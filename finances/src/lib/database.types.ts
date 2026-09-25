@@ -370,7 +370,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      request_report: {
+        Row: {
+          amount_cents: number | null
+          approved_at: string | null
+          approved_by: string | null
+          created_by: string | null
+          description: string | null
+          event_name: string | null
+          external_approver: string | null
+          id: string | null
+          no_receipt: boolean | null
+          no_receipt_reason: string | null
+          paid_at: string | null
+          paid_by: string | null
+          paid_date: string | null
+          payee_id: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference: string | null
+          purchase_date: string | null
+          request_number: number | null
+          status: Database["public"]["Enums"]["request_status"] | null
+          submitted_at: string | null
+          type: Database["public"]["Enums"]["reimbursement_type"] | null
+          vendor: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reimbursement_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_requests_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_requests_payee_id_fkey"
+            columns: ["payee_id"]
+            isOneToOne: false
+            referencedRelation: "payees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       approve_request: {
