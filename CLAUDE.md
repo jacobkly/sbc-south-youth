@@ -28,7 +28,7 @@ npm run build
 npx supabase start     # local Supabase stack (needs Docker Desktop)
 npx supabase db reset  # rebuild local DB from migrations and seed
 npx supabase test db   # pgTAP tests in supabase/tests
-npm run db:types       # regenerate src/lib/database.types.ts from the local DB
+npm run db:types       # regenerate src/lib/database.types.ts from the linked project
 ```
 
 ## Rules
