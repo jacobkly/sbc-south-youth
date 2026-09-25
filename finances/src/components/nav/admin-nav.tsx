@@ -33,7 +33,7 @@ const REQUESTS: NavItem = { href: "/admin/requests", label: "Requests", icon: Re
 const NEW_REQUEST: NavItem = { href: "/admin/requests/new", label: "New", icon: PlusIcon, adminOnly: true };
 const PAYEES: NavItem = { href: "/admin/payees", label: "Payees", icon: UsersIcon };
 const REPORTS: NavItem = { href: "/admin/reports", label: "Reports", icon: ChartColumnIcon };
-const SETTINGS: NavItem = { href: "/admin/settings", label: "Settings", icon: SettingsIcon, adminOnly: true };
+const SETTINGS: NavItem = { href: "/admin/settings", label: "Settings", icon: SettingsIcon };
 const ACCOUNT: NavItem = { href: "/account", label: "Account", icon: UserRoundIcon };
 
 const TAB_ITEMS = [DASHBOARD, REQUESTS, NEW_REQUEST, PAYEES];
