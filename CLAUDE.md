@@ -7,7 +7,8 @@ Guidance for Claude Code in this repo.
 Monorepo for SBC South Youth web projects on `sbcsouthyouth.com`. Each app is its own folder and its own Vercel project.
 
 - `finances/`: invite-only reimbursement tracker (`finances.` subdomain). Next.js 16 (App Router, TypeScript strict, Tailwind v4) and Supabase (Postgres, Auth, Storage). **Active.**
-- `site/`: public youth website on the apex domain. Not started. It must never display or connect to finance data.
+- `site/`: public youth website on the apex domain. Not started. It will share the Supabase project, but it must never read or display finance data.
+- `supabase/`: the Supabase project both apps share: migrations, config, and email templates.
 
 ## Current focus
 
@@ -25,11 +26,20 @@ npm run lint
 npm run typecheck
 npm test               # Vitest unit tests (src/**/*.test.ts)
 npm run build
-npx supabase start     # local Supabase stack (needs Docker Desktop)
-npx supabase db reset  # rebuild local DB from migrations and seed
-npx supabase test db   # pgTAP tests in supabase/tests
-npm run db:types       # regenerate src/lib/database.types.ts from the linked project
 ```
+
+Run these from the repo root, where the Supabase CLI is installed:
+
+```bash
+npx supabase db push --dry-run  # list migrations the linked project doesn't have yet
+npx supabase db push            # apply them
+npm run db:types                # regenerate finances/src/lib/database.types.ts
+npx supabase start              # local Supabase stack (needs Docker Desktop)
+npx supabase db reset           # rebuild local DB from migrations and seed
+npx supabase test db            # pgTAP tests in supabase/tests
+```
+
+The maintainer runs `link` and `db push` against the hosted project. Claude doesn't handle the database password.
 
 ## Rules
 
@@ -49,7 +59,7 @@ npm run db:types       # regenerate src/lib/database.types.ts from the linked pr
 
 ### Database
 
-- All schema changes go in Supabase CLI migrations in `finances/supabase/migrations`. No dashboard-only changes.
+- All schema changes go in Supabase CLI migrations in `supabase/migrations`. No dashboard-only changes.
 - `uuid` PKs (`gen_random_uuid()`), `timestamptz`, and `created_at`/`updated_at` with an `updated_at` trigger.
 - Money is stored as integer cents and displayed as USD.
 - All period math (month, quarter, year, "future date") uses `America/Los_Angeles`.

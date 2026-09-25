@@ -9,8 +9,7 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "db:types": "supabase gen types typescript --linked > src/lib/database.types.ts"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -33,7 +32,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "shadcn": "^4.21.0",
-    "supabase": "^2.118.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.2"

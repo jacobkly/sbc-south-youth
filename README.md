@@ -19,6 +19,21 @@ The app only keeps records. It never moves money.
 
 See [`finances/README.md`](finances/README.md) for local setup.
 
+## Database
+
+Both apps use one Supabase project, kept in [`supabase/`](supabase/): migrations, config, and email templates. The Supabase CLI is installed at the repo root, so run these from here:
+
+```bash
+npm install                                  # installs the Supabase CLI
+npx supabase login
+npx supabase link --project-ref <project-ref>
+npx supabase db push --dry-run               # list migrations the hosted project doesn't have yet
+npx supabase db push                         # apply them, in order
+npm run db:types                             # regenerate the finances app's database types
+```
+
+With Docker Desktop, `npx supabase start` runs a local stack instead, `npx supabase db reset` rebuilds it from the migrations, and `npx supabase test db` runs the database tests.
+
 ## Deployment
 
 Each app is its own Vercel project connected to this repo, with its **Root Directory** set to the app's folder and builds skipped when that folder hasn't changed.
