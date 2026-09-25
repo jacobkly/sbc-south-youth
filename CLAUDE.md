@@ -57,7 +57,9 @@ npx supabase gen types typescript --local > src/lib/database.types.ts
 
 - Next.js 16 has breaking changes from older versions. Check `finances/node_modules/next/dist/docs/` before using an API you're unsure of (see `finances/AGENTS.md`).
 - The finances app stays out of search engines: `robots.txt` disallows everything and metadata sets `noindex, nofollow`.
-- Responsive (used on desktop and phone), accessible, with loading, empty, and error states.
+- **Mobile-first.** The main user is on an iPhone, so design and check every screen at phone width in iOS Safari first. Desktop must work, but desktop-optimized layouts come later.
+- Use shadcn/ui components (in `src/components/ui`) for dialogs, pickers, tabs, and menus instead of hand-rolling them.
+- Accessible, with loading, empty, and error states on every screen.
 
 ### Git
 
