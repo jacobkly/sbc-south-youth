@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/dates";
-import { formatCents } from "@/lib/money";
-import { formatRequestNumber, REQUEST_STATUS_LABELS, REQUEST_TYPE_LABELS } from "@/lib/requests/format";
+import { RequestDetail } from "@/components/requests/request-detail";
+import { todayInLA } from "@/lib/dates";
+import { signReceiptUrls } from "@/lib/receipts/signed-urls";
+import { lateSubmissionDays } from "@/lib/requests/actions";
+import { changedPayeeIds, lateCheckDate } from "@/lib/requests/status";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -12,16 +13,13 @@ export const metadata: Metadata = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function receiptSummary(request: {
-  no_receipt: boolean;
-  no_receipt_reason: string | null;
-  receipts: { count: number }[];
-}): string {
-  if (request.no_receipt) return `None on file: ${request.no_receipt_reason}`;
-  const count = request.receipts[0]?.count ?? 0;
-  if (count === 0) return "None yet";
-  return count === 1 ? "1 file" : `${count} files`;
-}
+const REQUEST_COLUMNS = `
+  request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
+  no_receipt, no_receipt_reason, external_approver, paid_at, payment_method, payment_reference,
+  payee:payees(full_name),
+  receipts(id, storage_path, original_filename, mime_type, width, height),
+  request_events(id, action, from_status, note, changes, created_at, actor:users(full_name))
+`;
 
 export default async function RequestPage({ params }: PageProps<"/admin/requests/[id]">) {
   const { id } = await params;
@@ -29,45 +27,54 @@ export default async function RequestPage({ params }: PageProps<"/admin/requests
   if (!UUID.test(id)) notFound();
 
   const supabase = await createClient();
-  const { data: request, error } = await supabase
-    .from("reimbursement_requests")
-    .select(
-      "request_number, status, type, amount_cents, purchase_date, vendor, description, event_name, no_receipt, no_receipt_reason, payee:payees(full_name), receipts(count)",
-    )
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data: request, error }, { data: settings, error: settingsError }] = await Promise.all([
+    supabase
+      .from("reimbursement_requests")
+      .select(REQUEST_COLUMNS)
+      .eq("id", id)
+      .order("created_at", { referencedTable: "receipts" })
+      .order("created_at", { referencedTable: "request_events" })
+      .order("id", { referencedTable: "request_events" })
+      .maybeSingle(),
+    supabase.from("app_settings").select("late_submission_days").eq("id", 1).single(),
+  ]);
 
-  if (error) throw error; // handled by admin/error.tsx
+  // Handled by admin/error.tsx.
+  if (error) throw error;
+  if (settingsError) throw settingsError;
   if (!request) notFound();
 
-  const details: [string, string][] = [
-    ["Type", REQUEST_TYPE_LABELS[request.type]],
-    ["Purchase date", formatDate(request.purchase_date)],
-    ["Vendor", request.vendor],
-    ...(request.event_name ? ([["Event", request.event_name]] as [string, string][]) : []),
-    ["Description", request.description],
-    ["Receipts", receiptSummary(request)],
-  ];
+  const { request_events: events, ...details } = request;
+  const payeeIds = changedPayeeIds(events);
+
+  const [signed, payeeNames] = await Promise.all([
+    signReceiptUrls(
+      supabase,
+      details.receipts.map((receipt) => receipt.storage_path),
+    ),
+    payeeIds.length === 0
+      ? new Map<string, string>()
+      : supabase
+          .from("payees")
+          .select("id, full_name")
+          .in("id", payeeIds)
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return new Map(data.map((payee) => [payee.id, payee.full_name]));
+          }),
+  ]);
+
+  const limitDays = settings.late_submission_days;
+  const lateCheck = lateCheckDate(details.status, events, todayInLA());
+  const lateDays = lateCheck && lateSubmissionDays(details.purchase_date, lateCheck.date, limitDays);
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{formatRequestNumber(request.request_number)}</span>
-          <Badge variant="secondary">{REQUEST_STATUS_LABELS[request.status]}</Badge>
-        </div>
-        <h1 className="text-3xl font-semibold tracking-tight tabular-nums">{formatCents(request.amount_cents)}</h1>
-        <p className="text-lg">{request.payee?.full_name}</p>
-      </div>
-
-      <dl className="divide-y rounded-lg border">
-        {details.map(([term, value]) => (
-          <div key={term} className="space-y-1 px-4 py-3">
-            <dt className="text-sm text-muted-foreground">{term}</dt>
-            <dd className="break-words whitespace-pre-wrap">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
+    <RequestDetail
+      request={details}
+      events={events}
+      payeeNames={payeeNames}
+      signed={signed}
+      late={lateCheck && lateDays !== null ? { days: lateDays, limitDays, sent: lateCheck.sent } : null}
+    />
   );
 }

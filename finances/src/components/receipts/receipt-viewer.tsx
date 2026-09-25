@@ -22,8 +22,9 @@ export function ReceiptViewer({
 }: {
   name: string;
   url: string;
-  width: number;
-  height: number;
+  /** Unknown for older receipts, which still show; they just can't reserve space. */
+  width: number | null;
+  height: number | null;
   onClose: () => void;
 }) {
   const [zoom, setZoom] = useState<number>(1);
@@ -67,8 +68,8 @@ export function ReceiptViewer({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={url}
-            width={width}
-            height={height}
+            width={width ?? undefined}
+            height={height ?? undefined}
             alt={`Receipt: ${name}`}
             draggable={false}
             className={zoom === 1 ? "mx-auto h-full w-auto max-w-full object-contain" : "h-auto max-w-none"}
