@@ -19,9 +19,10 @@ export type PendingReceipt = {
 
 /**
  * Holds the receipts picked in a form. Each file is compressed and hashed as
- * soon as it's added, so saving only has to upload.
+ * soon as it's added, so saving only has to upload. `limit` is how many can
+ * be picked, which is less when the request already has some saved.
  */
-export function usePendingReceipts() {
+export function usePendingReceipts(limit: number = MAX_RECEIPTS) {
   const [receipts, setReceipts] = useState<PendingReceipt[]>([]);
   /** Why some picked files weren't added. Replaced on each pick. */
   const [problems, setProblems] = useState<string[]>([]);
@@ -42,7 +43,7 @@ export function usePendingReceipts() {
   }
 
   function add(files: File[]) {
-    const room = Math.max(0, MAX_RECEIPTS - receipts.length);
+    const room = Math.max(0, limit - receipts.length);
     const accepted = files.slice(0, room);
     const skipped = files.length - accepted.length;
     setProblems(
@@ -103,5 +104,7 @@ export function usePendingReceipts() {
     setProblems([]);
   }
 
-  return { receipts, problems, add, remove, setStatus, clear };
+  return { receipts, problems, limit, add, remove, setStatus, clear };
 }
+
+export type PendingReceipts = ReturnType<typeof usePendingReceipts>;

@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
-import { CircleAlertIcon, FileTextIcon, ImageOffIcon, LoaderCircleIcon } from "lucide-react";
+import { CircleAlertIcon, FileTextIcon, ImageOffIcon, LoaderCircleIcon, Undo2Icon, XIcon } from "lucide-react";
 import { ReceiptViewer } from "@/components/receipts/receipt-viewer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { isJustSigned, isSignedUrlStale, signReceiptUrls, type SignedReceiptUrls } from "@/lib/receipts/signed-urls";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 export type GalleryReceipt = {
   id: string;
@@ -21,6 +23,17 @@ const FRAME =
 
 const PLACEHOLDER = "flex size-full flex-col items-center justify-center gap-1 p-2 text-center text-xs text-muted-foreground";
 
+/** Lets the edit form mark saved receipts to remove when it saves. */
+export type GalleryRemoval = {
+  /** Ids marked to remove. */
+  marked: ReadonlySet<string>;
+  onToggle: (id: string) => void;
+  /** False when a marked one can't be kept, like when there's no room for it. */
+  canKeep: boolean;
+  /** True while saving. */
+  locked: boolean;
+};
+
 /**
  * A saved request's receipts. Images open full screen, and PDFs open in a new
  * tab. The links expire after five minutes, so stale ones are re-signed
@@ -29,10 +42,15 @@ const PLACEHOLDER = "flex size-full flex-col items-center justify-center gap-1 p
 export function ReceiptGallery({
   receipts,
   initial,
+  label = "Receipts",
+  removal,
 }: {
   receipts: GalleryReceipt[];
   /** Links signed while the page rendered, or null if that failed. */
   initial: SignedReceiptUrls | null;
+  /** Names the list. */
+  label?: string;
+  removal?: GalleryRemoval;
 }) {
   const [signed, setSigned] = useState<SignedReceiptUrls>(initial ?? { urls: {}, signedAt: 0 });
   const [failed, setFailed] = useState(false);
@@ -114,7 +132,7 @@ export function ReceiptGallery({
 
   return (
     <div className="space-y-3">
-      <ul className="grid grid-cols-3 gap-2 md:grid-cols-4" aria-label="Receipts">
+      <ul className="grid grid-cols-3 gap-2 md:grid-cols-4" aria-label={label}>
         {receipts.map((receipt) => {
           const url = signed.urls[receipt.path];
           const isPdf = receipt.mimeType === "application/pdf";
@@ -179,7 +197,30 @@ export function ReceiptGallery({
             );
           }
 
-          return <li key={receipt.id}>{tile}</li>;
+          if (!removal) return <li key={receipt.id}>{tile}</li>;
+
+          const marked = removal.marked.has(receipt.id);
+          return (
+            <li key={receipt.id} className="relative">
+              <div className={cn(marked && "opacity-40")}>{tile}</div>
+              {marked && (
+                <span className="pointer-events-none absolute inset-x-1 bottom-1 rounded-md bg-background/90 px-1 py-0.5 text-center text-xs font-medium">
+                  Removing
+                </span>
+              )}
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                onClick={() => removal.onToggle(receipt.id)}
+                disabled={removal.locked || (marked && !removal.canKeep)}
+                aria-label={marked ? `Keep ${receipt.name}` : `Remove ${receipt.name}`}
+                className="absolute top-1 right-1 size-9 rounded-full border shadow-sm"
+              >
+                {marked ? <Undo2Icon /> : <XIcon />}
+              </Button>
+            </li>
+          );
         })}
       </ul>
 

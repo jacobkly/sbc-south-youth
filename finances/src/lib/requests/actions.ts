@@ -128,6 +128,17 @@ function missingReceipt({ receiptCount, noReceipt }: Pick<SaveContext, "receiptC
   return receiptCount === 0 && !noReceipt;
 }
 
+/**
+ * Why an edit can't be saved without a receipt. A draft can go without one
+ * for now, but a request out for review keeps a receipt or the exception.
+ */
+export function editReceiptError(
+  status: RequestStatus,
+  context: Pick<SaveContext, "receiptCount" | "noReceipt">,
+): string | undefined {
+  return status !== "draft" && missingReceipt(context) ? RECEIPT_REQUIRED : undefined;
+}
+
 function approverError(approver: string): string | undefined {
   if (!approver) return "Enter who approved it.";
   if (approver.length > MAX_EXTERNAL_APPROVER) return `Keep the name to ${MAX_EXTERNAL_APPROVER} characters or fewer.`;

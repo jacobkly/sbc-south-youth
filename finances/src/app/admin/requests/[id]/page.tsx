@@ -6,14 +6,14 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { todayInLA } from "@/lib/dates";
 import { signReceiptUrls } from "@/lib/receipts/signed-urls";
 import { lateSubmissionDays } from "@/lib/requests/actions";
+import { isEditable } from "@/lib/requests/format";
 import { changedPayeeIds, lateCheckDate } from "@/lib/requests/status";
 import { createClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Request",
 };
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const REQUEST_COLUMNS = `
   request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
@@ -25,8 +25,7 @@ const REQUEST_COLUMNS = `
 
 export default async function RequestPage({ params }: PageProps<"/admin/requests/[id]">) {
   const { id } = await params;
-  // A malformed id would be a database error, not a missing request.
-  if (!UUID.test(id)) notFound();
+  if (!isUuid(id)) notFound();
 
   const supabase = await createClient();
   const [{ data: request, error }, { data: settings, error: settingsError }, user] = await Promise.all([
@@ -71,8 +70,9 @@ export default async function RequestPage({ params }: PageProps<"/admin/requests
   const lateCheck = lateCheckDate(details.status, events, todayInLA());
   const lateDays = lateCheck && lateSubmissionDays(details.purchase_date, lateCheck.date, limitDays);
 
-  // Viewers only look. The status functions check the role again.
-  const actions = user?.role === "admin" && (
+  // Viewers only look. The status functions and update policy check the role again.
+  const isAdmin = user?.role === "admin";
+  const actions = isAdmin && (
     <RequestActions
       request={{
         id,
@@ -98,6 +98,7 @@ export default async function RequestPage({ params }: PageProps<"/admin/requests
       signed={signed}
       late={lateCheck && lateDays !== null ? { days: lateDays, limitDays, sent: lateCheck.sent } : null}
       actions={actions}
+      editHref={isAdmin && isEditable(details.status) ? `/admin/requests/${id}/edit` : undefined}
     />
   );
 }

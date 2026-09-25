@@ -26,6 +26,8 @@ export function ReceiptPicker({
   id,
   receipts,
   problems,
+  max = MAX_RECEIPTS,
+  label = "Receipts",
   onAdd,
   onRemove,
   locked,
@@ -35,6 +37,10 @@ export function ReceiptPicker({
   receipts: PendingReceipt[];
   /** Why some picked files weren't added. */
   problems: string[];
+  /** How many can be picked, which is less when some are already saved. */
+  max?: number;
+  /** Names the list of picked files. */
+  label?: string;
   onAdd: (files: File[]) => void;
   onRemove: (key: string) => void;
   /** True while saving, so nothing changes mid-upload. */
@@ -45,7 +51,7 @@ export function ReceiptPicker({
   const [dragging, setDragging] = useState(false);
   const [viewing, setViewing] = useState<PendingReceipt | null>(null);
 
-  const full = receipts.length >= MAX_RECEIPTS;
+  const full = receipts.length >= max;
   const canAdd = !full && !locked;
 
   function pick() {
@@ -87,21 +93,23 @@ export function ReceiptPicker({
       />
 
       {receipts.length === 0 ? (
-        <Button
-          type="button"
-          id={id}
-          variant="outline"
-          disabled={locked}
-          aria-describedby={describedBy}
-          onClick={pick}
-          className="h-24 w-full flex-col gap-1 border-dashed text-base font-normal md:text-sm"
-        >
-          <ImagePlusIcon className="size-6 text-muted-foreground" aria-hidden />
-          <span>Add receipts</span>
-          <span className="hidden text-sm text-muted-foreground md:inline">or drop files here</span>
-        </Button>
+        !full && (
+          <Button
+            type="button"
+            id={id}
+            variant="outline"
+            disabled={locked}
+            aria-describedby={describedBy}
+            onClick={pick}
+            className="h-24 w-full flex-col gap-1 border-dashed text-base font-normal md:text-sm"
+          >
+            <ImagePlusIcon className="size-6 text-muted-foreground" aria-hidden />
+            <span>Add receipts</span>
+            <span className="hidden text-sm text-muted-foreground md:inline">or drop files here</span>
+          </Button>
+        )
       ) : (
-        <ul className="grid grid-cols-3 gap-2 md:grid-cols-4" aria-label="Receipts">
+        <ul className="grid grid-cols-3 gap-2 md:grid-cols-4" aria-label={label}>
           {receipts.map((receipt) => (
             <li key={receipt.key}>
               <ReceiptTile

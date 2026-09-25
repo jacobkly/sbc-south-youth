@@ -94,3 +94,21 @@ export async function uploadReceipt(
 
   return id;
 }
+
+/** A saved receipt: its row and where its file lives. */
+export type StoredReceipt = { id: string; path: string };
+
+/**
+ * Deletes a saved receipt's file, then its row. If the row can't be deleted,
+ * it only points at a missing file, and removing it again finishes the job.
+ * The other way round could leave a file nothing points at.
+ */
+export async function removeReceipt(supabase: SupabaseClient<Database>, receipt: StoredReceipt): Promise<void> {
+  const file = await supabase.storage.from(RECEIPTS_BUCKET).remove([receipt.path]);
+  if (file.error) throw new Error("Couldn't delete the receipt file.", { cause: file.error });
+
+  const { data, error } = await supabase.from("receipts").delete().eq("id", receipt.id).select("id");
+  if (error) throw new Error("Couldn't remove the receipt.", { cause: error });
+  // Nothing deleted means the request can't be edited anymore.
+  if (data.length === 0) throw new Error("Couldn't remove the receipt.");
+}

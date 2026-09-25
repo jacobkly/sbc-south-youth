@@ -8,6 +8,7 @@ import {
   availableActions,
   availableSaveOptions,
   blockedByReceiptRule,
+  editReceiptError,
   isWrongStatusError,
   lateSubmissionDays,
   needsExternalApprover,
@@ -326,6 +327,21 @@ describe("blockedByReceiptRule", () => {
     expect(blockedByReceiptRule("reject", none)).toBe(false);
     expect(blockedByReceiptRule("submit", { receiptCount: 0, noReceipt: true })).toBe(false);
     expect(blockedByReceiptRule("submit", { receiptCount: 2, noReceipt: false })).toBe(false);
+  });
+});
+
+describe("editReceiptError", () => {
+  const none = { receiptCount: 0, noReceipt: false };
+
+  it("lets a draft go without a receipt", () => {
+    expect(editReceiptError("draft", none)).toBeUndefined();
+  });
+
+  it("keeps the receipt rule once it's out for review", () => {
+    expect(editReceiptError("submitted", none)).toMatch(/Add a receipt/);
+    expect(editReceiptError("needs_info", none)).toMatch(/Add a receipt/);
+    expect(editReceiptError("submitted", { receiptCount: 0, noReceipt: true })).toBeUndefined();
+    expect(editReceiptError("needs_info", { receiptCount: 1, noReceipt: false })).toBeUndefined();
   });
 });
 

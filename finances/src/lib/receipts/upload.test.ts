@@ -1,7 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import type { Database } from "@/lib/database.types";
-import { prepareReceipt, receiptFilename, receiptPath, uploadReceipt, type PreparedReceipt } from "./upload";
+import {
+  prepareReceipt,
+  receiptFilename,
+  receiptPath,
+  removeReceipt,
+  uploadReceipt,
+  type PreparedReceipt,
+} from "./upload";
 
 const REQUEST_ID = "00000000-0000-4000-8000-000000000001";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -84,6 +91,56 @@ describe("uploadReceipt", () => {
     bucket.remove.mockRejectedValueOnce(new Error("offline"));
 
     await expect(uploadReceipt(client, REQUEST_ID, photo)).rejects.toThrow("Couldn't save test-receipt.jpg.");
+  });
+});
+
+describe("removeReceipt", () => {
+  const receipt = { id: "00000000-0000-4000-8000-0000000000aa", path: `${REQUEST_ID}/r1.webp` };
+
+  /** Records the calls, with the row delete answering `rows` or `error`. */
+  function removeClient({ fileError = null as object | null, error = null as object | null, rows = 1 } = {}) {
+    const calls: string[] = [];
+    const bucket = {
+      remove: vi.fn(async (paths: string[]) => {
+        calls.push(`remove ${paths.join(",")}`);
+        return fileError ? { data: null, error: fileError } : { data: [], error: null };
+      }),
+    };
+    const query = {
+      delete: vi.fn(() => query),
+      eq: vi.fn((column: string, value: string) => {
+        calls.push(`delete ${column}=${value}`);
+        return query;
+      }),
+      select: vi.fn(async () =>
+        error ? { data: null, error } : { data: Array.from({ length: rows }, () => ({ id: receipt.id })), error: null },
+      ),
+    };
+    const client = { storage: { from: vi.fn(() => bucket) }, from: vi.fn(() => query) };
+    return { client: client as unknown as SupabaseClient<Database>, calls };
+  }
+
+  it("deletes the file, then the row", async () => {
+    const { client, calls } = removeClient();
+
+    await removeReceipt(client, receipt);
+
+    expect(calls).toEqual([`remove ${receipt.path}`, `delete id=${receipt.id}`]);
+  });
+
+  it("keeps the row when the file can't be deleted", async () => {
+    const { client, calls } = removeClient({ fileError: { message: "offline" } });
+
+    await expect(removeReceipt(client, receipt)).rejects.toThrow("Couldn't delete the receipt file.");
+
+    expect(calls).toHaveLength(1);
+  });
+
+  it("fails when no row was deleted", async () => {
+    await expect(removeReceipt(removeClient({ rows: 0 }).client, receipt)).rejects.toThrow("Couldn't remove");
+    await expect(removeReceipt(removeClient({ error: { code: "42501" } }).client, receipt)).rejects.toThrow(
+      "Couldn't remove",
+    );
   });
 });
 

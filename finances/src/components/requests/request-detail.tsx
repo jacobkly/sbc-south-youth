@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
-import { FileXIcon, TriangleAlertIcon } from "lucide-react";
+import Link from "next/link";
+import { FileXIcon, PencilIcon, TriangleAlertIcon } from "lucide-react";
 import { ReceiptGallery } from "@/components/receipts/receipt-gallery";
 import { StatusBadge } from "@/components/requests/status-badge";
 import { StatusTimeline, type TimelineEvent } from "@/components/requests/status-timeline";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { formatDate, laDateOf } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import type { SignedReceiptUrls } from "@/lib/receipts/signed-urls";
@@ -72,6 +74,7 @@ export function RequestDetail({
   signed,
   late,
   actions,
+  editHref,
 }: {
   request: RequestDetailData;
   /** Oldest first. */
@@ -81,18 +84,30 @@ export function RequestDetail({
   late: LateWarning | null;
   /** Shown under the summary. Left out for anyone who can only view. */
   actions?: ReactNode;
+  /** Where to edit it, while it can still be edited by this user. */
+  editHref?: string;
 }) {
   const { receipts } = request;
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{formatRequestNumber(request.request_number)}</span>
-          <StatusBadge status={request.status} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{formatRequestNumber(request.request_number)}</span>
+            <StatusBadge status={request.status} />
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight tabular-nums">{formatCents(request.amount_cents)}</h1>
+          <p className="text-lg break-words">{request.payee?.full_name}</p>
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight tabular-nums">{formatCents(request.amount_cents)}</h1>
-        <p className="text-lg break-words">{request.payee?.full_name}</p>
+        {editHref && (
+          <Button variant="outline" className="h-11 shrink-0" asChild>
+            <Link href={editHref}>
+              <PencilIcon aria-hidden />
+              Edit
+            </Link>
+          </Button>
+        )}
       </div>
 
       {late && (
