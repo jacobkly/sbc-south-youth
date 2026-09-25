@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  daysBetween,
   formatDate,
   formatDateTime,
   isIsoDate,
   laDateOf,
+  laNoon,
   periodContaining,
   periodLabel,
   periodRange,
@@ -148,5 +150,32 @@ describe("labels", () => {
 
   it("formats instants in LA time", () => {
     expect(formatDateTime("2026-09-26T06:30:00Z")).toBe("Sep 25, 2026, 11:30 PM");
+  });
+});
+
+describe("daysBetween", () => {
+  it("counts whole days, across months, years, and leap days", () => {
+    expect(daysBetween("2026-09-25", "2026-09-25")).toBe(0);
+    expect(daysBetween("2026-07-27", "2026-09-25")).toBe(60);
+    expect(daysBetween("2027-12-31", "2028-03-01")).toBe(61);
+    expect(daysBetween("2026-09-25", "2026-09-20")).toBe(-5);
+  });
+
+  it("isn't thrown off by daylight saving changes", () => {
+    expect(daysBetween("2026-03-07", "2026-03-09")).toBe(2);
+    expect(daysBetween("2026-10-31", "2026-11-02")).toBe(2);
+  });
+});
+
+describe("laNoon", () => {
+  it("is noon in LA, in both daylight and standard time", () => {
+    expect(laNoon("2026-09-25").toISOString()).toBe("2026-09-25T19:00:00.000Z");
+    expect(laNoon("2026-01-15").toISOString()).toBe("2026-01-15T20:00:00.000Z");
+  });
+
+  it("stays on the same LA date on daylight saving change days", () => {
+    expect(laNoon("2026-03-08").toISOString()).toBe("2026-03-08T19:00:00.000Z");
+    expect(laNoon("2026-11-01").toISOString()).toBe("2026-11-01T20:00:00.000Z");
+    expect(laDateOf(laNoon("2026-03-08"))).toBe("2026-03-08");
   });
 });

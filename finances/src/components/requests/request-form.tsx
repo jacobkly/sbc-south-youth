@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
-import { CircleAlertIcon } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent, type RefObject } from "react";
+import Link from "next/link";
+import { CircleAlertIcon, CircleCheckIcon } from "lucide-react";
 import { describedBy, FormField } from "@/components/form-field";
 import { ReceiptPicker } from "@/components/receipts/receipt-picker";
 import { usePendingReceipts } from "@/components/receipts/use-pending-receipts";
 import { PayeePicker } from "@/components/requests/payee-picker";
+import { saveFieldId, SaveOptions } from "@/components/requests/save-options";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,16 +16,28 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { todayInLA, type IsoDate } from "@/lib/dates";
-import { centsToDecimal, parseAmountToCents } from "@/lib/money";
+import { centsToDecimal, formatCents, parseAmountToCents } from "@/lib/money";
 import type { PayeeRow } from "@/lib/payees/columns";
 import { MAX_RECEIPTS, uploadReceipt } from "@/lib/receipts/upload";
-import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
+import {
+  applySaveAction,
+  availableSaveOptions,
+  lateSubmissionDays,
+  needsExternalApprover,
+  SAVE_OPTION_LABELS,
+  saveActionErrorMessage,
+  validateSaveOption,
+  type SaveOption,
+  type SaveOptionErrors,
+  type SaveOptionField,
+  type SaveOptionValues,
+} from "@/lib/requests/actions";
+import { formatRequestNumber, REQUEST_TYPE_LABELS } from "@/lib/requests/format";
 import {
   FUTURE_DATE_CODE,
   MAX_NO_RECEIPT_REASON,
   MAX_REQUEST_CENTS,
   MIN_PURCHASE_DATE,
-  REQUEST_FIELDS,
   REQUEST_TYPES,
   requestFieldErrors,
   requestSaveErrorMessage,
@@ -38,36 +51,37 @@ import { createClient } from "@/lib/supabase/client";
 
 type TextField = Exclude<RequestField, "payee_id" | "type">;
 
+type FormErrors = RequestFieldErrors & SaveOptionErrors;
+
+type ErrorField = keyof FormErrors;
+
+/** Every field that can show an error, in the order they appear on screen. */
+const ERROR_FIELDS: ErrorField[] = [
+  "payee_id",
+  "type",
+  "amount",
+  "purchase_date",
+  "vendor",
+  "description",
+  "event_name",
+  "receipts",
+  "no_receipt_reason",
+  "paid_date",
+  "payment_reference",
+  "external_approver",
+];
+
 const fieldId = (key: RequestField | "receipts" | "no_receipt") => `request-${key}`;
 
-/** The type group has no single control, so focus its first option. */
-const focusId = (key: RequestField) => (key === "type" ? `request-type-${REQUEST_TYPES[0]}` : fieldId(key));
-
-function receiptHint(count: number): string {
-  if (count === 0) return `Photos or PDFs, up to ${MAX_RECEIPTS}.`;
-  if (count < MAX_RECEIPTS) return `${count} of ${MAX_RECEIPTS} added.`;
-  return `${MAX_RECEIPTS} of ${MAX_RECEIPTS} added, the most a request can have.`;
+/** Groups have no single control, so focus their first option. */
+function focusId(key: ErrorField): string {
+  if (key === "type") return `request-type-${REQUEST_TYPES[0]}`;
+  if (key === "paid_date" || key === "payment_reference" || key === "external_approver") return saveFieldId(key);
+  return fieldId(key);
 }
 
-/**
- * The admin's main entry form. Built for speed on a phone: big touch targets,
- * the right keyboard for each field, and today's date filled in.
- */
-export function RequestForm({
-  payees: initialPayees,
-  eventNames,
-  today,
-}: {
-  /** Active payees, sorted by name. */
-  payees: PayeeRow[];
-  /** Recent event names, offered as suggestions. */
-  eventNames: string[];
-  /** Today in Los Angeles, from the server so the first render matches. */
-  today: IsoDate;
-}) {
-  const router = useRouter();
-  const [payees, setPayees] = useState(initialPayees);
-  const [values, setValues] = useState<RequestFormValues>({
+function blankRequest(today: IsoDate): RequestFormValues {
+  return {
     payee_id: "",
     type: "",
     amount: "",
@@ -77,19 +91,103 @@ export function RequestForm({
     event_name: "",
     no_receipt: false,
     no_receipt_reason: "",
+  };
+}
+
+function receiptHint(count: number): string {
+  if (count === 0) return `Photos or PDFs, up to ${MAX_RECEIPTS}.`;
+  if (count < MAX_RECEIPTS) return `${count} of ${MAX_RECEIPTS} added.`;
+  return `${MAX_RECEIPTS} of ${MAX_RECEIPTS} added, the most a request can have.`;
+}
+
+type Saved = {
+  id: string;
+  requestNumber: number;
+  option: SaveOption;
+  amountCents: number;
+  payeeName: string;
+};
+
+/**
+ * The admin's main entry form. Built for speed on a phone: big touch targets,
+ * the right keyboard for each field, and today's date filled in. After saving,
+ * "Enter another" starts over but keeps how it was saved and paid, so a run
+ * of past payments goes quickly.
+ */
+export function RequestForm({
+  payees: initialPayees,
+  eventNames,
+  today,
+  currentUserId,
+  allowExternalApproval,
+  lateLimitDays,
+}: {
+  /** Active payees, sorted by name. */
+  payees: PayeeRow[];
+  /** Recent event names, offered as suggestions. */
+  eventNames: string[];
+  /** Today in Los Angeles, from the server so the first render matches. */
+  today: IsoDate;
+  /** The signed-in admin, to spot a reimbursement paid to them. */
+  currentUserId: string;
+  allowExternalApproval: boolean;
+  /** Days after purchase before a request counts as late. */
+  lateLimitDays: number;
+}) {
+  const [payees, setPayees] = useState(initialPayees);
+  const [values, setValues] = useState<RequestFormValues>(() => blankRequest(today));
+  const [saveValues, setSaveValues] = useState<SaveOptionValues>({
+    option: "draft",
+    external_approver: "",
+    payment_method: "cash_app",
+    payment_reference: "",
+    paid_date: today,
   });
-  const [errors, setErrors] = useState<RequestFieldErrors>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  // Set once the draft exists, so a retry after a failed upload updates it instead of adding another.
+  // Set once the draft exists, so a retry after a failed step updates it instead of adding another.
   const [requestId, setRequestId] = useState<string | null>(null);
+  const [saved, setSaved] = useState<Saved | null>(null);
   const pendingReceipts = usePendingReceipts();
   const { receipts } = pendingReceipts;
   const preparing = receipts.some((receipt) => receipt.status === "processing");
 
+  // Moves focus to the top of the new screen after saving or starting over.
+  const heading = useRef<HTMLHeadingElement>(null);
+  const [screen, setScreen] = useState(0);
+  useEffect(() => {
+    if (screen === 0) return;
+    window.scrollTo({ top: 0 });
+    heading.current?.focus({ preventScroll: true });
+  }, [screen]);
+
+  const payee = payees.find((candidate) => candidate.id === values.payee_id);
+  const rules = { selfPayee: Boolean(payee?.user_id && payee.user_id === currentUserId), allowExternalApproval };
+  const options = availableSaveOptions(rules);
+  // Switching to your own payee can take away the option that was picked.
+  const option = options.includes(saveValues.option) ? saveValues.option : "draft";
+  const lateDays = lateSubmissionDays(values.purchase_date, today, lateLimitDays);
+
   function set<K extends RequestField>(key: K, value: RequestFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
+  }
+
+  function setSave<K extends keyof SaveOptionValues>(key: K, value: SaveOptionValues[K]) {
+    setSaveValues((current) => ({ ...current, [key]: value }));
+    if (key === "option") {
+      // These errors depend on the option, so they may not apply anymore.
+      setErrors((current) => ({
+        ...current,
+        receipts: undefined,
+        paid_date: undefined,
+        payment_reference: undefined,
+        external_approver: undefined,
+      }));
+    } else {
+      setErrors((current) => ({ ...current, [key as SaveOptionField]: undefined }));
+    }
   }
 
   function textProps(key: TextField, hint?: boolean) {
@@ -104,9 +202,9 @@ export function RequestForm({
     };
   }
 
-  function showFieldErrors(next: RequestFieldErrors) {
+  function showFieldErrors(next: FormErrors) {
     setErrors(next);
-    const first = REQUEST_FIELDS.find((key) => next[key]);
+    const first = ERROR_FIELDS.find((key) => next[key]);
     if (first) document.getElementById(focusId(first))?.focus();
   }
 
@@ -118,12 +216,26 @@ export function RequestForm({
     }
   }
 
-  async function saveDraft() {
+  async function save() {
     if (preparing) return;
     // Checked against today at save time, in case the page sat open past midnight.
-    const parsed = requestSchema(todayInLA()).safeParse(values);
-    if (!parsed.success) {
-      showFieldErrors(requestFieldErrors(parsed.error));
+    const now = todayInLA();
+    const parsed = requestSchema(now).safeParse(values);
+    const action = validateSaveOption(
+      { ...saveValues, option },
+      {
+        ...rules,
+        today: now,
+        purchaseDate: values.purchase_date,
+        receiptCount: receipts.length,
+        noReceipt: values.no_receipt,
+      },
+    );
+    if (!parsed.success || !action.success) {
+      showFieldErrors({
+        ...(parsed.success ? {} : requestFieldErrors(parsed.error)),
+        ...(action.success ? {} : action.errors),
+      });
       return;
     }
 
@@ -136,7 +248,7 @@ export function RequestForm({
       ? requests.update(parsed.data).eq("id", requestId)
       : requests.insert(parsed.data)
     )
-      .select("id")
+      .select("id, request_number")
       .single();
 
     if (error) {
@@ -171,14 +283,47 @@ export function RequestForm({
       );
       return;
     }
-    // Stay pending while the detail page loads, so the draft can't be saved twice.
-    router.push(`/admin/requests/${data.id}`);
+
+    const actionError = await applySaveAction(supabase, data.id, action.data);
+    setPending(false);
+    if (actionError && action.data.option !== "draft") {
+      setFormError(saveActionErrorMessage(action.data.option, actionError));
+      return;
+    }
+
+    setSaved({
+      id: data.id,
+      requestNumber: data.request_number,
+      option,
+      amountCents: parsed.data.amount_cents,
+      payeeName: payee?.full_name ?? "",
+    });
+    setScreen((count) => count + 1);
+  }
+
+  /** Clears the form for the next request, keeping how it's saved and the payment method and date. */
+  function enterAnother() {
+    setValues(blankRequest(todayInLA()));
+    setSaveValues((current) => ({ ...current, external_approver: "", payment_reference: "" }));
+    setErrors({});
+    setFormError(null);
+    setRequestId(null);
+    pendingReceipts.clear();
+    setSaved(null);
+    setScreen((count) => count + 1);
   }
 
   function setNoReceipt(on: boolean) {
     setValues((current) => ({ ...current, no_receipt: on }));
-    setErrors((current) => ({ ...current, no_receipt_reason: undefined }));
+    setErrors((current) => ({ ...current, receipts: undefined, no_receipt_reason: undefined }));
   }
+
+  function addReceipts(files: File[]) {
+    setErrors((current) => ({ ...current, receipts: undefined }));
+    pendingReceipts.add(files);
+  }
+
+  if (saved) return <SavedPanel saved={saved} heading={heading} onEnterAnother={enterAnother} />;
 
   const typeInvalid = errors.type ? true : undefined;
 
@@ -188,10 +333,12 @@ export function RequestForm({
       className="space-y-5"
       onSubmit={(event) => {
         event.preventDefault();
-        void saveDraft();
+        void save();
       }}
     >
-      <h1 className="text-2xl font-semibold tracking-tight">New request</h1>
+      <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">
+        New request
+      </h1>
 
       <FormField id={fieldId("payee_id")} label="Payee" error={errors.payee_id} group>
         <PayeePicker
@@ -200,9 +347,9 @@ export function RequestForm({
           payees={payees}
           value={values.payee_id}
           onChange={(payeeId) => set("payee_id", payeeId)}
-          onAdded={(payee) =>
+          onAdded={(added) =>
             setPayees((current) =>
-              [...current, payee].sort((a, b) => a.full_name.localeCompare(b.full_name)),
+              [...current, added].sort((a, b) => a.full_name.localeCompare(b.full_name)),
             )
           }
           invalid={Boolean(errors.payee_id)}
@@ -289,16 +436,22 @@ export function RequestForm({
         </datalist>
       )}
 
-      <FormField id={fieldId("receipts")} label="Receipts" hint={receiptHint(receipts.length)} group>
+      <FormField
+        id={fieldId("receipts")}
+        label="Receipts"
+        hint={receiptHint(receipts.length)}
+        error={errors.receipts}
+        group
+      >
         {!values.no_receipt && (
           <ReceiptPicker
             id={fieldId("receipts")}
             receipts={receipts}
             problems={pendingReceipts.problems}
-            onAdd={pendingReceipts.add}
+            onAdd={addReceipts}
             onRemove={pendingReceipts.remove}
             locked={pending}
-            describedBy={describedBy(fieldId("receipts"), undefined, true)}
+            describedBy={describedBy(fieldId("receipts"), errors.receipts, true)}
           />
         )}
         {receipts.length === 0 && (
@@ -327,6 +480,20 @@ export function RequestForm({
         </FormField>
       )}
 
+      <SaveOptions
+        values={{ ...saveValues, option }}
+        onChange={setSave}
+        errors={errors}
+        options={options}
+        approverRequired={needsExternalApprover(option, rules)}
+        selfApprovalBlocked={rules.selfPayee && !allowExternalApproval}
+        lateDays={lateDays}
+        lateLimitDays={lateLimitDays}
+        purchaseDate={values.purchase_date}
+        today={today}
+        disabled={pending}
+      />
+
       {/* Next to the button, since that's where the eye is after tapping it on a phone. */}
       {formError && (
         <Alert variant="destructive">
@@ -336,8 +503,49 @@ export function RequestForm({
       )}
 
       <Button type="submit" className="h-11 w-full" disabled={pending || preparing}>
-        {pending ? "Saving…" : preparing ? "Preparing receipts…" : "Save draft"}
+        {pending ? "Saving…" : preparing ? "Preparing receipts…" : SAVE_OPTION_LABELS[option]}
       </Button>
     </form>
+  );
+}
+
+const SAVED_HEADINGS: Record<SaveOption, string> = {
+  draft: "Draft saved",
+  submit: "Submitted",
+  approve: "Approved",
+  paid: "Recorded as paid",
+};
+
+function SavedPanel({
+  saved,
+  heading,
+  onEnterAnother,
+}: {
+  saved: Saved;
+  heading: RefObject<HTMLHeadingElement | null>;
+  onEnterAnother: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <CircleCheckIcon className="size-8 text-primary" aria-hidden />
+        <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">
+          {SAVED_HEADINGS[saved.option]}
+        </h1>
+        <p className="text-muted-foreground">
+          {formatRequestNumber(saved.requestNumber)}: <span className="tabular-nums">{formatCents(saved.amountCents)}</span>{" "}
+          for {saved.payeeName}
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <Button type="button" className="h-11 w-full" onClick={onEnterAnother}>
+          Enter another
+        </Button>
+        <Button variant="outline" className="h-11 w-full" asChild>
+          <Link href={`/admin/requests/${saved.id}`}>View request</Link>
+        </Button>
+      </div>
+    </div>
   );
 }

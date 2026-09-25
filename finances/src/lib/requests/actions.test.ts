@@ -1,0 +1,272 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { describe, expect, it, vi } from "vitest";
+import type { Database } from "@/lib/database.types";
+import {
+  applySaveAction,
+  availableSaveOptions,
+  lateSubmissionDays,
+  needsExternalApprover,
+  paidAtFor,
+  saveActionErrorMessage,
+  validateSaveOption,
+  type SaveContext,
+  type SaveOptionValues,
+} from "./actions";
+
+const REQUEST_ID = "00000000-0000-4000-8000-000000000001";
+
+const values: SaveOptionValues = {
+  option: "draft",
+  external_approver: "",
+  payment_method: "cash_app",
+  payment_reference: "",
+  paid_date: "2026-09-25",
+};
+
+const context: SaveContext = {
+  today: "2026-09-25",
+  purchaseDate: "2026-09-20",
+  selfPayee: false,
+  allowExternalApproval: true,
+  receiptCount: 1,
+  noReceipt: false,
+};
+
+describe("availableSaveOptions", () => {
+  it("offers every option for someone else's reimbursement", () => {
+    expect(availableSaveOptions({ selfPayee: false, allowExternalApproval: false })).toEqual([
+      "draft",
+      "submit",
+      "approve",
+      "paid",
+    ]);
+  });
+
+  it("offers every option for your own while external approval is on", () => {
+    expect(availableSaveOptions({ selfPayee: true, allowExternalApproval: true })).toHaveLength(4);
+  });
+
+  it("drops approving and recording paid for your own while external approval is off", () => {
+    expect(availableSaveOptions({ selfPayee: true, allowExternalApproval: false })).toEqual(["draft", "submit"]);
+  });
+});
+
+describe("needsExternalApprover", () => {
+  const self = { selfPayee: true, allowExternalApproval: true };
+
+  it("is needed only when approving or recording your own as paid", () => {
+    expect(needsExternalApprover("approve", self)).toBe(true);
+    expect(needsExternalApprover("paid", self)).toBe(true);
+    expect(needsExternalApprover("draft", self)).toBe(false);
+    expect(needsExternalApprover("submit", self)).toBe(false);
+    expect(needsExternalApprover("approve", { ...self, selfPayee: false })).toBe(false);
+  });
+});
+
+describe("validateSaveOption", () => {
+  it("passes a draft and a submit through", () => {
+    expect(validateSaveOption(values, context)).toEqual({ success: true, data: { option: "draft" } });
+    expect(validateSaveOption({ ...values, option: "submit" }, context)).toEqual({
+      success: true,
+      data: { option: "submit" },
+    });
+  });
+
+  it("lets a draft wait for its receipts, but nothing past a draft", () => {
+    const none = { ...context, receiptCount: 0 };
+    expect(validateSaveOption(values, none).success).toBe(true);
+    for (const option of ["submit", "approve", "paid"] as const) {
+      const result = validateSaveOption({ ...values, option }, none);
+      expect(result.success ? {} : result.errors).toHaveProperty("receipts");
+    }
+    expect(validateSaveOption({ ...values, option: "submit" }, { ...none, noReceipt: true }).success).toBe(true);
+  });
+
+  it("records a payment with a trimmed reference and no approver for someone else", () => {
+    const result = validateSaveOption(
+      { ...values, option: "paid", payment_method: "check", payment_reference: "  1042 ", paid_date: "2026-09-22" },
+      context,
+    );
+    expect(result).toEqual({
+      success: true,
+      data: {
+        option: "paid",
+        external_approver: null,
+        payment_method: "check",
+        payment_reference: "1042",
+        paid_date: "2026-09-22",
+      },
+    });
+  });
+
+  it("stores a blank reference as null", () => {
+    const result = validateSaveOption({ ...values, option: "paid", payment_reference: "   " }, context);
+    expect(result.success && result.data.option === "paid" && result.data.payment_reference).toBeNull();
+  });
+
+  it("requires Approved by to approve or record your own as paid", () => {
+    const self = { ...context, selfPayee: true };
+    for (const option of ["approve", "paid"] as const) {
+      const result = validateSaveOption({ ...values, option, external_approver: "  " }, self);
+      expect(result).toEqual({ success: false, errors: { external_approver: "Enter who approved it." } });
+    }
+    expect(validateSaveOption({ ...values, option: "approve", external_approver: " Test Approver " }, self)).toEqual({
+      success: true,
+      data: { option: "approve", external_approver: "Test Approver" },
+    });
+  });
+
+  it("drops a leftover Approved by when it isn't needed", () => {
+    const result = validateSaveOption({ ...values, option: "approve", external_approver: "Test Approver" }, context);
+    expect(result).toEqual({ success: true, data: { option: "approve", external_approver: null } });
+  });
+
+  it("checks the paid date", () => {
+    const paidDateError = (paid_date: string, purchaseDate = context.purchaseDate) => {
+      const result = validateSaveOption({ ...values, option: "paid", paid_date }, { ...context, purchaseDate });
+      return result.success ? undefined : result.errors.paid_date;
+    };
+    expect(paidDateError("")).toBe("Enter the date it was paid.");
+    expect(paidDateError("2026-02-30")).toBe("Enter a valid date.");
+    expect(paidDateError("2026-09-26")).toBe("The paid date can't be in the future.");
+    expect(paidDateError("2026-09-19")).toBe("The paid date can't be before the purchase date.");
+    expect(paidDateError("2026-09-20")).toBeUndefined();
+    // An unfinished purchase date is its own error, so the paid date isn't blamed for it.
+    expect(paidDateError("2026-09-19", "")).toBeUndefined();
+  });
+
+  it("ignores the payment fields unless recording as paid", () => {
+    const result = validateSaveOption({ ...values, option: "approve", paid_date: "", payment_reference: "x".repeat(201) }, context);
+    expect(result.success).toBe(true);
+  });
+
+  it("limits the reference and approver lengths", () => {
+    const result = validateSaveOption(
+      { ...values, option: "paid", payment_reference: "x".repeat(201), external_approver: "x".repeat(101) },
+      { ...context, selfPayee: true },
+    );
+    expect(result.success ? {} : result.errors).toEqual({
+      payment_reference: "Keep the reference to 200 characters or fewer.",
+      external_approver: "Keep the name to 100 characters or fewer.",
+    });
+  });
+});
+
+describe("paidAtFor", () => {
+  it("uses the current time for a payment made today", () => {
+    const now = new Date("2026-09-25T22:15:00Z");
+    expect(paidAtFor("2026-09-25", now)).toBe("2026-09-25T22:15:00.000Z");
+  });
+
+  it("uses noon in LA for an earlier date", () => {
+    // 11:30 PM PDT on Sep 25 is Sep 26 in UTC, but it's still the 25th in LA.
+    const now = new Date("2026-09-26T06:30:00Z");
+    expect(paidAtFor("2026-09-24", now)).toBe("2026-09-24T19:00:00.000Z");
+    expect(paidAtFor("2026-09-25", now)).toBe("2026-09-26T06:30:00.000Z");
+  });
+});
+
+describe("lateSubmissionDays", () => {
+  it("warns only past the limit", () => {
+    expect(lateSubmissionDays("2026-07-27", "2026-09-25", 60)).toBeNull();
+    expect(lateSubmissionDays("2026-07-26", "2026-09-25", 60)).toBe(61);
+  });
+
+  it("stays quiet for a blank, invalid, or future date", () => {
+    expect(lateSubmissionDays("", "2026-09-25", 60)).toBeNull();
+    expect(lateSubmissionDays("2026-13-01", "2026-09-25", 60)).toBeNull();
+    expect(lateSubmissionDays("2026-09-26", "2026-09-25", 60)).toBeNull();
+  });
+});
+
+/** A stand-in for the Supabase client that records RPC calls. */
+function fakeClient(error: object | null = null) {
+  const rpc = vi.fn(async () => ({ data: null, error }));
+  return { client: { rpc } as unknown as SupabaseClient<Database>, rpc };
+}
+
+describe("applySaveAction", () => {
+  it("does nothing more for a draft", async () => {
+    const { client, rpc } = fakeClient();
+    expect(await applySaveAction(client, REQUEST_ID, { option: "draft" })).toBeNull();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("submits", async () => {
+    const { client, rpc } = fakeClient();
+    await applySaveAction(client, REQUEST_ID, { option: "submit" });
+    expect(rpc).toHaveBeenCalledWith("submit_request", { p_request_id: REQUEST_ID });
+  });
+
+  it("approves, sending Approved by only when there is one", async () => {
+    const { client, rpc } = fakeClient();
+    await applySaveAction(client, REQUEST_ID, { option: "approve", external_approver: null });
+    await applySaveAction(client, REQUEST_ID, { option: "approve", external_approver: "Test Approver" });
+    expect(rpc).toHaveBeenNthCalledWith(1, "approve_request", {
+      p_request_id: REQUEST_ID,
+      p_external_approver: undefined,
+    });
+    expect(rpc).toHaveBeenNthCalledWith(2, "approve_request", {
+      p_request_id: REQUEST_ID,
+      p_external_approver: "Test Approver",
+    });
+  });
+
+  it("records as paid with the method, reference, and paid time", async () => {
+    const { client, rpc } = fakeClient();
+    await applySaveAction(
+      client,
+      REQUEST_ID,
+      {
+        option: "paid",
+        external_approver: null,
+        payment_method: "cash_app",
+        payment_reference: null,
+        paid_date: "2026-09-01",
+      },
+      new Date("2026-09-25T18:00:00Z"),
+    );
+    expect(rpc).toHaveBeenCalledWith("record_as_paid", {
+      p_request_id: REQUEST_ID,
+      p_method: "cash_app",
+      p_reference: null,
+      p_paid_at: "2026-09-01T19:00:00.000Z",
+      p_external_approver: undefined,
+    });
+  });
+
+  it("returns the RPC's error", async () => {
+    const error = { code: "55000", message: "Only a draft or submitted reimbursement can be approved." };
+    const { client } = fakeClient(error);
+    expect(await applySaveAction(client, REQUEST_ID, { option: "approve", external_approver: null })).toBe(error);
+  });
+});
+
+describe("saveActionErrorMessage", () => {
+  it("shows the app's own messages", () => {
+    expect(
+      saveActionErrorMessage("paid", {
+        code: "23514",
+        message: "This reimbursement is paid to you, so enter the name of the person who approved it.",
+      }),
+    ).toBe(
+      "The draft is saved, but it wasn't recorded as paid. This reimbursement is paid to you, so enter the name of the person who approved it.",
+    );
+  });
+
+  it("hides raw database and network errors", () => {
+    const fallback = "The draft is saved, but it wasn't submitted. Check your connection and try again.";
+    expect(
+      saveActionErrorMessage("submit", {
+        code: "23514",
+        message: 'new row for relation "reimbursement_requests" violates check constraint "x"',
+      }),
+    ).toBe(fallback);
+    expect(saveActionErrorMessage("submit", { code: "42501", message: "permission denied for function submit_request" })).toBe(
+      fallback,
+    );
+    expect(saveActionErrorMessage("submit", { code: "PGRST301", message: "JWT expired." })).toBe(fallback);
+    expect(saveActionErrorMessage("submit", { message: "TypeError: Failed to fetch" })).toBe(fallback);
+    expect(saveActionErrorMessage("submit", null)).toBe(fallback);
+  });
+});

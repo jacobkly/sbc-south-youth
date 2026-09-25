@@ -27,6 +27,17 @@ const laDateParts = new Intl.DateTimeFormat("en-US", {
   day: "2-digit",
 });
 
+const laWallParts = new Intl.DateTimeFormat("en-US", {
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  second: "numeric",
+  hourCycle: "h23",
+});
+
 const dateLabel = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   month: "short",
@@ -160,4 +171,31 @@ export function formatDateTime(instant: Date | string): string {
   const date = typeof instant === "string" ? new Date(instant) : instant;
   if (Number.isNaN(date.getTime())) throw new RangeError(`Invalid instant: ${String(instant)}`);
   return dateTimeLabel.format(date);
+}
+
+/** Whole days from one date to another, negative when `to` is earlier. */
+export function daysBetween(from: IsoDate, to: IsoDate): number {
+  const a = parseIsoDate(from);
+  const b = parseIsoDate(to);
+  return Math.round((Date.UTC(b.year, b.month - 1, b.day) - Date.UTC(a.year, a.month - 1, a.day)) / 86_400_000);
+}
+
+/**
+ * Noon in Los Angeles on a date, as an instant. Used when only the day of
+ * something is known. Noon is never near a daylight saving change, so it
+ * always falls on the same LA date.
+ */
+export function laNoon(date: IsoDate): Date {
+  const { year, month, day } = parseIsoDate(date);
+  const guess = Date.UTC(year, month - 1, day, 12);
+  const wall = laWallTime(new Date(guess));
+  return new Date(guess - (wall - guess));
+}
+
+/** The LA wall-clock time of an instant, read as if it were UTC. */
+function laWallTime(instant: Date): number {
+  const parts = Object.fromEntries(
+    laWallParts.formatToParts(instant).map((part) => [part.type, Number(part.value)]),
+  );
+  return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour % 24, parts.minute, parts.second);
 }

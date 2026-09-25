@@ -94,5 +94,14 @@ export function usePendingReceipts() {
     update(key, { status });
   }
 
-  return { receipts, problems, add, remove, setStatus };
+  /** Starts over with no receipts, for entering another request. */
+  function clear() {
+    for (const receipt of receipts) removed.current.add(receipt.key);
+    for (const url of urls.current) URL.revokeObjectURL(url);
+    urls.current.clear();
+    setReceipts([]);
+    setProblems([]);
+  }
+
+  return { receipts, problems, add, remove, setStatus, clear };
 }
