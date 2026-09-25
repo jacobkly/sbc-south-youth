@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { FileXIcon, TriangleAlertIcon } from "lucide-react";
 import { ReceiptGallery } from "@/components/receipts/receipt-gallery";
 import { StatusBadge } from "@/components/requests/status-badge";
@@ -63,13 +64,14 @@ function detailRows(request: RequestDetailData): [string, string][] {
   return rows;
 }
 
-/** A request's summary, receipts, details, and history. Read-only. */
+/** A request's summary, receipts, details, and history, with room for the actions an admin can take. */
 export function RequestDetail({
   request,
   events,
   payeeNames,
   signed,
   late,
+  actions,
 }: {
   request: RequestDetailData;
   /** Oldest first. */
@@ -77,6 +79,8 @@ export function RequestDetail({
   payeeNames: ReadonlyMap<string, string>;
   signed: SignedReceiptUrls | null;
   late: LateWarning | null;
+  /** Shown under the summary. Left out for anyone who can only view. */
+  actions?: ReactNode;
 }) {
   const { receipts } = request;
 
@@ -101,6 +105,8 @@ export function RequestDetail({
           </AlertDescription>
         </Alert>
       )}
+
+      {actions}
 
       <section aria-labelledby="receipts-heading" className="space-y-3">
         <h2 id="receipts-heading" className="text-lg font-semibold">

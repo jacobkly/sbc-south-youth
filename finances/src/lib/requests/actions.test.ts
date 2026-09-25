@@ -2,13 +2,21 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import type { Database } from "@/lib/database.types";
 import {
+  appErrorMessage,
+  applyRequestAction,
   applySaveAction,
+  availableActions,
   availableSaveOptions,
+  blockedByReceiptRule,
+  isWrongStatusError,
   lateSubmissionDays,
   needsExternalApprover,
   paidAtFor,
   saveActionErrorMessage,
+  validateRequestAction,
   validateSaveOption,
+  type RequestActionContext,
+  type RequestActionValues,
   type SaveContext,
   type SaveOptionValues,
 } from "./actions";
@@ -268,5 +276,206 @@ describe("saveActionErrorMessage", () => {
     expect(saveActionErrorMessage("submit", { code: "PGRST301", message: "JWT expired." })).toBe(fallback);
     expect(saveActionErrorMessage("submit", { message: "TypeError: Failed to fetch" })).toBe(fallback);
     expect(saveActionErrorMessage("submit", null)).toBe(fallback);
+  });
+});
+
+describe("availableActions", () => {
+  const base: RequestActionContext = {
+    status: "draft",
+    selfPayee: false,
+    enteredBySelf: true,
+    allowExternalApproval: false,
+  };
+
+  it("offers each status's next steps", () => {
+    expect(availableActions(base)).toEqual(["submit", "approve", "record_paid"]);
+    expect(availableActions({ ...base, status: "submitted" })).toEqual(["approve", "request_info", "reject", "cancel"]);
+    expect(availableActions({ ...base, status: "needs_info" })).toEqual(["submit", "reject", "cancel"]);
+    expect(availableActions({ ...base, status: "approved" })).toEqual(["mark_paid", "unapprove"]);
+    expect(availableActions({ ...base, status: "paid" })).toEqual(["unmark_paid"]);
+  });
+
+  it("offers nothing once rejected or cancelled", () => {
+    expect(availableActions({ ...base, status: "rejected" })).toEqual([]);
+    expect(availableActions({ ...base, status: "cancelled" })).toEqual([]);
+  });
+
+  it("lets only whoever entered it, or the payee, cancel", () => {
+    const other = { ...base, status: "submitted" as const, enteredBySelf: false };
+    expect(availableActions(other)).not.toContain("cancel");
+    expect(availableActions({ ...other, selfPayee: true, allowExternalApproval: true })).toContain("cancel");
+    expect(availableActions({ ...other, status: "needs_info" })).toEqual(["submit", "reject"]);
+  });
+
+  it("hides approving your own reimbursement unless external approval is on", () => {
+    const own = { ...base, selfPayee: true };
+    expect(availableActions(own)).toEqual(["submit"]);
+    expect(availableActions({ ...own, status: "submitted" })).toEqual(["request_info", "reject", "cancel"]);
+    expect(availableActions({ ...own, allowExternalApproval: true })).toEqual(["submit", "approve", "record_paid"]);
+    // Paying out an approval that already happened is fine.
+    expect(availableActions({ ...own, status: "approved" })).toEqual(["mark_paid", "unapprove"]);
+  });
+});
+
+describe("blockedByReceiptRule", () => {
+  it("blocks sending on a request with no receipt and no exception", () => {
+    const none = { receiptCount: 0, noReceipt: false };
+    expect(blockedByReceiptRule("submit", none)).toBe(true);
+    expect(blockedByReceiptRule("approve", none)).toBe(true);
+    expect(blockedByReceiptRule("record_paid", none)).toBe(true);
+    expect(blockedByReceiptRule("reject", none)).toBe(false);
+    expect(blockedByReceiptRule("submit", { receiptCount: 0, noReceipt: true })).toBe(false);
+    expect(blockedByReceiptRule("submit", { receiptCount: 2, noReceipt: false })).toBe(false);
+  });
+});
+
+describe("validateRequestAction", () => {
+  const blank: RequestActionValues = {
+    note: "",
+    external_approver: "",
+    payment_method: "check",
+    payment_reference: "",
+    paid_date: "2026-09-25",
+  };
+
+  it("needs nothing more to submit or cancel", () => {
+    expect(validateRequestAction("submit", blank, context)).toEqual({ success: true, data: { action: "submit" } });
+    expect(validateRequestAction("cancel", blank, context)).toEqual({ success: true, data: { action: "cancel" } });
+  });
+
+  it("checks the receipt rule before sending it on", () => {
+    const noReceipts = { ...context, receiptCount: 0 };
+    expect(validateRequestAction("submit", blank, noReceipts)).toMatchObject({
+      success: false,
+      errors: { receipts: expect.any(String) },
+    });
+    expect(validateRequestAction("reject", { ...blank, note: "Duplicate." }, noReceipts).success).toBe(true);
+  });
+
+  it("requires a trimmed note of up to 1,000 characters", () => {
+    for (const action of ["request_info", "reject", "unapprove", "unmark_paid"] as const) {
+      expect(validateRequestAction(action, { ...blank, note: "   " }, context)).toEqual({
+        success: false,
+        errors: { note: "Add a note saying why." },
+      });
+      expect(validateRequestAction(action, { ...blank, note: "  Wrong amount.  " }, context)).toEqual({
+        success: true,
+        data: { action, note: "Wrong amount." },
+      });
+    }
+    expect(validateRequestAction("reject", { ...blank, note: ` ${"x".repeat(1000)} ` }, context).success).toBe(true);
+    expect(validateRequestAction("reject", { ...blank, note: "x".repeat(1001) }, context)).toEqual({
+      success: false,
+      errors: { note: "Keep the note to 1,000 characters or fewer." },
+    });
+  });
+
+  it("marks paid with the payment fields and no approver", () => {
+    expect(
+      validateRequestAction("mark_paid", { ...blank, payment_reference: " 1042 ", external_approver: "Left over" }, context),
+    ).toEqual({
+      success: true,
+      data: { action: "mark_paid", payment_method: "check", payment_reference: "1042", paid_date: "2026-09-25" },
+    });
+  });
+
+  it("checks the paid date when marking or recording paid", () => {
+    expect(validateRequestAction("mark_paid", { ...blank, paid_date: "2026-09-26" }, context)).toEqual({
+      success: false,
+      errors: { paid_date: "The paid date can't be in the future." },
+    });
+    expect(validateRequestAction("record_paid", { ...blank, paid_date: "2026-09-19" }, context)).toEqual({
+      success: false,
+      errors: { paid_date: "The paid date can't be before the purchase date." },
+    });
+    expect(validateRequestAction("approve", { ...blank, paid_date: "" }, context).success).toBe(true);
+  });
+
+  it("requires Approved by to approve or record your own as paid", () => {
+    const own = { ...context, selfPayee: true };
+    expect(validateRequestAction("approve", blank, own)).toEqual({
+      success: false,
+      errors: { external_approver: "Enter who approved it." },
+    });
+    expect(validateRequestAction("record_paid", { ...blank, external_approver: " Test Approver " }, own)).toEqual({
+      success: true,
+      data: {
+        action: "record_paid",
+        external_approver: "Test Approver",
+        payment_method: "check",
+        payment_reference: null,
+        paid_date: "2026-09-25",
+      },
+    });
+    expect(validateRequestAction("mark_paid", blank, own).success).toBe(true);
+  });
+});
+
+describe("applyRequestAction", () => {
+  const now = new Date("2026-09-25T18:00:00Z");
+
+  it("sends each note action to its function", async () => {
+    const { client, rpc } = fakeClient();
+    await applyRequestAction(client, REQUEST_ID, { action: "request_info", note: "Need the receipt." });
+    await applyRequestAction(client, REQUEST_ID, { action: "reject", note: "Duplicate." });
+    await applyRequestAction(client, REQUEST_ID, { action: "unapprove", note: "Wrong amount." });
+    await applyRequestAction(client, REQUEST_ID, { action: "unmark_paid", note: "Payment bounced." });
+    expect(rpc.mock.calls).toEqual([
+      ["request_info", { p_request_id: REQUEST_ID, p_note: "Need the receipt." }],
+      ["reject_request", { p_request_id: REQUEST_ID, p_note: "Duplicate." }],
+      ["unapprove_request", { p_request_id: REQUEST_ID, p_note: "Wrong amount." }],
+      ["unmark_paid", { p_request_id: REQUEST_ID, p_note: "Payment bounced." }],
+    ]);
+  });
+
+  it("cancels", async () => {
+    const { client, rpc } = fakeClient();
+    await applyRequestAction(client, REQUEST_ID, { action: "cancel" });
+    expect(rpc).toHaveBeenCalledWith("cancel_request", { p_request_id: REQUEST_ID });
+  });
+
+  it("marks paid, leaving out a blank reference", async () => {
+    const { client, rpc } = fakeClient();
+    await applyRequestAction(
+      client,
+      REQUEST_ID,
+      { action: "mark_paid", payment_method: "cash", payment_reference: null, paid_date: "2026-09-25" },
+      now,
+    );
+    await applyRequestAction(
+      client,
+      REQUEST_ID,
+      { action: "mark_paid", payment_method: "check", payment_reference: "1042", paid_date: "2026-09-24" },
+      now,
+    );
+    expect(rpc).toHaveBeenNthCalledWith(1, "mark_paid", {
+      p_request_id: REQUEST_ID,
+      p_method: "cash",
+      p_reference: undefined,
+      p_paid_at: "2026-09-25T18:00:00.000Z",
+    });
+    expect(rpc).toHaveBeenNthCalledWith(2, "mark_paid", {
+      p_request_id: REQUEST_ID,
+      p_method: "check",
+      p_reference: "1042",
+      p_paid_at: "2026-09-24T19:00:00.000Z",
+    });
+  });
+});
+
+describe("appErrorMessage", () => {
+  it("passes the app's sentences through and hides the rest", () => {
+    const wrongStatus = { code: "55000", message: "Only an approved reimbursement can be marked as paid." };
+    expect(appErrorMessage(wrongStatus)).toBe(wrongStatus.message);
+    expect(appErrorMessage({ code: "22023", message: "Add a note explaining why." })).toBe("Add a note explaining why.");
+    expect(appErrorMessage({ code: "42501", message: "permission denied for table payees" })).toBeNull();
+    expect(appErrorMessage({ message: "TypeError: Failed to fetch" })).toBeNull();
+    expect(appErrorMessage(null)).toBeNull();
+  });
+
+  it("spots a request that changed since the page loaded", () => {
+    expect(isWrongStatusError({ code: "55000", message: "x" })).toBe(true);
+    expect(isWrongStatusError({ code: "42501", message: "x" })).toBe(false);
+    expect(isWrongStatusError(null)).toBe(false);
   });
 });

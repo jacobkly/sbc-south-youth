@@ -1,27 +1,23 @@
 "use client";
 
-import type { ChangeEvent } from "react";
 import { InfoIcon, TriangleAlertIcon } from "lucide-react";
-import { describedBy, FormField } from "@/components/form-field";
+import { FormField } from "@/components/form-field";
+import { ApproverField, paymentFieldId, PaymentFields, TILE } from "@/components/requests/payment-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { isIsoDate, type IsoDate } from "@/lib/dates";
+import type { IsoDate } from "@/lib/dates";
 import {
-  MAX_EXTERNAL_APPROVER,
-  MAX_PAYMENT_REFERENCE,
-  PAYMENT_METHOD_LABELS,
-  PAYMENT_METHODS,
   SAVE_OPTION_LABELS,
-  type PaymentMethod,
   type SaveOption,
   type SaveOptionErrors,
   type SaveOptionValues,
 } from "@/lib/requests/actions";
-import { MIN_PURCHASE_DATE } from "@/lib/requests/schema";
 
-export const saveFieldId = (key: keyof SaveOptionValues) => `save-${key}`;
+const ID_PREFIX = "save";
+
+export const saveFieldId = (key: keyof SaveOptionValues) =>
+  key === "option" ? `${ID_PREFIX}-option` : paymentFieldId(ID_PREFIX, key);
 
 const optionItemId = (option: SaveOption) => `${saveFieldId("option")}-${option}`;
 
@@ -31,9 +27,6 @@ const OPTION_HINTS: Record<SaveOption, string> = {
   approve: "Approves it now, to pay later.",
   paid: "Approves it and records the payment in one step, like for past payments.",
 };
-
-const TILE =
-  "h-11 cursor-pointer rounded-lg border px-3 text-base font-normal has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-muted md:text-sm";
 
 /**
  * How to save a new request: as a draft, submitted, approved, or already
@@ -69,20 +62,6 @@ export function SaveOptions({
 }) {
   const { option } = values;
   const optionId = saveFieldId("option");
-  const methodId = saveFieldId("payment_method");
-
-  function textProps(key: "external_approver" | "payment_reference" | "paid_date", hint?: boolean) {
-    const id = saveFieldId(key);
-    return {
-      id,
-      name: key,
-      value: values[key],
-      disabled,
-      "aria-invalid": errors[key] ? true : undefined,
-      "aria-describedby": describedBy(id, errors[key], hint),
-      onChange: (event: ChangeEvent<HTMLInputElement>) => onChange(key, event.target.value),
-    };
-  }
 
   return (
     <div className="space-y-5">
@@ -124,68 +103,25 @@ export function SaveOptions({
       )}
 
       {option === "paid" && (
-        <>
-          <FormField id={methodId} label="Paid with" group>
-            <RadioGroup
-              value={values.payment_method}
-              onValueChange={(value) => onChange("payment_method", value as PaymentMethod)}
-              aria-labelledby={`${methodId}-label`}
-              disabled={disabled}
-              className="grid-cols-2 gap-3"
-            >
-              {PAYMENT_METHODS.map((method) => (
-                <Label key={method} htmlFor={`${methodId}-${method}`} className={TILE}>
-                  <RadioGroupItem id={`${methodId}-${method}`} value={method} />
-                  {PAYMENT_METHOD_LABELS[method]}
-                </Label>
-              ))}
-            </RadioGroup>
-          </FormField>
-
-          <div className="grid grid-cols-2 gap-3">
-            <FormField id={saveFieldId("paid_date")} label="Paid date" error={errors.paid_date}>
-              <Input
-                {...textProps("paid_date")}
-                type="date"
-                min={isIsoDate(purchaseDate) && purchaseDate <= today ? purchaseDate : MIN_PURCHASE_DATE}
-                max={today}
-                className="h-11 [&::-webkit-date-and-time-value]:text-left"
-              />
-            </FormField>
-
-            <FormField
-              id={saveFieldId("payment_reference")}
-              label="Reference"
-              optional
-              hint="Like a check number."
-              error={errors.payment_reference}
-            >
-              <Input
-                {...textProps("payment_reference", true)}
-                autoComplete="off"
-                maxLength={MAX_PAYMENT_REFERENCE}
-                className="h-11"
-              />
-            </FormField>
-          </div>
-        </>
+        <PaymentFields
+          idPrefix={ID_PREFIX}
+          values={values}
+          onChange={onChange}
+          errors={errors}
+          purchaseDate={purchaseDate}
+          today={today}
+          disabled={disabled}
+        />
       )}
 
       {approverRequired && (
-        <FormField
-          id={saveFieldId("external_approver")}
-          label="Approved by"
-          hint="This is paid to you, so enter who approved it."
+        <ApproverField
+          idPrefix={ID_PREFIX}
+          value={values.external_approver}
+          onChange={(value) => onChange("external_approver", value)}
           error={errors.external_approver}
-        >
-          <Input
-            {...textProps("external_approver", true)}
-            autoComplete="off"
-            autoCapitalize="words"
-            maxLength={MAX_EXTERNAL_APPROVER}
-            className="h-11"
-          />
-        </FormField>
+          disabled={disabled}
+        />
       )}
     </div>
   );
