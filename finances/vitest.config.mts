@@ -7,5 +7,7 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.ts"],
+    // Not Los Angeles, so any accidental use of the machine's local time fails.
+    env: { TZ: "Asia/Tokyo" },
   },
 });
