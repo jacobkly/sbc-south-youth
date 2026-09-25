@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  addDays,
   daysBetween,
   formatDate,
   formatDateTime,
@@ -12,6 +13,7 @@ import {
   periodLabel,
   periodRange,
   recentMonths,
+  shiftPeriod,
   todayInLA,
 } from "./dates";
 
@@ -159,6 +161,24 @@ describe("recentMonths", () => {
   });
 });
 
+describe("shiftPeriod", () => {
+  it("steps months across year ends", () => {
+    expect(shiftPeriod({ kind: "month", year: 2026, month: 1 }, -1)).toEqual({ kind: "month", year: 2025, month: 12 });
+    expect(shiftPeriod({ kind: "month", year: 2026, month: 12 }, 1)).toEqual({ kind: "month", year: 2027, month: 1 });
+    expect(shiftPeriod({ kind: "month", year: 2026, month: 9 }, -14)).toEqual({ kind: "month", year: 2025, month: 7 });
+  });
+
+  it("steps quarters and years", () => {
+    expect(shiftPeriod({ kind: "quarter", year: 2026, quarter: 1 }, -1)).toEqual({
+      kind: "quarter",
+      year: 2025,
+      quarter: 4,
+    });
+    expect(shiftPeriod({ kind: "quarter", year: 2026, quarter: 4 }, 1)).toEqual({ kind: "quarter", year: 2027, quarter: 1 });
+    expect(shiftPeriod({ kind: "year", year: 2026 }, -2)).toEqual({ kind: "year", year: 2024 });
+  });
+});
+
 describe("labels", () => {
   it("labels periods", () => {
     expect(periodLabel({ kind: "month", year: 2026, month: 9 })).toBe("September 2026");
@@ -191,6 +211,16 @@ describe("daysBetween", () => {
   it("isn't thrown off by daylight saving changes", () => {
     expect(daysBetween("2026-03-07", "2026-03-09")).toBe(2);
     expect(daysBetween("2026-10-31", "2026-11-02")).toBe(2);
+  });
+});
+
+describe("addDays", () => {
+  it("moves across months, years, and leap days", () => {
+    expect(addDays("2026-09-30", 1)).toBe("2026-10-01");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+    expect(addDays("2028-02-28", 1)).toBe("2028-02-29");
+    expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+    expect(addDays("2026-09-25", 0)).toBe("2026-09-25");
   });
 });
 

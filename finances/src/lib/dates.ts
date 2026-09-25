@@ -17,6 +17,9 @@ export type Period =
 
 export type PeriodKind = Period["kind"];
 
+/** A month, quarter, or year: a period that has a previous and next one. */
+export type CalendarPeriod = Exclude<Period, { kind: "custom" }>;
+
 export type MonthPeriod = Extract<Period, { kind: "month" }>;
 
 /** Inclusive date range. */
@@ -141,7 +144,7 @@ export function periodRange(period: Period): DateRange {
 }
 
 /** The month, quarter, or year (calendar year) that contains a date. */
-export function periodContaining(kind: Exclude<PeriodKind, "custom">, date: IsoDate): Period {
+export function periodContaining(kind: CalendarPeriod["kind"], date: IsoDate): CalendarPeriod {
   const { year, month } = parseIsoDate(date);
   switch (kind) {
     case "month":
@@ -150,6 +153,22 @@ export function periodContaining(kind: Exclude<PeriodKind, "custom">, date: IsoD
       return { kind, year, quarter: Math.ceil(month / 3) };
     case "year":
       return { kind, year };
+  }
+}
+
+/** The month, quarter, or year `steps` away, e.g. -1 for the one before. */
+export function shiftPeriod(period: CalendarPeriod, steps: number): CalendarPeriod {
+  switch (period.kind) {
+    case "month": {
+      const index = period.year * 12 + (period.month - 1) + steps;
+      return { kind: "month", year: Math.floor(index / 12), month: (index % 12) + 1 };
+    }
+    case "quarter": {
+      const index = period.year * 4 + (period.quarter - 1) + steps;
+      return { kind: "quarter", year: Math.floor(index / 4), quarter: (index % 4) + 1 };
+    }
+    case "year":
+      return { kind: "year", year: period.year + steps };
   }
 }
 
@@ -194,6 +213,13 @@ export function formatDateTime(instant: Date | string): string {
   const date = typeof instant === "string" ? new Date(instant) : instant;
   if (Number.isNaN(date.getTime())) throw new RangeError(`Invalid instant: ${String(instant)}`);
   return dateTimeLabel.format(date);
+}
+
+/** The date `days` later, or earlier when negative. */
+export function addDays(date: IsoDate, days: number): IsoDate {
+  const { year, month, day } = parseIsoDate(date);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return toIsoDate(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate());
 }
 
 /** Whole days from one date to another, negative when `to` is earlier. */

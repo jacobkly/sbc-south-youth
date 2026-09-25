@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/lib/database.types";
+import { addDays, laMidnight, periodRange } from "@/lib/dates";
+import { REPORT_STATUSES, type ReportFilters } from "@/lib/reports/filters";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import {
   MAX_QUEUE_PAGES,
   QUEUE_PAGE_SIZE,
@@ -12,6 +15,7 @@ import {
 
 const QUEUE_COLUMNS =
   "id, request_number, status, type, amount_cents, purchase_date, vendor, no_receipt, payee:payees(full_name)";
+const REPORT_COLUMNS = `${QUEUE_COLUMNS}, paid_at` as const;
 
 /** A request as the queue lists it. */
 export type QueueRow = Pick<
@@ -96,4 +100,33 @@ export async function loadPayeeRequests(
 
   if (error) throw error;
   return { rows: data, total: count ?? data.length };
+}
+
+/** A request as a report lists it. */
+export type ReportRow = QueueRow & Pick<Tables<"reimbursement_requests">, "paid_at">;
+
+/**
+ * Every request in a report, newest first. By paid date, only paid
+ * requests count, and the period is the LA days it covers. Throws if a
+ * query fails.
+ */
+export async function loadReport(supabase: SupabaseClient<Database>, filters: ReportFilters): Promise<ReportRow[]> {
+  const { start, end } = periodRange(filters.period);
+  return fetchAll((from, to) => {
+    const query = supabase.from("reimbursement_requests").select(REPORT_COLUMNS);
+    if (filters.basis === "paid") {
+      return query
+        .eq("status", "paid")
+        .gte("paid_at", laMidnight(start).toISOString())
+        .lt("paid_at", laMidnight(addDays(end, 1)).toISOString())
+        .order("paid_at", { ascending: false })
+        .order("request_number", { ascending: false })
+        .range(from, to);
+    }
+    const inPeriod = query.gte("purchase_date", start).lte("purchase_date", end);
+    return (filters.allStatuses ? inPeriod : inPeriod.in("status", REPORT_STATUSES))
+      .order("purchase_date", { ascending: false })
+      .order("request_number", { ascending: false })
+      .range(from, to);
+  });
 }
