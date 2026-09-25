@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AccountForm } from "@/components/account/account-form";
+import { PasswordForm } from "@/components/account/password-form";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -27,6 +28,15 @@ export default async function AccountPage() {
       </dl>
 
       <AccountForm userId={user.id} fullName={user.full_name} />
+
+      <Separator />
+
+      <section className="space-y-4" aria-labelledby="password-heading">
+        <h2 id="password-heading" className="text-lg font-semibold">
+          Password
+        </h2>
+        <PasswordForm email={user.email} />
+      </section>
 
       <Separator />
 

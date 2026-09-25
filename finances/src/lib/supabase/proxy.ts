@@ -25,13 +25,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  // Supabase sends email links to the site URL when it won't use the
-  // requested redirect. Finish those sign-ins at the callback too.
-  const params = request.nextUrl.searchParams;
-  if (pathname === "/" && (params.has("code") || params.has("error_code"))) {
-    return NextResponse.redirect(new URL(`/auth/callback${search}`, request.url));
-  }
-
   let response = NextResponse.next({ request });
   let cacheHeaders: Record<string, string> = {};
   const { url, key } = supabaseEnv();
