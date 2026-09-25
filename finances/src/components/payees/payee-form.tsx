@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, type ChangeEvent, type ReactNode } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CircleAlertIcon } from "lucide-react";
+import { describedBy, FormField } from "@/components/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { PAYEE_COLUMNS, type PayeeRow } from "@/lib/payees/columns";
@@ -59,50 +59,22 @@ export function PayeeSheet({ payee, onClose }: { payee: PayeeRow | "new" | null;
   );
 }
 
-function Field({
-  id,
-  label,
-  optional,
-  hint,
-  error,
-  children,
-}: {
-  id: string;
-  label: string;
-  optional?: boolean;
-  hint?: string;
-  error?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>
-        {label}
-        {optional && <span className="font-normal text-muted-foreground">(optional)</span>}
-      </Label>
-      {children}
-      {error ? (
-        <p id={`${id}-error`} className="text-sm text-destructive">
-          {error}
-        </p>
-      ) : (
-        hint && (
-          <p id={`${id}-hint`} className="text-xs text-muted-foreground">
-            {hint}
-          </p>
-        )
-      )}
-    </div>
-  );
-}
-
 /**
  * The payee fields. Used in the payees sheet, and reusable anywhere a payee
- * gets added inline. Calls onSaved with the saved row.
+ * gets added inline. Calls onSaved with the saved row. `defaultName` prefills
+ * the name of a new payee.
  */
-export function PayeeForm({ payee, onSaved }: { payee: PayeeRow | null; onSaved: (saved: PayeeRow) => void }) {
+export function PayeeForm({
+  payee,
+  defaultName = "",
+  onSaved,
+}: {
+  payee: PayeeRow | null;
+  defaultName?: string;
+  onSaved: (saved: PayeeRow) => void;
+}) {
   const [values, setValues] = useState<PayeeFormValues>({
-    full_name: payee?.full_name ?? "",
+    full_name: payee?.full_name ?? defaultName,
     email: payee?.email ?? "",
     payment_handle: payee?.payment_handle ?? "",
     notes: payee?.notes ?? "",
@@ -113,12 +85,11 @@ export function PayeeForm({ payee, onSaved }: { payee: PayeeRow | null; onSaved:
 
   function fieldProps(key: keyof PayeeFormValues, hint?: boolean) {
     const id = `payee-${key}`;
-    const describedBy = errors[key] ? `${id}-error` : hint ? `${id}-hint` : undefined;
     return {
       id,
       value: values[key],
       "aria-invalid": errors[key] ? true : undefined,
-      "aria-describedby": describedBy,
+      "aria-describedby": describedBy(id, errors[key], hint),
       onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setValues((current) => ({ ...current, [key]: event.target.value }));
         setErrors((current) => ({ ...current, [key]: undefined }));
@@ -190,11 +161,11 @@ export function PayeeForm({ payee, onSaved }: { payee: PayeeRow | null; onSaved:
         </Alert>
       )}
 
-      <Field id="payee-full_name" label="Name" error={errors.full_name}>
+      <FormField id="payee-full_name" label="Name" error={errors.full_name}>
         <Input {...fieldProps("full_name")} autoComplete="off" required maxLength={100} className="h-11" />
-      </Field>
+      </FormField>
 
-      <Field id="payee-email" label="Email" optional error={errors.email}>
+      <FormField id="payee-email" label="Email" optional error={errors.email}>
         <Input
           {...fieldProps("email")}
           type="email"
@@ -205,9 +176,9 @@ export function PayeeForm({ payee, onSaved }: { payee: PayeeRow | null; onSaved:
           maxLength={254}
           className="h-11"
         />
-      </Field>
+      </FormField>
 
-      <Field
+      <FormField
         id="payee-payment_handle"
         label="Payment handle"
         optional
@@ -222,11 +193,11 @@ export function PayeeForm({ payee, onSaved }: { payee: PayeeRow | null; onSaved:
           maxLength={100}
           className="h-11"
         />
-      </Field>
+      </FormField>
 
-      <Field id="payee-notes" label="Notes" optional error={errors.notes}>
+      <FormField id="payee-notes" label="Notes" optional error={errors.notes}>
         <Textarea {...fieldProps("notes")} rows={3} maxLength={1000} />
-      </Field>
+      </FormField>
 
       <Button type="submit" className="h-11 w-full" disabled={pending !== null}>
         {pending === "save" ? "Saving…" : payee ? "Save changes" : "Add payee"}

@@ -8,14 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { PayeeRow } from "@/lib/payees/columns";
+import { payeeMatches, payeeSearchNeedle } from "@/lib/payees/search";
 
 type StatusFilter = "active" | "inactive";
-
-function matches(payee: PayeeRow, needle: string): boolean {
-  return [payee.full_name, payee.email, payee.payment_handle].some((value) =>
-    value?.toLowerCase().includes(needle),
-  );
-}
 
 /**
  * Payees with search and an active/inactive filter. There are few enough
@@ -26,14 +21,14 @@ export function PayeeList({ payees, canEdit }: { payees: PayeeRow[]; canEdit: bo
   const [status, setStatus] = useState<StatusFilter>("active");
   const [editing, setEditing] = useState<PayeeRow | "new" | null>(null);
 
-  const needle = query.trim().toLowerCase();
+  const needle = payeeSearchNeedle(query);
   const byStatus = {
     active: payees.filter((payee) => payee.is_active),
     inactive: payees.filter((payee) => !payee.is_active),
   };
 
   function renderList(filter: StatusFilter) {
-    const visible = needle ? byStatus[filter].filter((payee) => matches(payee, needle)) : byStatus[filter];
+    const visible = byStatus[filter].filter((payee) => payeeMatches(payee, needle));
 
     if (visible.length === 0) {
       return (
