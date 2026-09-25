@@ -238,7 +238,7 @@ describe("applySaveAction", () => {
     expect(rpc).toHaveBeenCalledWith("record_as_paid", {
       p_request_id: REQUEST_ID,
       p_method: "cash_app",
-      p_reference: null,
+      p_reference: "",
       p_paid_at: "2026-09-01T19:00:00.000Z",
       p_external_approver: undefined,
     });

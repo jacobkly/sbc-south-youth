@@ -408,7 +408,8 @@ export async function applyRequestAction(
         await supabase.rpc("record_as_paid", {
           p_request_id,
           p_method: input.payment_method,
-          p_reference: input.payment_reference,
+          // The argument is required. The function saves an empty reference as null.
+          p_reference: input.payment_reference ?? "",
           p_paid_at: paidAtFor(input.paid_date, now),
           p_external_approver: input.external_approver ?? undefined,
         })

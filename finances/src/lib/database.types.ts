@@ -7,6 +7,36 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       app_settings: {
@@ -347,6 +377,10 @@ export type Database = {
         Args: { p_external_approver?: string; p_request_id: string }
         Returns: undefined
       }
+      assert_receipt_rule: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
       cancel_request: { Args: { p_request_id: string }; Returns: undefined }
       current_app_role: {
         Args: never
@@ -356,6 +390,41 @@ export type Database = {
       link_payee: {
         Args: { p_payee_id: string; p_user_id: string }
         Returns: undefined
+      }
+      lock_request: {
+        Args: { p_request_id: string }
+        Returns: {
+          admin_note: string | null
+          amount_cents: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          description: string
+          event_name: string | null
+          external_approver: string | null
+          id: string
+          no_receipt: boolean
+          no_receipt_reason: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payee_id: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference: string | null
+          purchase_date: string
+          request_number: number
+          status: Database["public"]["Enums"]["request_status"]
+          submitted_at: string | null
+          type: Database["public"]["Enums"]["reimbursement_type"]
+          updated_at: string
+          vendor: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reimbursement_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       mark_paid: {
         Args: {
@@ -371,7 +440,7 @@ export type Database = {
           p_external_approver?: string
           p_method: Database["public"]["Enums"]["payment_method"]
           p_paid_at: string
-          p_reference: string | null
+          p_reference: string
           p_request_id: string
         }
         Returns: undefined
@@ -384,6 +453,7 @@ export type Database = {
         Args: { p_note: string; p_request_id: string }
         Returns: undefined
       }
+      require_note: { Args: { p_note: string }; Returns: string }
       set_member_active: {
         Args: { p_is_active: boolean; p_user_id: string }
         Returns: undefined
@@ -434,12 +504,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -463,11 +533,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -488,11 +558,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -513,11 +583,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -526,7 +596,27 @@ export type Enums<
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       payment_method: ["cash_app", "bank_transfer", "check", "cash", "other"],
