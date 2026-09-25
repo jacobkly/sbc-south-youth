@@ -5,6 +5,7 @@ import {
   formatDateTime,
   isIsoDate,
   laDateOf,
+  laMidnight,
   laNoon,
   periodContaining,
   periodLabel,
@@ -177,5 +178,23 @@ describe("laNoon", () => {
     expect(laNoon("2026-03-08").toISOString()).toBe("2026-03-08T19:00:00.000Z");
     expect(laNoon("2026-11-01").toISOString()).toBe("2026-11-01T20:00:00.000Z");
     expect(laDateOf(laNoon("2026-03-08"))).toBe("2026-03-08");
+  });
+});
+
+describe("laMidnight", () => {
+  it("is the start of the LA date, in both daylight and standard time", () => {
+    expect(laMidnight("2026-01-01").toISOString()).toBe("2026-01-01T08:00:00.000Z");
+    expect(laMidnight("2026-07-01").toISOString()).toBe("2026-07-01T07:00:00.000Z");
+  });
+
+  it("uses the offset in effect at midnight on daylight saving change days", () => {
+    expect(laMidnight("2026-03-08").toISOString()).toBe("2026-03-08T08:00:00.000Z");
+    expect(laMidnight("2026-11-01").toISOString()).toBe("2026-11-01T07:00:00.000Z");
+  });
+
+  it("is the first instant of the date", () => {
+    const start = laMidnight("2027-01-01");
+    expect(laDateOf(start)).toBe("2027-01-01");
+    expect(laDateOf(new Date(start.getTime() - 1))).toBe("2026-12-31");
   });
 });

@@ -1,25 +1,40 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronRightIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { PayeeSheet } from "@/components/payees/payee-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatCents } from "@/lib/money";
 import type { PayeeRow } from "@/lib/payees/columns";
 import { payeeMatches, payeeSearchNeedle } from "@/lib/payees/search";
+import { cn } from "@/lib/utils";
 
 type StatusFilter = "active" | "inactive";
 
 /**
  * Payees with search and an active/inactive filter. There are few enough
  * payees to filter in the browser, which keeps search instant as you type.
+ * Each row shows what the payee was paid this year and opens their page.
  */
-export function PayeeList({ payees, canEdit }: { payees: PayeeRow[]; canEdit: boolean }) {
+export function PayeeList({
+  payees,
+  canEdit,
+  yearTotals,
+  year,
+}: {
+  payees: PayeeRow[];
+  canEdit: boolean;
+  /** Cents paid to each payee id during `year`. */
+  yearTotals: Record<string, number>;
+  year: number;
+}) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("active");
-  const [editing, setEditing] = useState<PayeeRow | "new" | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const needle = payeeSearchNeedle(query);
   const byStatus = {
@@ -41,7 +56,7 @@ export function PayeeList({ payees, canEdit }: { payees: PayeeRow[]; canEdit: bo
             <div className="space-y-3">
               <p>No payees yet.</p>
               {canEdit && (
-                <Button className="h-11 px-5" onClick={() => setEditing("new")}>
+                <Button className="h-11 px-5" onClick={() => setAdding(true)}>
                   <PlusIcon />
                   Add the first payee
                 </Button>
@@ -53,40 +68,41 @@ export function PayeeList({ payees, canEdit }: { payees: PayeeRow[]; canEdit: bo
     }
 
     return (
-      <ul className="divide-y rounded-lg border">
-        {visible.map((payee) => {
-          const details = [payee.payment_handle, payee.email].filter(Boolean).join(" · ");
-          const content = (
-            <>
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-2 font-medium">
-                  <span className="truncate">{payee.full_name}</span>
-                  {payee.user_id && <Badge variant="secondary">Has account</Badge>}
-                </p>
-                <p className="truncate text-sm text-muted-foreground">{details || "No contact info"}</p>
-              </div>
-              {canEdit && <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
-            </>
-          );
+      <>
+        {/* Screen readers get the year on each amount instead. */}
+        <p className="mb-1 pr-11 text-right text-xs text-muted-foreground" aria-hidden>
+          Paid in {year}
+        </p>
+        <ul className="divide-y rounded-lg border">
+          {visible.map((payee) => {
+            const details = [payee.payment_handle, payee.email].filter(Boolean).join(" · ");
+            const paid = yearTotals[payee.id] ?? 0;
 
-          return (
-            <li key={payee.id}>
-              {canEdit ? (
-                <button
-                  type="button"
-                  className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left outline-none hover:bg-muted focus-visible:bg-muted"
-                  aria-label={`Edit ${payee.full_name}`}
-                  onClick={() => setEditing(payee)}
+            return (
+              <li key={payee.id}>
+                <Link
+                  href={`/admin/payees/${payee.id}`}
+                  className="flex min-h-16 items-center gap-3 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted"
                 >
-                  {content}
-                </button>
-              ) : (
-                <div className="flex min-h-16 items-center gap-3 px-4 py-3">{content}</div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{payee.full_name}</p>
+                    {/* The badge sits on this line so the name gets the full width on a phone. */}
+                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                      {payee.user_id && <Badge variant="secondary">Has account</Badge>}
+                      <span className="truncate">{details || "No contact info"}</span>
+                    </p>
+                  </div>
+                  <span className={cn("shrink-0 text-sm tabular-nums", paid === 0 && "text-muted-foreground")}>
+                    {formatCents(paid)}
+                    <span className="sr-only"> paid in {year}</span>
+                  </span>
+                  <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </>
     );
   }
 
@@ -95,7 +111,7 @@ export function PayeeList({ payees, canEdit }: { payees: PayeeRow[]; canEdit: bo
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Payees</h1>
         {canEdit && (
-          <Button className="h-10 px-4" onClick={() => setEditing("new")}>
+          <Button className="h-10 px-4" onClick={() => setAdding(true)}>
             <PlusIcon />
             Add payee
           </Button>
@@ -131,7 +147,7 @@ export function PayeeList({ payees, canEdit }: { payees: PayeeRow[]; canEdit: bo
         </TabsContent>
       </Tabs>
 
-      {canEdit && <PayeeSheet payee={editing} onClose={() => setEditing(null)} />}
+      {canEdit && <PayeeSheet payee={adding ? "new" : null} onClose={() => setAdding(false)} />}
     </div>
   );
 }

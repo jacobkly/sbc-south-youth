@@ -186,8 +186,21 @@ export function daysBetween(from: IsoDate, to: IsoDate): number {
  * always falls on the same LA date.
  */
 export function laNoon(date: IsoDate): Date {
+  return laClockTime(date, 12);
+}
+
+/**
+ * The start of a date in Los Angeles, as an instant. Daylight saving
+ * changes happen at 2 AM, so midnight always exists and never repeats.
+ */
+export function laMidnight(date: IsoDate): Date {
+  return laClockTime(date, 0);
+}
+
+/** The instant when the LA clock reads the given hour on a date. */
+function laClockTime(date: IsoDate, hour: number): Date {
   const { year, month, day } = parseIsoDate(date);
-  const guess = Date.UTC(year, month - 1, day, 12);
+  const guess = Date.UTC(year, month - 1, day, hour);
   const wall = laWallTime(new Date(guess));
   return new Date(guess - (wall - guess));
 }

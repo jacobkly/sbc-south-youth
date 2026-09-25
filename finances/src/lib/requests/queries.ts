@@ -79,3 +79,21 @@ export async function loadQueue(
     hasMore: byTab[filters.tab] > rows.data.length && filters.pages < MAX_QUEUE_PAGES,
   };
 }
+
+/** A payee's newest requests, and how many they have in all. Throws if the query fails. */
+export async function loadPayeeRequests(
+  supabase: SupabaseClient<Database>,
+  payeeId: string,
+  limit: number,
+): Promise<{ rows: QueueRow[]; total: number }> {
+  const { data, count, error } = await supabase
+    .from("reimbursement_requests")
+    .select(QUEUE_COLUMNS, { count: "exact" })
+    .eq("payee_id", payeeId)
+    .order("purchase_date", { ascending: false })
+    .order("request_number", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return { rows: data, total: count ?? data.length };
+}

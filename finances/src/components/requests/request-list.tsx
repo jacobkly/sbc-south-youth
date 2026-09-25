@@ -10,8 +10,19 @@ import { formatRequestNumber } from "@/lib/requests/format";
 import type { QueueRow } from "@/lib/requests/queries";
 import type { QueueTab } from "@/lib/requests/queue";
 
-/** Requests as tappable cards, each linking to its detail page. */
-export function RequestList({ rows, showStatus }: { rows: QueueRow[]; showStatus: boolean }) {
+/**
+ * Requests as tappable cards, each linking to its detail page. Leave out
+ * the payee on a page that's already about one payee.
+ */
+export function RequestList({
+  rows,
+  showStatus,
+  showPayee = true,
+}: {
+  rows: QueueRow[];
+  showStatus: boolean;
+  showPayee?: boolean;
+}) {
   return (
     <ul className="divide-y rounded-lg border">
       {rows.map((row) => (
@@ -21,8 +32,14 @@ export function RequestList({ rows, showStatus }: { rows: QueueRow[]; showStatus
             className="flex min-h-16 items-start gap-3 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted"
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{row.payee?.full_name ?? "Unknown payee"}</p>
-              <p className="truncate text-sm text-muted-foreground">{row.vendor}</p>
+              {showPayee ? (
+                <>
+                  <p className="truncate font-medium">{row.payee?.full_name ?? "Unknown payee"}</p>
+                  <p className="truncate text-sm text-muted-foreground">{row.vendor}</p>
+                </>
+              ) : (
+                <p className="truncate font-medium">{row.vendor}</p>
+              )}
               <p className="text-sm text-muted-foreground tabular-nums">
                 {formatRequestNumber(row.request_number)} · {formatDate(row.purchase_date)}
               </p>
