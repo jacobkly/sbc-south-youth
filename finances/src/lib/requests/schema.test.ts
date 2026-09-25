@@ -12,6 +12,8 @@ const valid: RequestFormValues = {
   vendor: "Test Market",
   description: "Snacks for small group.",
   event_name: "",
+  no_receipt: false,
+  no_receipt_reason: "",
 };
 
 function errorsFor(values: Partial<RequestFormValues>) {
@@ -30,6 +32,8 @@ describe("requestSchema", () => {
       vendor: "Test Market",
       description: "Snacks for small group.",
       event_name: null,
+      no_receipt: false,
+      no_receipt_reason: null,
     });
   });
 
@@ -55,7 +59,16 @@ describe("requestSchema", () => {
 
   it("requires every field except the event", () => {
     expect(
-      errorsFor({ payee_id: "", type: "", amount: "", purchase_date: "", vendor: " ", description: "" }),
+      errorsFor({
+        payee_id: "",
+        type: "",
+        amount: "",
+        purchase_date: "",
+        vendor: " ",
+        description: "",
+        no_receipt: true,
+        no_receipt_reason: " ",
+      }),
     ).toEqual({
       payee_id: "Choose a payee.",
       type: "Choose Cafe or Youth.",
@@ -63,6 +76,18 @@ describe("requestSchema", () => {
       purchase_date: "Enter the purchase date.",
       vendor: "Enter the store or vendor.",
       description: "Describe what was bought and why.",
+      no_receipt_reason: "Say why there's no receipt.",
+    });
+  });
+
+  it("keeps a trimmed reason only when there's no receipt", () => {
+    expect(schema.parse({ ...valid, no_receipt: true, no_receipt_reason: " Lost it. " })).toMatchObject({
+      no_receipt: true,
+      no_receipt_reason: "Lost it.",
+    });
+    expect(schema.parse({ ...valid, no_receipt: false, no_receipt_reason: "Lost it." })).toMatchObject({
+      no_receipt: false,
+      no_receipt_reason: null,
     });
   });
 
@@ -98,11 +123,18 @@ describe("requestSchema", () => {
 
   it("enforces the text length limits", () => {
     expect(
-      errorsFor({ vendor: "v".repeat(101), description: "d".repeat(1001), event_name: "e".repeat(101) }),
+      errorsFor({
+        vendor: "v".repeat(101),
+        description: "d".repeat(1001),
+        event_name: "e".repeat(101),
+        no_receipt: true,
+        no_receipt_reason: "r".repeat(501),
+      }),
     ).toEqual({
       vendor: "Keep the vendor to 100 characters or fewer.",
       description: "Keep the description to 1,000 characters or fewer.",
       event_name: "Keep the event name to 100 characters or fewer.",
+      no_receipt_reason: "Keep the reason to 500 characters or fewer.",
     });
   });
 
@@ -112,6 +144,8 @@ describe("requestSchema", () => {
       vendor: "v".repeat(100),
       description: "d".repeat(1000),
       event_name: "e".repeat(100),
+      no_receipt: true,
+      no_receipt_reason: "r".repeat(500),
     });
     expect(result.success).toBe(true);
   });

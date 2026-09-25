@@ -12,6 +12,17 @@ export const metadata: Metadata = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function receiptSummary(request: {
+  no_receipt: boolean;
+  no_receipt_reason: string | null;
+  receipts: { count: number }[];
+}): string {
+  if (request.no_receipt) return `None on file: ${request.no_receipt_reason}`;
+  const count = request.receipts[0]?.count ?? 0;
+  if (count === 0) return "None yet";
+  return count === 1 ? "1 file" : `${count} files`;
+}
+
 export default async function RequestPage({ params }: PageProps<"/admin/requests/[id]">) {
   const { id } = await params;
   // A malformed id would be a database error, not a missing request.
@@ -21,7 +32,7 @@ export default async function RequestPage({ params }: PageProps<"/admin/requests
   const { data: request, error } = await supabase
     .from("reimbursement_requests")
     .select(
-      "request_number, status, type, amount_cents, purchase_date, vendor, description, event_name, payee:payees(full_name)",
+      "request_number, status, type, amount_cents, purchase_date, vendor, description, event_name, no_receipt, no_receipt_reason, payee:payees(full_name), receipts(count)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -35,6 +46,7 @@ export default async function RequestPage({ params }: PageProps<"/admin/requests
     ["Vendor", request.vendor],
     ...(request.event_name ? ([["Event", request.event_name]] as [string, string][]) : []),
     ["Description", request.description],
+    ["Receipts", receiptSummary(request)],
   ];
 
   return (

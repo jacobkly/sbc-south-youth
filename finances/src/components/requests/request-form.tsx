@@ -4,19 +4,24 @@ import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CircleAlertIcon } from "lucide-react";
 import { describedBy, FormField } from "@/components/form-field";
+import { ReceiptPicker } from "@/components/receipts/receipt-picker";
+import { usePendingReceipts } from "@/components/receipts/use-pending-receipts";
 import { PayeePicker } from "@/components/requests/payee-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { todayInLA, type IsoDate } from "@/lib/dates";
 import { centsToDecimal, parseAmountToCents } from "@/lib/money";
 import type { PayeeRow } from "@/lib/payees/columns";
+import { MAX_RECEIPTS, uploadReceipt } from "@/lib/receipts/upload";
 import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
 import {
   FUTURE_DATE_CODE,
+  MAX_NO_RECEIPT_REASON,
   MAX_REQUEST_CENTS,
   MIN_PURCHASE_DATE,
   REQUEST_FIELDS,
@@ -33,10 +38,16 @@ import { createClient } from "@/lib/supabase/client";
 
 type TextField = Exclude<RequestField, "payee_id" | "type">;
 
-const fieldId = (key: RequestField) => `request-${key}`;
+const fieldId = (key: RequestField | "receipts" | "no_receipt") => `request-${key}`;
 
 /** The type group has no single control, so focus its first option. */
 const focusId = (key: RequestField) => (key === "type" ? `request-type-${REQUEST_TYPES[0]}` : fieldId(key));
+
+function receiptHint(count: number): string {
+  if (count === 0) return `Photos or PDFs, up to ${MAX_RECEIPTS}.`;
+  if (count < MAX_RECEIPTS) return `${count} of ${MAX_RECEIPTS} added.`;
+  return `${MAX_RECEIPTS} of ${MAX_RECEIPTS} added, the most a request can have.`;
+}
 
 /**
  * The admin's main entry form. Built for speed on a phone: big touch targets,
@@ -64,10 +75,17 @@ export function RequestForm({
     vendor: "",
     description: "",
     event_name: "",
+    no_receipt: false,
+    no_receipt_reason: "",
   });
   const [errors, setErrors] = useState<RequestFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Set once the draft exists, so a retry after a failed upload updates it instead of adding another.
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const pendingReceipts = usePendingReceipts();
+  const { receipts } = pendingReceipts;
+  const preparing = receipts.some((receipt) => receipt.status === "processing");
 
   function set<K extends RequestField>(key: K, value: RequestFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -101,6 +119,7 @@ export function RequestForm({
   }
 
   async function saveDraft() {
+    if (preparing) return;
     // Checked against today at save time, in case the page sat open past midnight.
     const parsed = requestSchema(todayInLA()).safeParse(values);
     if (!parsed.success) {
@@ -111,9 +130,12 @@ export function RequestForm({
     setErrors({});
     setFormError(null);
     setPending(true);
-    const { data, error } = await createClient()
-      .from("reimbursement_requests")
-      .insert(parsed.data)
+    const supabase = createClient();
+    const requests = supabase.from("reimbursement_requests");
+    const { data, error } = await (requestId
+      ? requests.update(parsed.data).eq("id", requestId)
+      : requests.insert(parsed.data)
+    )
       .select("id")
       .single();
 
@@ -124,8 +146,38 @@ export function RequestForm({
       else setFormError(message);
       return;
     }
+    setRequestId(data.id);
+
+    // One at a time, to go easy on a phone's connection.
+    let failed = 0;
+    for (const receipt of receipts) {
+      if (!receipt.prepared || (receipt.status !== "ready" && receipt.status !== "failed")) continue;
+      pendingReceipts.setStatus(receipt.key, "uploading");
+      try {
+        await uploadReceipt(supabase, data.id, receipt.prepared);
+        pendingReceipts.setStatus(receipt.key, "uploaded");
+      } catch {
+        pendingReceipts.setStatus(receipt.key, "failed");
+        failed++;
+      }
+    }
+
+    if (failed > 0) {
+      setPending(false);
+      setFormError(
+        failed === 1
+          ? "The draft is saved, but 1 receipt didn't upload. Save again to retry, or remove it."
+          : `The draft is saved, but ${failed} receipts didn't upload. Save again to retry, or remove them.`,
+      );
+      return;
+    }
     // Stay pending while the detail page loads, so the draft can't be saved twice.
     router.push(`/admin/requests/${data.id}`);
+  }
+
+  function setNoReceipt(on: boolean) {
+    setValues((current) => ({ ...current, no_receipt: on }));
+    setErrors((current) => ({ ...current, no_receipt_reason: undefined }));
   }
 
   const typeInvalid = errors.type ? true : undefined;
@@ -237,6 +289,44 @@ export function RequestForm({
         </datalist>
       )}
 
+      <FormField id={fieldId("receipts")} label="Receipts" hint={receiptHint(receipts.length)} group>
+        {!values.no_receipt && (
+          <ReceiptPicker
+            id={fieldId("receipts")}
+            receipts={receipts}
+            problems={pendingReceipts.problems}
+            onAdd={pendingReceipts.add}
+            onRemove={pendingReceipts.remove}
+            locked={pending}
+            describedBy={describedBy(fieldId("receipts"), undefined, true)}
+          />
+        )}
+        {receipts.length === 0 && (
+          <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 py-2">
+            <Label htmlFor={fieldId("no_receipt")} className="text-base font-normal md:text-sm">
+              No receipt on file
+            </Label>
+            <Switch
+              id={fieldId("no_receipt")}
+              checked={values.no_receipt}
+              onCheckedChange={setNoReceipt}
+              disabled={pending}
+            />
+          </div>
+        )}
+      </FormField>
+
+      {values.no_receipt && (
+        <FormField
+          id={fieldId("no_receipt_reason")}
+          label="Why there's no receipt"
+          hint="Like a lost receipt, or backfilled from payment history."
+          error={errors.no_receipt_reason}
+        >
+          <Textarea {...textProps("no_receipt_reason", true)} rows={2} maxLength={MAX_NO_RECEIPT_REASON} />
+        </FormField>
+      )}
+
       {/* Next to the button, since that's where the eye is after tapping it on a phone. */}
       {formError && (
         <Alert variant="destructive">
@@ -245,8 +335,8 @@ export function RequestForm({
         </Alert>
       )}
 
-      <Button type="submit" className="h-11 w-full" disabled={pending}>
-        {pending ? "Saving…" : "Save draft"}
+      <Button type="submit" className="h-11 w-full" disabled={pending || preparing}>
+        {pending ? "Saving…" : preparing ? "Preparing receipts…" : "Save draft"}
       </Button>
     </form>
   );

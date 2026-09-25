@@ -10,6 +10,7 @@ export const REQUEST_TYPES = ["cafe", "youth"] as const satisfies readonly Reque
 // Limits match the reimbursement_requests table checks.
 export const MAX_REQUEST_CENTS = 100_000_000;
 export const MIN_PURCHASE_DATE: IsoDate = "2000-01-01";
+export const MAX_NO_RECEIPT_REASON = 500;
 
 /** The form's fields, in the order they appear on screen. */
 export const REQUEST_FIELDS = [
@@ -20,6 +21,7 @@ export const REQUEST_FIELDS = [
   "vendor",
   "description",
   "event_name",
+  "no_receipt_reason",
 ] as const;
 
 export type RequestField = (typeof REQUEST_FIELDS)[number];
@@ -33,6 +35,9 @@ export type RequestFormValues = {
   vendor: string;
   description: string;
   event_name: string;
+  /** "No receipt on file", for backfilled history and lost receipts. */
+  no_receipt: boolean;
+  no_receipt_reason: string;
 };
 
 export type RequestFieldErrors = Partial<Record<RequestField, string>>;
@@ -95,8 +100,25 @@ export function requestSchema(today: IsoDate = todayInLA()) {
         .trim()
         .max(100, "Keep the event name to 100 characters or fewer.")
         .transform((value) => value || null),
+      no_receipt: z.boolean(),
+      no_receipt_reason: z
+        .string()
+        .trim()
+        .max(MAX_NO_RECEIPT_REASON, "Keep the reason to 500 characters or fewer."),
     })
-    .transform(({ amount, ...rest }) => ({ ...rest, amount_cents: amount }));
+    .refine((values) => !values.no_receipt || values.no_receipt_reason, {
+      path: ["no_receipt_reason"],
+      message: "Say why there's no receipt.",
+      // Check even when other fields fail, so every error shows on the first try.
+      when: ({ issues }) => !issues.some((issue) => String(issue.path?.[0]).startsWith("no_receipt")),
+    })
+    // A reason only makes sense with the exception turned on.
+    .transform(({ amount, no_receipt, no_receipt_reason, ...rest }) => ({
+      ...rest,
+      amount_cents: amount,
+      no_receipt,
+      no_receipt_reason: no_receipt ? no_receipt_reason : null,
+    }));
 }
 
 export type RequestInput = z.output<ReturnType<typeof requestSchema>>;
