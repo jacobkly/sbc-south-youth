@@ -4,7 +4,7 @@ Invite-only reimbursement tracker for SBC South Youth. Built with Next.js (App R
 
 ## Prerequisites
 
-- Node.js 20 or newer
+- Node.js 24 or newer
 - Docker Desktop (for the local Supabase stack)
 
 ## Setup
@@ -39,3 +39,6 @@ Database schema changes are always made as migrations in `supabase/migrations`.
 | `npm run build` | Production build |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run the TypeScript compiler without emitting files |
+| `npm test` | Run unit tests once (Vitest) |
+| `npm run test:watch` | Run unit tests in watch mode |
+| `npm run db:types` | Regenerate `src/lib/database.types.ts` from the local database |

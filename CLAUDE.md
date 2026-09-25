@@ -23,11 +23,12 @@ Run these from `finances/`:
 npm run dev            # dev server at http://localhost:3000
 npm run lint
 npm run typecheck
+npm test               # Vitest unit tests (src/**/*.test.ts)
 npm run build
 npx supabase start     # local Supabase stack (needs Docker Desktop)
 npx supabase db reset  # rebuild local DB from migrations and seed
 npx supabase test db   # pgTAP tests in supabase/tests
-npx supabase gen types typescript --local > src/lib/database.types.ts
+npm run db:types       # regenerate src/lib/database.types.ts from the local DB
 ```
 
 ## Rules
