@@ -1,0 +1,15 @@
+# Env files (each app also has its own .gitignore)
+.env*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Claude Code local settings
+.claude/settings.local.json
