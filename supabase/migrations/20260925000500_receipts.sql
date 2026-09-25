@@ -5,10 +5,12 @@ create table public.receipts (
   id uuid primary key default gen_random_uuid(),
   request_id uuid not null references public.reimbursement_requests (id) on delete cascade,
   storage_path text not null unique,
+  -- Only Supabase Storage for now. The column lets another location be added
+  -- later without touching existing rows.
   storage_location text not null default 'supabase' check (storage_location = 'supabase'),
   original_filename text not null check (char_length(original_filename) <= 255),
   mime_type text not null check (mime_type in ('image/jpeg', 'image/webp', 'image/png', 'application/pdf')),
-  size_bytes integer not null check (size_bytes > 0 and size_bytes <= 10485760),
+  size_bytes integer not null check (size_bytes > 0 and size_bytes <= 10485760), -- 10 MB
   width integer check (width is null or width > 0),
   height integer check (height is null or height > 0),
   sha256 text not null check (sha256 ~ '^[0-9a-f]{64}$'),
@@ -21,6 +23,7 @@ create table public.receipts (
 
 create index receipts_request_id_idx on public.receipts (request_id);
 create index receipts_uploaded_by_idx on public.receipts (uploaded_by);
+-- For spotting the same file uploaded twice.
 create index receipts_sha256_idx on public.receipts (sha256);
 
 -- At most 10 receipts per request.
@@ -169,14 +172,13 @@ $$;
 revoke execute on function public.storage_usage() from public, anon;
 grant execute on function public.storage_usage() to authenticated;
 
--- Storage bucket ------------------------------------------------------------
-
+-- Private bucket for the files, with the same limits as the receipts table.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'receipts',
   'receipts',
   false,
-  10485760,
+  10485760, -- 10 MB
   array['image/jpeg', 'image/webp', 'image/png', 'application/pdf']
 );
 

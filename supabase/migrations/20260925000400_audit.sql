@@ -47,9 +47,11 @@ create policy "Events are readable with their request"
     )
   );
 
--- Logs every insert and update on a request. A status change gets its own
--- action; the status RPCs put their note in admin_note, which is recorded
--- here. Edits to the purchase details are logged with old and new values.
+-- Logs each insert and update on a request. A status change is logged as its
+-- action, with the note the status RPCs leave in admin_note. Edits to the
+-- purchase details are logged with old and new values, and an edit that
+-- changes none of them isn't logged. Security definer, since clients can't
+-- write to request_events.
 create function public.log_request_event()
 returns trigger
 language plpgsql

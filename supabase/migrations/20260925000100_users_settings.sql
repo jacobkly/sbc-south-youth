@@ -1,8 +1,15 @@
 -- Users, roles, and app settings.
 --
--- public.users mirrors auth.users with an app role. Roles are read with
--- current_app_role(), never from user_metadata, and change only through
--- set_member_role().
+-- public.users adds an app role to each auth user. Policies read it through
+-- current_app_role(), never from user_metadata, which users can edit
+-- themselves. Roles change only through set_member_role().
+--
+-- Postgres lets anyone execute a new function, and Supabase exposes every
+-- function in public over the API. So each function revokes execute, then
+-- grants it back to authenticated only if the app calls it.
+--
+-- Policies wrap auth.uid() and current_app_role() in a select so Postgres
+-- runs them once per query instead of once per row.
 
 create type public.user_role as enum ('member', 'admin', 'viewer');
 
@@ -19,8 +26,6 @@ end;
 $$;
 
 revoke execute on function public.set_updated_at() from public, anon, authenticated;
-
--- Users ---------------------------------------------------------------------
 
 create table public.users (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -170,7 +175,7 @@ $$;
 revoke execute on function public.set_member_active(uuid, boolean) from public, anon;
 grant execute on function public.set_member_active(uuid, boolean) to authenticated;
 
--- App settings (single row) --------------------------------------------------
+-- App-wide settings. The id check keeps it to one row.
 
 create table public.app_settings (
   id integer primary key default 1 check (id = 1),

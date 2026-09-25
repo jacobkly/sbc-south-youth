@@ -1,9 +1,6 @@
--- Status RPCs for approving and paying: approve, record as paid, mark paid,
--- and their undo actions. Shared helpers used by every status RPC live here
--- too. The guard trigger on reimbursement_requests enforces the
--- self-approval rule whenever these record an approval.
-
--- Helpers (not callable by clients) ------------------------------------------
+-- Status RPCs for approving and paying, with their undo actions, plus the
+-- helpers every status RPC shares. When one records an approval, the guard
+-- trigger on reimbursement_requests enforces the self-approval rule.
 
 -- Loads a request and locks it for the rest of the transaction.
 create function public.lock_request(p_request_id uuid)
@@ -78,8 +75,6 @@ $$;
 
 revoke execute on function public.require_note(text) from public, anon, authenticated;
 
--- Approve --------------------------------------------------------------------
-
 create function public.approve_request(p_request_id uuid, p_external_approver text default null)
 returns void
 language plpgsql
@@ -113,7 +108,8 @@ $$;
 revoke execute on function public.approve_request(uuid, text) from public, anon;
 grant execute on function public.approve_request(uuid, text) to authenticated;
 
--- Record as paid (draft straight to paid, for quick entry and backfill) -------
+-- Draft straight to paid, for a reimbursement that was paid before it was
+-- entered. The admin recording it is also recorded as the approver.
 
 create function public.record_as_paid(
   p_request_id uuid,
@@ -154,7 +150,7 @@ begin
   update public.reimbursement_requests
   set status = 'paid',
       approved_by = auth.uid(),
-      approved_at = least(p_paid_at, now()),
+      approved_at = least(p_paid_at, now()), -- never after the payment, or in the future
       external_approver = nullif(trim(p_external_approver), ''),
       paid_by = auth.uid(),
       paid_at = p_paid_at,
@@ -166,8 +162,6 @@ $$;
 
 revoke execute on function public.record_as_paid(uuid, public.payment_method, text, timestamptz, text) from public, anon;
 grant execute on function public.record_as_paid(uuid, public.payment_method, text, timestamptz, text) to authenticated;
-
--- Mark paid --------------------------------------------------------------------
 
 create function public.mark_paid(
   p_request_id uuid,
@@ -210,7 +204,7 @@ $$;
 revoke execute on function public.mark_paid(uuid, public.payment_method, text, timestamptz) from public, anon;
 grant execute on function public.mark_paid(uuid, public.payment_method, text, timestamptz) to authenticated;
 
--- Undo: unmark paid (paid back to approved) ----------------------------------------
+-- Undoes a payment: paid back to approved.
 
 create function public.unmark_paid(p_request_id uuid, p_note text)
 returns void
@@ -247,7 +241,7 @@ $$;
 revoke execute on function public.unmark_paid(uuid, text) from public, anon;
 grant execute on function public.unmark_paid(uuid, text) to authenticated;
 
--- Undo: unapprove (approved back to submitted) ------------------------------------
+-- Undoes an approval: approved back to submitted, for another review.
 
 create function public.unapprove_request(p_request_id uuid, p_note text)
 returns void
@@ -272,7 +266,7 @@ begin
 
   update public.reimbursement_requests
   set status = 'submitted',
-      submitted_at = coalesce(submitted_at, now()),
+      submitted_at = coalesce(submitted_at, now()), -- unset if it was approved straight from draft
       approved_by = null,
       approved_at = null,
       external_approver = null,

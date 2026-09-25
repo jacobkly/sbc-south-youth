@@ -1,5 +1,6 @@
 -- Status RPCs for the review loop: submit, request info, reject, and cancel.
--- Submit and cancel also allow the payee's linked user, for Phase 2.
+-- Submit and cancel also work for the payee's own linked account, so a
+-- member can manage their own requests.
 
 create function public.submit_request(p_request_id uuid)
 returns void
@@ -17,6 +18,7 @@ begin
 
   v_request := public.lock_request(p_request_id);
 
+  -- Members can only see their own requests, so don't confirm anyone else's exists.
   if v_role <> 'admin' and v_request.payee_id is distinct from public.current_payee_id() then
     raise exception 'That reimbursement doesn''t exist.' using errcode = 'P0002';
   end if;
@@ -99,7 +101,7 @@ $$;
 revoke execute on function public.reject_request(uuid, text) from public, anon;
 grant execute on function public.reject_request(uuid, text) to authenticated;
 
--- Cancel: the payee's linked user, or the admin who entered the request.
+-- The payee's linked user or the admin who entered the request can cancel it.
 create function public.cancel_request(p_request_id uuid)
 returns void
 language plpgsql

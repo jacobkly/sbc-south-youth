@@ -23,7 +23,7 @@ create table public.reimbursement_requests (
   payee_id uuid not null references public.payees (id),
   created_by uuid not null default auth.uid() references public.users (id),
   type public.reimbursement_type not null,
-  amount_cents integer not null check (amount_cents > 0 and amount_cents <= 100000000),
+  amount_cents integer not null check (amount_cents > 0 and amount_cents <= 100000000), -- up to $1,000,000
   purchase_date date not null check (purchase_date >= date '2000-01-01'),
   vendor text not null check (char_length(trim(vendor)) between 1 and 100),
   description text not null check (char_length(trim(description)) between 1 and 1000),
@@ -62,8 +62,8 @@ create trigger set_updated_at
   before update on public.reimbursement_requests
   for each row execute function public.set_updated_at();
 
--- Guard trigger: blocks future dates, keeps admin-only columns admin-only,
--- and backstops the self-approval rule for every write path.
+-- Blocks future dates, keeps the payee and no-receipt columns admin-only, and
+-- enforces the self-approval rule no matter which path writes the row.
 create function public.guard_reimbursement_request()
 returns trigger
 language plpgsql
