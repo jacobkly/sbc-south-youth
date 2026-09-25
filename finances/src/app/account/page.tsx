@@ -1,0 +1,36 @@
+import type { Metadata } from "next";
+import { AccountForm } from "@/components/account/account-form";
+import { SignOutButton } from "@/components/auth/sign-out-button";
+import { Separator } from "@/components/ui/separator";
+import { getCurrentUser } from "@/lib/auth/current-user";
+
+export const metadata: Metadata = {
+  title: "Account",
+};
+
+const ROLE_LABELS = { admin: "Admin", viewer: "Viewer", member: "Member" } as const;
+
+export default async function AccountPage() {
+  // The layout already checked access, so the user is an active admin or viewer.
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+        <dt className="text-muted-foreground">Email</dt>
+        <dd className="truncate">{user.email}</dd>
+        <dt className="text-muted-foreground">Role</dt>
+        <dd>{ROLE_LABELS[user.role]}</dd>
+      </dl>
+
+      <AccountForm userId={user.id} fullName={user.full_name} />
+
+      <Separator />
+
+      <SignOutButton variant="outline" className="h-11 w-full sm:w-auto sm:px-6" />
+    </div>
+  );
+}

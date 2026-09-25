@@ -111,7 +111,7 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="h-11 text-base"
+              className="h-11"
             />
           </div>
           <Button type="submit" className="h-11 w-full" disabled={pending}>
