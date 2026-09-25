@@ -222,6 +222,14 @@ export function addDays(date: IsoDate, days: number): IsoDate {
   return toIsoDate(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate());
 }
 
+/** An instant as LA "YYYY-MM-DD HH:MM", which spreadsheets read as a date and time. */
+export function laDateTime(instant: Date | string): string {
+  const date = typeof instant === "string" ? new Date(instant) : instant;
+  if (Number.isNaN(date.getTime())) throw new RangeError(`Invalid instant: ${String(instant)}`);
+  const wall = new Date(laWallTime(date)).toISOString();
+  return `${wall.slice(0, 10)} ${wall.slice(11, 16)}`;
+}
+
 /** Whole days from one date to another, negative when `to` is earlier. */
 export function daysBetween(from: IsoDate, to: IsoDate): number {
   const a = parseIsoDate(from);

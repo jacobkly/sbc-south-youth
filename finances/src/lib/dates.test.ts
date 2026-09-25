@@ -6,6 +6,7 @@ import {
   formatDateTime,
   isIsoDate,
   laDateOf,
+  laDateTime,
   laMidnight,
   laNoon,
   monthShortName,
@@ -197,6 +198,12 @@ describe("labels", () => {
 
   it("formats instants in LA time", () => {
     expect(formatDateTime("2026-09-26T06:30:00Z")).toBe("Sep 25, 2026, 11:30 PM");
+  });
+
+  it("writes instants as LA date and time for spreadsheets", () => {
+    expect(laDateTime("2026-09-26T06:30:00Z")).toBe("2026-09-25 23:30");
+    expect(laDateTime("2026-01-15T20:05:59Z")).toBe("2026-01-15 12:05");
+    expect(laDateTime("2026-07-01T07:00:00Z")).toBe("2026-07-01 00:00");
   });
 });
 
