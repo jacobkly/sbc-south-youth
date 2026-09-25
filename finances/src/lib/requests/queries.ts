@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/lib/database.types";
-import { addDays, laMidnight, periodRange } from "@/lib/dates";
-import { REPORT_STATUSES, type ReportFilters } from "@/lib/reports/filters";
+import { reportBounds, type ReportFilters } from "@/lib/reports/filters";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import {
   MAX_QUEUE_PAGES,
@@ -16,6 +15,15 @@ import {
 const QUEUE_COLUMNS =
   "id, request_number, status, type, amount_cents, purchase_date, vendor, no_receipt, payee:payees(full_name)";
 const REPORT_COLUMNS = `${QUEUE_COLUMNS}, paid_at` as const;
+const EXPORT_COLUMNS = `
+  request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
+  submitted_at, external_approver, approved_at, paid_at, payment_method, payment_reference, no_receipt_reason,
+  payee:payees(full_name),
+  entered_by:users!reimbursement_requests_created_by_fkey(full_name),
+  approver:users!reimbursement_requests_approved_by_fkey(full_name),
+  payer:users!reimbursement_requests_paid_by_fkey(full_name),
+  receipts(count)
+`;
 
 /** A request as the queue lists it. */
 export type QueueRow = Pick<
@@ -105,28 +113,27 @@ export async function loadPayeeRequests(
 /** A request as a report lists it. */
 export type ReportRow = QueueRow & Pick<Tables<"reimbursement_requests">, "paid_at">;
 
-/**
- * Every request in a report, newest first. By paid date, only paid
- * requests count, and the period is the LA days it covers. Throws if a
- * query fails.
- */
-export async function loadReport(supabase: SupabaseClient<Database>, filters: ReportFilters): Promise<ReportRow[]> {
-  const { start, end } = periodRange(filters.period);
-  return fetchAll((from, to) => {
-    const query = supabase.from("reimbursement_requests").select(REPORT_COLUMNS);
-    if (filters.basis === "paid") {
-      return query
-        .eq("status", "paid")
-        .gte("paid_at", laMidnight(start).toISOString())
-        .lt("paid_at", laMidnight(addDays(end, 1)).toISOString())
-        .order("paid_at", { ascending: false })
-        .order("request_number", { ascending: false })
-        .range(from, to);
-    }
-    const inPeriod = query.gte("purchase_date", start).lte("purchase_date", end);
-    return (filters.allStatuses ? inPeriod : inPeriod.in("status", REPORT_STATUSES))
-      .order("purchase_date", { ascending: false })
-      .order("request_number", { ascending: false })
-      .range(from, to);
-  });
+/** The requests in a report with the given columns, newest first by the report's date. */
+function reportQuery<Columns extends string>(
+  supabase: SupabaseClient<Database>,
+  filters: ReportFilters,
+  columns: Columns,
+) {
+  const { column, from, before, statuses } = reportBounds(filters);
+  let query = supabase.from("reimbursement_requests").select(columns).gte(column, from).lt(column, before);
+  if (statuses) query = query.in("status", statuses);
+  return query.order(column, { ascending: false }).order("request_number", { ascending: false });
 }
+
+/** Every request in a report. By paid date, only paid requests count. Throws if a query fails. */
+export async function loadReport(supabase: SupabaseClient<Database>, filters: ReportFilters): Promise<ReportRow[]> {
+  return fetchAll((from, to) => reportQuery(supabase, filters, REPORT_COLUMNS).range(from, to));
+}
+
+/** Every request in a report with everything the CSV needs. Throws if a query fails. */
+export async function loadReportExport(supabase: SupabaseClient<Database>, filters: ReportFilters) {
+  return fetchAll((from, to) => reportQuery(supabase, filters, EXPORT_COLUMNS).range(from, to));
+}
+
+/** A request as the CSV export has it. */
+export type ReportExportRow = Awaited<ReturnType<typeof loadReportExport>>[number];

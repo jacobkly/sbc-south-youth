@@ -1,5 +1,7 @@
 import {
+  addDays,
   isIsoDate,
+  laMidnight,
   periodContaining,
   periodRange,
   shiftPeriod,
@@ -107,12 +109,22 @@ export function parseReportFilters(params: SearchParams, today: IsoDate): Report
   };
 }
 
-/** The report's URL for these filters, leaving out the default basis and status. */
-export function reportHref(filters: ReportFilters): string {
+/** The filters as URL parameters, leaving out the default basis and status. */
+function reportParams(filters: ReportFilters): URLSearchParams {
   const params = new URLSearchParams({ period: periodSlug(filters.period) });
   if (filters.basis !== "purchase") params.set("basis", filters.basis);
   if (filters.allStatuses) params.set("status", "all");
-  return `/admin/reports?${params}`;
+  return params;
+}
+
+/** The report's URL for these filters. */
+export function reportHref(filters: ReportFilters): string {
+  return `/admin/reports?${reportParams(filters)}`;
+}
+
+/** Where to download the report as a CSV. */
+export function reportExportHref(filters: ReportFilters): string {
+  return `/admin/reports/export?${reportParams(filters)}`;
 }
 
 /**
@@ -124,6 +136,32 @@ export function switchPeriodKind(period: Period, kind: PeriodKind, today: IsoDat
   const { start, end } = periodRange(period);
   if (kind === "custom") return { kind, start, end };
   return periodContaining(kind, end < today ? end : today);
+}
+
+/**
+ * Where a report looks: the date column, the range [from, before) on it,
+ * and the statuses it counts, or null for every status.
+ */
+export type ReportBounds = {
+  column: "purchase_date" | "paid_at";
+  from: string;
+  before: string;
+  statuses: readonly RequestStatus[] | null;
+};
+
+export function reportBounds(filters: ReportFilters): ReportBounds {
+  const { start, end } = periodRange(filters.period);
+  const after = addDays(end, 1);
+  if (filters.basis === "paid") {
+    // paid_at is an instant, so the range runs from midnight to midnight in LA.
+    return {
+      column: "paid_at",
+      from: laMidnight(start).toISOString(),
+      before: laMidnight(after).toISOString(),
+      statuses: ["paid"],
+    };
+  }
+  return { column: "purchase_date", from: start, before: after, statuses: filters.allStatuses ? null : REPORT_STATUSES };
 }
 
 /** Whether the next month, quarter, or year has started, so there's something to step to. */

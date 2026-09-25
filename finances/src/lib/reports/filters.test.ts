@@ -5,6 +5,8 @@ import {
   parsePeriodSlug,
   parseReportFilters,
   periodSlug,
+  reportBounds,
+  reportExportHref,
   reportHref,
   reportTotals,
   switchPeriodKind,
@@ -87,6 +89,40 @@ describe("parseReportFilters", () => {
     const params = Object.fromEntries(new URL(reportHref(filters), "http://x").searchParams);
     expect(parseReportFilters(params, TODAY)).toEqual(filters);
     expect(reportHref(parseReportFilters({}, TODAY))).toBe("/admin/reports?period=2026-Q3");
+  });
+
+  it("exports the same report", () => {
+    const filters = parseReportFilters({ period: "2026-09", status: "all" }, TODAY);
+    expect(reportExportHref(filters)).toBe("/admin/reports/export?period=2026-09&status=all");
+  });
+});
+
+describe("reportBounds", () => {
+  const q3 = { kind: "quarter", year: 2026, quarter: 3 } as const;
+
+  it("covers the purchase dates in the period, approved and paid by default", () => {
+    expect(reportBounds({ period: q3, basis: "purchase", allStatuses: false })).toEqual({
+      column: "purchase_date",
+      from: "2026-07-01",
+      before: "2026-10-01",
+      statuses: ["approved", "paid"],
+    });
+    expect(reportBounds({ period: q3, basis: "purchase", allStatuses: true }).statuses).toBeNull();
+  });
+
+  it("covers the LA days of the period for paid dates, paid requests only", () => {
+    expect(reportBounds({ period: q3, basis: "paid", allStatuses: true })).toEqual({
+      column: "paid_at",
+      from: "2026-07-01T07:00:00.000Z",
+      before: "2026-10-01T07:00:00.000Z",
+      statuses: ["paid"],
+    });
+  });
+
+  it("follows daylight saving time across the period", () => {
+    const q4 = reportBounds({ period: { kind: "quarter", year: 2026, quarter: 4 }, basis: "paid", allStatuses: false });
+    expect(q4.from).toBe("2026-10-01T07:00:00.000Z");
+    expect(q4.before).toBe("2027-01-01T08:00:00.000Z");
   });
 });
 

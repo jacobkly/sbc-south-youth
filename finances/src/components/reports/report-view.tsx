@@ -2,10 +2,12 @@
 
 import { useOptimistic, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { DownloadIcon } from "lucide-react";
 import { cn } from "cn";
 import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
 import { PeriodPicker } from "@/components/reports/period-picker";
 import { ReportList } from "@/components/reports/report-list";
+import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { sharePercent } from "@/lib/dashboard/summary";
 import { periodLabel, type IsoDate } from "@/lib/dates";
@@ -16,6 +18,7 @@ import { REQUEST_TYPES } from "@/lib/requests/schema";
 import {
   REPORT_BASES,
   REPORT_BASIS_LABELS,
+  reportExportHref,
   reportHref,
   reportTotals,
   type ReportBasis,
@@ -66,7 +69,16 @@ export function ReportView({ filters, today, rows }: { filters: ReportFilters; t
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
+        {/* A plain link, so the browser downloads the file itself. It exports the report being picked, even mid-load. */}
+        <Button asChild variant="outline" className="h-11">
+          <a href={reportExportHref(shown)} download>
+            <DownloadIcon aria-hidden />
+            Export CSV
+          </a>
+        </Button>
+      </div>
 
       <section aria-label="Report options" className="@container space-y-4 rounded-lg border p-4">
         <PeriodPicker period={shown.period} today={today} onChange={(period) => update({ period })} />
