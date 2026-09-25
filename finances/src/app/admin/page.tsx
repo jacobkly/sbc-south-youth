@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PlusIcon } from "lucide-react";
+import { MonthlyChart } from "@/components/dashboard/monthly-chart";
 import { StorageBar } from "@/components/dashboard/storage-bar";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
+import { TypeSplitChart } from "@/components/dashboard/type-split-chart";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { loadDashboard } from "@/lib/dashboard/summary";
@@ -26,7 +28,11 @@ export default async function DashboardPage() {
       </div>
 
       {summary.hasRequests ? (
-        <SummaryCards summary={summary} />
+        <>
+          <SummaryCards summary={summary} />
+          <MonthlyChart months={summary.paidByMonth} />
+          <TypeSplitChart paid={summary.paid} />
+        </>
       ) : (
         <div className="space-y-3 rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
           <p>No requests yet. Totals show up here once requests are entered.</p>

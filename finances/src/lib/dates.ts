@@ -17,6 +17,8 @@ export type Period =
 
 export type PeriodKind = Period["kind"];
 
+export type MonthPeriod = Extract<Period, { kind: "month" }>;
+
 /** Inclusive date range. */
 export type DateRange = { start: IsoDate; end: IsoDate };
 
@@ -58,6 +60,11 @@ const monthLabel = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   month: "long",
   year: "numeric",
+});
+
+const monthShortLabel = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "short",
 });
 
 function pad(n: number, width = 2): string {
@@ -144,6 +151,22 @@ export function periodContaining(kind: Exclude<PeriodKind, "custom">, date: IsoD
     case "year":
       return { kind, year };
   }
+}
+
+/** The `count` months ending with the month that contains `date`, oldest first. */
+export function recentMonths(count: number, date: IsoDate): MonthPeriod[] {
+  const { year, month } = parseIsoDate(date);
+  const months: MonthPeriod[] = [];
+  for (let back = count - 1; back >= 0; back--) {
+    const index = year * 12 + (month - 1) - back;
+    months.push({ kind: "month", year: Math.floor(index / 12), month: (index % 12) + 1 });
+  }
+  return months;
+}
+
+/** Short month name for chart axes, e.g. "Sep". */
+export function monthShortName(period: MonthPeriod): string {
+  return monthShortLabel.format(new Date(Date.UTC(period.year, period.month - 1, 1)));
 }
 
 /** Human label for a period, e.g. "September 2026", "Q3 2026", "2026". */

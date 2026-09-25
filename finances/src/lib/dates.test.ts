@@ -7,9 +7,11 @@ import {
   laDateOf,
   laMidnight,
   laNoon,
+  monthShortName,
   periodContaining,
   periodLabel,
   periodRange,
+  recentMonths,
   todayInLA,
 } from "./dates";
 
@@ -134,11 +136,35 @@ describe("periodContaining", () => {
   });
 });
 
+describe("recentMonths", () => {
+  it("ends with the month containing the date, oldest first", () => {
+    expect(recentMonths(3, "2026-09-25")).toEqual([
+      { kind: "month", year: 2026, month: 7 },
+      { kind: "month", year: 2026, month: 8 },
+      { kind: "month", year: 2026, month: 9 },
+    ]);
+  });
+
+  it("crosses into the previous year", () => {
+    const months = recentMonths(12, "2026-02-01");
+    expect(months).toHaveLength(12);
+    expect(months[0]).toEqual({ kind: "month", year: 2025, month: 3 });
+    expect(months[10]).toEqual({ kind: "month", year: 2026, month: 1 });
+    expect(months[11]).toEqual({ kind: "month", year: 2026, month: 2 });
+  });
+
+  it("always reaches back to this year's January within 12 months", () => {
+    const [first] = recentMonths(12, "2026-12-31");
+    expect(first).toEqual({ kind: "month", year: 2026, month: 1 });
+  });
+});
+
 describe("labels", () => {
   it("labels periods", () => {
     expect(periodLabel({ kind: "month", year: 2026, month: 9 })).toBe("September 2026");
     expect(periodLabel({ kind: "quarter", year: 2026, quarter: 3 })).toBe("Q3 2026");
     expect(periodLabel({ kind: "year", year: 2026 })).toBe("2026");
+    expect(monthShortName({ kind: "month", year: 2026, month: 9 })).toBe("Sep");
     expect(periodLabel({ kind: "custom", start: "2026-03-15", end: "2026-04-02" })).toBe(
       "Mar 15, 2026 – Apr 2, 2026",
     );
