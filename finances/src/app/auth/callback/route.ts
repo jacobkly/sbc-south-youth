@@ -10,9 +10,10 @@ function isEmailOtpType(value: string | null): value is EmailOtpType {
 }
 
 /**
- * Finishes a sign-in from an email link. Handles the token-hash link from
- * the email template, which works in any browser, and the PKCE code
- * redirect as a fallback.
+ * Finishes a sign-in from an email link. Handles the PKCE code redirect
+ * that Supabase's standard email link ends with, which only works in the
+ * browser that asked for the link, and a token-hash link, which a custom
+ * email template can use to work in any browser.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;

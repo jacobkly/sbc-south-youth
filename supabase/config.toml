@@ -243,7 +243,7 @@ otp_expiry = 3600
 # sender_name = "Admin"
 
 [auth.email.template.magic_link]
-subject = "Your sign-in code"
+subject = "Your sign-in link"
 content_path = "./supabase/templates/magic-link.html"
 
 # Uncomment to customize notification email template

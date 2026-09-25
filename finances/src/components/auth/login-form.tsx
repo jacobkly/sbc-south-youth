@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { CircleAlertIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,21 +10,22 @@ import { createClient } from "@/lib/supabase/client";
 
 const RESEND_SECONDS = 60;
 
-type Step = "email" | "code";
+type Step = "email" | "sent";
 
 /**
- * Two-step email sign-in: send a one-time code, then enter it. The same
- * email also has a sign-in link. Accounts are never created here, and the
- * form answers the same way whether or not an email has an account.
+ * Email sign-in with a one-time link. The link only works in the browser
+ * that asked for it, since that browser holds the other half of the
+ * sign-in. Accounts are never created here, and the form answers the same
+ * way whether or not an email has an account.
  */
 export function LoginForm({ next, linkFailed }: { next: string; linkFailed: boolean }) {
-  const router = useRouter();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(
-    linkFailed ? "That sign-in link didn't work. It may have expired, so send a new code." : null,
+    linkFailed
+      ? "That sign-in link didn't work. It may have expired or been opened in a different browser, so send a new one."
+      : null,
   );
   const [resendIn, setResendIn] = useState(0);
 
@@ -35,14 +35,16 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
     return () => clearTimeout(timer);
   }, [resendIn]);
 
-  async function sendCode() {
+  async function sendLink() {
     setPending(true);
     setError(null);
+    const callback = new URL("/auth/callback", window.location.origin);
+    callback.searchParams.set("next", next);
     const { error } = await createClient().auth.signInWithOtp({
       email: email.trim(),
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: callback.href,
       },
     });
     setPending(false);
@@ -50,7 +52,7 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
     // Rate limits and network problems are worth showing. Anything else,
     // like an email with no account, gets the same answer as success.
     if (error?.status === 429) {
-      setError("Too many sign-in emails. Wait a few minutes, then try again.");
+      setError("Too many sign-in emails. Wait a while, then try again.");
       return;
     }
     if (error && (!error.status || error.status >= 500)) {
@@ -58,28 +60,8 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
       return;
     }
 
-    setCode("");
-    setStep("code");
+    setStep("sent");
     setResendIn(RESEND_SECONDS);
-  }
-
-  async function verifyCode() {
-    setPending(true);
-    setError(null);
-    const { error } = await createClient().auth.verifyOtp({
-      email: email.trim(),
-      token: code,
-      type: "email",
-    });
-
-    if (error) {
-      setPending(false);
-      setError("That code didn't work. Check it, or send a new one.");
-      return;
-    }
-
-    router.replace(next);
-    router.refresh();
   }
 
   return (
@@ -96,7 +78,7 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
-            void sendCode();
+            void sendLink();
           }}
         >
           <div className="space-y-2">
@@ -115,39 +97,18 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
             />
           </div>
           <Button type="submit" className="h-11 w-full" disabled={pending}>
-            {pending ? "Sending…" : "Send sign-in code"}
+            {pending ? "Sending…" : "Send sign-in link"}
           </Button>
         </form>
       ) : (
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void verifyCode();
-          }}
-        >
-          <p className="text-sm text-muted-foreground" role="status">
-            If <span className="font-medium text-foreground">{email.trim()}</span> has an account, we sent it a
-            code and a sign-in link.
-          </p>
-          <div className="space-y-2">
-            <Label htmlFor="code">Code</Label>
-            <Input
-              id="code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]{6,10}"
-              maxLength={10}
-              required
-              autoFocus
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
-              className="h-11 text-lg tracking-[0.3em]"
-            />
+        <div className="space-y-4">
+          <div className="space-y-2 text-sm text-muted-foreground" role="status">
+            <p>
+              If <span className="font-medium text-foreground">{email.trim()}</span> has an account, we sent it a
+              sign-in link.
+            </p>
+            <p>Open the link in this browser. It won&apos;t work in a different one.</p>
           </div>
-          <Button type="submit" className="h-11 w-full" disabled={pending || code.length < 6}>
-            {pending ? "Signing in…" : "Sign in"}
-          </Button>
           <div className="flex items-center justify-between gap-2">
             <Button
               type="button"
@@ -165,12 +126,12 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
               variant="ghost"
               className="h-11"
               disabled={pending || resendIn > 0}
-              onClick={() => void sendCode()}
+              onClick={() => void sendLink()}
             >
-              {resendIn > 0 ? `Resend in ${resendIn}s` : "Send a new code"}
+              {resendIn > 0 ? `Resend in ${resendIn}s` : "Send a new link"}
             </Button>
           </div>
-        </form>
+        </div>
       )}
     </div>
   );
