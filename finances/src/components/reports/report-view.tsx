@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "cn";
@@ -19,7 +19,9 @@ import { REQUEST_TYPES } from "@/lib/requests/schema";
 import {
   REPORT_BASES,
   REPORT_BASIS_LABELS,
+  REPORT_PAGE_SIZE,
   reportHref,
+  reportPagesHref,
   reportPayeeTotals,
   reportTotals,
   type PayeeTotals,
@@ -54,11 +56,23 @@ function emptyMessage(filters: ReportFilters): string {
  * button and shared links bring back the same report. The server loads
  * the rows; this shows each change right away while they load.
  */
-export function ReportView({ filters, today, rows }: { filters: ReportFilters; today: IsoDate; rows: ReportRow[] }) {
+export function ReportView({
+  filters,
+  pages,
+  today,
+  rows,
+}: {
+  filters: ReportFilters;
+  /** How many pages of requests to show. */
+  pages: number;
+  today: IsoDate;
+  rows: ReportRow[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(filters);
 
+  /** Leaves the pages out of the URL, so a new report starts from the first page. */
   function update(changes: Partial<ReportFilters>) {
     const next = { ...shown, ...changes };
     startTransition(() => {
@@ -134,16 +148,7 @@ export function ReportView({ filters, today, rows }: { filters: ReportFilters; t
           <>
             <TotalsSection totals={totals} subject={reportSubject(filters)} />
             <PayeeTotalsSection payees={reportPayeeTotals(rows)} totalCents={totals.cents} />
-            <section aria-labelledby="report-requests-heading" className="space-y-3">
-              <h2 id="report-requests-heading" className="text-lg font-semibold">
-                Requests
-              </h2>
-              <ReportList
-                rows={rows}
-                basis={filters.basis}
-                showStatus={filters.basis === "purchase"}
-              />
-            </section>
+            <RequestsSection rows={rows} filters={filters} pages={pages} disabled={pending} />
           </>
         ) : (
           <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
@@ -199,6 +204,72 @@ function TotalsSection({ totals, subject }: { totals: ReportTotals; subject: str
           </dd>
         </div>
       </dl>
+    </section>
+  );
+}
+
+/**
+ * The report's requests, a page at a time. How many pages show is kept in
+ * the URL, so coming back from a request brings back the same spot.
+ */
+function RequestsSection({
+  rows,
+  filters,
+  pages: loadedPages,
+  disabled,
+}: {
+  rows: ReportRow[];
+  filters: ReportFilters;
+  pages: number;
+  disabled: boolean;
+}) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  // Every row is already here, so more show right away while the URL catches up.
+  const [pages, setPages] = useOptimistic(loadedPages);
+  const shown = rows.slice(0, pages * REPORT_PAGE_SIZE);
+  const remaining = rows.length - shown.length;
+  // The row to focus once the last page shows, since the button goes away.
+  const focusRow = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (focusRow.current === null) return;
+    document.querySelectorAll<HTMLElement>("#report-requests a")[focusRow.current]?.focus();
+    focusRow.current = null;
+  }, [pages]);
+
+  // Through the router, not history.replaceState, so Next knows the page's URL.
+  // Otherwise refreshing the page after going back to it would scroll to the top.
+  function showMore() {
+    if (remaining <= REPORT_PAGE_SIZE) focusRow.current = shown.length;
+    startTransition(() => {
+      setPages(pages + 1);
+      router.replace(reportPagesHref(filters, pages + 1), { scroll: false });
+    });
+  }
+
+  return (
+    <section aria-labelledby="report-requests-heading" className="space-y-3">
+      <h2 id="report-requests-heading" className="text-lg font-semibold">
+        Requests
+      </h2>
+      <ReportList id="report-requests" rows={shown} basis={filters.basis} showStatus={filters.basis === "purchase"} />
+      {remaining > 0 && (
+        <>
+          <p className="text-center text-sm text-muted-foreground">
+            Showing {shown.length.toLocaleString()} of {rows.length.toLocaleString()}
+          </p>
+          <Button
+            variant="outline"
+            className="h-11 w-full"
+            aria-controls="report-requests"
+            disabled={disabled}
+            onClick={showMore}
+          >
+            Show {Math.min(REPORT_PAGE_SIZE, remaining)} more
+          </Button>
+        </>
+      )}
     </section>
   );
 }

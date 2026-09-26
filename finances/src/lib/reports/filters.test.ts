@@ -4,10 +4,12 @@ import {
   customPeriod,
   parsePeriodSlug,
   parseReportFilters,
+  parseReportPages,
   periodSlug,
   reportBounds,
   reportExportHref,
   reportHref,
+  reportPagesHref,
   reportPayeeTotals,
   reportTotals,
   switchPeriodKind,
@@ -96,6 +98,27 @@ describe("parseReportFilters", () => {
     const filters = parseReportFilters({ period: "2026-09", status: "all" }, TODAY);
     expect(reportExportHref(filters)).toBe("/admin/reports/export?period=2026-09&status=all");
     expect(reportExportHref(filters, "summary")).toBe("/admin/reports/export?period=2026-09&status=all&file=summary");
+  });
+});
+
+describe("report pages", () => {
+  it("reads how many pages to show, at least one", () => {
+    expect(parseReportPages({ pages: "3" })).toBe(3);
+    expect(parseReportPages({ pages: ["2", "5"] })).toBe(2);
+    expect(parseReportPages({})).toBe(1);
+    for (const pages of ["", "0", "-2", "2.5", "lots"]) expect(parseReportPages({ pages })).toBe(1);
+  });
+
+  it("adds the pages to the report's URL after the filters", () => {
+    const filters = parseReportFilters({ period: "2026-09", status: "all" }, TODAY);
+    expect(reportPagesHref(filters, 3)).toBe("/admin/reports?period=2026-09&status=all&pages=3");
+    expect(reportPagesHref(filters, 1)).toBe(reportHref(filters));
+  });
+
+  it("leaves the pages out of the filters and exports", () => {
+    const filters = parseReportFilters({ period: "2026-09", pages: "3" }, TODAY);
+    expect(reportHref(filters)).toBe("/admin/reports?period=2026-09");
+    expect(reportExportHref(filters)).toBe("/admin/reports/export?period=2026-09");
   });
 });
 

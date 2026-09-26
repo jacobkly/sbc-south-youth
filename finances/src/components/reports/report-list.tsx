@@ -12,16 +12,18 @@ import type { ReportBasis } from "@/lib/reports/filters";
  * Shows the date the report goes by, and the type, since reports split by it.
  */
 export function ReportList({
+  id,
   rows,
   basis,
   showStatus,
 }: {
+  id?: string;
   rows: ReportRow[];
   basis: ReportBasis;
   showStatus: boolean;
 }) {
   return (
-    <ul className="divide-y rounded-lg border">
+    <ul id={id} className="divide-y rounded-lg border">
       {rows.map((row) => (
         <li key={row.id}>
           <Link

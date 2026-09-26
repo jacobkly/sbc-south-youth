@@ -122,6 +122,25 @@ export function reportHref(filters: ReportFilters): string {
   return `/admin/reports?${reportParams(filters)}`;
 }
 
+/** How many of a report's requests show at first, and how many each "Show more" adds. */
+export const REPORT_PAGE_SIZE = 25;
+
+/**
+ * How many pages of requests the URL shows. Kept apart from the filters,
+ * since it doesn't change what the report counts or exports.
+ */
+export function parseReportPages(params: SearchParams): number {
+  const pages = Number(single(params, "pages"));
+  return Number.isInteger(pages) && pages > 1 ? pages : 1;
+}
+
+/** The report's URL with this many pages of requests showing. */
+export function reportPagesHref(filters: ReportFilters, pages: number): string {
+  const params = reportParams(filters);
+  if (pages > 1) params.set("pages", String(pages));
+  return `/admin/reports?${params}`;
+}
+
 /** The files a report downloads as: one line per request, or the totals. */
 export type ReportFile = "requests" | "summary";
 
