@@ -154,7 +154,7 @@ function CustomRange({ period, onChange }: { period: CustomPeriod; onChange: (pe
             type="date"
             value={draft.start}
             onChange={(event) => setDraft({ ...draft, start: event.target.value })}
-            className="h-11 [&::-webkit-date-and-time-value]:text-left"
+            className="h-11"
           />
         </FormField>
         <FormField id="report-to" label="To">
@@ -165,7 +165,7 @@ function CustomRange({ period, onChange }: { period: CustomPeriod; onChange: (pe
             onChange={(event) => setDraft({ ...draft, end: event.target.value })}
             aria-invalid={outOfOrder}
             aria-describedby={describedBy("report-range", rangeError)}
-            className="h-11 [&::-webkit-date-and-time-value]:text-left"
+            className="h-11"
           />
         </FormField>
       </div>

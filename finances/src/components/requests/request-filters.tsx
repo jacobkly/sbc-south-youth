@@ -106,7 +106,7 @@ export function FilterSheet({
                   type="date"
                   value={draft.from ?? ""}
                   onChange={(event) => change({ from: event.target.value || null })}
-                  className="h-11 [&::-webkit-date-and-time-value]:text-left"
+                  className="h-11"
                 />
               </FormField>
               <FormField id="filter-to" label="To">
@@ -117,7 +117,7 @@ export function FilterSheet({
                   onChange={(event) => change({ to: event.target.value || null })}
                   aria-invalid={Boolean(rangeError)}
                   aria-describedby={describedBy("filter-date", rangeError)}
-                  className="h-11 [&::-webkit-date-and-time-value]:text-left"
+                  className="h-11"
                 />
               </FormField>
             </div>
@@ -139,7 +139,7 @@ export function FilterSheet({
                 <Label
                   key={value}
                   htmlFor={`filter-type-${value}`}
-                  className="h-11 cursor-pointer rounded-lg border px-3 text-base font-normal has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-muted md:text-sm"
+                  className="h-11 cursor-pointer rounded-lg border px-3 text-base font-normal has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-muted desktop:text-sm"
                 >
                   <RadioGroupItem id={`filter-type-${value}`} value={value} />
                   {value === ANY ? "Any" : REQUEST_TYPE_LABELS[value as RequestType]}
@@ -153,7 +153,7 @@ export function FilterSheet({
               value={draft.payee ?? ANY}
               onValueChange={(value) => change({ payee: value === ANY ? null : value })}
             >
-              <SelectTrigger id="filter-payee" className="w-full text-base data-[size=default]:h-11 md:text-sm">
+              <SelectTrigger id="filter-payee" className="w-full text-base data-[size=default]:h-11 desktop:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -169,7 +169,7 @@ export function FilterSheet({
           </FormField>
 
           <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 py-2">
-            <Label htmlFor="filter-no-receipt" className="text-base font-normal md:text-sm">
+            <Label htmlFor="filter-no-receipt" className="text-base font-normal desktop:text-sm">
               Only requests with no receipt
             </Label>
             <Switch

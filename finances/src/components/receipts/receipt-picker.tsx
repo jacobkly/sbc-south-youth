@@ -101,11 +101,11 @@ export function ReceiptPicker({
             disabled={locked}
             aria-describedby={describedBy}
             onClick={pick}
-            className="h-24 w-full flex-col gap-1 border-dashed text-base font-normal md:text-sm"
+            className="h-24 w-full flex-col gap-1 border-dashed text-base font-normal desktop:text-sm"
           >
             <ImagePlusIcon className="size-6 text-muted-foreground" aria-hidden />
             <span>Add receipts</span>
-            <span className="hidden text-sm text-muted-foreground md:inline">or drop files here</span>
+            <span className="hidden text-sm text-muted-foreground desktop:inline">or drop files here</span>
           </Button>
         )
       ) : (

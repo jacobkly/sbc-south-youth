@@ -18,7 +18,7 @@ import { MIN_PURCHASE_DATE } from "@/lib/requests/schema";
 
 /** A radio option drawn as a tappable tile. */
 export const TILE =
-  "h-11 cursor-pointer rounded-lg border px-3 text-base font-normal has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-muted md:text-sm";
+  "h-11 cursor-pointer rounded-lg border px-3 text-base font-normal has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-muted desktop:text-sm";
 
 /** A field's id. Each form passes its own prefix, so two forms on a page never share ids. */
 export const paymentFieldId = (prefix: string, key: keyof PaymentValues | "external_approver") => `${prefix}-${key}`;
@@ -85,7 +85,7 @@ export function PaymentFields<T extends PaymentValues>({
             type="date"
             min={isIsoDate(purchaseDate) && purchaseDate <= today ? purchaseDate : MIN_PURCHASE_DATE}
             max={today}
-            className="h-11 [&::-webkit-date-and-time-value]:text-left"
+            className="h-11"
           />
         </FormField>
 

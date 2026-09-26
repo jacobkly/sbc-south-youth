@@ -60,7 +60,7 @@ export function PayeePicker({
         type="button"
         id={id}
         variant="outline"
-        className="h-11 w-full justify-between px-3 text-base font-normal md:text-sm"
+        className="h-11 w-full justify-between px-3 text-base font-normal desktop:text-sm"
         aria-haspopup="dialog"
         aria-labelledby={`${labelId} ${id}`}
         aria-invalid={invalid || undefined}

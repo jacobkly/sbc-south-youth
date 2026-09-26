@@ -104,7 +104,7 @@ export function SettingsForm({ settings }: { settings: AppSettings }) {
           Approval
         </h2>
         <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 py-2">
-          <Label htmlFor="settings-external-approval" className="text-base font-normal md:text-sm">
+          <Label htmlFor="settings-external-approval" className="text-base font-normal desktop:text-sm">
             Allow external approval
           </Label>
           <Switch

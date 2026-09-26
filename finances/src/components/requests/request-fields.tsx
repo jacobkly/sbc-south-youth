@@ -156,7 +156,7 @@ export function RequestFields({
             <Label
               key={type}
               htmlFor={`request-type-${type}`}
-              className="h-11 cursor-pointer rounded-lg border px-3 text-base font-normal has-[[aria-invalid=true]]:border-destructive has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-muted md:text-sm"
+              className="h-11 cursor-pointer rounded-lg border px-3 text-base font-normal has-[[aria-invalid=true]]:border-destructive has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-muted desktop:text-sm"
             >
               <RadioGroupItem id={`request-type-${type}`} value={type} aria-invalid={typeInvalid} />
               {REQUEST_TYPE_LABELS[type]}
@@ -191,7 +191,7 @@ export function RequestFields({
             type="date"
             min={MIN_PURCHASE_DATE}
             max={today}
-            className="h-11 [&::-webkit-date-and-time-value]:text-left"
+            className="h-11"
           />
         </FormField>
       </div>
@@ -255,7 +255,7 @@ export function RequestFields({
         )}
         {receiptCount === 0 && (
           <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 py-2">
-            <Label htmlFor={requestFieldId("no_receipt")} className="text-base font-normal md:text-sm">
+            <Label htmlFor={requestFieldId("no_receipt")} className="text-base font-normal desktop:text-sm">
               No receipt on file
             </Label>
             <Switch
