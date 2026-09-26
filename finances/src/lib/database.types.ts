@@ -442,6 +442,14 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       current_payee_id: { Args: never; Returns: string }
+      import_paid_requests: {
+        Args: {
+          p_external_approver?: string
+          p_method: Database["public"]["Enums"]["payment_method"]
+          p_rows: Json
+        }
+        Returns: Json
+      }
       link_payee: {
         Args: { p_payee_id: string; p_user_id: string }
         Returns: undefined
