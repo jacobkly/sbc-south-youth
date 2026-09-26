@@ -115,16 +115,18 @@ export function ApproverField({
   onChange,
   error,
   disabled,
+  hint = "This is paid to you, so enter who approved it.",
 }: {
   idPrefix: string;
   value: string;
   onChange: (value: string) => void;
   error?: string;
   disabled?: boolean;
+  hint?: string;
 }) {
   const id = paymentFieldId(idPrefix, "external_approver");
   return (
-    <FormField id={id} label="Approved by" hint="This is paid to you, so enter who approved it." error={error}>
+    <FormField id={id} label="Approved by" hint={hint} error={error}>
       <Input
         id={id}
         name="external_approver"

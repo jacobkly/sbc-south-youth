@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { FileSpreadsheetIcon } from "lucide-react";
 import { SettingsForm, SettingsSummary } from "@/components/settings/settings-form";
+import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { SETTINGS_COLUMNS } from "@/lib/settings/schema";
 import { createClient } from "@/lib/supabase/server";
@@ -23,6 +26,24 @@ export default async function SettingsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       {/* Viewers can read the settings. The update policy lets only admins change them. */}
       {user?.role === "admin" ? <SettingsForm settings={settings} /> : <SettingsSummary settings={settings} />}
+
+      {user?.role === "admin" && (
+        <section aria-labelledby="settings-import-heading" className="space-y-3 border-t pt-6">
+          <h2 id="settings-import-heading" className="text-lg font-semibold">
+            Import
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Bring in reimbursements that were already paid, from a spreadsheet with Date, Name, Amount, Type, and Notes
+            columns.
+          </p>
+          <Button variant="outline" className="h-11 px-5" asChild>
+            <Link href="/admin/settings/import">
+              <FileSpreadsheetIcon aria-hidden />
+              Import from a spreadsheet
+            </Link>
+          </Button>
+        </section>
+      )}
     </div>
   );
 }

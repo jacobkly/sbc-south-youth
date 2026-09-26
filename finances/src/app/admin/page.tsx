@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PlusIcon, ReceiptTextIcon } from "lucide-react";
+import { FileSpreadsheetIcon, PlusIcon, ReceiptTextIcon } from "lucide-react";
 import { LatestRequests } from "@/components/dashboard/latest-requests";
 import { MonthlyChart } from "@/components/dashboard/monthly-chart";
 import { NeedsAction } from "@/components/dashboard/needs-action";
@@ -65,12 +65,20 @@ export default async function DashboardPage() {
               </p>
             </div>
             {canEdit && (
-              <Button className="h-11 px-5" asChild>
-                <Link href="/admin/requests/new">
-                  <PlusIcon aria-hidden />
-                  Enter the first request
-                </Link>
-              </Button>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button className="h-11 px-5" asChild>
+                  <Link href="/admin/requests/new">
+                    <PlusIcon aria-hidden />
+                    Enter the first request
+                  </Link>
+                </Button>
+                <Button variant="outline" className="h-11 px-5" asChild>
+                  <Link href="/admin/settings/import">
+                    <FileSpreadsheetIcon aria-hidden />
+                    Import a spreadsheet
+                  </Link>
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
