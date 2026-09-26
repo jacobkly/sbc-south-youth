@@ -18,23 +18,11 @@ import {
   QUEUE_TAB_STATUSES,
   QUEUE_TABS,
   queueHref,
-  type QueueFilters,
   type QueueTab,
+  type ShownQueueFilters,
 } from "@/lib/requests/queue";
 
 const SEARCH_DELAY_MS = 300;
-
-/** Scrolls the tab row sideways so the selected tab is in view, without moving the page. */
-function revealSelectedTab(row: HTMLElement | null) {
-  const tab = row?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
-  if (!row || !tab) return;
-  const margin = 16;
-  if (tab.offsetLeft - margin < row.scrollLeft) {
-    row.scrollLeft = tab.offsetLeft - margin;
-  } else if (tab.offsetLeft + tab.offsetWidth + margin > row.scrollLeft + row.clientWidth) {
-    row.scrollLeft = tab.offsetLeft + tab.offsetWidth + margin - row.clientWidth;
-  }
-}
 
 /**
  * The requests queue. The tab, search, and filters live in the URL, so the
@@ -48,13 +36,12 @@ export function RequestQueue({
   hasMore,
   payees,
   canCreate,
-}: QueuePage & { filters: QueueFilters; payees: PayeeOption[]; canCreate: boolean }) {
+}: Omit<QueuePage, "tab"> & { filters: ShownQueueFilters; payees: PayeeOption[]; canCreate: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(filters);
   const [query, setQuery] = useState(filters.q);
   const [loadedQuery, setLoadedQuery] = useState(filters.q);
-  const tabRowRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // The search can change without typing, like tapping Requests in the nav.
@@ -64,7 +51,7 @@ export function RequestQueue({
     if (query.trim() === loadedQuery) setQuery(filters.q);
   }
 
-  function navigate(next: QueueFilters) {
+  function navigate(next: ShownQueueFilters) {
     startTransition(() => {
       setShown(next);
       router.replace(queueHref(next), { scroll: false });
@@ -72,7 +59,7 @@ export function RequestQueue({
   }
 
   /** Any change to what's listed starts again from the first page. */
-  function update(changes: Partial<QueueFilters>) {
+  function update(changes: Partial<ShownQueueFilters>) {
     navigate({ ...shown, ...changes, pages: 1 });
   }
 
@@ -90,10 +77,6 @@ export function RequestQueue({
     const timer = setTimeout(() => searchIfChanged(query), SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
   }, [query]);
-
-  useEffect(() => {
-    revealSelectedTab(tabRowRef.current);
-  }, [shown.tab]);
 
   const switchingTab = shown.tab !== filters.tab;
   const loadingMore = pending && !switchingTab && shown.pages > filters.pages;
@@ -196,19 +179,19 @@ export function RequestQueue({
       </div>
 
       <Tabs value={shown.tab} onValueChange={(value) => update({ tab: value as QueueTab })}>
-        <div
-          ref={tabRowRef}
-          className="relative -mx-4 overflow-x-auto px-4 pb-1.5 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden"
-        >
-          <TabsList variant="line" className="w-max min-w-full justify-start group-data-horizontal/tabs:h-10">
-            {QUEUE_TABS.map((tab) => (
-              <TabsTrigger key={tab} value={tab} className="flex-none px-2.5">
-                {QUEUE_TAB_LABELS[tab]}{" "}
-                <span className="text-xs font-normal text-muted-foreground tabular-nums">{counts[tab]}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
+        {/* Wraps onto more rows instead of scrolling sideways, so every tab stays in reach on a phone. */}
+        <TabsList className="w-full flex-wrap justify-start gap-2 bg-transparent p-0 group-data-horizontal/tabs:h-auto">
+          {QUEUE_TABS.map((tab) => (
+            <TabsTrigger
+              key={tab}
+              value={tab}
+              className="h-10 flex-none gap-2 rounded-full border-border px-3.5 text-foreground data-active:border-primary data-active:bg-primary data-active:text-primary-foreground data-active:shadow-none dark:text-foreground dark:data-active:border-primary dark:data-active:bg-primary dark:data-active:text-primary-foreground"
+            >
+              {QUEUE_TAB_LABELS[tab]}
+              <span className="text-xs font-normal tabular-nums opacity-70">{counts[tab]}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
         {QUEUE_TABS.map((tab) => (
           <TabsContent
             key={tab}

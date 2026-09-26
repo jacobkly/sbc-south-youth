@@ -23,7 +23,14 @@ export default async function RequestsPage({ searchParams }: PageProps<"/admin/r
   const matchingPayees = needle
     ? payees.data.filter((payee) => payee.full_name.toLowerCase().includes(needle)).map((payee) => payee.id)
     : [];
-  const queue = await loadQueue(supabase, filters, matchingPayees);
+  const { tab, ...queue } = await loadQueue(supabase, filters, matchingPayees);
 
-  return <RequestQueue filters={filters} {...queue} payees={payees.data} canCreate={user?.role === "admin"} />;
+  return (
+    <RequestQueue
+      filters={{ ...filters, tab }}
+      {...queue}
+      payees={payees.data}
+      canCreate={user?.role === "admin"}
+    />
+  );
 }

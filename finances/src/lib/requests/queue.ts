@@ -3,7 +3,8 @@ import { isUuid } from "@/lib/utils";
 import type { RequestStatus } from "./format";
 import { REQUEST_TYPES, type RequestType } from "./schema";
 
-export const QUEUE_TABS = ["review", "info", "pay", "paid", "closed", "all"] as const;
+/** In the order they're shown. */
+export const QUEUE_TABS = ["all", "pay", "review", "info", "paid", "closed"] as const;
 export type QueueTab = (typeof QUEUE_TABS)[number];
 
 export const QUEUE_TAB_LABELS: Record<QueueTab, string> = {
@@ -25,6 +26,14 @@ export const QUEUE_TAB_STATUSES: Record<QueueTab, readonly RequestStatus[] | nul
   all: null,
 };
 
+/** Tabs with work waiting, in the order the queue prefers to open them. */
+const WORK_TABS: readonly QueueTab[] = ["pay", "review", "info"];
+
+/** The tab to open when the URL doesn't name one: the first with work waiting, or All. */
+export function defaultTab(counts: Record<QueueTab, number>): QueueTab {
+  return WORK_TABS.find((tab) => counts[tab] > 0) ?? "all";
+}
+
 export const QUEUE_PAGE_SIZE = 25;
 /** Enough for 1,000 rows, the most one Supabase query returns. */
 export const MAX_QUEUE_PAGES = 40;
@@ -32,7 +41,8 @@ const MAX_SEARCH = 100;
 
 /** The queue's tab and filters, as kept in the URL. */
 export type QueueFilters = {
-  tab: QueueTab;
+  /** Null when the URL doesn't name one, until `defaultTab` picks it. */
+  tab: QueueTab | null;
   /** Searches vendor, description, event, payee, and R-number. */
   q: string;
   /** Purchase date range, inclusive. */
@@ -45,8 +55,11 @@ export type QueueFilters = {
   pages: number;
 };
 
+/** Filters once the tab is picked. */
+export type ShownQueueFilters = QueueFilters & { tab: QueueTab };
+
 export const DEFAULT_QUEUE_FILTERS: QueueFilters = {
-  tab: "pay",
+  tab: null,
   q: "",
   from: null,
   to: null,
@@ -87,7 +100,7 @@ export function parseQueueFilters(params: SearchParams): QueueFilters {
 /** The queue's URL for these filters, leaving out the defaults. */
 export function queueHref(filters: QueueFilters): string {
   const params = new URLSearchParams();
-  if (filters.tab !== DEFAULT_QUEUE_FILTERS.tab) params.set("tab", filters.tab);
+  if (filters.tab) params.set("tab", filters.tab);
   if (filters.q.trim()) params.set("q", filters.q.trim());
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);

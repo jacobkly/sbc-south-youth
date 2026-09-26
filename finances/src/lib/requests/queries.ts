@@ -3,6 +3,7 @@ import type { Database, Tables } from "@/lib/database.types";
 import { reportBounds, type ReportFilters } from "@/lib/reports/filters";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import {
+  defaultTab,
   MAX_QUEUE_PAGES,
   QUEUE_PAGE_SIZE,
   QUEUE_TAB_STATUSES,
@@ -32,6 +33,8 @@ export type QueueRow = Pick<
 > & { payee: { full_name: string } | null };
 
 export type QueuePage = {
+  /** The tab shown: the one in the URL, or the one picked for it. */
+  tab: QueueTab;
   /** Newest purchase first. */
   rows: QueueRow[];
   /** How many requests in each tab match the filters. */
@@ -60,35 +63,51 @@ function queueQuery(
   return query;
 }
 
-/** The loaded pages of the current tab, and the count in every tab. Throws if a query fails. */
+/** How many requests in each tab match the filters. Throws if a query fails. */
+async function loadCounts(
+  supabase: SupabaseClient<Database>,
+  filters: QueueFilters,
+  payeeIds: readonly string[],
+): Promise<Record<QueueTab, number>> {
+  const results = await Promise.all(
+    QUEUE_TABS.map((tab) => queueQuery(supabase, tab, filters, payeeIds, { count: "exact", head: true })),
+  );
+  return Object.fromEntries(
+    QUEUE_TABS.map((tab, index) => {
+      const { count, error } = results[index];
+      if (error) throw error;
+      return [tab, count ?? 0];
+    }),
+  ) as Record<QueueTab, number>;
+}
+
+/**
+ * The loaded pages of the current tab, and the count in every tab. When the
+ * URL doesn't name a tab, the counts pick one. Throws if a query fails.
+ */
 export async function loadQueue(
   supabase: SupabaseClient<Database>,
   filters: QueueFilters,
   payeeIds: readonly string[],
 ): Promise<QueuePage> {
+  const counting = loadCounts(supabase, filters, payeeIds);
+  // Only waits for the counts first when it needs them to pick the tab.
+  const tab = filters.tab ?? defaultTab(await counting);
   const [rows, counts] = await Promise.all([
-    queueQuery(supabase, filters.tab, filters, payeeIds)
+    queueQuery(supabase, tab, filters, payeeIds)
       .order("purchase_date", { ascending: false })
       .order("request_number", { ascending: false })
       .range(0, filters.pages * QUEUE_PAGE_SIZE - 1),
-    Promise.all(
-      QUEUE_TABS.map((tab) => queueQuery(supabase, tab, filters, payeeIds, { count: "exact", head: true })),
-    ),
+    counting,
   ]);
 
   if (rows.error) throw rows.error;
-  const byTab = Object.fromEntries(
-    QUEUE_TABS.map((tab, index) => {
-      const { count, error } = counts[index];
-      if (error) throw error;
-      return [tab, count ?? 0];
-    }),
-  ) as Record<QueueTab, number>;
 
   return {
+    tab,
     rows: rows.data,
-    counts: byTab,
-    hasMore: byTab[filters.tab] > rows.data.length && filters.pages < MAX_QUEUE_PAGES,
+    counts,
+    hasMore: counts[tab] > rows.data.length && filters.pages < MAX_QUEUE_PAGES,
   };
 }
 

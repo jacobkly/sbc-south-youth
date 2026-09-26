@@ -3,6 +3,7 @@ import {
   activeFilterCount,
   containsPattern,
   DEFAULT_QUEUE_FILTERS,
+  defaultTab,
   isFiltered,
   MAX_QUEUE_PAGES,
   parseQueueFilters,
@@ -14,8 +15,9 @@ import {
 const PAYEE = "0b7c6a8e-4f1d-4c2a-9e3b-5d6f7a8b9c0d";
 
 describe("parseQueueFilters", () => {
-  it("defaults to the to-pay tab with nothing filtered", () => {
+  it("leaves the tab to be picked, with nothing filtered", () => {
     expect(parseQueueFilters({})).toEqual(DEFAULT_QUEUE_FILTERS);
+    expect(DEFAULT_QUEUE_FILTERS.tab).toBeNull();
   });
 
   it("reads every filter", () => {
@@ -71,9 +73,31 @@ describe("parseQueueFilters", () => {
   });
 });
 
+describe("defaultTab", () => {
+  const none = { all: 0, pay: 0, review: 0, info: 0, paid: 0, closed: 0 };
+
+  it("opens To pay first when anything is waiting to be paid", () => {
+    expect(defaultTab({ ...none, all: 5, pay: 1, review: 2, info: 1 })).toBe("pay");
+  });
+
+  it("then Awaiting review, then Needs info", () => {
+    expect(defaultTab({ ...none, all: 3, review: 2, info: 1 })).toBe("review");
+    expect(defaultTab({ ...none, all: 1, info: 1 })).toBe("info");
+  });
+
+  it("opens All when nothing is waiting", () => {
+    expect(defaultTab({ ...none, all: 4, paid: 3, closed: 1 })).toBe("all");
+    expect(defaultTab(none)).toBe("all");
+  });
+});
+
 describe("queueHref", () => {
   it("leaves out the defaults", () => {
     expect(queueHref(DEFAULT_QUEUE_FILTERS)).toBe("/admin/requests");
+  });
+
+  it("keeps a chosen tab, so it isn't picked again", () => {
+    expect(queueHref({ ...DEFAULT_QUEUE_FILTERS, tab: "all" })).toBe("/admin/requests?tab=all");
   });
 
   it("round-trips through parseQueueFilters", () => {
