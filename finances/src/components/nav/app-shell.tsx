@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AdminNav } from "@/components/nav/admin-nav";
 import { NoAccess } from "@/components/nav/no-access";
+import { RefreshOnHistory } from "@/components/nav/refresh-on-history";
 import { canUseApp, getCurrentUser } from "@/lib/auth/current-user";
 import type { Enums } from "@/lib/database.types";
 
@@ -26,6 +27,7 @@ export function ShellLayout({ role, name, children }: { role: Enums<"user_role">
   return (
     <div className="min-h-dvh desktop:pl-64">
       <AdminNav role={role} name={name} />
+      <RefreshOnHistory />
       <main className="mx-auto w-full max-w-3xl px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 desktop:px-8 desktop:py-10">
         {children}
       </main>
