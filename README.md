@@ -32,7 +32,9 @@ npx supabase db push                         # apply them, in order
 npm run db:types                             # regenerate the finances app's database types
 ```
 
-With Docker Desktop, `npx supabase start` runs a local stack instead, `npx supabase db reset` rebuilds it from the migrations, and `npx supabase test db` runs the database tests.
+With Docker Desktop, `npx supabase start` runs a local stack instead, `npx supabase db reset` rebuilds it from the migrations and the fake data in `supabase/seed.sql`, and `npx supabase test db` runs the database tests.
+
+A daily GitHub Action ([`keep-alive.yml`](.github/workflows/keep-alive.yml)) stops the free project from pausing. It needs the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` repository secrets.
 
 ## Deployment
 
