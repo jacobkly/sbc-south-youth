@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LoginForm } from "@/components/auth/login-form";
+import { LogoMark } from "@/components/nav/logo-mark";
 import { safeNextPath } from "@/lib/auth/next-path";
 
 export const metadata: Metadata = {
@@ -14,6 +15,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
+        <LogoMark className="mb-6 size-12 rounded-xl" />
         <h1 className="text-2xl font-semibold tracking-tight">SBC South Youth Finances</h1>
         <p className="mt-1 text-sm text-muted-foreground">Sign in with your email and password.</p>
         <LoginForm next={next} linkFailed={linkFailed} />
