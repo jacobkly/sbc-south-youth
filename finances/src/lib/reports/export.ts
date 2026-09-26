@@ -117,3 +117,8 @@ export function reportFileName(filters: ReportFilters): string {
 export function summaryFileName(filters: ReportFilters): string {
   return `${fileStem(filters)}_summary.csv`;
 }
+
+/** The receipts ZIP's name, like "sbc-youth-reimbursements_2026-Q3_receipts.zip". */
+export function receiptsZipFileName(filters: ReportFilters): string {
+  return `${fileStem(filters)}_receipts.zip`;
+}

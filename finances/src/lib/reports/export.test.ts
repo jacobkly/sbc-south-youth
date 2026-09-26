@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ReportExportRow } from "@/lib/requests/queries";
 import {
+  receiptsZipFileName,
   REPORT_CSV_HEADER,
   reportCsv,
   reportCsvRow,
@@ -173,6 +174,15 @@ describe("summaryFileName", () => {
     );
     expect(summaryFileName({ period: q3, basis: "paid", allStatuses: false })).toBe(
       "sbc-youth-reimbursements_2026-Q3_paid-date_summary.csv",
+    );
+  });
+});
+
+describe("receiptsZipFileName", () => {
+  it("names the period and marks it as the receipts", () => {
+    const march = { kind: "month", year: 2026, month: 3 } as const;
+    expect(receiptsZipFileName({ period: march, basis: "purchase", allStatuses: true })).toBe(
+      "sbc-youth-reimbursements_2026-03_all-statuses_receipts.zip",
     );
   });
 });

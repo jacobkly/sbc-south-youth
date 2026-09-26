@@ -72,7 +72,7 @@ export function ReportView({ filters, today, rows }: { filters: ReportFilters; t
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-        <ExportMenu filters={shown} />
+        <ExportMenu filters={shown} report={{ filters, rows }} loading={pending} />
       </div>
 
       <section aria-label="Report options" className="@container space-y-4 rounded-lg border p-4">
