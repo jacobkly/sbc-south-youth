@@ -5,7 +5,8 @@ import { ArrowLeftIcon, CheckIcon, ChevronsUpDownIcon, PlusIcon, SearchIcon } fr
 import { PayeeForm } from "@/components/payees/payee-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/ui/responsive-sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { PayeeRow } from "@/lib/payees/columns";
 import { payeeMatches, payeeSearchNeedle } from "@/lib/payees/search";
 
@@ -75,10 +76,7 @@ export function PayeePicker({
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="bottom"
-          className="gap-0 rounded-t-xl pb-[env(safe-area-inset-bottom)] data-[side=bottom]:h-[85dvh] md:inset-x-0 md:bottom-6 md:mx-auto md:max-w-lg md:rounded-xl md:border md:data-[side=bottom]:h-[70dvh]"
-        >
+        <ResponsiveSheetContent className="gap-0 overflow-hidden touch:h-[min(85dvh,calc(var(--visible-height,100dvh)-1rem))] touch:pb-[env(safe-area-inset-bottom)] desktop:h-[70dvh] desktop:pb-0">
           {adding ? (
             <div className="min-h-0 flex-1 overflow-y-auto pb-4">
               <SheetHeader>
@@ -166,7 +164,7 @@ export function PayeePicker({
               </div>
             </>
           )}
-        </SheetContent>
+        </ResponsiveSheetContent>
       </Sheet>
     </>
   );

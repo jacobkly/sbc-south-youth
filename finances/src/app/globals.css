@@ -4,9 +4,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* PCs: a wide screen with a mouse or trackpad. Phones and tablets, even wide
-   ones,  get the touch layout: bottom tab bar and sheets. */
+/* desktop: PCs, a wide screen with a mouse or trackpad. touch: everything
+   else. Phones and tablets, even wide ones, get the touch layout: tab bar and
+   bottom sheets. Keep in sync with DESKTOP_QUERY in src/lib/media.ts. */
 @custom-variant desktop (@media (min-width: 64rem) and (hover: hover) and (pointer: fine));
+@custom-variant touch (@media not all and (min-width: 64rem) and (hover: hover) and (pointer: fine));
 
 @theme inline {
     --font-heading: var(--font-sans);

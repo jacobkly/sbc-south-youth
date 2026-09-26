@@ -6,7 +6,8 @@ import { describedBy, FormField } from "@/components/form-field";
 import { ApproverField, paymentFieldId, PaymentFields } from "@/components/requests/payment-fields";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/ui/responsive-sheet";
+import { Sheet, SheetClose, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import type { IsoDate } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
@@ -184,10 +185,7 @@ export function ActionSheet({
 
   return (
     <Sheet open={opened !== null} onOpenChange={(open) => !open && !busy && onClose()}>
-      <SheetContent
-        side="bottom"
-        className="max-h-[92dvh] overflow-y-auto rounded-t-xl pb-[calc(1rem+env(safe-area-inset-bottom))] md:inset-x-0 md:bottom-6 md:mx-auto md:max-w-lg md:rounded-xl md:border"
-      >
+      <ResponsiveSheetContent>
         {current && copy && (
           <>
             <SheetHeader className="pr-12">
@@ -211,7 +209,7 @@ export function ActionSheet({
             />
           </>
         )}
-      </SheetContent>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 }
@@ -364,17 +362,17 @@ function ActionForm({
         />
       )}
 
-      {/* "Go back" comes first so it gets focus when the sheet opens, but shows below on phones. */}
-      <div className="flex flex-col-reverse gap-2 pt-2 md:flex-row md:justify-end">
+      {/* "Go back" comes first so a PC focuses it when the dialog opens, but it shows below on phones. */}
+      <div className="flex flex-col-reverse gap-2 pt-2 desktop:flex-row desktop:justify-end">
         <SheetClose asChild>
-          <Button type="button" variant="outline" className="h-11 md:min-w-28" disabled={pending}>
+          <Button type="button" variant="outline" className="h-11 desktop:min-w-28" disabled={pending}>
             Go back
           </Button>
         </SheetClose>
         <Button
           type="submit"
           variant={copy.destructive ? "destructive" : "default"}
-          className="h-11 md:min-w-28"
+          className="h-11 desktop:min-w-28"
           disabled={pending || receiptBlocked}
         >
           {pending ? "Saving…" : copy.label}

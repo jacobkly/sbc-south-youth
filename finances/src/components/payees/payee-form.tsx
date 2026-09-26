@@ -7,7 +7,8 @@ import { describedBy, FormField } from "@/components/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/ui/responsive-sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { PAYEE_COLUMNS, type PayeeRow } from "@/lib/payees/columns";
 import {
@@ -23,7 +24,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const FIELD_ORDER: (keyof PayeeFormValues)[] = ["full_name", "email", "payment_handle", "notes"];
 
-/** Add or edit a payee in a bottom sheet (a centered panel on wider screens). */
+/** Add or edit a payee in a bottom sheet on phones and tablets, a dialog on PCs. */
 export function PayeeSheet({ payee, onClose }: { payee: PayeeRow | "new" | null; onClose: () => void }) {
   const router = useRouter();
   // Keep showing the last payee while the sheet animates closed.
@@ -34,10 +35,7 @@ export function PayeeSheet({ payee, onClose }: { payee: PayeeRow | "new" | null;
 
   return (
     <Sheet open={payee !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent
-        side="bottom"
-        className="max-h-[92dvh] overflow-y-auto rounded-t-xl pb-[calc(1rem+env(safe-area-inset-bottom))] md:inset-x-0 md:bottom-6 md:mx-auto md:max-w-lg md:rounded-xl md:border"
-      >
+      <ResponsiveSheetContent>
         <SheetHeader>
           <SheetTitle>{isNew ? "Add payee" : "Edit payee"}</SheetTitle>
           <SheetDescription>
@@ -54,7 +52,7 @@ export function PayeeSheet({ payee, onClose }: { payee: PayeeRow | "new" | null;
             }}
           />
         )}
-      </SheetContent>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 }

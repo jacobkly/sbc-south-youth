@@ -16,10 +16,10 @@ import {
   REQUESTS,
   SETTINGS,
 } from "@/components/nav/nav-items";
+import { ResponsiveSheetContent } from "@/components/ui/responsive-sheet";
 import {
   Sheet,
   SheetClose,
-  SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
@@ -80,7 +80,7 @@ export function TabBar({ role, name }: { role: Enums<"user_role">; name: string 
               </span>
               <span className="max-w-full truncate px-1">More</span>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-2xl pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <ResponsiveSheetContent>
               <SheetHeader>
                 <SheetTitle>More</SheetTitle>
                 <SheetDescription>Signed in as {name}</SheetDescription>
@@ -104,7 +104,7 @@ export function TabBar({ role, name }: { role: Enums<"user_role">; name: string 
               <div className="px-4">
                 <SignOutButton variant="outline" className="h-11 w-full" />
               </div>
-            </SheetContent>
+            </ResponsiveSheetContent>
           </Sheet>
         </li>
       </ul>

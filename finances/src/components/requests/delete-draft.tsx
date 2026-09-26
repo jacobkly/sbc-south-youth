@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { CircleAlertIcon, Trash2Icon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/ui/responsive-sheet";
+import { Sheet, SheetClose, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatCents } from "@/lib/money";
 import { RETRY_MESSAGE } from "@/lib/requests/actions";
 import { deleteDraft } from "@/lib/requests/drafts";
@@ -69,10 +70,7 @@ export function DeleteDraft({
         Delete draft
       </Button>
 
-      <SheetContent
-        side="bottom"
-        className="max-h-[92dvh] overflow-y-auto rounded-t-xl pb-[calc(1rem+env(safe-area-inset-bottom))] md:inset-x-0 md:bottom-6 md:mx-auto md:max-w-lg md:rounded-xl md:border"
-      >
+      <ResponsiveSheetContent>
         <SheetHeader className="pr-12">
           <SheetTitle>Delete this draft?</SheetTitle>
           <SheetDescription>
@@ -90,17 +88,17 @@ export function DeleteDraft({
             </Alert>
           )}
 
-          {/* "Go back" comes first so it gets focus when the sheet opens, but shows below on phones. */}
-          <div className="flex flex-col-reverse gap-2 pt-2 md:flex-row md:justify-end">
+          {/* "Go back" comes first so a PC focuses it when the dialog opens, but it shows below on phones. */}
+          <div className="flex flex-col-reverse gap-2 pt-2 desktop:flex-row desktop:justify-end">
             <SheetClose asChild>
-              <Button type="button" variant="outline" className="h-11 md:min-w-28" disabled={pending}>
+              <Button type="button" variant="outline" className="h-11 desktop:min-w-28" disabled={pending}>
                 Go back
               </Button>
             </SheetClose>
             <Button
               type="button"
               variant="destructive"
-              className="h-11 md:min-w-28"
+              className="h-11 desktop:min-w-28"
               disabled={pending}
               onClick={() => void remove()}
             >
@@ -108,7 +106,7 @@ export function DeleteDraft({
             </Button>
           </div>
         </div>
-      </SheetContent>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 }

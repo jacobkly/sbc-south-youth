@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/ui/responsive-sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import type { Tables } from "@/lib/database.types";
 import { formatDate } from "@/lib/dates";
@@ -89,15 +90,7 @@ export function FilterSheet({
         )}
       </Button>
 
-      <SheetContent
-        side="bottom"
-        className="max-h-[92dvh] overflow-y-auto rounded-t-xl pb-[calc(1rem+env(safe-area-inset-bottom))] md:inset-x-0 md:bottom-6 md:mx-auto md:max-w-lg md:rounded-xl md:border"
-        // Focus the sheet itself, not the first date field, which would open the date picker on iPhone.
-        onOpenAutoFocus={(event) => {
-          event.preventDefault();
-          if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus();
-        }}
-      >
+      <ResponsiveSheetContent>
         <SheetHeader className="pr-12">
           <SheetTitle>Filter requests</SheetTitle>
           <SheetDescription>Applies to every tab.</SheetDescription>
@@ -186,16 +179,16 @@ export function FilterSheet({
             />
           </div>
 
-          <div className="flex flex-col-reverse gap-2 pt-2 md:flex-row md:justify-end">
-            <Button type="button" variant="outline" className="h-11 md:min-w-28" onClick={() => setDraft(CLEARED)}>
+          <div className="flex flex-col-reverse gap-2 pt-2 desktop:flex-row desktop:justify-end">
+            <Button type="button" variant="outline" className="h-11 desktop:min-w-28" onClick={() => setDraft(CLEARED)}>
               Clear all
             </Button>
-            <Button type="submit" className="h-11 md:min-w-28">
+            <Button type="submit" className="h-11 desktop:min-w-28">
               Show results
             </Button>
           </div>
         </form>
-      </SheetContent>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 }
