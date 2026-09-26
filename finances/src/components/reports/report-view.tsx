@@ -2,9 +2,9 @@
 
 import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { DownloadIcon } from "lucide-react";
 import { cn } from "cn";
 import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
+import { ExportMenu } from "@/components/reports/export-menu";
 import { PeriodPicker } from "@/components/reports/period-picker";
 import { ReportList } from "@/components/reports/report-list";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import { REQUEST_TYPES } from "@/lib/requests/schema";
 import {
   REPORT_BASES,
   REPORT_BASIS_LABELS,
-  reportExportHref,
   reportHref,
   reportPayeeTotals,
   reportTotals,
@@ -73,13 +72,7 @@ export function ReportView({ filters, today, rows }: { filters: ReportFilters; t
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-        {/* A plain link, so the browser downloads the file itself. It exports the report being picked, even mid-load. */}
-        <Button asChild variant="outline" className="h-11">
-          <a href={reportExportHref(shown)} download>
-            <DownloadIcon aria-hidden />
-            Export CSV
-          </a>
-        </Button>
+        <ExportMenu filters={shown} />
       </div>
 
       <section aria-label="Report options" className="@container space-y-4 rounded-lg border p-4">

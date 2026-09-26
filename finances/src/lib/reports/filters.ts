@@ -122,9 +122,14 @@ export function reportHref(filters: ReportFilters): string {
   return `/admin/reports?${reportParams(filters)}`;
 }
 
+/** The files a report downloads as: one line per request, or the totals. */
+export type ReportFile = "requests" | "summary";
+
 /** Where to download the report as a CSV. */
-export function reportExportHref(filters: ReportFilters): string {
-  return `/admin/reports/export?${reportParams(filters)}`;
+export function reportExportHref(filters: ReportFilters, file: ReportFile = "requests"): string {
+  const params = reportParams(filters);
+  if (file === "summary") params.set("file", "summary");
+  return `/admin/reports/export?${params}`;
 }
 
 /**
@@ -193,7 +198,7 @@ export function reportTotals(rows: readonly { type: RequestType; amount_cents: n
 
 export type PayeeTotals = ReportTotals & { payeeId: string; name: string };
 
-type PayeeReportRow = {
+export type PayeeReportRow = {
   payee_id: string;
   payee: { full_name: string } | null;
   type: RequestType;

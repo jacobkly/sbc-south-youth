@@ -4,7 +4,15 @@ import { centsToDecimal } from "@/lib/money";
 import { PAYMENT_METHOD_LABELS } from "@/lib/requests/actions";
 import { formatRequestNumber, REQUEST_STATUS_LABELS, REQUEST_TYPE_LABELS } from "@/lib/requests/format";
 import type { ReportExportRow } from "@/lib/requests/queries";
-import { periodSlug, type ReportFilters } from "./filters";
+import { REQUEST_TYPES } from "@/lib/requests/schema";
+import {
+  periodSlug,
+  reportPayeeTotals,
+  reportTotals,
+  type PayeeReportRow,
+  type ReportFilters,
+  type ReportTotals,
+} from "./filters";
 
 export const REPORT_CSV_HEADER = [
   "request_number",
@@ -63,13 +71,49 @@ export function reportCsv(rows: readonly ReportExportRow[]): string {
   return toCsv(REPORT_CSV_HEADER, rows.map(reportCsvRow));
 }
 
+/** The summary's columns: the amount and count of each type, then in all. */
+export const SUMMARY_CSV_HEADER = [
+  "payee",
+  ...REQUEST_TYPES.flatMap((type) => [`${type}_amount`, `${type}_count`]),
+  "total_amount",
+  "total_count",
+];
+
+function summaryCsvRow(name: string, totals: ReportTotals): CsvValue[] {
+  return [
+    name,
+    ...REQUEST_TYPES.flatMap((type) => [centsToDecimal(totals.byType[type].cents), totals.byType[type].count]),
+    centsToDecimal(totals.cents),
+    totals.count,
+  ];
+}
+
+/** One line per payee, biggest first, then an "All payees" line with the report's totals. */
+export function summaryCsv(rows: readonly PayeeReportRow[]): string {
+  return toCsv(SUMMARY_CSV_HEADER, [
+    ...reportPayeeTotals(rows).map((payee) => summaryCsvRow(payee.name, payee)),
+    summaryCsvRow("All payees", reportTotals(rows)),
+  ]);
+}
+
 /**
- * The file name, like "sbc-youth-reimbursements_2026-Q3.csv". A paid-date
- * or all-statuses report says so, so it isn't mistaken for the default one.
+ * The start of every download's name, like "sbc-youth-reimbursements_2026-Q3".
+ * A paid-date or all-statuses report says so, so it isn't mistaken for the
+ * default one.
  */
-export function reportFileName(filters: ReportFilters): string {
+function fileStem(filters: ReportFilters): string {
   const parts = ["sbc-youth-reimbursements", periodSlug(filters.period)];
   if (filters.basis === "paid") parts.push("paid-date");
   else if (filters.allStatuses) parts.push("all-statuses");
-  return `${parts.join("_")}.csv`;
+  return parts.join("_");
+}
+
+/** The requests CSV's name, like "sbc-youth-reimbursements_2026-Q3.csv". */
+export function reportFileName(filters: ReportFilters): string {
+  return `${fileStem(filters)}.csv`;
+}
+
+/** The summary CSV's name, like "sbc-youth-reimbursements_2026-Q3_summary.csv". */
+export function summaryFileName(filters: ReportFilters): string {
+  return `${fileStem(filters)}_summary.csv`;
 }

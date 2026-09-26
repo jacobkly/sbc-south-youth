@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { ReportExportRow } from "@/lib/requests/queries";
-import { REPORT_CSV_HEADER, reportCsv, reportCsvRow, reportFileName } from "./export";
+import {
+  REPORT_CSV_HEADER,
+  reportCsv,
+  reportCsvRow,
+  reportFileName,
+  SUMMARY_CSV_HEADER,
+  summaryCsv,
+  summaryFileName,
+} from "./export";
 
 const PAID: ReportExportRow = {
   request_number: 12,
@@ -132,6 +140,39 @@ describe("reportFileName", () => {
     );
     expect(reportFileName({ period: q3, basis: "purchase", allStatuses: true })).toBe(
       "sbc-youth-reimbursements_2026-Q3_all-statuses.csv",
+    );
+  });
+});
+
+describe("summaryCsv", () => {
+  it("writes each payee's totals by type, biggest first, then everyone's", () => {
+    const lines = summaryCsv([
+      { payee_id: "p1", payee: { full_name: "Alex Example" }, type: "cafe", amount_cents: 500 },
+      { payee_id: "p2", payee: { full_name: "Pat Example" }, type: "youth", amount_cents: 4599 },
+      { payee_id: "p1", payee: { full_name: "Alex Example" }, type: "youth", amount_cents: 1000 },
+    ]).split("\r\n");
+    expect(lines).toEqual([
+      "﻿payee,cafe_amount,cafe_count,youth_amount,youth_count,total_amount,total_count",
+      "Pat Example,0.00,0,45.99,1,45.99,1",
+      "Alex Example,5.00,1,10.00,1,15.00,2",
+      "All payees,5.00,1,55.99,2,60.99,3",
+      "",
+    ]);
+  });
+
+  it("has only the totals line for an empty report", () => {
+    expect(summaryCsv([])).toBe(`﻿${SUMMARY_CSV_HEADER.join(",")}\r\nAll payees,0.00,0,0.00,0,0.00,0\r\n`);
+  });
+});
+
+describe("summaryFileName", () => {
+  it("names the period and marks it as the summary", () => {
+    const q3 = { kind: "quarter", year: 2026, quarter: 3 } as const;
+    expect(summaryFileName({ period: q3, basis: "purchase", allStatuses: false })).toBe(
+      "sbc-youth-reimbursements_2026-Q3_summary.csv",
+    );
+    expect(summaryFileName({ period: q3, basis: "paid", allStatuses: false })).toBe(
+      "sbc-youth-reimbursements_2026-Q3_paid-date_summary.csv",
     );
   });
 });

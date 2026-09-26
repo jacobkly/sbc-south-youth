@@ -95,6 +95,7 @@ describe("parseReportFilters", () => {
   it("exports the same report", () => {
     const filters = parseReportFilters({ period: "2026-09", status: "all" }, TODAY);
     expect(reportExportHref(filters)).toBe("/admin/reports/export?period=2026-09&status=all");
+    expect(reportExportHref(filters, "summary")).toBe("/admin/reports/export?period=2026-09&status=all&file=summary");
   });
 });
 
