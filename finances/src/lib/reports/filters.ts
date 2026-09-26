@@ -190,3 +190,30 @@ export function reportTotals(rows: readonly { type: RequestType; amount_cents: n
   }
   return totals;
 }
+
+export type PayeeTotals = ReportTotals & { payeeId: string; name: string };
+
+type PayeeReportRow = {
+  payee_id: string;
+  payee: { full_name: string } | null;
+  type: RequestType;
+  amount_cents: number;
+};
+
+/**
+ * The report's totals for each payee, biggest first and then by name.
+ * Grouped by payee, not name, since two payees can share a name.
+ */
+export function reportPayeeTotals(rows: readonly PayeeReportRow[]): PayeeTotals[] {
+  const groups = new Map<string, PayeeReportRow[]>();
+  for (const row of rows) {
+    const group = groups.get(row.payee_id);
+    if (group) group.push(row);
+    else groups.set(row.payee_id, [row]);
+  }
+  return Array.from(groups, ([payeeId, group]) => ({
+    payeeId,
+    name: group[0].payee?.full_name ?? "Unknown payee",
+    ...reportTotals(group),
+  })).sort((a, b) => b.cents - a.cents || a.name.localeCompare(b.name));
+}

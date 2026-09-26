@@ -8,6 +8,7 @@ import {
   reportBounds,
   reportExportHref,
   reportHref,
+  reportPayeeTotals,
   reportTotals,
   switchPeriodKind,
 } from "./filters";
@@ -195,5 +196,57 @@ describe("reportTotals", () => {
       count: 0,
       byType: { cafe: { cents: 0, count: 0 }, youth: { cents: 0, count: 0 } },
     });
+  });
+});
+
+describe("reportPayeeTotals", () => {
+  const ALEX = { full_name: "Alex Example" };
+  const PAT = { full_name: "Pat Example" };
+
+  it("totals each payee by type, biggest first", () => {
+    const totals = reportPayeeTotals([
+      { payee_id: "p1", payee: ALEX, type: "cafe", amount_cents: 500 },
+      { payee_id: "p2", payee: PAT, type: "youth", amount_cents: 4000 },
+      { payee_id: "p1", payee: ALEX, type: "youth", amount_cents: 1000 },
+    ]);
+    expect(totals).toEqual([
+      {
+        payeeId: "p2",
+        name: "Pat Example",
+        cents: 4000,
+        count: 1,
+        byType: { cafe: { cents: 0, count: 0 }, youth: { cents: 4000, count: 1 } },
+      },
+      {
+        payeeId: "p1",
+        name: "Alex Example",
+        cents: 1500,
+        count: 2,
+        byType: { cafe: { cents: 500, count: 1 }, youth: { cents: 1000, count: 1 } },
+      },
+    ]);
+  });
+
+  it("keeps payees who share a name apart, and breaks ties by name", () => {
+    const totals = reportPayeeTotals([
+      { payee_id: "p3", payee: PAT, type: "cafe", amount_cents: 700 },
+      { payee_id: "p1", payee: ALEX, type: "cafe", amount_cents: 700 },
+      { payee_id: "p2", payee: ALEX, type: "cafe", amount_cents: 700 },
+    ]);
+    expect(totals.map((payee) => [payee.payeeId, payee.name])).toEqual([
+      ["p1", "Alex Example"],
+      ["p2", "Alex Example"],
+      ["p3", "Pat Example"],
+    ]);
+  });
+
+  it("names a payee it can't read", () => {
+    expect(reportPayeeTotals([{ payee_id: "p1", payee: null, type: "cafe", amount_cents: 100 }])[0].name).toBe(
+      "Unknown payee",
+    );
+  });
+
+  it("is empty for no requests", () => {
+    expect(reportPayeeTotals([])).toEqual([]);
   });
 });

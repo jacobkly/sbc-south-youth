@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DownloadIcon } from "lucide-react";
 import { cn } from "cn";
@@ -20,7 +20,9 @@ import {
   REPORT_BASIS_LABELS,
   reportExportHref,
   reportHref,
+  reportPayeeTotals,
   reportTotals,
+  type PayeeTotals,
   type ReportBasis,
   type ReportFilters,
   type ReportTotals,
@@ -137,6 +139,7 @@ export function ReportView({ filters, today, rows }: { filters: ReportFilters; t
         {rows.length > 0 ? (
           <>
             <TotalsSection totals={totals} subject={reportSubject(filters)} />
+            <PayeeTotalsSection payees={reportPayeeTotals(rows)} totalCents={totals.cents} />
             <section aria-labelledby="report-requests-heading" className="space-y-3">
               <h2 id="report-requests-heading" className="text-lg font-semibold">
                 Requests
@@ -202,6 +205,49 @@ function TotalsSection({ totals, subject }: { totals: ReportTotals; subject: str
           </dd>
         </div>
       </dl>
+    </section>
+  );
+}
+
+/** How many payees a long list shows before "Show all". */
+const PAYEES_SHOWN = 5;
+
+/** Each payee's total and share, biggest first. A long list starts with the top few. */
+function PayeeTotalsSection({ payees, totalCents }: { payees: PayeeTotals[]; totalCents: number }) {
+  const [expanded, setExpanded] = useState(false);
+  // Hiding only one or two payees would save less than the button takes.
+  const collapsible = payees.length > PAYEES_SHOWN + 2;
+  const shown = collapsible && !expanded ? payees.slice(0, PAYEES_SHOWN) : payees;
+
+  return (
+    <section aria-labelledby="report-payees-heading" className="space-y-3">
+      <h2 id="report-payees-heading" className="text-lg font-semibold">
+        By payee
+      </h2>
+      <dl id="report-payee-totals" className="divide-y rounded-lg border">
+        {shown.map((payee) => (
+          <div key={payee.payeeId} className="flex items-start justify-between gap-3 px-4 py-3">
+            <dt className="min-w-0 truncate text-sm font-medium">{payee.name}</dt>
+            <dd className="shrink-0 text-right tabular-nums">
+              <span className="block font-semibold">{formatCents(payee.cents)}</span>
+              <span className="block text-sm text-muted-foreground">
+                {requestCount(payee.count)} · {sharePercent(payee.cents, totalCents)}
+              </span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {collapsible && (
+        <Button
+          variant="outline"
+          className="h-11 w-full"
+          aria-controls="report-payee-totals"
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? `Show the top ${PAYEES_SHOWN}` : `Show all ${payees.length} payees`}
+        </Button>
+      )}
     </section>
   );
 }
