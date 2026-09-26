@@ -1,6 +1,7 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "cn";
 import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
@@ -205,7 +206,10 @@ function TotalsSection({ totals, subject }: { totals: ReportTotals; subject: str
 /** How many payees a long list shows before "Show all". */
 const PAYEES_SHOWN = 5;
 
-/** Each payee's total and share, biggest first. A long list starts with the top few. */
+/**
+ * Each payee's total and share, biggest first, linking to the payee.
+ * A long list starts with the top few.
+ */
 function PayeeTotalsSection({ payees, totalCents }: { payees: PayeeTotals[]; totalCents: number }) {
   const [expanded, setExpanded] = useState(false);
   // Hiding only one or two payees would save less than the button takes.
@@ -217,19 +221,24 @@ function PayeeTotalsSection({ payees, totalCents }: { payees: PayeeTotals[]; tot
       <h2 id="report-payees-heading" className="text-lg font-semibold">
         By payee
       </h2>
-      <dl id="report-payee-totals" className="divide-y rounded-lg border">
+      <ul id="report-payee-totals" className="divide-y rounded-lg border">
         {shown.map((payee) => (
-          <div key={payee.payeeId} className="flex items-start justify-between gap-3 px-4 py-3">
-            <dt className="min-w-0 truncate text-sm font-medium">{payee.name}</dt>
-            <dd className="shrink-0 text-right tabular-nums">
-              <span className="block font-semibold">{formatCents(payee.cents)}</span>
-              <span className="block text-sm text-muted-foreground">
-                {requestCount(payee.count)} · {sharePercent(payee.cents, totalCents)}
+          <li key={payee.payeeId}>
+            <Link
+              href={`/admin/payees/${payee.payeeId}`}
+              className="flex items-start justify-between gap-3 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted"
+            >
+              <span className="min-w-0 truncate text-sm font-medium">{payee.name}</span>
+              <span className="shrink-0 text-right tabular-nums">
+                <span className="block font-semibold">{formatCents(payee.cents)}</span>
+                <span className="block text-sm text-muted-foreground">
+                  {requestCount(payee.count)} · {sharePercent(payee.cents, totalCents)}
+                </span>
               </span>
-            </dd>
-          </div>
+            </Link>
+          </li>
         ))}
-      </dl>
+      </ul>
       {collapsible && (
         <Button
           variant="outline"
