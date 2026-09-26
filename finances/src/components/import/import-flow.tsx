@@ -403,8 +403,8 @@ export function ImportPreview({
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Each row is saved as paid on its date, with the vendor “Not recorded” and no receipt, marked “Imported from
-        spreadsheet.” Notes become the description.
+        Each row is saved as paid on its date, with no vendor and no receipt, marked “Imported from spreadsheet.”
+        Notes become the description.
       </p>
 
       <div className="flex flex-col gap-2 desktop:flex-row">

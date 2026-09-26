@@ -196,13 +196,20 @@ export function RequestFields({
         </FormField>
       </div>
 
-      <FormField id={requestFieldId("vendor")} label="Vendor" hint="The store or website." error={errors.vendor}>
+      <FormField
+        id={requestFieldId("vendor")}
+        label="Vendor"
+        recommended
+        hint="The store or website."
+        error={errors.vendor}
+      >
         <Input {...textProps("vendor", true)} autoComplete="off" autoCapitalize="words" maxLength={100} className="h-11" />
       </FormField>
 
       <FormField
         id={requestFieldId("description")}
         label="Description"
+        recommended
         hint="What was bought and why."
         error={errors.description}
       >

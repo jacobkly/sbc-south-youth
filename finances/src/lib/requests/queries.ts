@@ -14,7 +14,7 @@ import {
 } from "./queue";
 
 const QUEUE_COLUMNS =
-  "id, request_number, status, type, amount_cents, purchase_date, vendor, no_receipt, payee:payees(full_name)";
+  "id, request_number, status, type, amount_cents, purchase_date, vendor, description, no_receipt, payee:payees(full_name)";
 const REPORT_COLUMNS = `${QUEUE_COLUMNS}, payee_id, paid_at` as const;
 const EXPORT_COLUMNS = `
   request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
@@ -29,7 +29,15 @@ const EXPORT_COLUMNS = `
 /** A request as the queue lists it. */
 export type QueueRow = Pick<
   Tables<"reimbursement_requests">,
-  "id" | "request_number" | "status" | "type" | "amount_cents" | "purchase_date" | "vendor" | "no_receipt"
+  | "id"
+  | "request_number"
+  | "status"
+  | "type"
+  | "amount_cents"
+  | "purchase_date"
+  | "vendor"
+  | "description"
+  | "no_receipt"
 > & { payee: { full_name: string } | null };
 
 export type QueuePage = {

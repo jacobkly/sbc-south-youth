@@ -20,8 +20,8 @@ export type RequestDetailData = {
   type: RequestType;
   amount_cents: number;
   purchase_date: string;
-  vendor: string;
-  description: string;
+  vendor: string | null;
+  description: string | null;
   event_name: string | null;
   no_receipt: boolean;
   no_receipt_reason: string | null;
@@ -48,8 +48,9 @@ export type LateWarning = {
   sent: boolean;
 };
 
-function detailRows(request: RequestDetailData): [string, string][] {
-  const rows: [string, string][] = [
+/** Each detail and its value. A null value wasn't recorded. */
+function detailRows(request: RequestDetailData): [string, string | null][] {
+  const rows: [string, string | null][] = [
     ["Type", REQUEST_TYPE_LABELS[request.type]],
     ["Purchase date", formatDate(request.purchase_date)],
     ["Vendor", request.vendor],
@@ -61,7 +62,7 @@ function detailRows(request: RequestDetailData): [string, string][] {
     const method = request.payment_method && PAYMENT_METHOD_LABELS[request.payment_method];
     rows.push(
       ["Paid", formatDate(laDateOf(request.paid_at))],
-      ["Paid with", [method, request.payment_reference].filter(Boolean).join(" · ") || "Not recorded"],
+      ["Paid with", [method, request.payment_reference].filter(Boolean).join(" · ") || null],
     );
   }
   return rows;
@@ -163,7 +164,9 @@ export function RequestDetail({
           {detailRows(request).map(([term, value]) => (
             <div key={term} className="space-y-1 px-4 py-3">
               <dt className="text-sm text-muted-foreground">{term}</dt>
-              <dd className="break-words whitespace-pre-wrap">{value}</dd>
+              <dd className="break-words whitespace-pre-wrap">
+                {value ?? <span className="text-muted-foreground">Not recorded</span>}
+              </dd>
             </div>
           ))}
         </dl>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
-import { formatRequestNumber } from "@/lib/requests/format";
+import { formatRequestNumber, requestTitle } from "@/lib/requests/format";
 import type { QueueRow } from "@/lib/requests/queries";
 import type { QueueTab } from "@/lib/requests/queue";
 
@@ -38,10 +38,10 @@ export function RequestList({
               {showPayee ? (
                 <>
                   <p className="truncate font-medium">{row.payee?.full_name ?? "Unknown payee"}</p>
-                  <p className="truncate text-sm text-muted-foreground">{row.vendor}</p>
+                  <p className="truncate text-sm text-muted-foreground">{requestTitle(row)}</p>
                 </>
               ) : (
-                <p className="truncate font-medium">{row.vendor}</p>
+                <p className="truncate font-medium">{requestTitle(row)}</p>
               )}
               <p className="text-sm text-muted-foreground tabular-nums">
                 {formatRequestNumber(row.request_number)} · {formatDate(row.purchase_date)}

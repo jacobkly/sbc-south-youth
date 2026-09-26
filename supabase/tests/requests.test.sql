@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(43);
+select plan(45);
 
 -- Fake people. New auth users get a member row from the signup trigger.
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -240,7 +240,7 @@ select throws_ok(
      values ('00000000-0000-4000-8000-00000000b001', 'cafe', 500, '2026-01-10', '   ', 'No vendor') $$,
   '23514',
   null,
-  'a request needs a vendor'
+  'a vendor can''t be only spaces'
 );
 
 select throws_ok(
@@ -248,7 +248,21 @@ select throws_ok(
      values ('00000000-0000-4000-8000-00000000b001', 'cafe', 500, '2026-01-10', 'Fake Store', '') $$,
   '23514',
   null,
-  'a request needs a description'
+  'a description can''t be blank'
+);
+
+select lives_ok(
+  $$ insert into public.reimbursement_requests (
+       payee_id, type, amount_cents, purchase_date, no_receipt, no_receipt_reason
+     ) values ('00000000-0000-4000-8000-00000000b001', 'youth', 432, '2026-01-10', true, 'Lost it') $$,
+  'a request can leave out the vendor and description'
+);
+
+select lives_ok(
+  $$ select public.record_as_paid(
+       (select id from public.reimbursement_requests where amount_cents = 432), 'cash', null, now()
+     ) $$,
+  'a request without a vendor or description can still be paid'
 );
 
 select throws_ok(

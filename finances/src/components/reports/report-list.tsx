@@ -3,7 +3,7 @@ import { StatusBadge } from "@/components/requests/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, laDateOf } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
-import { formatRequestNumber, REQUEST_TYPE_LABELS } from "@/lib/requests/format";
+import { formatRequestNumber, REQUEST_TYPE_LABELS, requestTitle } from "@/lib/requests/format";
 import type { ReportRow } from "@/lib/requests/queries";
 import type { ReportBasis } from "@/lib/reports/filters";
 
@@ -32,7 +32,7 @@ export function ReportList({
           >
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">{row.payee?.full_name ?? "Unknown payee"}</p>
-              <p className="truncate text-sm text-muted-foreground">{row.vendor}</p>
+              <p className="truncate text-sm text-muted-foreground">{requestTitle(row)}</p>
               <p className="text-sm text-muted-foreground tabular-nums">
                 {formatRequestNumber(row.request_number)} ·{" "}
                 {basis === "paid" && row.paid_at

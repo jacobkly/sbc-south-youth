@@ -185,7 +185,7 @@ export type Database = {
           approved_by: string | null
           created_at: string
           created_by: string
-          description: string
+          description: string | null
           event_name: string | null
           external_approver: string | null
           id: string
@@ -202,7 +202,7 @@ export type Database = {
           submitted_at: string | null
           type: Database["public"]["Enums"]["reimbursement_type"]
           updated_at: string
-          vendor: string
+          vendor: string | null
         }
         Insert: {
           admin_note?: string | null
@@ -211,7 +211,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           created_by?: string
-          description: string
+          description?: string | null
           event_name?: string | null
           external_approver?: string | null
           id?: string
@@ -228,7 +228,7 @@ export type Database = {
           submitted_at?: string | null
           type: Database["public"]["Enums"]["reimbursement_type"]
           updated_at?: string
-          vendor: string
+          vendor?: string | null
         }
         Update: {
           admin_note?: string | null
@@ -237,7 +237,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           created_by?: string
-          description?: string
+          description?: string | null
           event_name?: string | null
           external_approver?: string | null
           id?: string
@@ -254,7 +254,7 @@ export type Database = {
           submitted_at?: string | null
           type?: Database["public"]["Enums"]["reimbursement_type"]
           updated_at?: string
-          vendor?: string
+          vendor?: string | null
         }
         Relationships: [
           {
@@ -463,7 +463,7 @@ export type Database = {
           approved_by: string | null
           created_at: string
           created_by: string
-          description: string
+          description: string | null
           event_name: string | null
           external_approver: string | null
           id: string
@@ -480,7 +480,7 @@ export type Database = {
           submitted_at: string | null
           type: Database["public"]["Enums"]["reimbursement_type"]
           updated_at: string
-          vendor: string
+          vendor: string | null
         }
         SetofOptions: {
           from: "*"

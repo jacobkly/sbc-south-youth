@@ -85,16 +85,17 @@ export function requestSchema(today: IsoDate = todayInLA()) {
                 : null;
         if (message) ctx.addIssue({ code: "custom", message });
       }),
+      // Recommended, not required: older payments often don't have them.
       vendor: z
         .string()
         .trim()
-        .min(1, "Enter the store or vendor.")
-        .max(100, "Keep the vendor to 100 characters or fewer."),
+        .max(100, "Keep the vendor to 100 characters or fewer.")
+        .transform((value) => value || null),
       description: z
         .string()
         .trim()
-        .min(1, "Describe what was bought and why.")
-        .max(1000, "Keep the description to 1,000 characters or fewer."),
+        .max(1000, "Keep the description to 1,000 characters or fewer.")
+        .transform((value) => value || null),
       event_name: z
         .string()
         .trim()

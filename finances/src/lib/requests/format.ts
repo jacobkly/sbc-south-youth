@@ -25,6 +25,14 @@ export function isEditable(status: RequestStatus): boolean {
   return (EDITABLE_STATUSES as readonly RequestStatus[]).includes(status);
 }
 
+/**
+ * What a list calls a request: the vendor, else what was bought, else its
+ * type, since the vendor and description are optional.
+ */
+export function requestTitle(request: { vendor: string | null; description: string | null; type: RequestType }): string {
+  return request.vendor ?? request.description ?? `${REQUEST_TYPE_LABELS[request.type]} purchase`;
+}
+
 /** The number people see, e.g. 7 -> "R-0007". */
 export function formatRequestNumber(requestNumber: number): string {
   return `R-${String(requestNumber).padStart(4, "0")}`;

@@ -57,7 +57,7 @@ describe("requestSchema", () => {
     expect(schema.parse({ ...valid, purchase_date: TODAY }).purchase_date).toBe(TODAY);
   });
 
-  it("requires every field except the event", () => {
+  it("requires the payee, type, amount, and date", () => {
     expect(
       errorsFor({
         payee_id: "",
@@ -74,9 +74,14 @@ describe("requestSchema", () => {
       type: "Choose Cafe or Youth.",
       amount: "Enter an amount.",
       purchase_date: "Enter the purchase date.",
-      vendor: "Enter the store or vendor.",
-      description: "Describe what was bought and why.",
       no_receipt_reason: "Say why there's no receipt.",
+    });
+  });
+
+  it("stores a blank vendor and description as null", () => {
+    expect(schema.parse({ ...valid, vendor: "  ", description: "\n " })).toMatchObject({
+      vendor: null,
+      description: null,
     });
   });
 

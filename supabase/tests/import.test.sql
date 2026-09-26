@@ -73,7 +73,7 @@ select is(
     select count(*)::int
     from public.reimbursement_requests
     where status = 'paid'
-      and vendor = 'Not recorded'
+      and vendor is null
       and no_receipt
       and no_receipt_reason = 'Imported from spreadsheet'
       and payment_method = 'cash_app'
@@ -90,9 +90,13 @@ select is(
 );
 
 select is(
-  (select count(*)::int from public.reimbursement_requests where description = 'Not recorded'),
+  (
+    select count(*)::int
+    from public.reimbursement_requests
+    where no_receipt_reason = 'Imported from spreadsheet' and description is null
+  ),
   1,
-  'blank notes become "Not recorded"'
+  'blank notes leave the description empty'
 );
 
 select is(

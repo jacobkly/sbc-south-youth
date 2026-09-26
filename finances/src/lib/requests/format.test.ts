@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { formatRequestNumber, isEditable } from "./format";
+import { formatRequestNumber, isEditable, requestTitle } from "./format";
+
+describe("requestTitle", () => {
+  it("uses the vendor first", () => {
+    expect(requestTitle({ vendor: "Test Market", description: "Snacks", type: "youth" })).toBe("Test Market");
+  });
+
+  it("falls back to the description, then the type", () => {
+    expect(requestTitle({ vendor: null, description: "Snacks", type: "youth" })).toBe("Snacks");
+    expect(requestTitle({ vendor: null, description: null, type: "cafe" })).toBe("Cafe purchase");
+  });
+});
 
 describe("formatRequestNumber", () => {
   it("pads to four digits", () => {

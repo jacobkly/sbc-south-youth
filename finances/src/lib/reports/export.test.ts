@@ -98,6 +98,11 @@ describe("reportCsvRow", () => {
     });
   });
 
+  it("leaves a missing vendor and description blank", () => {
+    const line = reportCsv([{ ...DRAFT, vendor: null, description: null }]).split("\r\n")[1];
+    expect(line.startsWith("R-0003,Draft,Test Payee,Test Admin,2026-08-14,,Cafe,,,5.00,")).toBe(true);
+  });
+
   it("counts no receipts when the count is missing", () => {
     expect(reportCsvRow({ ...DRAFT, receipts: [] }).at(-2)).toBe(0);
   });

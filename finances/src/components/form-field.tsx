@@ -10,12 +10,15 @@ export function describedBy(id: string, error?: string, hint?: boolean): string 
 /**
  * A label, the control, and either its error or its hint. For a single
  * control, `id` is the control's id. For a group (like radio buttons), pass
- * `group` and point the group's aria-labelledby at `${id}-label`.
+ * `group` and point the group's aria-labelledby at `${id}-label`. A field
+ * that can be left blank is `optional`, or `recommended` when it should
+ * usually be filled in.
  */
 export function FormField({
   id,
   label,
   optional,
+  recommended,
   hint,
   error,
   group,
@@ -24,6 +27,7 @@ export function FormField({
   id: string;
   label: string;
   optional?: boolean;
+  recommended?: boolean;
   hint?: string;
   error?: string;
   group?: boolean;
@@ -34,6 +38,7 @@ export function FormField({
       <Label id={`${id}-label`} htmlFor={group ? undefined : id}>
         {label}
         {optional && <span className="font-normal text-muted-foreground">(optional)</span>}
+        {recommended && <span className="font-normal text-muted-foreground">(recommended)</span>}
       </Label>
       {children}
       {error ? (
