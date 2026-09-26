@@ -4,12 +4,11 @@ import { PasswordForm } from "@/components/account/password-form";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { ROLE_LABELS } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
   title: "Account",
 };
-
-const ROLE_LABELS = { admin: "Admin", viewer: "Viewer", member: "Member" } as const;
 
 export default async function AccountPage() {
   // The layout already checked access, so the user is an active admin or viewer.

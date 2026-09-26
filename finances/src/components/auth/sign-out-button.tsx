@@ -6,7 +6,8 @@ import { LogOutIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
-export function SignOutButton(props: Omit<ComponentProps<typeof Button>, "onClick" | "children">) {
+/** Signs out on this device and goes to the sign-in page. */
+export function useSignOut() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -17,6 +18,12 @@ export function SignOutButton(props: Omit<ComponentProps<typeof Button>, "onClic
     router.replace("/login");
     router.refresh();
   }
+
+  return { pending, signOut };
+}
+
+export function SignOutButton(props: Omit<ComponentProps<typeof Button>, "onClick" | "children">) {
+  const { pending, signOut } = useSignOut();
 
   return (
     <Button {...props} disabled={pending || props.disabled} onClick={() => void signOut()}>
