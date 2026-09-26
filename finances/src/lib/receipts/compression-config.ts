@@ -3,7 +3,9 @@
  * /dev/compression-test page. Receipts must stay readable at full zoom
  * while averaging about 500 KB, so the 1 GB storage tier lasts for years.
  *
- * Starting values until the compression test picks final ones.
+ * Photos start at `shortEdge` and `quality`. Detailed or noisy photos can
+ * come out well over 1 MB that way, so anything over `targetBytes` steps
+ * down through `lowerQualities`, then `smallerShortEdges`, until it fits.
  */
 
 export type OutputFormat = "image/webp" | "image/jpeg";
@@ -19,6 +21,12 @@ export type CompressionSettings = {
   quality: number;
   /** Quality used when the browser can't encode the preferred format (Safari may not encode WebP). */
   jpegFallbackQuality: number;
+  /** Largest file size to aim for, in bytes. */
+  targetBytes: number;
+  /** Lower qualities to try, in order, while the file is over `targetBytes`. */
+  lowerQualities: number[];
+  /** Smaller short edges to try, in order, when no quality gets under `targetBytes`. */
+  smallerShortEdges: number[];
 };
 
 export const RECEIPT_COMPRESSION: CompressionSettings = {
@@ -27,4 +35,7 @@ export const RECEIPT_COMPRESSION: CompressionSettings = {
   format: "image/webp",
   quality: 0.82,
   jpegFallbackQuality: 0.85,
+  targetBytes: 500 * 1024,
+  lowerQualities: [0.7, 0.6, 0.5],
+  smallerShortEdges: [1200, 1000],
 };

@@ -11,6 +11,8 @@ export type ProcessedReceipt = {
   /** Output size in px, or null for PDFs. */
   width: number | null;
   height: number | null;
+  /** Encoder quality used, or null for PDFs. */
+  quality: number | null;
   original: { size: number; type: string; width: number | null; height: number | null };
 };
 
@@ -38,6 +40,31 @@ export function targetSize(
     width: Math.max(1, Math.round(width * scale)),
     height: Math.max(1, Math.round(height * scale)),
   };
+}
+
+export type CompressionAttempt = { width: number; height: number; quality: number };
+
+/**
+ * The sizes and qualities to try, best first, until one fits the target
+ * file size. Each size runs through its qualities before a smaller size is
+ * tried. Smaller sizes that wouldn't shrink the image are skipped.
+ */
+export function compressionAttempts(
+  width: number,
+  height: number,
+  settings: CompressionSettings,
+  startQuality: number,
+): CompressionAttempt[] {
+  const qualities = [startQuality, ...settings.lowerQualities.filter((quality) => quality < startQuality)];
+
+  const sizes = [targetSize(width, height, settings)];
+  for (const shortEdge of settings.smallerShortEdges) {
+    const size = targetSize(width, height, { ...settings, shortEdge });
+    const last = sizes[sizes.length - 1];
+    if (size.width * size.height < last.width * last.height) sizes.push(size);
+  }
+
+  return sizes.flatMap((size) => qualities.map((quality) => ({ ...size, quality })));
 }
 
 /** File extension used in storage paths for each receipt type. */
@@ -143,20 +170,23 @@ function toBlob(canvas: HTMLCanvasElement, type: OutputFormat, quality: number):
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
-/** Encodes in the preferred format, falling back to JPEG when the browser quietly returns something else. */
-async function encode(canvas: HTMLCanvasElement, settings: CompressionSettings): Promise<{ blob: Blob; mimeType: OutputFormat }> {
-  const preferred = await toBlob(canvas, settings.format, settings.quality);
-  if (preferred && preferred.type === settings.format) return { blob: preferred, mimeType: settings.format };
+/** Whether this browser's canvas can really encode `type`. Safari quietly returns PNG for WebP. */
+export async function canEncode(type: OutputFormat): Promise<boolean> {
+  const blob = await toBlob(createCanvas(1, 1), type, 1);
+  return blob?.type === type;
+}
 
-  const jpeg = await toBlob(canvas, "image/jpeg", settings.jpegFallbackQuality);
-  if (jpeg && jpeg.type === "image/jpeg") return { blob: jpeg, mimeType: "image/jpeg" };
-
-  throw new ReceiptFileError("This browser couldn't save the image. Try another browser.");
+/** Frees a canvas's pixels now. Safari can run out of canvas memory waiting for garbage collection. */
+function releaseCanvas(canvas: HTMLCanvasElement) {
+  canvas.width = 0;
+  canvas.height = 0;
 }
 
 /**
  * Prepares a receipt for upload. Images are resized and re-encoded, which
- * also strips EXIF data such as GPS location. PDFs pass through unchanged.
+ * also strips EXIF data such as GPS location. Quality, then size, steps
+ * down until the file fits `targetBytes`; if nothing fits, the smallest
+ * attempt is kept. PDFs pass through unchanged.
  */
 export async function processReceipt(
   file: File,
@@ -169,6 +199,7 @@ export async function processReceipt(
       mimeType: "application/pdf",
       width: null,
       height: null,
+      quality: null,
       original: { size: file.size, type: "application/pdf", width: null, height: null },
     };
   }
@@ -176,20 +207,37 @@ export async function processReceipt(
   if (!isImage(file)) throw new ReceiptFileError("Receipts must be a photo or a PDF.");
 
   const image = await decodeImage(file);
+  let canvas: HTMLCanvasElement | null = null;
   try {
-    const size = targetSize(image.width, image.height, settings);
-    const canvas = drawScaled(image, size.width, size.height);
-    const { blob, mimeType } = await encode(canvas, settings);
-    if (blob.size > MAX_RECEIPT_BYTES) throw new ReceiptFileError("This image is still over 10 MB after compression.");
+    const mimeType: OutputFormat = (await canEncode(settings.format)) ? settings.format : "image/jpeg";
+    const startQuality = mimeType === settings.format ? settings.quality : settings.jpegFallbackQuality;
+
+    let encoded: ({ blob: Blob } & CompressionAttempt) | undefined;
+    for (const attempt of compressionAttempts(image.width, image.height, settings, startQuality)) {
+      if (canvas?.width !== attempt.width || canvas.height !== attempt.height) {
+        if (canvas) releaseCanvas(canvas);
+        canvas = drawScaled(image, attempt.width, attempt.height);
+      }
+      const blob = await toBlob(canvas, mimeType, attempt.quality);
+      if (!blob || blob.type !== mimeType) throw new ReceiptFileError("This browser couldn't save the image. Try another browser.");
+      encoded = { blob, ...attempt };
+      if (blob.size <= settings.targetBytes) break;
+    }
+
+    // compressionAttempts always returns at least one attempt.
+    if (!encoded) throw new ReceiptFileError("This image couldn't be processed.");
+    if (encoded.blob.size > MAX_RECEIPT_BYTES) throw new ReceiptFileError("This image is still over 10 MB after compression.");
 
     return {
-      blob,
+      blob: encoded.blob,
       mimeType,
-      width: size.width,
-      height: size.height,
+      width: encoded.width,
+      height: encoded.height,
+      quality: encoded.quality,
       original: { size: file.size, type: file.type, width: image.width, height: image.height },
     };
   } finally {
+    if (canvas) releaseCanvas(canvas);
     image.release();
   }
 }
