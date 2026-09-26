@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { FileXIcon, PencilIcon, TriangleAlertIcon } from "lucide-react";
+import { BackLink } from "@/components/nav/back-link";
 import { ReceiptGallery } from "@/components/receipts/receipt-gallery";
 import { StatusBadge } from "@/components/requests/status-badge";
 import { StatusTimeline, type TimelineEvent } from "@/components/requests/status-timeline";
@@ -91,23 +92,26 @@ export function RequestDetail({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{formatRequestNumber(request.request_number)}</span>
-            <StatusBadge status={request.status} />
+      <div className="space-y-2">
+        <BackLink fallbackHref="/admin/requests" fallbackLabel="Requests" />
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{formatRequestNumber(request.request_number)}</span>
+              <StatusBadge status={request.status} />
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight tabular-nums">{formatCents(request.amount_cents)}</h1>
+            <p className="text-lg break-words">{request.payee?.full_name}</p>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight tabular-nums">{formatCents(request.amount_cents)}</h1>
-          <p className="text-lg break-words">{request.payee?.full_name}</p>
+          {editHref && (
+            <Button variant="outline" className="h-11 shrink-0" asChild>
+              <Link href={editHref}>
+                <PencilIcon aria-hidden />
+                Edit
+              </Link>
+            </Button>
+          )}
         </div>
-        {editHref && (
-          <Button variant="outline" className="h-11 shrink-0" asChild>
-            <Link href={editHref}>
-              <PencilIcon aria-hidden />
-              Edit
-            </Link>
-          </Button>
-        )}
       </div>
 
       {late && (

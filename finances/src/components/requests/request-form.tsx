@@ -349,7 +349,10 @@ function SavedPanel({
           Enter another
         </Button>
         <Button variant="outline" className="h-11 w-full" asChild>
-          <Link href={`/admin/requests/${saved.id}`}>View request</Link>
+          {/* Replaces the form, so going back from the request skips it. */}
+          <Link href={`/admin/requests/${saved.id}`} replace>
+            View request
+          </Link>
         </Button>
       </div>
     </div>

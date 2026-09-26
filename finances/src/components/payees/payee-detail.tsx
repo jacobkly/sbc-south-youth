@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeftIcon } from "lucide-react";
+import { BackLink } from "@/components/nav/back-link";
 import { RequestList } from "@/components/requests/request-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,12 +59,7 @@ export function PayeeDetail({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Button variant="ghost" className="-ml-3 h-11 px-3 text-muted-foreground" asChild>
-          <Link href="/admin/payees">
-            <ChevronLeftIcon aria-hidden />
-            Payees
-          </Link>
-        </Button>
+        <BackLink fallbackHref="/admin/payees" fallbackLabel="Payees" />
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight break-words">{payee.full_name}</h1>

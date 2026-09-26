@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronLeftIcon } from "lucide-react";
 import { ImportFlow } from "@/components/import/import-flow";
-import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/nav/back-link";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { createClient } from "@/lib/supabase/server";
 
@@ -28,12 +26,7 @@ export default async function ImportPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Button variant="ghost" className="-ml-3 h-11 px-3 text-muted-foreground" asChild>
-          <Link href="/admin/settings">
-            <ChevronLeftIcon aria-hidden />
-            Settings
-          </Link>
-        </Button>
+        <BackLink fallbackHref="/admin/settings" fallbackLabel="Settings" />
         <h1 className="text-2xl font-semibold tracking-tight">Import from a spreadsheet</h1>
       </div>
       <ImportFlow currentUserId={user.id} allowExternalApproval={settings.allow_external_approval} />
