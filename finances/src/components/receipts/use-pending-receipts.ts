@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ReceiptFileError } from "@/lib/receipts/compress";
+import { findReceiptMatches, type ReceiptMatch } from "@/lib/receipts/duplicates";
 import { MAX_RECEIPTS, prepareReceipt, type PreparedReceipt } from "@/lib/receipts/upload";
+import { createClient } from "@/lib/supabase/client";
 
 export type PendingReceiptStatus = "processing" | "ready" | "uploading" | "uploaded" | "failed";
 
@@ -15,14 +17,20 @@ export type PendingReceipt = {
   prepared: PreparedReceipt | null;
   /** Object URL of the prepared file, for previews. */
   url: string | null;
+  /** Saved requests that already have this exact file. Only a warning. */
+  matches: ReceiptMatch[];
 };
 
 /**
  * Holds the receipts picked in a form. Each file is compressed and hashed as
  * soon as it's added, so saving only has to upload. `limit` is how many can
  * be picked, which is less when the request already has some saved.
+ *
+ * Once a file is ready, saved receipts with the same hash are looked up, to
+ * catch one purchase entered twice. `requestId` is the request being edited,
+ * so a match on it reads as already saved there.
  */
-export function usePendingReceipts(limit: number = MAX_RECEIPTS) {
+export function usePendingReceipts(limit: number = MAX_RECEIPTS, requestId?: string) {
   const [receipts, setReceipts] = useState<PendingReceipt[]>([]);
   /** Why some picked files weren't added. Replaced on each pick. */
   const [problems, setProblems] = useState<string[]>([]);
@@ -42,6 +50,18 @@ export function usePendingReceipts(limit: number = MAX_RECEIPTS) {
     setReceipts((current) => current.map((receipt) => (receipt.key === key ? { ...receipt, ...change } : receipt)));
   }
 
+  /** Not queued, so the next file doesn't wait on the network. */
+  function findMatches(key: string, sha256: string) {
+    findReceiptMatches(createClient(), sha256, requestId).then(
+      (matches) => {
+        if (matches.length > 0 && !removed.current.has(key)) update(key, { matches });
+      },
+      () => {
+        // Only a warning, so a failed lookup just shows none.
+      },
+    );
+  }
+
   function add(files: File[]) {
     const room = Math.max(0, limit - receipts.length);
     const accepted = files.slice(0, room);
@@ -58,6 +78,7 @@ export function usePendingReceipts(limit: number = MAX_RECEIPTS) {
       status: "processing",
       prepared: null,
       url: null,
+      matches: [],
     }));
     setReceipts((current) => [...current, ...items]);
 
@@ -72,6 +93,7 @@ export function usePendingReceipts(limit: number = MAX_RECEIPTS) {
           const url = URL.createObjectURL(prepared.blob);
           urls.current.add(url);
           update(item.key, { status: "ready", prepared, url });
+          findMatches(item.key, prepared.sha256);
         } catch (error) {
           const reason = error instanceof ReceiptFileError ? error.message : "It couldn't be processed.";
           setReceipts((current) => current.filter((receipt) => receipt.key !== item.key));

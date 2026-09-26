@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import {
   CircleAlertIcon,
   CircleCheckIcon,
@@ -8,14 +9,29 @@ import {
   ImagePlusIcon,
   LoaderCircleIcon,
   PlusIcon,
+  TriangleAlertIcon,
   XIcon,
 } from "lucide-react";
 import type { PendingReceipt } from "@/components/receipts/use-pending-receipts";
 import { ReceiptViewer } from "@/components/receipts/receipt-viewer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { formatCents } from "@/lib/money";
 import { MAX_RECEIPTS } from "@/lib/receipts/upload";
+import { formatRequestNumber, REQUEST_STATUS_LABELS } from "@/lib/requests/format";
 import { cn } from "@/lib/utils";
+
+/** The keys of picked files that repeat an earlier pick in the same list. */
+function pickedTwice(receipts: readonly PendingReceipt[]): Set<string> {
+  const seen = new Set<string>();
+  const repeats = new Set<string>();
+  for (const { key, prepared } of receipts) {
+    if (!prepared) continue;
+    if (seen.has(prepared.sha256)) repeats.add(key);
+    else seen.add(prepared.sha256);
+  }
+  return repeats;
+}
 
 /**
  * Adds receipt photos and PDFs to a form. On iOS the file input offers Take
@@ -53,6 +69,8 @@ export function ReceiptPicker({
 
   const full = receipts.length >= max;
   const canAdd = !full && !locked;
+  const repeats = pickedTwice(receipts);
+  const duplicates = receipts.filter((receipt) => receipt.matches.length > 0 || repeats.has(receipt.key));
 
   function pick() {
     input.current?.click();
@@ -114,6 +132,7 @@ export function ReceiptPicker({
             <li key={receipt.key}>
               <ReceiptTile
                 receipt={receipt}
+                duplicate={duplicates.includes(receipt)}
                 locked={locked}
                 onView={() => setViewing(receipt)}
                 onRemove={() => onRemove(receipt.key)}
@@ -153,6 +172,44 @@ export function ReceiptPicker({
         </Alert>
       )}
 
+      {duplicates.length > 0 && (
+        <Alert role="status">
+          <TriangleAlertIcon />
+          <AlertDescription>
+            <ul className="space-y-1">
+              {duplicates.flatMap((receipt) =>
+                // A repeat's matches are already listed under its first pick.
+                repeats.has(receipt.key) ? (
+                  <li key={receipt.key} className="break-words">
+                    {receipt.name} was picked twice.
+                  </li>
+                ) : (
+                  receipt.matches.map((match) => (
+                    <li key={`${receipt.key}-${match.requestId}`} className="break-words">
+                      {receipt.name} is already{" "}
+                      {match.current ? (
+                        "saved on this request."
+                      ) : (
+                        <>
+                          on{" "}
+                          <Link href={`/admin/requests/${match.requestId}`} target="_blank">
+                            {formatRequestNumber(match.requestNumber)}
+                            <span className="sr-only"> (opens in a new tab)</span>
+                          </Link>
+                          : {match.payeeName ?? "Unknown payee"}, {formatCents(match.amountCents)},{" "}
+                          {REQUEST_STATUS_LABELS[match.status].toLowerCase()}.
+                        </>
+                      )}
+                    </li>
+                  ))
+                ),
+              )}
+            </ul>
+            <p className="mt-1">Check it isn&apos;t the same purchase. You can still save it.</p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {viewing?.url && viewing.prepared?.width && viewing.prepared.height && (
         <ReceiptViewer
           name={viewing.name}
@@ -175,11 +232,14 @@ const STATUS_TEXT: Partial<Record<PendingReceipt["status"], string>> = {
 
 function ReceiptTile({
   receipt,
+  duplicate,
   locked,
   onView,
   onRemove,
 }: {
   receipt: PendingReceipt;
+  /** Already on a saved request, or picked twice. */
+  duplicate: boolean;
   locked?: boolean;
   onView: () => void;
   onRemove: () => void;
@@ -190,6 +250,7 @@ function ReceiptTile({
   // Uploaded files belong to the saved draft now; they're removed from its page.
   const removable = !locked && status !== "uploaded" && status !== "uploading";
   const statusText = STATUS_TEXT[status];
+  const label = duplicate ? `${name}, possible duplicate` : name;
 
   const body =
     url && !isPdf ? (
@@ -215,11 +276,11 @@ function ReceiptTile({
   return (
     <div className="relative">
       {url && isPdf ? (
-        <a href={url} target="_blank" rel="noopener" className={frame} aria-label={`Open ${name}`}>
+        <a href={url} target="_blank" rel="noopener" className={frame} aria-label={`Open ${label}`}>
           {body}
         </a>
       ) : url ? (
-        <button type="button" className={frame} onClick={onView} aria-label={`View ${name}`}>
+        <button type="button" className={frame} onClick={onView} aria-label={`View ${label}`}>
           {body}
         </button>
       ) : (
@@ -238,6 +299,16 @@ function ReceiptTile({
           {busy && <LoaderCircleIcon className="size-3 animate-spin" aria-hidden />}
           {status === "uploaded" && <CircleCheckIcon className="size-3" aria-hidden />}
           {statusText}
+        </span>
+      )}
+
+      {duplicate && !statusText && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-1 bottom-1 flex items-center justify-center gap-1 rounded-md bg-amber-100 px-1 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+        >
+          <TriangleAlertIcon className="size-3" />
+          Duplicate
         </span>
       )}
 

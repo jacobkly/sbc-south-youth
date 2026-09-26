@@ -83,7 +83,7 @@ export function EditRequestForm({
   const [marked, setMarked] = useState<ReadonlySet<string>>(() => new Set());
 
   const kept = saved.length - marked.size;
-  const pendingReceipts = usePendingReceipts(MAX_RECEIPTS - kept);
+  const pendingReceipts = usePendingReceipts(MAX_RECEIPTS - kept, request.id);
   const { receipts } = pendingReceipts;
   const receiptCount = kept + receipts.length;
   const preparing = receipts.some((receipt) => receipt.status === "processing");
