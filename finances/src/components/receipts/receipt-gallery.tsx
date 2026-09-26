@@ -23,6 +23,11 @@ const FRAME =
 
 const PLACEHOLDER = "flex size-full flex-col items-center justify-center gap-1 p-2 text-center text-xs text-muted-foreground";
 
+/** "Receipt 2 of 3", or just "Receipt" when there's one. Saved file names aren't worth showing. */
+function receiptTitle(index: number, count: number): string {
+  return count > 1 ? `Receipt ${index + 1} of ${count}` : "Receipt";
+}
+
 /** Lets the edit form mark saved receipts to remove when it saves. */
 export type GalleryRemoval = {
   /** Ids marked to remove. */
@@ -133,10 +138,11 @@ export function ReceiptGallery({
   return (
     <div className="space-y-3">
       <ul className="grid grid-cols-3 gap-2 md:grid-cols-4" aria-label={label}>
-        {receipts.map((receipt) => {
+        {receipts.map((receipt, index) => {
           const url = signed.urls[receipt.path];
           const isPdf = receipt.mimeType === "application/pdf";
           const busy = opening === receipt.id;
+          const named = receiptTitle(index, receipts.length).toLowerCase();
 
           let tile;
           if (!url || broken.has(url)) {
@@ -145,7 +151,7 @@ export function ReceiptGallery({
                 type="button"
                 className={FRAME}
                 onClick={() => void refresh()}
-                aria-label={`Couldn't load ${receipt.name}. Try again`}
+                aria-label={`Couldn't load ${named}. Try again`}
               >
                 <span className={PLACEHOLDER}>
                   <ImageOffIcon className="size-6" aria-hidden />
@@ -175,7 +181,7 @@ export function ReceiptGallery({
                 type="button"
                 className={FRAME}
                 onClick={() => void openImage(receipt)}
-                aria-label={`View ${receipt.name}`}
+                aria-label={`View ${named}`}
                 aria-busy={busy || undefined}
               >
                 {/* Signed storage URLs, so next/image doesn't apply. */}
@@ -214,7 +220,7 @@ export function ReceiptGallery({
                 size="icon"
                 onClick={() => removal.onToggle(receipt.id)}
                 disabled={removal.locked || (marked && !removal.canKeep)}
-                aria-label={marked ? `Keep ${receipt.name}` : `Remove ${receipt.name}`}
+                aria-label={marked ? `Keep ${named}` : `Remove ${named}`}
                 className="absolute top-1 right-1 size-9 rounded-full border shadow-sm"
               >
                 {marked ? <Undo2Icon /> : <XIcon />}
@@ -233,7 +239,7 @@ export function ReceiptGallery({
 
       {viewing && viewingUrl && (
         <ReceiptViewer
-          name={viewing.name}
+          title={receiptTitle(receipts.indexOf(viewing), receipts.length)}
           url={viewingUrl}
           width={viewing.width}
           height={viewing.height}

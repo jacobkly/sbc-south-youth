@@ -212,7 +212,7 @@ export function ReceiptPicker({
 
       {viewing?.url && viewing.prepared?.width && viewing.prepared.height && (
         <ReceiptViewer
-          name={viewing.name}
+          title={viewing.name}
           url={viewing.url}
           width={viewing.prepared.width}
           height={viewing.prepared.height}
