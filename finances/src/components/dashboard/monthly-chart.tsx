@@ -2,6 +2,7 @@
 
 import { ChevronDownIcon } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Text, XAxis, YAxis, type XAxisTickContentProps } from "recharts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartLegend,
@@ -53,16 +54,16 @@ export function MonthlyChart({ months }: { months: PaidPeriod<MonthPeriod>[] }) 
   const hasPaid = rows.some((row) => row.total > 0);
 
   return (
-    <section aria-labelledby="monthly-heading" className="space-y-3">
-      <div>
-        <h2 id="monthly-heading" className="text-lg font-semibold">
-          Paid by month
-        </h2>
-        <p className="text-sm text-muted-foreground">{range}</p>
-      </div>
+    <Card className="gap-0 pb-0">
+      <CardHeader>
+        <CardTitle>
+          <h2>Paid by month</h2>
+        </CardTitle>
+        <CardDescription>{range}</CardDescription>
+      </CardHeader>
 
       {hasPaid ? (
-        <div className="rounded-lg border">
+        <>
           {/* Pointer and touch only. "Show the numbers" has the same data for everyone. */}
           <div aria-hidden className="px-2 pt-4">
             <ChartContainer config={TYPE_CHART_CONFIG} className="aspect-auto h-60 w-full">
@@ -157,12 +158,12 @@ export function MonthlyChart({ months }: { months: PaidPeriod<MonthPeriod>[] }) 
               </table>
             </div>
           </details>
-        </div>
+        </>
       ) : (
-        <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
           Nothing paid in the last 12 months.
-        </p>
+        </CardContent>
       )}
-    </section>
+    </Card>
   );
 }

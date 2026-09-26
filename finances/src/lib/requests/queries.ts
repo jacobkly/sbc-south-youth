@@ -111,6 +111,22 @@ export async function loadQueue(
   };
 }
 
+/** The newest requests by purchase date, and how many there are in all. Throws if the query fails. */
+export async function loadRecentRequests(
+  supabase: SupabaseClient<Database>,
+  limit: number,
+): Promise<{ rows: QueueRow[]; total: number }> {
+  const { data, count, error } = await supabase
+    .from("reimbursement_requests")
+    .select(QUEUE_COLUMNS, { count: "exact" })
+    .order("purchase_date", { ascending: false })
+    .order("request_number", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return { rows: data, total: count ?? data.length };
+}
+
 /** A payee's newest requests, and how many they have in all. Throws if the query fails. */
 export async function loadPayeeRequests(
   supabase: SupabaseClient<Database>,

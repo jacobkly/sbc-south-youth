@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PlusIcon } from "lucide-react";
+import { cn } from "cn";
 import { StatusBadge } from "@/components/requests/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,13 +19,15 @@ export function RequestList({
   rows,
   showStatus,
   showPayee = true,
+  className,
 }: {
   rows: QueueRow[];
   showStatus: boolean;
   showPayee?: boolean;
+  className?: string;
 }) {
   return (
-    <ul className="divide-y rounded-lg border">
+    <ul className={cn("divide-y rounded-lg border", className)}>
       {rows.map((row) => (
         <li key={row.id}>
           <Link

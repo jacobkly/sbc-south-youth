@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Pie, PieChart } from "recharts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { sharePercent, type PaidTotals } from "@/lib/dashboard/summary";
@@ -26,16 +27,14 @@ export function TypeSplitChart({ paid }: { paid: PaidTotals }) {
   const slices = REQUEST_TYPES.map((type) => ({ type, cents: byType[type], fill: `var(--color-${type})` }));
 
   return (
-    <section aria-labelledby="split-heading" className="@container space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 id="split-heading" className="text-lg font-semibold">
-            Cafe vs. youth
-          </h2>
-          <p aria-live="polite" className="text-sm text-muted-foreground">
-            Paid in {label}
-          </p>
-        </div>
+    <Card className="@container">
+      <CardHeader>
+        <CardTitle>
+          <h2>Cafe vs. youth</h2>
+        </CardTitle>
+        <CardDescription aria-live="polite">Paid in {label}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
         <ToggleGroup
           type="single"
           variant="outline"
@@ -51,10 +50,8 @@ export function TypeSplitChart({ paid }: { paid: PaidTotals }) {
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-      </div>
 
-      {total > 0 ? (
-        <div className="rounded-lg border px-4 py-4">
+        {total > 0 ? (
           <div className="mx-auto flex max-w-md items-center gap-4 @md:gap-8">
             {/* The list beside it has the same numbers for everyone. */}
             <div aria-hidden className="size-28 shrink-0">
@@ -99,12 +96,10 @@ export function TypeSplitChart({ paid }: { paid: PaidTotals }) {
               </div>
             </dl>
           </div>
-        </div>
-      ) : (
-        <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
-          Nothing paid in {label}.
-        </p>
-      )}
-    </section>
+        ) : (
+          <p className="py-6 text-center text-sm text-muted-foreground">Nothing paid in {label}.</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
