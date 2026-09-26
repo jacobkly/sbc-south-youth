@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(49);
+select plan(50);
 
 -- Fake people. New auth users get a member row from the signup trigger.
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -119,6 +119,13 @@ select throws_ok(
   '23514',
   'Add at least one receipt, or mark it as having no receipt and give a reason.',
   'a request with no receipt and no exception can''t be approved'
+);
+
+select throws_ok(
+  $$ select public.record_as_paid('00000000-0000-4000-8000-00000000c001', 'cash', null, now()) $$,
+  '23514',
+  'Add at least one receipt, or mark it as having no receipt and give a reason.',
+  'a request with no receipt and no exception can''t be recorded as paid'
 );
 
 reset role;
