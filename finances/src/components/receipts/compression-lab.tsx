@@ -6,7 +6,7 @@ import { ReceiptCompare } from "@/components/receipts/receipt-compare";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { extensionFor, processReceipt, type ProcessedReceipt } from "@/lib/receipts/compress";
+import { canEncode, extensionFor, processReceipt, type ProcessedReceipt } from "@/lib/receipts/compress";
 import { RECEIPT_COMPRESSION, type CompressionSettings, type OutputFormat } from "@/lib/receipts/compression-config";
 
 /** Average size that keeps a few years of receipts inside the 1 GB free tier. */
@@ -40,18 +40,10 @@ function sameSettings(a: CompressionSettings, b: CompressionSettings): boolean {
   return (Object.keys(a) as (keyof CompressionSettings)[]).every((key) => a[key] === b[key]);
 }
 
-function downloadName(file: File, receipt: ProcessedReceipt, settings: CompressionSettings): string {
+function downloadName(file: File, receipt: ProcessedReceipt): string {
   const base = file.name.replace(/\.[^.]+$/, "") || "receipt";
-  const quality = receipt.mimeType === settings.format ? settings.quality : settings.jpegFallbackQuality;
-  return `${base}-${settings.shortEdge}px-q${quality}.${extensionFor(receipt.mimeType)}`;
-}
-
-/** Whether this browser's canvas can really encode WebP. Safari quietly returns PNG instead. */
-function detectWebp(): Promise<boolean> {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1;
-  canvas.height = 1;
-  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob?.type === "image/webp"), "image/webp"));
+  const shortEdge = Math.min(receipt.width ?? 0, receipt.height ?? 0);
+  return `${base}-${shortEdge}px-q${receipt.quality}.${extensionFor(receipt.mimeType)}`;
 }
 
 /**
@@ -73,7 +65,7 @@ export function CompressionLab() {
 
   useEffect(() => {
     let active = true;
-    detectWebp().then((supported) => active && setWebp(supported));
+    canEncode("image/webp").then((supported) => active && setWebp(supported));
     return () => {
       active = false;
     };
@@ -289,7 +281,6 @@ export function CompressionLab() {
               <ReceiptRow
                 entry={entry}
                 outcome={outcomes[entry.id] ?? { status: "pending" }}
-                settings={settings}
                 onCompare={() => setComparing(entry.id)}
               />
             </li>
@@ -380,12 +371,10 @@ function Stat({ label, value, detail, tone }: { label: string; value: string; de
 function ReceiptRow({
   entry,
   outcome,
-  settings,
   onCompare,
 }: {
   entry: Entry;
   outcome: Outcome;
-  settings: CompressionSettings;
   onCompare: () => void;
 }) {
   return (
@@ -410,7 +399,7 @@ function ReceiptRow({
             {outcome.message}
           </p>
         )}
-        {outcome.status === "done" && <ReceiptDetails entry={entry} outcome={outcome} settings={settings} onCompare={onCompare} />}
+        {outcome.status === "done" && <ReceiptDetails entry={entry} outcome={outcome} onCompare={onCompare} />}
       </div>
     </Card>
   );
@@ -419,12 +408,10 @@ function ReceiptRow({
 function ReceiptDetails({
   entry,
   outcome,
-  settings,
   onCompare,
 }: {
   entry: Entry;
   outcome: Extract<Outcome, { status: "done" }>;
-  settings: CompressionSettings;
   onCompare: () => void;
 }) {
   const { receipt } = outcome;
@@ -439,7 +426,7 @@ function ReceiptDetails({
       </p>
       <p className="text-xs text-muted-foreground">
         {receipt.original.width}×{receipt.original.height} → {receipt.width}×{receipt.height} ·{" "}
-        {extensionFor(receipt.mimeType).toUpperCase()} · {Math.round(outcome.ms)} ms
+        {extensionFor(receipt.mimeType).toUpperCase()} q{receipt.quality} · {Math.round(outcome.ms)} ms
       </p>
       <div className="mt-auto flex gap-2 pt-1">
         <Button variant="outline" className="h-10 flex-1 sm:flex-none" onClick={onCompare}>
@@ -447,7 +434,7 @@ function ReceiptDetails({
           Compare
         </Button>
         <Button variant="outline" className="h-10 flex-1 sm:flex-none" asChild>
-          <a href={outcome.url} download={downloadName(entry.file, receipt, settings)}>
+          <a href={outcome.url} download={downloadName(entry.file, receipt)}>
             <DownloadIcon data-icon="inline-start" />
             Download
           </a>
