@@ -7,7 +7,7 @@ Web projects for SBC South Youth. This repo holds every app under the `sbcsouthy
 | Folder | What it is | Status |
 |---|---|---|
 | [`finances/`](finances/) | Invite-only app for tracking reimbursements, receipts, and expense reports for the youth ministry | In development |
-| `site/` | Public youth website (about, events, photos, contact) | Planned |
+| [`site/`](site/) | Public youth website (about, events, photos, contact) | Under construction page |
 
 ## Finances app
 

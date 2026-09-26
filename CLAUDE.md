@@ -7,7 +7,7 @@ Guidance for Claude Code in this repo.
 Monorepo for SBC South Youth web projects on `sbcsouthyouth.com`. Each app is its own folder and its own Vercel project.
 
 - `finances/`: invite-only reimbursement tracker (`finances.` subdomain). Next.js 16 (App Router, TypeScript strict, Tailwind v4) and Supabase (Postgres, Auth, Storage). **Active.**
-- `site/`: public youth website on the apex domain. Not started. It will share the Supabase project, but it must never read or display finance data.
+- `site/`: public youth website on the apex domain. Next.js 16 (App Router, TypeScript strict, Tailwind v4). For now it's one "under construction" page with no backend. It may share the Supabase project later, but it must never read or display finance data.
 - `supabase/`: the Supabase project both apps share: migrations, config, and email templates.
 
 ## Current focus
@@ -27,6 +27,8 @@ npm run typecheck
 npm test               # Vitest unit tests (src/**/*.test.ts)
 npm run build
 ```
+
+`site/` has the same scripts except `npm test`, and its dev server runs at http://localhost:3001.
 
 Run these from the repo root, where the Supabase CLI is installed:
 
