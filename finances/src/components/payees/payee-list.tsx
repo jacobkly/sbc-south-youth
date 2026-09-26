@@ -1,45 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronRightIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowDownUpIcon, ChevronDownIcon, ChevronRightIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { PayeeSheet } from "@/components/payees/payee-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCents } from "@/lib/money";
-import type { PayeeRow } from "@/lib/payees/columns";
+import type { PayeeListRow } from "@/lib/payees/columns";
 import { payeeMatches, payeeSearchNeedle } from "@/lib/payees/search";
+import { PAYEE_SORTS, payeesHref, sortPayees, type PayeeSort } from "@/lib/payees/sort";
 import { cn } from "@/lib/utils";
 
 type StatusFilter = "active" | "inactive";
 
 /**
- * Payees with search and an active/inactive filter. There are few enough
- * payees to filter in the browser, which keeps search instant as you type.
- * Each row shows what the payee was paid this year and opens their page.
+ * Payees with search, a sort, and an active/inactive filter. There are few
+ * enough payees to filter and sort in the browser, which keeps it instant.
+ * The sort lives in the URL, so coming back from a payee keeps it. Each row
+ * shows what the payee was paid this year and opens their page.
  */
 export function PayeeList({
   payees,
+  sort,
   canEdit,
   yearTotals,
   year,
 }: {
-  payees: PayeeRow[];
+  payees: PayeeListRow[];
+  sort: PayeeSort;
   canEdit: boolean;
   /** Cents paid to each payee id during `year`. */
   yearTotals: Record<string, number>;
   year: number;
 }) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const [shownSort, setShownSort] = useOptimistic(sort);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("active");
   const [adding, setAdding] = useState(false);
 
+  // Through the router, not history.replaceState, so a refresh after going back doesn't scroll to the top.
+  function changeSort(next: PayeeSort) {
+    startTransition(() => {
+      setShownSort(next);
+      router.replace(payeesHref(next), { scroll: false });
+    });
+  }
+
   const needle = payeeSearchNeedle(query);
+  const sorted = sortPayees(payees, shownSort, yearTotals);
   const byStatus = {
-    active: payees.filter((payee) => payee.is_active),
-    inactive: payees.filter((payee) => !payee.is_active),
+    active: sorted.filter((payee) => payee.is_active),
+    inactive: sorted.filter((payee) => !payee.is_active),
   };
 
   function renderList(filter: StatusFilter) {
@@ -69,10 +94,13 @@ export function PayeeList({
 
     return (
       <>
-        {/* Screen readers get the year on each amount instead. */}
-        <p className="mb-1 pr-11 text-right text-xs text-muted-foreground" aria-hidden>
-          Paid in {year}
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <SortMenu sort={shownSort} year={year} onChange={changeSort} />
+          {/* Screen readers get the year on each amount instead. */}
+          <p className="pr-11 text-xs text-muted-foreground" aria-hidden>
+            Paid in {year}
+          </p>
+        </div>
         <ul className="divide-y rounded-lg border">
           {visible.map((payee) => {
             const details = [payee.payment_handle, payee.email].filter(Boolean).join(" · ");
@@ -149,5 +177,46 @@ export function PayeeList({
 
       {canEdit && <PayeeSheet payee={adding ? "new" : null} onClose={() => setAdding(false)} />}
     </div>
+  );
+}
+
+const SORT_LABELS: Record<PayeeSort, string> = {
+  name: "Name",
+  paid: "Most paid",
+  newest: "Newest",
+};
+
+/** Picks the list's order. The button shows the current one. */
+function SortMenu({ sort, year, onChange }: { sort: PayeeSort; year: number; onChange: (sort: PayeeSort) => void }) {
+  const hints: Record<PayeeSort, string> = {
+    name: "A to Z",
+    paid: `Paid in ${year}, most first`,
+    newest: "Most recently added first",
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="-ml-3 h-11 gap-1.5 px-3 text-muted-foreground">
+          <ArrowDownUpIcon aria-hidden />
+          <span className="sr-only">Sort by </span>
+          {SORT_LABELS[sort]}
+          <ChevronDownIcon aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-60">
+        <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={sort} onValueChange={(value) => onChange(value as PayeeSort)}>
+          {PAYEE_SORTS.map((option) => (
+            <DropdownMenuRadioItem key={option} value={option} className="min-h-11 py-2">
+              <span>
+                <span className="block">{SORT_LABELS[option]}</span>
+                <span className="block text-xs text-muted-foreground">{hints[option]}</span>
+              </span>
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
