@@ -39,18 +39,29 @@ export default async function DashboardPage() {
       </div>
 
       {summary.hasRequests ? (
-        // On a PC: what needs action beside the totals, then the charts on the
-        // left and the latest requests and top payees on the right. The last
-        // row soaks up whichever side runs longer, so neither side has gaps.
-        <div className="grid grid-cols-1 gap-6 @4xl/main:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] @4xl/main:grid-rows-[auto_auto_auto_1fr] @4xl/main:items-start">
-          <NeedsAction summary={summary} />
-          <StatCards summary={summary} />
-          <MonthlyChart months={summary.paidByMonth} />
-          <div className="grid gap-6 md:grid-cols-2 md:items-start @4xl/main:col-start-2 @4xl/main:row-span-3 @4xl/main:grid-cols-1">
-            <LatestRequests rows={summary.latest} />
-            <TopPayees payees={summary.topPayees} period={summary.paid.year.period} activePayees={summary.activePayees} />
+        // On a PC, two columns that each stack on their own, so neither waits
+        // for the other: what needs action, paid by month, and the latest
+        // requests on the left, and the totals, top payees, and the cafe and
+        // youth split on the right. Stats spans the first two rows, so the
+        // left column starts right under what needs action. The last row is
+        // flexible, so a taller left column stretches only that row. Margins
+        // stand in for row gaps, so a row that ends up empty adds no space.
+        // The last card in each column stretches, so both end together.
+        <div className="grid grid-cols-1 gap-6 @4xl/main:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] @4xl/main:grid-rows-[auto_auto_1fr] @4xl/main:items-start @4xl/main:gap-y-0">
+          <div className="@4xl/main:mb-6">
+            <NeedsAction summary={summary} />
           </div>
-          <TypeSplitChart paid={summary.paid} />
+          <div className="@4xl/main:row-span-2 @4xl/main:mb-6">
+            <StatCards summary={summary} />
+          </div>
+          <div className="grid grid-cols-1 gap-6 @4xl/main:row-span-2 @4xl/main:grid-rows-[auto_1fr] @4xl/main:self-stretch">
+            <MonthlyChart months={summary.paidByMonth} />
+            <LatestRequests rows={summary.latest} />
+          </div>
+          <div className="grid grid-cols-1 gap-6 @4xl/main:grid-rows-[auto_1fr] @4xl/main:self-stretch">
+            <TopPayees payees={summary.topPayees} period={summary.paid.year.period} activePayees={summary.activePayees} />
+            <TypeSplitChart paid={summary.paid} />
+          </div>
         </div>
       ) : (
         <Card>
