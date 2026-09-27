@@ -93,7 +93,9 @@ select is(
   (
     select count(*)::int
     from public.reimbursement_requests
-    where no_receipt_reason = 'Imported from spreadsheet' and description is null
+    where no_receipt_reason = 'Imported from spreadsheet'
+      and description is null
+      and paid_by = '00000000-0000-4000-8000-00000000a001'
   ),
   1,
   'blank notes leave the description empty'
@@ -105,6 +107,7 @@ select is(
     from public.request_events e
     join public.reimbursement_requests r on r.id = e.request_id
     where r.no_receipt_reason = 'Imported from spreadsheet'
+      and r.paid_by = '00000000-0000-4000-8000-00000000a001'
       and e.action = 'recorded_paid'
   ),
   3,
