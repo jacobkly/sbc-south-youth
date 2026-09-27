@@ -220,6 +220,7 @@ export type Database = {
           type: Database["public"]["Enums"]["reimbursement_type"]
           updated_at: string
           vendor: string | null
+          missing_receipt: boolean | null
         }
         Insert: {
           admin_note?: string | null
@@ -620,6 +621,14 @@ export type Database = {
           p_request_id: string
         }
         Returns: undefined
+      }
+      missing_receipt: {
+        Args: {
+          "": Database["public"]["Tables"]["reimbursement_requests"]["Row"]
+        }
+        Returns: {
+          error: true
+        } & "the function public.missing_receipt with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
       record_as_paid: {
         Args: {

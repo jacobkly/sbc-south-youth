@@ -1,6 +1,5 @@
-import { RequestRow, RequestTable } from "@/components/requests/request-list";
+import { MissingReceiptBadge, RequestRow, RequestTable } from "@/components/requests/request-list";
 import { StatusBadge } from "@/components/requests/status-badge";
-import { Badge } from "@/components/ui/badge";
 import { formatDate, laDateOf } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { formatRequestNumber, REQUEST_TYPE_LABELS, requestTitle } from "@/lib/requests/format";
@@ -41,7 +40,7 @@ export function ReportList({
             <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="font-medium tabular-nums">{formatCents(row.amount_cents)}</span>
               {showStatus && <StatusBadge status={row.status} />}
-              {row.no_receipt && <Badge variant="outline">No receipt</Badge>}
+              {row.missing_receipt && <MissingReceiptBadge />}
             </div>
           </RequestRow>
         );

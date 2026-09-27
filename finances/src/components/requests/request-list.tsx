@@ -12,6 +12,11 @@ import { formatRequestNumber, REQUEST_TYPE_LABELS, requestTitle } from "@/lib/re
 import type { QueueRow } from "@/lib/requests/queries";
 import type { QueueTab } from "@/lib/requests/queue";
 
+/** "No receipt on file" is on, or one of its receipts has no file. */
+export function MissingReceiptBadge() {
+  return <Badge variant="outline">Missing receipt</Badge>;
+}
+
 /** Which optional columns a list shows. */
 type Shown = { showPayee: boolean; showStatus: boolean };
 
@@ -102,7 +107,7 @@ export function RequestRow({
           {showPayee && <span className="truncate font-medium">{row.payee?.full_name ?? "Unknown payee"}</span>}
           <span className="flex min-w-0 items-center gap-2">
             <span className={cn("truncate", !showPayee && "font-medium")}>{requestTitle(row)}</span>
-            {row.no_receipt && <Badge variant="outline">No receipt</Badge>}
+            {row.missing_receipt && <MissingReceiptBadge />}
           </span>
           <span className="text-muted-foreground">{REQUEST_TYPE_LABELS[row.type]}</span>
           {showStatus && (
@@ -149,7 +154,7 @@ export function RequestList({
           <div className="flex shrink-0 flex-col items-end gap-1">
             <span className="font-medium tabular-nums">{formatCents(row.amount_cents)}</span>
             {showStatus && <StatusBadge status={row.status} />}
-            {row.no_receipt && <Badge variant="outline">No receipt</Badge>}
+            {row.missing_receipt && <MissingReceiptBadge />}
           </div>
         </RequestRow>
       ))}

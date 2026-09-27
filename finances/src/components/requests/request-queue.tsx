@@ -65,7 +65,7 @@ export function RequestQueue({
 
   function clearFilters() {
     setQuery("");
-    update({ q: "", from: null, to: null, type: null, payee: null, noReceipt: false });
+    update({ q: "", from: null, to: null, type: null, payee: null, missingReceipt: false });
   }
 
   const searchIfChanged = useEffectEvent((text: string) => {

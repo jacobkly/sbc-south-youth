@@ -21,17 +21,17 @@ import { REQUEST_TYPES, type RequestType } from "@/lib/requests/schema";
 export type PayeeOption = Pick<Tables<"payees">, "id" | "full_name" | "is_active">;
 
 /** The filters set in the sheet. The tab and search are set on the page. */
-export type SheetFilters = Pick<QueueFilters, "from" | "to" | "type" | "payee" | "noReceipt">;
+export type SheetFilters = Pick<QueueFilters, "from" | "to" | "type" | "payee" | "missingReceipt">;
 
-const CLEARED: SheetFilters = { from: null, to: null, type: null, payee: null, noReceipt: false };
+const CLEARED: SheetFilters = { from: null, to: null, type: null, payee: null, missingReceipt: false };
 
 // Radix Select and RadioGroup need a non-empty value for "no filter".
 const ANY = "any";
 
 const FILTERS_BUTTON_ID = "request-filters-button";
 
-function sheetFilters({ from, to, type, payee, noReceipt }: QueueFilters): SheetFilters {
-  return { from, to, type, payee, noReceipt };
+function sheetFilters({ from, to, type, payee, missingReceipt }: QueueFilters): SheetFilters {
+  return { from, to, type, payee, missingReceipt };
 }
 
 /**
@@ -169,13 +169,13 @@ export function FilterSheet({
           </FormField>
 
           <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 py-2">
-            <Label htmlFor="filter-no-receipt" className="text-base font-normal desktop:text-sm">
-              Only requests with no receipt
+            <Label htmlFor="filter-missing-receipt" className="text-base font-normal desktop:text-sm">
+              Only requests missing a receipt
             </Label>
             <Switch
-              id="filter-no-receipt"
-              checked={draft.noReceipt}
-              onCheckedChange={(on) => change({ noReceipt: on })}
+              id="filter-missing-receipt"
+              checked={draft.missingReceipt}
+              onCheckedChange={(on) => change({ missingReceipt: on })}
             />
           </div>
 
@@ -218,7 +218,9 @@ export function ActiveFilters({
     const name = payees.find((option) => option.id === filters.payee)?.full_name ?? "Unknown payee";
     chips.push({ key: "payee", label: name, clear: { payee: null } });
   }
-  if (filters.noReceipt) chips.push({ key: "noReceipt", label: "No receipt", clear: { noReceipt: false } });
+  if (filters.missingReceipt) {
+    chips.push({ key: "missingReceipt", label: "Missing a receipt", clear: { missingReceipt: false } });
+  }
 
   if (chips.length === 0) return null;
   return (

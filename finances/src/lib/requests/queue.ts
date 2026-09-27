@@ -50,7 +50,8 @@ export type QueueFilters = {
   to: IsoDate | null;
   type: RequestType | null;
   payee: string | null;
-  noReceipt: boolean;
+  /** "No receipt on file" is on, or a receipt has no file. */
+  missingReceipt: boolean;
   /** How many pages have been loaded with "Load more". */
   pages: number;
 };
@@ -65,7 +66,7 @@ export const DEFAULT_QUEUE_FILTERS: QueueFilters = {
   to: null,
   type: null,
   payee: null,
-  noReceipt: false,
+  missingReceipt: false,
   pages: 1,
 };
 
@@ -92,7 +93,7 @@ export function parseQueueFilters(params: SearchParams): QueueFilters {
     to: to && isIsoDate(to) ? to : null,
     type: REQUEST_TYPES.find((candidate) => candidate === type) ?? null,
     payee: payee && isUuid(payee) ? payee.toLowerCase() : null,
-    noReceipt: single(params, "noreceipt") === "1",
+    missingReceipt: single(params, "missing") === "1",
     pages: Number.isInteger(pages) && pages > 1 ? Math.min(pages, MAX_QUEUE_PAGES) : 1,
   };
 }
@@ -106,7 +107,7 @@ export function queueHref(filters: QueueFilters): string {
   if (filters.to) params.set("to", filters.to);
   if (filters.type) params.set("type", filters.type);
   if (filters.payee) params.set("payee", filters.payee);
-  if (filters.noReceipt) params.set("noreceipt", "1");
+  if (filters.missingReceipt) params.set("missing", "1");
   if (filters.pages > 1) params.set("pages", String(filters.pages));
   const query = params.toString();
   return query ? `/admin/requests?${query}` : "/admin/requests";
@@ -114,7 +115,7 @@ export function queueHref(filters: QueueFilters): string {
 
 /** How many filters are on, not counting the tab and search. */
 export function activeFilterCount(filters: QueueFilters): number {
-  return [filters.from || filters.to, filters.type, filters.payee, filters.noReceipt].filter(Boolean).length;
+  return [filters.from || filters.to, filters.type, filters.payee, filters.missingReceipt].filter(Boolean).length;
 }
 
 /** Whether anything narrows the results beyond the tab. */

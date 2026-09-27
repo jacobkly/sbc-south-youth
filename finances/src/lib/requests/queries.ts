@@ -14,7 +14,7 @@ import {
 } from "./queue";
 
 const QUEUE_COLUMNS =
-  "id, request_number, status, type, amount_cents, purchase_date, vendor, description, no_receipt, payee:payees(full_name)";
+  "id, request_number, status, type, amount_cents, purchase_date, vendor, description, missing_receipt, payee:payees(full_name)";
 const REPORT_COLUMNS = `${QUEUE_COLUMNS}, payee_id, paid_at` as const;
 const EXPORT_COLUMNS = `
   request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
@@ -37,7 +37,7 @@ export type QueueRow = Pick<
   | "purchase_date"
   | "vendor"
   | "description"
-  | "no_receipt"
+  | "missing_receipt"
 > & { payee: { full_name: string } | null };
 
 export type QueuePage = {
@@ -66,7 +66,7 @@ function queueQuery(
   if (filters.to) query = query.lte("purchase_date", filters.to);
   if (filters.type) query = query.eq("type", filters.type);
   if (filters.payee) query = query.eq("payee_id", filters.payee);
-  if (filters.noReceipt) query = query.eq("no_receipt", true);
+  if (filters.missingReceipt) query = query.eq("missing_receipt", true);
   if (filters.q) query = query.or(searchFilter(filters.q, payeeIds));
   return query;
 }

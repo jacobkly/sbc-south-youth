@@ -29,7 +29,7 @@ describe("parseQueueFilters", () => {
         to: "2026-03-31",
         type: "cafe",
         payee: PAYEE.toUpperCase(),
-        noreceipt: "1",
+        missing: "1",
         pages: "3",
       }),
     ).toEqual({
@@ -39,7 +39,7 @@ describe("parseQueueFilters", () => {
       to: "2026-03-31",
       type: "cafe",
       payee: PAYEE,
-      noReceipt: true,
+      missingReceipt: true,
       pages: 3,
     });
   });
@@ -52,7 +52,7 @@ describe("parseQueueFilters", () => {
         to: "yesterday",
         type: "travel",
         payee: "not-a-uuid",
-        noreceipt: "yes",
+        missing: "yes",
         pages: "2.5",
       }),
     ).toEqual(DEFAULT_QUEUE_FILTERS);
@@ -108,7 +108,7 @@ describe("queueHref", () => {
       to: "2026-01-31",
       type: "youth",
       payee: PAYEE,
-      noReceipt: true,
+      missingReceipt: true,
       pages: 2,
     } as const;
     const href = queueHref(filters);
@@ -128,7 +128,7 @@ describe("activeFilterCount and isFiltered", () => {
 
   it("counts each filter but not the tab or search", () => {
     expect(
-      activeFilterCount({ ...DEFAULT_QUEUE_FILTERS, tab: "all", q: "x", type: "cafe", payee: PAYEE, noReceipt: true }),
+      activeFilterCount({ ...DEFAULT_QUEUE_FILTERS, tab: "all", q: "x", type: "cafe", payee: PAYEE, missingReceipt: true }),
     ).toBe(3);
   });
 
@@ -136,7 +136,7 @@ describe("activeFilterCount and isFiltered", () => {
     expect(isFiltered(DEFAULT_QUEUE_FILTERS)).toBe(false);
     expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, tab: "all" })).toBe(false);
     expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, q: "x" })).toBe(true);
-    expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, noReceipt: true })).toBe(true);
+    expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, missingReceipt: true })).toBe(true);
   });
 });
 

@@ -75,7 +75,8 @@ select set_eq(
     'reject_request',
     'cancel_request',
     'import_paid_requests',
-    'save_request'
+    'save_request',
+    'missing_receipt'
   ],
   'signed-in users can call only the app''s RPCs (helpers and trigger functions stay private)'
 );
