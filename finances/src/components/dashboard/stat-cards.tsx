@@ -106,11 +106,14 @@ function StorageCard({ bytes }: { bytes: number }) {
   );
 }
 
-/** Paid this month, quarter, and year, plus receipt storage. Two across on phones, four on wider screens. */
+/**
+ * Paid this month, quarter, and year, plus receipt storage. Two across on
+ * phones, four on wider screens, and two again in the PC dashboard's column.
+ */
 export function StatCards({ summary }: { summary: DashboardSummary }) {
   return (
     <section aria-label="Totals" className="space-y-2">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 @4xl/main:grid-cols-2">
         {KINDS.map((item) => (
           <PaidCard key={item.kind} summary={summary} {...item} />
         ))}

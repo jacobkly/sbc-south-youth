@@ -39,16 +39,19 @@ export default async function DashboardPage() {
       </div>
 
       {summary.hasRequests ? (
-        <>
+        // On a PC: what needs action beside the totals, then the charts on the
+        // left and the latest requests and top payees on the right. The last
+        // row soaks up whichever side runs longer, so neither side has gaps.
+        <div className="grid grid-cols-1 gap-6 @4xl/main:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] @4xl/main:grid-rows-[auto_auto_auto_1fr] @4xl/main:items-start">
           <NeedsAction summary={summary} />
           <StatCards summary={summary} />
           <MonthlyChart months={summary.paidByMonth} />
-          <div className="grid gap-6 md:grid-cols-2 md:items-start">
+          <div className="grid gap-6 md:grid-cols-2 md:items-start @4xl/main:col-start-2 @4xl/main:row-span-3 @4xl/main:grid-cols-1">
             <LatestRequests rows={summary.latest} />
             <TopPayees payees={summary.topPayees} period={summary.paid.year.period} activePayees={summary.activePayees} />
           </div>
           <TypeSplitChart paid={summary.paid} />
-        </>
+        </div>
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
