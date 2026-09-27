@@ -11,6 +11,7 @@ import { ExportMenu } from "@/components/reports/export-menu";
 import { PeriodPicker } from "@/components/reports/period-picker";
 import { ReportChart } from "@/components/reports/report-chart";
 import { ReportList } from "@/components/reports/report-list";
+import { RequestBreakdowns } from "@/components/reports/request-breakdowns";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -205,9 +206,12 @@ export function ReportView({
               <EmptyReport filters={filters} />
             )}
           </TabsContent>
-          <TabsContent value="requests" className="text-base">
+          <TabsContent value="requests" className="space-y-6 text-base">
             {rows.length > 0 ? (
-              <RequestsSection rows={rows} filters={filters} page={page} disabled={pending} />
+              <>
+                <RequestBreakdowns rows={rows} filters={filters} />
+                <RequestsSection rows={rows} filters={filters} page={page} disabled={pending} />
+              </>
             ) : (
               <EmptyReport filters={filters} />
             )}
