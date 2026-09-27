@@ -1,0 +1,166 @@
+import {
+  addDays,
+  daysBetween,
+  formatDate,
+  laDateOf,
+  monthShortName,
+  periodContaining,
+  periodLabel,
+  periodRange,
+  shiftPeriod,
+  type DateRange,
+  type IsoDate,
+  type MonthPeriod,
+} from "@/lib/dates";
+import { REQUEST_TYPES, type RequestType } from "@/lib/requests/schema";
+import type { ReportBasis } from "./filters";
+
+/** How much time each bar of a report's chart covers. */
+export type TimelineUnit = "day" | "week" | "month" | "year";
+
+/** Days for a month or shorter, weeks up to a quarter, months up to two years, then years. */
+export function timelineUnit({ start, end }: DateRange): TimelineUnit {
+  const days = daysBetween(start, end) + 1;
+  if (days <= 31) return "day";
+  if (days <= 92) return "week";
+  if (days <= 731) return "month";
+  return "year";
+}
+
+export type TimelineRow = {
+  type: RequestType;
+  amount_cents: number;
+  purchase_date: IsoDate;
+  paid_at: string | null;
+};
+
+/** One bar: its dates, cut to the report's range, and what falls in them. */
+export type TimelineBucket = DateRange & {
+  cents: number;
+  count: number;
+  byType: Record<RequestType, number>;
+};
+
+export type Timeline = { unit: TimelineUnit; buckets: TimelineBucket[] };
+
+/** A last week shorter than this joins the week before, so no bar covers only a day or two. */
+const SHORTEST_WEEK = 4;
+
+/** The first day of the next bucket. Weeks count from the start of the range. */
+function nextStart(date: IsoDate, unit: TimelineUnit): IsoDate {
+  switch (unit) {
+    case "day":
+      return addDays(date, 1);
+    case "week":
+      return addDays(date, 7);
+    case "month":
+    case "year":
+      return periodRange(shiftPeriod(periodContaining(unit, date), 1)).start;
+  }
+}
+
+/** Every bucket in the range, in order, with no gaps. */
+function spans(range: DateRange, unit: TimelineUnit): DateRange[] {
+  const result: DateRange[] = [];
+  for (let start = range.start; start <= range.end; ) {
+    const next = nextStart(start, unit);
+    const end = next <= range.end ? addDays(next, -1) : range.end;
+    result.push({ start, end });
+    start = next;
+  }
+  const last = result[result.length - 1];
+  if (unit === "week" && result.length > 1 && daysBetween(last.start, last.end) + 1 < SHORTEST_WEEK) {
+    result.pop();
+    result[result.length - 1].end = last.end;
+  }
+  return result;
+}
+
+/** The date that puts a request in the report: its purchase date, or the LA date it was paid. */
+function dateOf(row: TimelineRow, basis: ReportBasis): IsoDate | null {
+  if (basis === "paid") return row.paid_at ? laDateOf(row.paid_at) : null;
+  return row.purchase_date;
+}
+
+/** The last bucket that starts on or before the date. */
+function bucketIndex(buckets: readonly DateRange[], date: IsoDate): number {
+  let low = 0;
+  let high = buckets.length - 1;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (buckets[middle].start <= date) low = middle;
+    else high = middle - 1;
+  }
+  return low;
+}
+
+/**
+ * A report's requests over its range, as buckets for a stacked bar chart.
+ * Empty buckets are kept, so time reads evenly. Years are the exception:
+ * they start at the first year with a request, so a range typed from long
+ * ago doesn't open on years of nothing.
+ */
+export function reportTimeline(rows: readonly TimelineRow[], range: DateRange, basis: ReportBasis): Timeline {
+  const unit = timelineUnit(range);
+  const buckets: TimelineBucket[] = spans(range, unit).map((span) => ({
+    ...span,
+    cents: 0,
+    count: 0,
+    byType: Object.fromEntries(REQUEST_TYPES.map((type) => [type, 0])) as Record<RequestType, number>,
+  }));
+
+  for (const row of rows) {
+    const date = dateOf(row, basis);
+    if (!date || date < range.start || date > range.end) continue;
+    const bucket = buckets[bucketIndex(buckets, date)];
+    bucket.cents += row.amount_cents;
+    bucket.count += 1;
+    bucket.byType[row.type] += row.amount_cents;
+  }
+
+  const first = buckets.findIndex((bucket) => bucket.count > 0);
+  return { unit, buckets: unit === "year" && first > 0 ? buckets.slice(first) : buckets };
+}
+
+const monthDay = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
+
+function shortDate(date: IsoDate): string {
+  return monthDay.format(new Date(`${date}T00:00:00Z`));
+}
+
+function monthOf(date: IsoDate): MonthPeriod {
+  return { kind: "month", year: Number(date.slice(0, 4)), month: Number(date.slice(5, 7)) };
+}
+
+/** The axis label under a bar, e.g. "5", "Jul 29", "Sep", or "2026". */
+export function bucketTick({ start }: DateRange, unit: TimelineUnit): string {
+  switch (unit) {
+    case "day":
+      return String(Number(start.slice(8)));
+    case "week":
+      return shortDate(start);
+    case "month":
+      return monthShortName(monthOf(start));
+    case "year":
+      return start.slice(0, 4);
+  }
+}
+
+/**
+ * The full name of a bar, e.g. "Sep 5, 2026", "Jul 29 – Aug 4",
+ * "September 2026", or "2026". Weeks show the year only when they cross one.
+ */
+export function bucketLabel({ start, end }: DateRange, unit: TimelineUnit): string {
+  switch (unit) {
+    case "day":
+      return formatDate(start);
+    case "week":
+      if (start.slice(0, 4) !== end.slice(0, 4)) return `${formatDate(start)} – ${formatDate(end)}`;
+      if (start.slice(0, 7) === end.slice(0, 7)) return `${shortDate(start)} – ${Number(end.slice(8))}`;
+      return `${shortDate(start)} – ${shortDate(end)}`;
+    case "month":
+      return periodLabel(monthOf(start));
+    case "year":
+      return start.slice(0, 4);
+  }
+}

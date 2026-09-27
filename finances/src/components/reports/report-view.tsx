@@ -8,11 +8,12 @@ import { cn } from "cn";
 import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
 import { ExportMenu } from "@/components/reports/export-menu";
 import { PeriodPicker } from "@/components/reports/period-picker";
+import { ReportChart } from "@/components/reports/report-chart";
 import { ReportList } from "@/components/reports/report-list";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { sharePercent } from "@/lib/dashboard/summary";
-import { periodLabel, type IsoDate } from "@/lib/dates";
+import { periodLabel, periodRange, type IsoDate } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { pageCount, pageItems, pageSlice } from "@/lib/pagination";
 import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
@@ -31,6 +32,7 @@ import {
   type ReportFilters,
   type ReportTotals,
 } from "@/lib/reports/filters";
+import { reportTimeline } from "@/lib/reports/timeline";
 
 const SELECTED = "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:data-[state=on]:bg-primary/90";
 
@@ -84,6 +86,7 @@ export function ReportView({
   }
 
   const totals = reportTotals(rows);
+  const timeline = reportTimeline(rows, periodRange(filters.period), filters.basis);
 
   return (
     <div className="space-y-6">
@@ -145,17 +148,25 @@ export function ReportView({
         </div>
       </section>
 
-      {/* On a PC the totals and payees sit side by side, above the full-width requests. */}
+      {/*
+        On a PC the totals and chart sit left of the payees, above the
+        full-width requests. Equal columns give the totals room to go across,
+        so the left side comes out about as tall as five payees.
+      */}
       <div
         aria-busy={pending}
         className={cn(
-          "grid grid-cols-1 gap-6 transition-opacity @4xl/main:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] @4xl/main:items-start",
+          "grid grid-cols-1 gap-6 transition-opacity @4xl/main:grid-cols-2 @4xl/main:items-start",
           pending && "opacity-60",
         )}
       >
         {rows.length > 0 ? (
           <>
-            <TotalsSection totals={totals} subject={reportSubject(filters)} />
+            <div className="space-y-6">
+              <TotalsSection totals={totals} subject={reportSubject(filters)} />
+              {/* A one-day report would be a single bar. */}
+              {timeline.buckets.length > 1 && <ReportChart timeline={timeline} />}
+            </div>
             <PayeeTotalsSection payees={reportPayeeTotals(rows)} totalCents={totals.cents} />
             <RequestsSection rows={rows} filters={filters} page={page} disabled={pending} />
           </>
