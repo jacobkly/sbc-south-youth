@@ -17,10 +17,11 @@ export const metadata: Metadata = {
 };
 
 const REQUEST_COLUMNS = `
-  request_number, status, created_by, payee_id, type, amount_cents, purchase_date, vendor, description,
+  request_number, status, created_by, payee_id, type, amount_cents, purchase_date, description,
   event_name, no_receipt, no_receipt_reason,
   payee:payees(full_name),
-  receipts(id, storage_path, original_filename, mime_type, width, height)
+  lines:request_lines(id, amount_cents, vendor),
+  receipts(id, line_id, storage_path, original_filename, mime_type, width, height)
 `;
 
 export default async function EditRequestPage({ params }: PageProps<"/admin/requests/[id]/edit">) {
@@ -37,6 +38,7 @@ export default async function EditRequestPage({ params }: PageProps<"/admin/requ
       .from("reimbursement_requests")
       .select(REQUEST_COLUMNS)
       .eq("id", id)
+      .order("position", { referencedTable: "lines" })
       .order("created_at", { referencedTable: "receipts" })
       .maybeSingle(),
     supabase
@@ -78,9 +80,12 @@ export default async function EditRequestPage({ params }: PageProps<"/admin/requ
           values: {
             payee_id: request.payee_id,
             type: request.type,
-            amount: centsToDecimal(request.amount_cents),
             purchase_date: request.purchase_date,
-            vendor: request.vendor ?? "",
+            lines: request.lines.map((line) => ({
+              id: line.id,
+              amount: centsToDecimal(line.amount_cents),
+              vendor: line.vendor ?? "",
+            })),
             description: request.description ?? "",
             event_name: request.event_name ?? "",
             no_receipt: request.no_receipt,
@@ -90,6 +95,7 @@ export default async function EditRequestPage({ params }: PageProps<"/admin/requ
           payeeName: request.payee?.full_name ?? "",
           receipts: request.receipts.map((receipt) => ({
             id: receipt.id,
+            lineId: receipt.line_id,
             path: receipt.storage_path,
             name: receipt.original_filename,
             mimeType: receipt.mime_type,

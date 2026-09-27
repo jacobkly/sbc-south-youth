@@ -10,6 +10,11 @@ describe("eventTitle", () => {
     expect(eventTitle({ action: "unpaid", from_status: "paid" })).toBe("Payment undone");
   });
 
+  it("calls uploads files, since a receipt is an amount that can have several", () => {
+    expect(eventTitle({ action: "receipt_added", from_status: "draft" })).toBe("File added");
+    expect(eventTitle({ action: "receipt_removed", from_status: "draft" })).toBe("File removed");
+  });
+
   it("calls a submit after an info request a resubmit", () => {
     expect(eventTitle({ action: "submitted", from_status: "draft" })).toBe("Submitted");
     expect(eventTitle({ action: "submitted", from_status: "needs_info" })).toBe("Resubmitted");
@@ -56,6 +61,31 @@ describe("describeChanges", () => {
       { field: "event_name", label: "Event", from: "none", to: "Test Retreat" },
       { field: "no_receipt", label: "No receipt on file", from: "Off", to: "On" },
       { field: "no_receipt_reason", label: "No-receipt reason", from: "none", to: "Lost it" },
+    ]);
+  });
+
+  it("lists each receipt's amount and vendor, after the total", () => {
+    const changes = {
+      vendor: { from: "Test Market", to: "Test Market, Test Grocer" },
+      lines: {
+        from: [{ amount_cents: 1000, vendor: "Test Market" }],
+        to: [
+          { amount_cents: 1000, vendor: "Test Market" },
+          { amount_cents: 1550, vendor: "Test Grocer" },
+          { amount_cents: 500, vendor: null },
+        ],
+      },
+      amount_cents: { from: 1000, to: 3050 },
+    };
+    expect(describeChanges({ action: "updated", changes })).toEqual([
+      { field: "amount_cents", label: "Amount", from: "$10.00", to: "$30.50" },
+      {
+        field: "lines",
+        label: "Receipts",
+        from: "$10.00 Test Market",
+        to: "$10.00 Test Market, $15.50 Test Grocer, $5.00",
+      },
+      { field: "vendor", label: "Vendor", from: "Test Market", to: "Test Market, Test Grocer" },
     ]);
   });
 

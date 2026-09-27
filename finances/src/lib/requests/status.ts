@@ -31,8 +31,8 @@ export const EVENT_ACTION_LABELS: Record<EventAction, string> = {
   unapproved: "Approval undone",
   paid: "Marked paid",
   unpaid: "Payment undone",
-  receipt_added: "Receipt added",
-  receipt_removed: "Receipt removed",
+  receipt_added: "File added",
+  receipt_removed: "File removed",
 };
 
 /** One row of the audit log, as the timeline needs it. */
@@ -70,6 +70,8 @@ const CHANGE_FIELDS = [
   ["payee_id", "Payee"],
   ["type", "Type"],
   ["amount_cents", "Amount"],
+  // Each receipt's amount and vendor, when the request has had more than one.
+  ["lines", "Receipts"],
   ["purchase_date", "Purchase date"],
   ["vendor", "Vendor"],
   ["description", "Description"],
@@ -94,6 +96,12 @@ export function changedPayeeIds(events: Pick<RequestEvent, "action" | "changes">
   return [...ids];
 }
 
+/** "$10.00 Costco", or just the amount without a vendor. */
+function formatLine(line: Json): string {
+  if (!isRecord(line) || typeof line.amount_cents !== "number") return "?";
+  return [formatCents(line.amount_cents), line.vendor].filter((part) => typeof part === "string" && part).join(" ");
+}
+
 function formatValue(field: ChangeField, value: Json | undefined, payeeNames: ReadonlyMap<string, string>): string {
   if (value === null || value === undefined || value === "") return "none";
   switch (field) {
@@ -107,6 +115,8 @@ function formatValue(field: ChangeField, value: Json | undefined, payeeNames: Re
       return typeof value === "string" && isIsoDate(value) ? formatDate(value) : String(value);
     case "no_receipt":
       return value === true ? "On" : "Off";
+    case "lines":
+      return Array.isArray(value) && value.length > 0 ? value.map(formatLine).join(", ") : "none";
     default:
       return typeof value === "string" ? value : JSON.stringify(value);
   }

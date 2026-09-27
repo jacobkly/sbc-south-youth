@@ -7,12 +7,7 @@ import { CircleAlertIcon } from "lucide-react";
 import { ReceiptGallery, type GalleryReceipt } from "@/components/receipts/receipt-gallery";
 import { usePendingReceipts } from "@/components/receipts/use-pending-receipts";
 import { DeleteDraft } from "@/components/requests/delete-draft";
-import {
-  REQUEST_ERROR_FIELDS,
-  RequestFields,
-  requestFocusId,
-  type RequestFormErrors,
-} from "@/components/requests/request-fields";
+import { requestErrorIds, RequestFields, type RequestFormErrors } from "@/components/requests/request-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { todayInLA, type IsoDate } from "@/lib/dates";
@@ -22,14 +17,19 @@ import { MAX_RECEIPTS, removeReceipt, uploadReceipt } from "@/lib/receipts/uploa
 import { editReceiptError } from "@/lib/requests/actions";
 import { formatRequestNumber, type RequestStatus } from "@/lib/requests/format";
 import {
-  FUTURE_DATE_CODE,
+  errorsAfterChange,
+  isFutureDateError,
   requestFieldErrors,
   requestSaveErrorMessage,
   requestSchema,
+  saveRequestArgs,
   type RequestFormValues,
 } from "@/lib/requests/schema";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+
+/** A saved file, and the receipt it belongs to. */
+export type SavedFile = GalleryReceipt & { lineId: string };
 
 /** A request opened for editing. */
 export type EditableRequest = {
@@ -40,19 +40,24 @@ export type EditableRequest = {
   amountCents: number;
   payeeName: string;
   /** Oldest first. */
-  receipts: GalleryReceipt[];
+  receipts: SavedFile[];
   /** Links for the receipts, signed while the page rendered. */
   signed: SignedReceiptUrls | null;
 };
 
 const CLOSED_MESSAGE = "It can't be edited anymore. It may have been approved or closed since this page loaded.";
 
+/** The database turned the save down because the request isn't open anymore. */
+function isClosedError(error: { code?: string; message?: string }): boolean {
+  return error.code === "55000" && error.message === "This reimbursement can't be edited anymore.";
+}
+
 function count(n: number, one: string, many: string): string {
-  return n === 1 ? `1 receipt ${one}` : `${n} receipts ${many}`;
+  return n === 1 ? `1 file ${one}` : `${n} files ${many}`;
 }
 
 /**
- * Edits a request that's still open. Changes, removed receipts, and new ones
+ * Edits a request that's still open. Changes, removed files, and new ones
  * are all saved together, then it goes back to the request. The database
  * logs each change in the request's history.
  */
@@ -78,11 +83,14 @@ export function EditRequestForm({
   const [errors, setErrors] = useState<RequestFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  // Saved receipts still on the request, and the ones marked to remove on save.
+  // Saved files still on the request, and the ones marked to remove on save.
   const [saved, setSaved] = useState(request.receipts);
   const [marked, setMarked] = useState<ReadonlySet<string>>(() => new Set());
 
-  const kept = saved.length - marked.size;
+  // Taking off a receipt takes its saved files with it.
+  const lineIds = new Set(values.lines.map((line) => line.id));
+  const removing = saved.filter((file) => marked.has(file.id) || !lineIds.has(file.lineId));
+  const kept = saved.length - removing.length;
   const pendingReceipts = usePendingReceipts(MAX_RECEIPTS - kept, request.id);
   const { receipts } = pendingReceipts;
   const receiptCount = kept + receipts.length;
@@ -90,11 +98,7 @@ export function EditRequestForm({
 
   function set<K extends keyof RequestFormValues>(key: K, value: RequestFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
-    setErrors((current) =>
-      key === "no_receipt"
-        ? { ...current, receipts: undefined, no_receipt_reason: undefined }
-        : { ...current, [key]: undefined },
-    );
+    setErrors((current) => errorsAfterChange(current, key, values[key], value));
   }
 
   function toggleRemove(id: string) {
@@ -106,21 +110,21 @@ export function EditRequestForm({
     setErrors((current) => ({ ...current, receipts: undefined }));
   }
 
-  function addReceipts(files: File[]) {
+  function addReceipts(files: File[], lineId: string) {
     setErrors((current) => ({ ...current, receipts: undefined }));
-    pendingReceipts.add(files);
+    pendingReceipts.add(files, lineId);
   }
 
   function showFieldErrors(next: RequestFormErrors) {
     setErrors(next);
-    const first = REQUEST_ERROR_FIELDS.find((key) => next[key]);
-    if (first) document.getElementById(requestFocusId(first))?.focus();
+    const [first] = requestErrorIds(next, values.lines);
+    if (first) document.getElementById(first)?.focus();
   }
 
   async function save() {
     if (preparing) return;
     const parsed = requestSchema(todayInLA()).safeParse(values);
-    const next: RequestFormErrors = parsed.success ? {} : requestFieldErrors(parsed.error);
+    const next: RequestFormErrors = parsed.success ? {} : requestFieldErrors(parsed.error, values.lines);
     const receiptError = editReceiptError(request.status, { receiptCount, noReceipt: values.no_receipt });
     if (receiptError) next.receipts = receiptError;
     if (!parsed.success || receiptError) {
@@ -133,35 +137,34 @@ export function EditRequestForm({
     setPending(true);
     const supabase = createClient();
 
-    const { error } = await supabase
-      .from("reimbursement_requests")
-      .update(parsed.data)
-      .eq("id", request.id)
-      .select("id")
-      .single();
-    if (error) {
-      setPending(false);
-      // No row back means the update policy turned it down: it's no longer open.
-      if (error.code === "PGRST116") setFormError(CLOSED_MESSAGE);
-      else if (error.code === FUTURE_DATE_CODE) showFieldErrors({ purchase_date: requestSaveErrorMessage(error) });
-      else setFormError(requestSaveErrorMessage(error));
-      return;
-    }
-
-    // Removed before adding, so a full request has room for the new ones.
+    // Files go first: a receipt can't be taken off while it has any, and a full request needs the room.
     let notRemoved = 0;
-    for (const receipt of saved.filter((candidate) => marked.has(candidate.id))) {
+    for (const file of removing) {
       try {
-        await removeReceipt(supabase, { id: receipt.id, path: receipt.path });
-        setSaved((current) => current.filter((candidate) => candidate.id !== receipt.id));
+        await removeReceipt(supabase, { id: file.id, path: file.path });
+        setSaved((current) => current.filter((candidate) => candidate.id !== file.id));
         setMarked((current) => {
-          const next = new Set(current);
-          next.delete(receipt.id);
-          return next;
+          const rest = new Set(current);
+          rest.delete(file.id);
+          return rest;
         });
       } catch {
         notRemoved++;
       }
+    }
+    if (notRemoved > 0) {
+      setPending(false);
+      setFormError(`${count(notRemoved, "wasn't removed", "weren't removed")}, so the changes weren't saved. Save again to retry.`);
+      return;
+    }
+
+    const { error } = await supabase.rpc("save_request", saveRequestArgs(request.id, parsed.data));
+    if (error) {
+      setPending(false);
+      if (isClosedError(error)) setFormError(CLOSED_MESSAGE);
+      else if (isFutureDateError(error)) showFieldErrors({ purchase_date: requestSaveErrorMessage(error) });
+      else setFormError(requestSaveErrorMessage(error));
+      return;
     }
 
     // One at a time, to go easy on a phone's connection.
@@ -170,7 +173,7 @@ export function EditRequestForm({
       if (!receipt.prepared || (receipt.status !== "ready" && receipt.status !== "failed")) continue;
       pendingReceipts.setStatus(receipt.key, "uploading");
       try {
-        await uploadReceipt(supabase, request.id, receipt.prepared);
+        await uploadReceipt(supabase, request.id, receipt.line, receipt.prepared);
         pendingReceipts.setStatus(receipt.key, "uploaded");
       } catch {
         pendingReceipts.setStatus(receipt.key, "failed");
@@ -178,13 +181,9 @@ export function EditRequestForm({
       }
     }
 
-    if (notRemoved > 0 || notUploaded > 0) {
+    if (notUploaded > 0) {
       setPending(false);
-      const problems = [
-        notRemoved > 0 && count(notRemoved, "wasn't removed", "weren't removed"),
-        notUploaded > 0 && count(notUploaded, "didn't upload", "didn't upload"),
-      ].filter(Boolean);
-      setFormError(`The changes are saved, but ${problems.join(" and ")}. Save again to retry.`);
+      setFormError(`The changes are saved, but ${count(notUploaded, "didn't upload", "didn't upload")}. Save again to retry.`);
       return;
     }
 
@@ -193,6 +192,26 @@ export function EditRequestForm({
   }
 
   const busy = pending || preparing;
+
+  function savedFiles(lineId: string, title?: string) {
+    const files = saved.filter((file) => file.lineId === lineId);
+    if (files.length === 0) return null;
+    return (
+      <ReceiptGallery
+        receipts={files}
+        title={title}
+        initial={request.signed}
+        label="Saved files"
+        removal={{
+          marked,
+          onToggle: toggleRemove,
+          // A file can't come back while "No receipt on file" is on.
+          canKeep: receiptCount < MAX_RECEIPTS && !values.no_receipt,
+          locked: pending,
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -217,22 +236,7 @@ export function EditRequestForm({
           eventNames={eventNames}
           today={today}
           pendingReceipts={pendingReceipts}
-          savedReceipts={
-            saved.length > 0 && (
-              <ReceiptGallery
-                receipts={saved}
-                initial={request.signed}
-                label="Saved receipts"
-                removal={{
-                  marked,
-                  onToggle: toggleRemove,
-                  // A receipt can't come back while "No receipt on file" is on.
-                  canKeep: receiptCount < MAX_RECEIPTS && !values.no_receipt,
-                  locked: pending,
-                }}
-              />
-            )
-          }
+          savedReceipts={savedFiles}
           receiptCount={receiptCount}
           onAddReceipts={addReceipts}
           locked={pending}

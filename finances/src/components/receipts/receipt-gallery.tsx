@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { CircleAlertIcon, FileTextIcon, ImageOffIcon, LoaderCircleIcon, Undo2Icon, XIcon } from "lucide-react";
 import { ReceiptViewer } from "@/components/receipts/receipt-viewer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -29,6 +29,28 @@ function receiptTitle(index: number, count: number): string {
   return count > 1 ? `Receipt ${index + 1} of ${count}` : "Receipt";
 }
 
+/** One receipt's saved files, for a request with several receipts. */
+export type GalleryGroup = {
+  id: string;
+  /** Names the receipt in the viewer and to screen readers, like "Costco" or "Receipt 2". */
+  title: string;
+  /** Shown above its files. */
+  header: ReactNode;
+  /** Shown in place of files when it has none. */
+  empty?: ReactNode;
+  receipts: GalleryReceipt[];
+};
+
+/** The title for a receipt's file: the receipt's name, and which file when it has several. */
+function fileTitle(title: string, index: number, count: number): string {
+  return count > 1 ? `${title}, file ${index + 1} of ${count}` : title;
+}
+
+/** How a remove button names a receipt's file, so it isn't mistaken for the whole receipt. */
+function fileOf(title: string, index: number, count: number): string {
+  return `${count > 1 ? `file ${index + 1} of ${count}` : "the file"} from ${title}`;
+}
+
 /** Lets the edit form mark saved receipts to remove when it saves. */
 export type GalleryRemoval = {
   /** Ids marked to remove. */
@@ -44,20 +66,52 @@ export type GalleryRemoval = {
  * A saved request's receipts. Images open full screen, and PDFs open in a new
  * tab. The links expire after five minutes, so stale ones are re-signed
  * before a receipt opens and when the page comes back into view.
+ *
+ * Pass `groups` to list the files under each of the request's receipts. The
+ * viewer still swipes across all of them. Pass `title` to name a flat list's
+ * files after the receipt they belong to.
  */
 export function ReceiptGallery({
-  receipts,
+  receipts: flat,
+  groups,
+  title,
   initial,
   label = "Receipts",
   removal,
 }: {
-  receipts: GalleryReceipt[];
   /** Links signed while the page rendered, or null if that failed. */
   initial: SignedReceiptUrls | null;
   /** Names the list. */
   label?: string;
   removal?: GalleryRemoval;
-}) {
+} & (
+  | { receipts: GalleryReceipt[]; groups?: undefined; /** Like "Receipt 2". */ title?: string }
+  | { groups: GalleryGroup[]; receipts?: undefined; title?: undefined }
+)) {
+  const receipts = groups?.flatMap((group) => group.receipts) ?? flat ?? [];
+  // Keyed by path, so a parent that rebuilds its groups each render doesn't re-sign.
+  const pathsKey = receipts.map((receipt) => receipt.path).join("\n");
+  const paths = useMemo(() => (pathsKey ? pathsKey.split("\n") : []), [pathsKey]);
+
+  /** Each file's title, by id. */
+  const titles = new Map<string, string>();
+  /** What the remove buttons call each file, when it isn't its title. */
+  const removeNames = new Map<string, string>();
+  if (groups) {
+    for (const group of groups) {
+      group.receipts.forEach((receipt, index) =>
+        titles.set(receipt.id, fileTitle(group.title, index, group.receipts.length)),
+      );
+    }
+  } else if (title) {
+    receipts.forEach((receipt, index) => {
+      titles.set(receipt.id, fileTitle(title, index, receipts.length));
+      removeNames.set(receipt.id, fileOf(title, index, receipts.length));
+    });
+  } else {
+    receipts.forEach((receipt, index) => titles.set(receipt.id, receiptTitle(index, receipts.length)));
+  }
+
   const [signed, setSigned] = useState<SignedReceiptUrls>(initial ?? { urls: {}, signedAt: 0 });
   const [failed, setFailed] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
@@ -67,17 +121,14 @@ export function ReceiptGallery({
   const pending = useRef<Promise<SignedReceiptUrls | null> | null>(null);
 
   const refresh = useCallback(() => {
-    pending.current ??= signReceiptUrls(
-      createClient(),
-      receipts.map((receipt) => receipt.path),
-    ).then((result) => {
+    pending.current ??= signReceiptUrls(createClient(), paths).then((result) => {
       pending.current = null;
       setFailed(!result);
       if (result) setSigned(result);
       return result;
     });
     return pending.current;
-  }, [receipts]);
+  }, [paths]);
 
   const signedRef = useRef(signed);
   useEffect(() => {
@@ -87,7 +138,7 @@ export function ReceiptGallery({
   useEffect(() => {
     const needsRefresh = () => {
       const { urls, signedAt } = signedRef.current;
-      return isSignedUrlStale(signedAt) || receipts.some((receipt) => !urls[receipt.path]);
+      return isSignedUrlStale(signedAt) || paths.some((path) => !urls[path]);
     };
     // A page restored from the back button can hold links that are long expired.
     if (needsRefresh()) void refresh();
@@ -96,7 +147,7 @@ export function ReceiptGallery({
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [receipts, refresh]);
+  }, [paths, refresh]);
 
   /** Fresh links, re-signing first if they're about to expire. */
   async function freshUrls(): Promise<Record<string, string> | null> {
@@ -139,101 +190,125 @@ export function ReceiptGallery({
   // PDFs open in a tab, so swiping skips them.
   const { previous, next } = neighborsOf(receipts, viewingIndex, (receipt) => receipt.mimeType !== "application/pdf");
 
+  function renderTile(receipt: GalleryReceipt) {
+    const url = signed.urls[receipt.path];
+    const isPdf = receipt.mimeType === "application/pdf";
+    const busy = opening === receipt.id;
+    const tileTitle = titles.get(receipt.id) ?? "Receipt";
+    // "receipt 2 of 3" reads better lowercase mid-sentence. A vendor or a given title keeps its capitals.
+    const named = groups || title ? tileTitle : tileTitle.toLowerCase();
+
+    let tile;
+    if (!url || broken.has(url)) {
+      tile = (
+        <button
+          type="button"
+          className={FRAME}
+          onClick={() => void refresh()}
+          aria-label={`Couldn't load ${named}. Try again`}
+        >
+          <span className={PLACEHOLDER}>
+            <ImageOffIcon className="size-6" aria-hidden />
+            <span>Couldn&apos;t load. Tap to retry.</span>
+          </span>
+        </button>
+      );
+    } else if (isPdf) {
+      tile = (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={FRAME}
+          onClick={(event) => openPdf(event, receipt)}
+          aria-label={`Open ${receipt.name} (PDF, opens in a new tab)`}
+        >
+          <span className={PLACEHOLDER}>
+            <FileTextIcon className="size-6" aria-hidden />
+            <span className="line-clamp-2 break-all">{receipt.name}</span>
+          </span>
+        </a>
+      );
+    } else {
+      tile = (
+        <button
+          type="button"
+          className={FRAME}
+          onClick={() => void openImage(receipt)}
+          aria-label={`View ${named}`}
+          aria-busy={busy || undefined}
+        >
+          {/* Signed storage URLs, so next/image doesn't apply. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onError={() => onImageError(url)}
+            className="size-full object-cover"
+          />
+          {busy && (
+            <span className="absolute inset-0 flex items-center justify-center bg-background/60">
+              <LoaderCircleIcon className="size-6 animate-spin" aria-hidden />
+            </span>
+          )}
+        </button>
+      );
+    }
+
+    if (!removal) return <li key={receipt.id}>{tile}</li>;
+
+    const marked = removal.marked.has(receipt.id);
+    const removeName = removeNames.get(receipt.id) ?? named;
+    return (
+      <li key={receipt.id} className="relative">
+        <div className={cn(marked && "opacity-40")}>{tile}</div>
+        {marked && (
+          <span className="pointer-events-none absolute inset-x-1 bottom-1 rounded-md bg-background/90 px-1 py-0.5 text-center text-xs font-medium">
+            Removing
+          </span>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          onClick={() => removal.onToggle(receipt.id)}
+          disabled={removal.locked || (marked && !removal.canKeep)}
+          aria-label={marked ? `Keep ${removeName}` : `Remove ${removeName}`}
+          className="absolute top-1 right-1 size-9 rounded-full border shadow-sm"
+        >
+          {marked ? <Undo2Icon /> : <XIcon />}
+        </Button>
+      </li>
+    );
+  }
+
+  // By its own width, so tiles stay big in a narrow column on a PC.
+  const grid = "grid grid-cols-3 gap-2 @xl:grid-cols-4";
+
   return (
     <div className="@container space-y-3">
-      {/* By its own width, so tiles stay big in a narrow column on a PC. */}
-      <ul className="grid grid-cols-3 gap-2 @xl:grid-cols-4" aria-label={label}>
-        {receipts.map((receipt, index) => {
-          const url = signed.urls[receipt.path];
-          const isPdf = receipt.mimeType === "application/pdf";
-          const busy = opening === receipt.id;
-          const named = receiptTitle(index, receipts.length).toLowerCase();
-
-          let tile;
-          if (!url || broken.has(url)) {
-            tile = (
-              <button
-                type="button"
-                className={FRAME}
-                onClick={() => void refresh()}
-                aria-label={`Couldn't load ${named}. Try again`}
-              >
-                <span className={PLACEHOLDER}>
-                  <ImageOffIcon className="size-6" aria-hidden />
-                  <span>Couldn&apos;t load. Tap to retry.</span>
-                </span>
-              </button>
-            );
-          } else if (isPdf) {
-            tile = (
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={FRAME}
-                onClick={(event) => openPdf(event, receipt)}
-                aria-label={`Open ${receipt.name} (PDF, opens in a new tab)`}
-              >
-                <span className={PLACEHOLDER}>
-                  <FileTextIcon className="size-6" aria-hidden />
-                  <span className="line-clamp-2 break-all">{receipt.name}</span>
-                </span>
-              </a>
-            );
-          } else {
-            tile = (
-              <button
-                type="button"
-                className={FRAME}
-                onClick={() => void openImage(receipt)}
-                aria-label={`View ${named}`}
-                aria-busy={busy || undefined}
-              >
-                {/* Signed storage URLs, so next/image doesn't apply. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  onError={() => onImageError(url)}
-                  className="size-full object-cover"
-                />
-                {busy && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-background/60">
-                    <LoaderCircleIcon className="size-6 animate-spin" aria-hidden />
-                  </span>
-                )}
-              </button>
-            );
-          }
-
-          if (!removal) return <li key={receipt.id}>{tile}</li>;
-
-          const marked = removal.marked.has(receipt.id);
-          return (
-            <li key={receipt.id} className="relative">
-              <div className={cn(marked && "opacity-40")}>{tile}</div>
-              {marked && (
-                <span className="pointer-events-none absolute inset-x-1 bottom-1 rounded-md bg-background/90 px-1 py-0.5 text-center text-xs font-medium">
-                  Removing
-                </span>
+      {groups ? (
+        <ul className="divide-y" aria-label={label}>
+          {groups.map((group) => (
+            <li key={group.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
+              {group.header}
+              {group.receipts.length > 0 ? (
+                <ul className={grid} aria-label={`${group.title} files`}>
+                  {group.receipts.map(renderTile)}
+                </ul>
+              ) : (
+                group.empty
               )}
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                onClick={() => removal.onToggle(receipt.id)}
-                disabled={removal.locked || (marked && !removal.canKeep)}
-                aria-label={marked ? `Keep ${named}` : `Remove ${named}`}
-                className="absolute top-1 right-1 size-9 rounded-full border shadow-sm"
-              >
-                {marked ? <Undo2Icon /> : <XIcon />}
-              </Button>
             </li>
-          );
-        })}
-      </ul>
+          ))}
+        </ul>
+      ) : (
+        <ul className={grid} aria-label={label}>
+          {receipts.map(renderTile)}
+        </ul>
+      )}
 
       {failed && (
         <Alert variant="destructive">
@@ -244,7 +319,7 @@ export function ReceiptGallery({
 
       {viewing && viewingUrl && (
         <ReceiptViewer
-          title={receiptTitle(viewingIndex, receipts.length)}
+          title={titles.get(viewing.id) ?? "Receipt"}
           url={viewingUrl}
           width={viewing.width}
           height={viewing.height}

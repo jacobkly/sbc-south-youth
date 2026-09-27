@@ -19,7 +19,8 @@ const REQUEST_COLUMNS = `
   request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
   no_receipt, no_receipt_reason, external_approver, paid_at, payment_method, payment_reference, created_by,
   payee:payees(full_name, user_id),
-  receipts(id, storage_path, original_filename, mime_type, width, height),
+  lines:request_lines(id, amount_cents, vendor),
+  receipts(id, line_id, storage_path, original_filename, mime_type, width, height),
   request_events(id, action, from_status, note, changes, created_at, actor:users(full_name))
 `;
 
@@ -33,6 +34,7 @@ export default async function RequestPage({ params }: PageProps<"/admin/requests
       .from("reimbursement_requests")
       .select(REQUEST_COLUMNS)
       .eq("id", id)
+      .order("position", { referencedTable: "lines" })
       .order("created_at", { referencedTable: "receipts" })
       .order("created_at", { referencedTable: "request_events" })
       .order("id", { referencedTable: "request_events" })

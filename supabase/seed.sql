@@ -53,6 +53,10 @@ select set_config(
   false
 );
 
+-- Requests and their receipt amounts go in together, since the total and
+-- vendors are checked against them at commit.
+begin;
+
 insert into public.reimbursement_requests (
   id, payee_id, created_by, type, amount_cents, purchase_date, vendor, description, event_name,
   no_receipt, no_receipt_reason
@@ -63,7 +67,7 @@ select
   r.event_name, r.no_receipt_reason is not null, r.no_receipt_reason
 from (values
   ('00000000-0000-4000-8000-5eed0000c001', '00000000-0000-4000-8000-5eed0000b002', 'youth', 2350, 2,
-    'Grocery Outlet', 'Snacks for small group', null, null),
+    'Grocery Outlet, Dollar Store, Corner Store', 'Snacks for small group', null, null),
   ('00000000-0000-4000-8000-5eed0000c002', '00000000-0000-4000-8000-5eed0000b003', 'cafe', 4800, 5,
     'Restaurant Depot', 'Coffee beans and milk', null, 'The receipt was lost.'),
   ('00000000-0000-4000-8000-5eed0000c003', '00000000-0000-4000-8000-5eed0000b002', 'youth', 12000, 10,
@@ -79,7 +83,7 @@ from (values
   ('00000000-0000-4000-8000-5eed0000c008', '00000000-0000-4000-8000-5eed0000b002', 'youth', 1200, 8,
     'Grocery Outlet', 'Entered twice by mistake', null, 'The receipt was lost.'),
   ('00000000-0000-4000-8000-5eed0000c009', '00000000-0000-4000-8000-5eed0000b002', 'cafe', 5620, 45,
-    'Restaurant Depot', 'Syrups and whipped cream', null, 'The receipt was lost.'),
+    'Restaurant Depot, Warehouse Club', 'Syrups and whipped cream', null, 'The receipt was lost.'),
   ('00000000-0000-4000-8000-5eed0000c010', '00000000-0000-4000-8000-5eed0000b003', 'youth', 21500, 70,
     'Trampoline Park', 'Group tickets', 'Summer outing', 'Paid online; no receipt was sent.'),
   ('00000000-0000-4000-8000-5eed0000c011', '00000000-0000-4000-8000-5eed0000b004', 'youth', 4275, 100,
@@ -87,6 +91,22 @@ from (values
   ('00000000-0000-4000-8000-5eed0000c012', '00000000-0000-4000-8000-5eed0000b001', 'cafe', 3190, 130,
     'Warehouse Club', 'Pastries for Sunday', null, 'The receipt was lost.')
 ) as r (id, payee_id, type, amount_cents, days_ago, vendor, description, event_name, no_receipt_reason);
+
+-- One receipt each, except c001 (three stores) and c009 (two).
+insert into public.request_lines (request_id, position, amount_cents, vendor)
+select r.id, 1, r.amount_cents, r.vendor
+from public.reimbursement_requests r
+where r.created_by = '00000000-0000-4000-8000-5eed0000a001'
+  and r.id not in ('00000000-0000-4000-8000-5eed0000c001', '00000000-0000-4000-8000-5eed0000c009');
+
+insert into public.request_lines (request_id, position, amount_cents, vendor) values
+  ('00000000-0000-4000-8000-5eed0000c001', 1, 1200, 'Grocery Outlet'),
+  ('00000000-0000-4000-8000-5eed0000c001', 2, 650, 'Dollar Store'),
+  ('00000000-0000-4000-8000-5eed0000c001', 3, 500, 'Corner Store'),
+  ('00000000-0000-4000-8000-5eed0000c009', 1, 4100, 'Restaurant Depot'),
+  ('00000000-0000-4000-8000-5eed0000c009', 2, 1520, 'Warehouse Club');
+
+commit;
 
 -- c001 stays a draft.
 select public.submit_request('00000000-0000-4000-8000-5eed0000c002');

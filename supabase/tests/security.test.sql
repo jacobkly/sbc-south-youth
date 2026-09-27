@@ -5,11 +5,11 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(19);
+select plan(20);
 
 select tables_are(
   'public',
-  array['users', 'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'receipts'],
+  array['users', 'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'receipts', 'request_lines'],
   'public has only the known tables (add new ones here once they have RLS and tests)'
 );
 
@@ -74,7 +74,8 @@ select set_eq(
     'request_info',
     'reject_request',
     'cancel_request',
-    'import_paid_requests'
+    'import_paid_requests',
+    'save_request'
   ],
   'signed-in users can call only the app''s RPCs (helpers and trigger functions stay private)'
 );
@@ -136,9 +137,12 @@ insert into public.reimbursement_requests (
   'submitted', now()
 );
 
-insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+insert into public.request_lines (id, request_id, position, amount_cents, vendor)
+values ('00000000-0000-4000-8000-00000000f001', '00000000-0000-4000-8000-00000000c001', 1, 1000, 'Fake Store');
+
+insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
 values (
-  '00000000-0000-4000-8000-00000000d001', '00000000-0000-4000-8000-00000000c001',
+  '00000000-0000-4000-8000-00000000d001', '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000f001',
   '00000000-0000-4000-8000-00000000c001/00000000-0000-4000-8000-00000000d001.jpg',
   'receipt.jpg', 'image/jpeg', 1000, repeat('a', 64)
 );
@@ -151,6 +155,7 @@ select ok(
   and exists (select 1 from public.payees where id = '00000000-0000-4000-8000-00000000b001')
   and exists (select 1 from public.reimbursement_requests where id = '00000000-0000-4000-8000-00000000c001')
   and exists (select 1 from public.request_events where request_id = '00000000-0000-4000-8000-00000000c001')
+  and exists (select 1 from public.request_lines where request_id = '00000000-0000-4000-8000-00000000c001')
   and exists (select 1 from public.receipts where id = '00000000-0000-4000-8000-00000000d001')
   and exists (select 1 from storage.objects where bucket_id = 'receipts'),
   'every table has a row for the deactivated admin to be refused'

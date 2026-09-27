@@ -129,9 +129,13 @@ select throws_ok(
 );
 
 reset role;
-insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+insert into public.request_lines (id, request_id, position, amount_cents, vendor)
+select '00000000-0000-4000-8000-00000000f001', id, 1, amount_cents, vendor
+from public.reimbursement_requests where id = '00000000-0000-4000-8000-00000000c001';
+
+insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
 values (
-  '00000000-0000-4000-8000-00000000d001', '00000000-0000-4000-8000-00000000c001',
+  '00000000-0000-4000-8000-00000000d001', '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000f001',
   '00000000-0000-4000-8000-00000000c001/00000000-0000-4000-8000-00000000d001.jpg',
   'receipt.jpg', 'image/jpeg', 1000, repeat('a', 64)
 );

@@ -8,9 +8,11 @@ import { createClient } from "@/lib/supabase/client";
 
 export type PendingReceiptStatus = "processing" | "ready" | "uploading" | "uploaded" | "failed";
 
-/** A receipt picked in a form but not saved yet. */
+/** A file picked in a form but not saved yet. */
 export type PendingReceipt = {
   key: string;
+  /** The id of the receipt it was picked for. */
+  line: string;
   name: string;
   status: PendingReceiptStatus;
   /** Set once processing finishes. */
@@ -21,10 +23,14 @@ export type PendingReceipt = {
   matches: ReceiptMatch[];
 };
 
+/** Why a picked file wasn't added, shown with the receipt it was picked for. */
+export type PendingProblem = { line: string; text: string };
+
 /**
- * Holds the receipts picked in a form. Each file is compressed and hashed as
- * soon as it's added, so saving only has to upload. `limit` is how many can
- * be picked, which is less when the request already has some saved.
+ * Holds the files picked in a form, each for one of its receipts. Each file is
+ * compressed and hashed as soon as it's added, so saving only has to upload.
+ * `limit` is how many can be picked in all, which is less when the request
+ * already has some saved.
  *
  * Once a file is ready, saved receipts with the same hash are looked up, to
  * catch one purchase entered twice. `requestId` is the request being edited,
@@ -33,7 +39,7 @@ export type PendingReceipt = {
 export function usePendingReceipts(limit: number = MAX_RECEIPTS, requestId?: string) {
   const [receipts, setReceipts] = useState<PendingReceipt[]>([]);
   /** Why some picked files weren't added. Replaced on each pick. */
-  const [problems, setProblems] = useState<string[]>([]);
+  const [problems, setProblems] = useState<PendingProblem[]>([]);
   const queue = useRef(Promise.resolve());
   const nextKey = useRef(0);
   const removed = useRef(new Set<string>());
@@ -62,18 +68,19 @@ export function usePendingReceipts(limit: number = MAX_RECEIPTS, requestId?: str
     );
   }
 
-  function add(files: File[]) {
+  /** Adds files to the receipt `line`. */
+  function add(files: File[], line: string) {
     const room = Math.max(0, limit - receipts.length);
     const accepted = files.slice(0, room);
     const skipped = files.length - accepted.length;
+    const notAdded = skipped === 1 ? "1 file wasn't" : `${skipped} files weren't`;
     setProblems(
-      skipped > 0
-        ? [`A request can have up to ${MAX_RECEIPTS} receipts, so ${skipped === 1 ? "1 file wasn't" : `${skipped} files weren't`} added.`]
-        : [],
+      skipped > 0 ? [{ line, text: `A request can hold up to ${MAX_RECEIPTS} files, so ${notAdded} added.` }] : [],
     );
 
     const items: PendingReceipt[] = accepted.map((file) => ({
       key: String(nextKey.current++),
+      line,
       name: file.name || "receipt",
       status: "processing",
       prepared: null,
@@ -97,20 +104,32 @@ export function usePendingReceipts(limit: number = MAX_RECEIPTS, requestId?: str
         } catch (error) {
           const reason = error instanceof UnusableFileError ? error.message : "It couldn't be processed.";
           setReceipts((current) => current.filter((receipt) => receipt.key !== item.key));
-          setProblems((current) => [...current, `${item.name}: ${reason}`]);
+          setProblems((current) => [...current, { line, text: `${item.name}: ${reason}` }]);
         }
       });
     });
   }
 
-  function remove(key: string) {
-    removed.current.add(key);
-    const receipt = receipts.find((candidate) => candidate.key === key);
-    if (receipt?.url) {
+  function forget(receipt: PendingReceipt) {
+    removed.current.add(receipt.key);
+    if (receipt.url) {
       URL.revokeObjectURL(receipt.url);
       urls.current.delete(receipt.url);
     }
+  }
+
+  function remove(key: string) {
+    removed.current.add(key);
+    const receipt = receipts.find((candidate) => candidate.key === key);
+    if (receipt) forget(receipt);
     setReceipts((current) => current.filter((candidate) => candidate.key !== key));
+  }
+
+  /** Drops the files picked for a receipt that's being taken off. */
+  function removeLine(line: string) {
+    for (const receipt of receipts) if (receipt.line === line) forget(receipt);
+    setReceipts((current) => current.filter((candidate) => candidate.line !== line));
+    setProblems((current) => current.filter((problem) => problem.line !== line));
   }
 
   function setStatus(key: string, status: PendingReceiptStatus) {
@@ -126,7 +145,7 @@ export function usePendingReceipts(limit: number = MAX_RECEIPTS, requestId?: str
     setProblems([]);
   }
 
-  return { receipts, problems, limit, add, remove, setStatus, clear };
+  return { receipts, problems, limit, add, remove, removeLine, setStatus, clear };
 }
 
 export type PendingReceipts = ReturnType<typeof usePendingReceipts>;

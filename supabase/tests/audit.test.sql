@@ -66,8 +66,11 @@ select results_eq(
 set local role authenticated;
 
 -- As the admin.
-update public.reimbursement_requests set vendor = 'Other Store', amount_cents = 1500
-where id = '00000000-0000-4000-8000-00000000c001';
+select public.save_request(
+  '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000b001', 'youth', '2026-01-10',
+  'Full loop', null, true, 'Lost it',
+  '[{"id": "00000000-0000-4000-8000-00000000f001", "amount_cents": 1500, "vendor": "Other Store"}]'
+);
 
 select is(
   (select changes from public.request_events
@@ -76,13 +79,16 @@ select is(
   'an edit logs the old and new values of what changed'
 );
 
-update public.reimbursement_requests set vendor = vendor, description = description
-where id = '00000000-0000-4000-8000-00000000c001';
+select public.save_request(
+  '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000b001', 'youth', '2026-01-10',
+  'Full loop', null, true, 'Lost it',
+  '[{"id": "00000000-0000-4000-8000-00000000f001", "amount_cents": 1500, "vendor": "Other Store"}]'
+);
 
 select is(
   (select count(*)::int from public.request_events where request_id = '00000000-0000-4000-8000-00000000c001'),
   2,
-  'an edit that changes nothing isn''t logged'
+  'saving without changing anything isn''t logged'
 );
 
 select public.submit_request('00000000-0000-4000-8000-00000000c001');

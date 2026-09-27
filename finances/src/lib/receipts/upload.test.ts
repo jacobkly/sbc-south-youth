@@ -11,6 +11,7 @@ import {
 } from "./upload";
 
 const REQUEST_ID = "00000000-0000-4000-8000-000000000001";
+const LINE_ID = "00000000-0000-4000-8000-00000000f001";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const photo: PreparedReceipt = {
@@ -46,10 +47,10 @@ function fakeClient({ uploadError = null as object | null, insertError = null as
 }
 
 describe("uploadReceipt", () => {
-  it("uploads the file, then adds a row pointing at it", async () => {
+  it("uploads the file, then adds a row on its receipt pointing at it", async () => {
     const { client, bucket, table, calls } = fakeClient();
 
-    const id = await uploadReceipt(client, REQUEST_ID, photo);
+    const id = await uploadReceipt(client, REQUEST_ID, LINE_ID, photo);
 
     expect(id).toMatch(UUID);
     const path = `${REQUEST_ID}/${id}.webp`;
@@ -58,6 +59,7 @@ describe("uploadReceipt", () => {
     expect(table.insert).toHaveBeenCalledWith({
       id,
       request_id: REQUEST_ID,
+      line_id: LINE_ID,
       storage_path: path,
       original_filename: "test-receipt.jpg",
       mime_type: "image/webp",
@@ -71,7 +73,7 @@ describe("uploadReceipt", () => {
   it("deletes the uploaded file when the row can't be added", async () => {
     const { client, calls } = fakeClient({ insertError: { code: "42501" } });
 
-    await expect(uploadReceipt(client, REQUEST_ID, photo)).rejects.toThrow("Couldn't save test-receipt.jpg.");
+    await expect(uploadReceipt(client, REQUEST_ID, LINE_ID, photo)).rejects.toThrow("Couldn't save test-receipt.jpg.");
 
     expect(calls).toHaveLength(3);
     const uploaded = calls[0].replace("upload ", "");
@@ -81,7 +83,7 @@ describe("uploadReceipt", () => {
   it("adds no row when the upload fails", async () => {
     const { client, calls } = fakeClient({ uploadError: { message: "Payload too large" } });
 
-    await expect(uploadReceipt(client, REQUEST_ID, photo)).rejects.toThrow("Couldn't upload test-receipt.jpg.");
+    await expect(uploadReceipt(client, REQUEST_ID, LINE_ID, photo)).rejects.toThrow("Couldn't upload test-receipt.jpg.");
 
     expect(calls).toHaveLength(1);
   });
@@ -90,7 +92,7 @@ describe("uploadReceipt", () => {
     const { client, bucket } = fakeClient({ insertError: { code: "23514" } });
     bucket.remove.mockRejectedValueOnce(new Error("offline"));
 
-    await expect(uploadReceipt(client, REQUEST_ID, photo)).rejects.toThrow("Couldn't save test-receipt.jpg.");
+    await expect(uploadReceipt(client, REQUEST_ID, LINE_ID, photo)).rejects.toThrow("Couldn't save test-receipt.jpg.");
   });
 });
 

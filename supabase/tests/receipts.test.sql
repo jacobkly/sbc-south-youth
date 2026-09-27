@@ -24,31 +24,41 @@ insert into public.payees (id, full_name)
 values ('00000000-0000-4000-8000-00000000b001', 'Test Payee');
 
 -- c001 is a draft, c002 submitted, c003 approved, and c004 a draft to delete.
+-- Each gets its receipt amount while it's still open, then moves on.
 insert into public.reimbursement_requests (
-  id, payee_id, created_by, type, amount_cents, purchase_date, vendor, description,
-  status, approved_by, approved_at
+  id, payee_id, created_by, type, amount_cents, purchase_date, vendor, description
 )
 select
   r.id::uuid, '00000000-0000-4000-8000-00000000b001', '00000000-0000-4000-8000-00000000a001',
-  'youth', 1000, '2026-01-10', 'Fake Store', r.description, r.status::public.request_status,
-  case when r.status = 'approved' then '00000000-0000-4000-8000-00000000a001'::uuid end,
-  case when r.status = 'approved' then now() end
+  'youth', 1000, '2026-01-10', 'Fake Store', r.description
 from (values
-  ('00000000-0000-4000-8000-00000000c001', 'Draft', 'draft'),
-  ('00000000-0000-4000-8000-00000000c002', 'Submitted', 'submitted'),
-  ('00000000-0000-4000-8000-00000000c003', 'Approved', 'approved'),
-  ('00000000-0000-4000-8000-00000000c004', 'Draft to delete', 'draft')
-) as r (id, description, status);
+  ('00000000-0000-4000-8000-00000000c001', 'Draft'),
+  ('00000000-0000-4000-8000-00000000c002', 'Submitted'),
+  ('00000000-0000-4000-8000-00000000c003', 'Approved'),
+  ('00000000-0000-4000-8000-00000000c004', 'Draft to delete')
+) as r (id, description);
+
+insert into public.request_lines (id, request_id, position, amount_cents, vendor)
+select ('00000000-0000-4000-8000-00000000f' || right(r.id::text, 3))::uuid, r.id, 1, r.amount_cents, r.vendor
+from public.reimbursement_requests r
+where r.payee_id = '00000000-0000-4000-8000-00000000b001';
+
+update public.reimbursement_requests set status = 'submitted', submitted_at = now()
+where id = '00000000-0000-4000-8000-00000000c002';
+
+update public.reimbursement_requests
+set status = 'approved', approved_by = '00000000-0000-4000-8000-00000000a001', approved_at = now()
+where id = '00000000-0000-4000-8000-00000000c003';
 
 -- Receipts and files already on the approved request and the draft to delete.
-insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256) values
+insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256) values
   (
-    '00000000-0000-4000-8000-00000000d003', '00000000-0000-4000-8000-00000000c003',
+    '00000000-0000-4000-8000-00000000d003', '00000000-0000-4000-8000-00000000c003', '00000000-0000-4000-8000-00000000f003',
     '00000000-0000-4000-8000-00000000c003/00000000-0000-4000-8000-00000000d003.pdf',
     'invoice.pdf', 'application/pdf', 4000, repeat('c', 64)
   ),
   (
-    '00000000-0000-4000-8000-00000000d004', '00000000-0000-4000-8000-00000000c004',
+    '00000000-0000-4000-8000-00000000d004', '00000000-0000-4000-8000-00000000c004', '00000000-0000-4000-8000-00000000f004',
     '00000000-0000-4000-8000-00000000c004/00000000-0000-4000-8000-00000000d004.jpg',
     'photo.jpg', 'image/jpeg', 500, repeat('d', 64)
   );
@@ -101,9 +111,9 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
 
 select lives_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, width, height, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, width, height, sha256)
      values (
-       '00000000-0000-4000-8000-00000000d001', '00000000-0000-4000-8000-00000000c001',
+       '00000000-0000-4000-8000-00000000d001', '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000f001',
        '00000000-0000-4000-8000-00000000c001/00000000-0000-4000-8000-00000000d001.jpg',
        'receipt.jpg', 'image/jpeg', 1000, 1200, 1600, repeat('a', 64)
      ) $$,
@@ -124,9 +134,9 @@ select results_eq(
 );
 
 select lives_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
      values (
-       '00000000-0000-4000-8000-00000000d002', '00000000-0000-4000-8000-00000000c002',
+       '00000000-0000-4000-8000-00000000d002', '00000000-0000-4000-8000-00000000c002', '00000000-0000-4000-8000-00000000f002',
        '00000000-0000-4000-8000-00000000c002/00000000-0000-4000-8000-00000000d002.webp',
        'receipt.webp', 'image/webp', 2000, repeat('b', 64)
      ) $$,
@@ -134,9 +144,9 @@ select lives_ok(
 );
 
 select throws_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
      values (
-       '00000000-0000-4000-8000-00000000d005', '00000000-0000-4000-8000-00000000c003',
+       '00000000-0000-4000-8000-00000000d005', '00000000-0000-4000-8000-00000000c003', '00000000-0000-4000-8000-00000000f003',
        '00000000-0000-4000-8000-00000000c003/00000000-0000-4000-8000-00000000d005.jpg',
        'late.jpg', 'image/jpeg', 1000, repeat('e', 64)
      ) $$,
@@ -146,9 +156,9 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
      values (
-       '00000000-0000-4000-8000-00000000d006', '00000000-0000-4000-8000-00000000c001',
+       '00000000-0000-4000-8000-00000000d006', '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000f001',
        '00000000-0000-4000-8000-00000000c002/00000000-0000-4000-8000-00000000d006.jpg',
        'wrong-folder.jpg', 'image/jpeg', 1000, repeat('e', 64)
      ) $$,
@@ -158,9 +168,9 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
      values (
-       '00000000-0000-4000-8000-00000000d006', '00000000-0000-4000-8000-00000000c001',
+       '00000000-0000-4000-8000-00000000d006', '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000f001',
        '00000000-0000-4000-8000-00000000c001/00000000-0000-4000-8000-00000000d006.gif',
        'animated.gif', 'image/gif', 1000, repeat('e', 64)
      ) $$,
@@ -170,9 +180,9 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
      values (
-       '00000000-0000-4000-8000-00000000d006', '00000000-0000-4000-8000-00000000c001',
+       '00000000-0000-4000-8000-00000000d006', '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000f001',
        '00000000-0000-4000-8000-00000000c001/00000000-0000-4000-8000-00000000d006.jpg',
        'empty.jpg', 'image/jpeg', 0, repeat('e', 64)
      ) $$,
@@ -182,9 +192,9 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
      values (
-       '00000000-0000-4000-8000-00000000d006', '00000000-0000-4000-8000-00000000c001',
+       '00000000-0000-4000-8000-00000000d006', '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000f001',
        '00000000-0000-4000-8000-00000000c001/00000000-0000-4000-8000-00000000d006.jpg',
        'huge.jpg', 'image/jpeg', 10485761, repeat('e', 64)
      ) $$,
@@ -194,9 +204,9 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
      values (
-       '00000000-0000-4000-8000-00000000d006', '00000000-0000-4000-8000-00000000c001',
+       '00000000-0000-4000-8000-00000000d006', '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000f001',
        '00000000-0000-4000-8000-00000000c001/00000000-0000-4000-8000-00000000d006.jpg',
        'bad-hash.jpg', 'image/jpeg', 1000, 'NOT-A-HASH'
      ) $$,
@@ -206,9 +216,9 @@ select throws_ok(
 );
 
 select lives_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
      select
-       f.id, '00000000-0000-4000-8000-00000000c001',
+       f.id, '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000f001',
        '00000000-0000-4000-8000-00000000c001/' || f.id || '.jpg',
        'page.jpg', 'image/jpeg', 100, repeat('f', 64)
      from (select gen_random_uuid() as id from generate_series(1, 9)) as f $$,
@@ -216,9 +226,9 @@ select lives_ok(
 );
 
 select throws_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
      values (
-       '00000000-0000-4000-8000-00000000d007', '00000000-0000-4000-8000-00000000c001',
+       '00000000-0000-4000-8000-00000000d007', '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000f001',
        '00000000-0000-4000-8000-00000000c001/00000000-0000-4000-8000-00000000d007.jpg',
        'eleventh.jpg', 'image/jpeg', 100, repeat('f', 64)
      ) $$,
@@ -302,9 +312,9 @@ select results_eq(
 );
 
 select throws_ok(
-  $$ insert into public.receipts (id, request_id, storage_path, original_filename, mime_type, size_bytes, sha256)
+  $$ insert into public.receipts (id, request_id, line_id, storage_path, original_filename, mime_type, size_bytes, sha256)
      values (
-       '00000000-0000-4000-8000-00000000d008', '00000000-0000-4000-8000-00000000c002',
+       '00000000-0000-4000-8000-00000000d008', '00000000-0000-4000-8000-00000000c002', '00000000-0000-4000-8000-00000000f002',
        '00000000-0000-4000-8000-00000000c002/00000000-0000-4000-8000-00000000d008.jpg',
        'viewer.jpg', 'image/jpeg', 100, repeat('f', 64)
      ) $$,

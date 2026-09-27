@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { FileXIcon, PencilIcon, TriangleAlertIcon } from "lucide-react";
 import { BackLink } from "@/components/nav/back-link";
-import { ReceiptGallery } from "@/components/receipts/receipt-gallery";
+import { ReceiptGallery, type GalleryGroup, type GalleryReceipt } from "@/components/receipts/receipt-gallery";
 import { StatusBadge } from "@/components/requests/status-badge";
 import { StatusTimeline, type TimelineEvent } from "@/components/requests/status-timeline";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -30,9 +30,12 @@ export type RequestDetailData = {
   payment_method: PaymentMethod | null;
   payment_reference: string | null;
   payee: { full_name: string } | null;
+  /** In order. There's always at least one. */
+  lines: { id: string; amount_cents: number; vendor: string | null }[];
   /** Oldest first. */
   receipts: {
     id: string;
+    line_id: string;
     storage_path: string;
     original_filename: string;
     mime_type: string;
@@ -56,7 +59,8 @@ function detailRows(request: RequestDetailData): [string, string | null][] {
   const rows: [string, string | null][] = [
     ["Type", REQUEST_TYPE_LABELS[request.type]],
     ["Purchase date", formatDate(request.purchase_date)],
-    ["Vendor", request.vendor],
+    // With several receipts, it's the list of their vendors.
+    [request.lines.length > 1 ? "Vendors" : "Vendor", request.vendor],
   ];
   if (request.event_name) rows.push(["Event", request.event_name]);
   rows.push(["Description", request.description]);
@@ -69,6 +73,42 @@ function detailRows(request: RequestDetailData): [string, string | null][] {
     );
   }
   return rows;
+}
+
+function galleryReceipt(receipt: RequestDetailData["receipts"][number]): GalleryReceipt {
+  return {
+    id: receipt.id,
+    path: receipt.storage_path,
+    name: receipt.original_filename,
+    mimeType: receipt.mime_type,
+    width: receipt.width,
+    height: receipt.height,
+  };
+}
+
+/** Each receipt's amount and vendor, over its files. */
+function receiptGroups(request: RequestDetailData): GalleryGroup[] {
+  return request.lines.map((line, index) => {
+    const title = line.vendor ?? `Receipt ${index + 1}`;
+    return {
+      id: line.id,
+      title,
+      header: (
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="min-w-0 font-medium break-words">{title}</span>
+          <span className="shrink-0 tabular-nums">{formatCents(line.amount_cents)}</span>
+        </div>
+      ),
+      // "No receipt on file" already says so for all of them.
+      empty: !request.no_receipt && (
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <FileXIcon className="size-4" aria-hidden />
+          No receipt
+        </p>
+      ),
+      receipts: request.receipts.filter((receipt) => receipt.line_id === line.id).map(galleryReceipt),
+    };
+  });
 }
 
 /** A request's summary, receipts, details, and history, with room for the actions an admin can take. */
@@ -171,18 +211,10 @@ export function RequestDetail({
                 )}
               </Alert>
             )}
-            {receipts.length > 0 ? (
-              <ReceiptGallery
-                receipts={receipts.map((receipt) => ({
-                  id: receipt.id,
-                  path: receipt.storage_path,
-                  name: receipt.original_filename,
-                  mimeType: receipt.mime_type,
-                  width: receipt.width,
-                  height: receipt.height,
-                }))}
-                initial={signed}
-              />
+            {request.lines.length > 1 ? (
+              <ReceiptGallery groups={receiptGroups(request)} initial={signed} />
+            ) : receipts.length > 0 ? (
+              <ReceiptGallery receipts={receipts.map(galleryReceipt)} initial={signed} />
             ) : (
               !request.no_receipt && <p className="text-muted-foreground">No receipts yet.</p>
             )}

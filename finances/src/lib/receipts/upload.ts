@@ -56,13 +56,14 @@ export async function prepareReceipt(file: File): Promise<PreparedReceipt> {
 }
 
 /**
- * Uploads a receipt file, then adds its row. If the row can't be added, the
- * file is deleted, so storage never keeps a file the app can't see.
- * Returns the new receipt's id.
+ * Uploads a file for one of a request's receipts (`lineId`), then adds its
+ * row. If the row can't be added, the file is deleted, so storage never keeps
+ * a file the app can't see. Returns the new file's id.
  */
 export async function uploadReceipt(
   supabase: SupabaseClient<Database>,
   requestId: string,
+  lineId: string,
   receipt: PreparedReceipt,
 ): Promise<string> {
   const id = crypto.randomUUID();
@@ -75,6 +76,7 @@ export async function uploadReceipt(
   const { error } = await supabase.from("receipts").insert({
     id,
     request_id: requestId,
+    line_id: lineId,
     storage_path: path,
     original_filename: receipt.name,
     mime_type: receipt.mimeType,

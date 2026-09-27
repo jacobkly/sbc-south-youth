@@ -23,7 +23,7 @@ import { formatRequestNumber, REQUEST_STATUS_LABELS } from "@/lib/requests/forma
 import { cn } from "@/lib/utils";
 
 /** The keys of picked files that repeat an earlier pick in the same list. */
-function pickedTwice(receipts: readonly PendingReceipt[]): Set<string> {
+export function pickedTwice(receipts: readonly PendingReceipt[]): Set<string> {
   const seen = new Set<string>();
   const repeats = new Set<string>();
   for (const { key, prepared } of receipts) {
@@ -45,6 +45,9 @@ export function ReceiptPicker({
   problems,
   max = MAX_RECEIPTS,
   label = "Receipts",
+  addLabel = "Add receipts",
+  compact,
+  repeats: repeatsAcross,
   onAdd,
   onRemove,
   locked,
@@ -58,6 +61,12 @@ export function ReceiptPicker({
   max?: number;
   /** Names the list of picked files. */
   label?: string;
+  /** The button's text before anything is picked. */
+  addLabel?: string;
+  /** A small button, for one receipt in a list of them. */
+  compact?: boolean;
+  /** Files picked twice, when the form has a picker per receipt. Found in `receipts` when left out. */
+  repeats?: ReadonlySet<string>;
   onAdd: (files: File[]) => void;
   onRemove: (key: string) => void;
   /** True while saving, so nothing changes mid-upload. */
@@ -76,7 +85,7 @@ export function ReceiptPicker({
   );
   const full = receipts.length >= max;
   const canAdd = !full && !locked;
-  const repeats = pickedTwice(receipts);
+  const repeats = repeatsAcross ?? pickedTwice(receipts);
   const duplicates = receipts.filter((receipt) => receipt.matches.length > 0 || repeats.has(receipt.key));
 
   function pick() {
@@ -118,7 +127,21 @@ export function ReceiptPicker({
       />
 
       {receipts.length === 0 ? (
-        !full && (
+        !full &&
+        (compact ? (
+          <Button
+            type="button"
+            id={id}
+            variant="outline"
+            disabled={locked}
+            aria-describedby={describedBy}
+            onClick={pick}
+            className="h-11 w-full border-dashed text-base font-normal desktop:text-sm"
+          >
+            <ImagePlusIcon className="text-muted-foreground" aria-hidden />
+            {addLabel}
+          </Button>
+        ) : (
           <Button
             type="button"
             id={id}
@@ -129,10 +152,10 @@ export function ReceiptPicker({
             className="h-24 w-full flex-col gap-1 border-dashed text-base font-normal desktop:text-sm"
           >
             <ImagePlusIcon className="size-6 text-muted-foreground" aria-hidden />
-            <span>Add receipts</span>
+            <span>{addLabel}</span>
             <span className="hidden text-sm text-muted-foreground desktop:inline">or drop files here</span>
           </Button>
-        )
+        ))
       ) : (
         // Matches the gallery, which goes by its own width.
         <ul className="grid grid-cols-3 gap-2 @xl:grid-cols-4" aria-label={label}>

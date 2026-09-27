@@ -6,9 +6,8 @@ import { CircleAlertIcon, CircleCheckIcon } from "lucide-react";
 import { usePendingReceipts } from "@/components/receipts/use-pending-receipts";
 import {
   blankRequest,
-  REQUEST_ERROR_FIELDS,
+  requestErrorIds,
   RequestFields,
-  requestFocusId,
   type RequestFormErrors,
 } from "@/components/requests/request-fields";
 import { saveFieldId, SaveOptions } from "@/components/requests/save-options";
@@ -33,25 +32,20 @@ import {
 } from "@/lib/requests/actions";
 import { formatRequestNumber } from "@/lib/requests/format";
 import {
-  FUTURE_DATE_CODE,
+  errorsAfterChange,
+  isFutureDateError,
   requestFieldErrors,
   requestSaveErrorMessage,
   requestSchema,
+  saveRequestArgs,
   type RequestFormValues,
 } from "@/lib/requests/schema";
 import { createClient } from "@/lib/supabase/client";
 
 type FormErrors = RequestFormErrors & SaveOptionErrors;
 
-type ErrorField = keyof FormErrors;
-
-/** Every field that can show an error, in the order they appear on screen. */
-const ERROR_FIELDS: ErrorField[] = [...REQUEST_ERROR_FIELDS, "paid_date", "payment_reference", "external_approver"];
-
-function focusId(key: ErrorField): string {
-  if (key === "paid_date" || key === "payment_reference" || key === "external_approver") return saveFieldId(key);
-  return requestFocusId(key);
-}
+/** The save option's fields that can show an error, in the order they appear on screen. */
+const SAVE_ERROR_FIELDS = ["paid_date", "payment_reference", "external_approver"] as const;
 
 type Saved = {
   id: string;
@@ -124,11 +118,7 @@ export function RequestForm({
 
   function set<K extends keyof RequestFormValues>(key: K, value: RequestFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
-    setErrors((current) =>
-      key === "no_receipt"
-        ? { ...current, receipts: undefined, no_receipt_reason: undefined }
-        : { ...current, [key]: undefined },
-    );
+    setErrors((current) => errorsAfterChange(current, key, values[key], value));
   }
 
   function setSave<K extends keyof SaveOptionValues>(key: K, value: SaveOptionValues[K]) {
@@ -149,8 +139,11 @@ export function RequestForm({
 
   function showFieldErrors(next: FormErrors) {
     setErrors(next);
-    const first = ERROR_FIELDS.find((key) => next[key]);
-    if (first) document.getElementById(focusId(first))?.focus();
+    const [first] = [
+      ...requestErrorIds(next, values.lines),
+      ...SAVE_ERROR_FIELDS.filter((key) => next[key]).map(saveFieldId),
+    ];
+    if (first) document.getElementById(first)?.focus();
   }
 
   async function save() {
@@ -170,7 +163,7 @@ export function RequestForm({
     );
     if (!parsed.success || !action.success) {
       showFieldErrors({
-        ...(parsed.success ? {} : requestFieldErrors(parsed.error)),
+        ...(parsed.success ? {} : requestFieldErrors(parsed.error, values.lines)),
         ...(action.success ? {} : action.errors),
       });
       return;
@@ -180,18 +173,13 @@ export function RequestForm({
     setFormError(null);
     setPending(true);
     const supabase = createClient();
-    const requests = supabase.from("reimbursement_requests");
-    const { data, error } = await (requestId
-      ? requests.update(parsed.data).eq("id", requestId)
-      : requests.insert(parsed.data)
-    )
-      .select("id, request_number")
-      .single();
+    // Creates the draft, or updates it on a retry. The receipts' ids come from here, so a retry updates them too.
+    const { data, error } = await supabase.rpc("save_request", saveRequestArgs(requestId, parsed.data));
 
     if (error) {
       setPending(false);
       const message = requestSaveErrorMessage(error);
-      if (error.code === FUTURE_DATE_CODE) showFieldErrors({ purchase_date: message });
+      if (isFutureDateError(error)) showFieldErrors({ purchase_date: message });
       else setFormError(message);
       return;
     }
@@ -203,7 +191,7 @@ export function RequestForm({
       if (!receipt.prepared || (receipt.status !== "ready" && receipt.status !== "failed")) continue;
       pendingReceipts.setStatus(receipt.key, "uploading");
       try {
-        await uploadReceipt(supabase, data.id, receipt.prepared);
+        await uploadReceipt(supabase, data.id, receipt.line, receipt.prepared);
         pendingReceipts.setStatus(receipt.key, "uploaded");
       } catch {
         pendingReceipts.setStatus(receipt.key, "failed");
@@ -215,8 +203,8 @@ export function RequestForm({
       setPending(false);
       setFormError(
         failed === 1
-          ? "The draft is saved, but 1 receipt didn't upload. Save again to retry, or remove it."
-          : `The draft is saved, but ${failed} receipts didn't upload. Save again to retry, or remove them.`,
+          ? "The draft is saved, but 1 file didn't upload. Save again to retry, or remove it."
+          : `The draft is saved, but ${failed} files didn't upload. Save again to retry, or remove them.`,
       );
       return;
     }
@@ -250,9 +238,9 @@ export function RequestForm({
     setScreen((count) => count + 1);
   }
 
-  function addReceipts(files: File[]) {
+  function addReceipts(files: File[], lineId: string) {
     setErrors((current) => ({ ...current, receipts: undefined }));
-    pendingReceipts.add(files);
+    pendingReceipts.add(files, lineId);
   }
 
   if (saved) return <SavedPanel saved={saved} heading={heading} onEnterAnother={enterAnother} />;

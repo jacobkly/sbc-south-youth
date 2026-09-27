@@ -122,6 +122,7 @@ export type Database = {
           created_at: string
           height: number | null
           id: string
+          line_id: string
           mime_type: string
           original_filename: string
           request_id: string
@@ -136,6 +137,7 @@ export type Database = {
           created_at?: string
           height?: number | null
           id?: string
+          line_id: string
           mime_type: string
           original_filename: string
           request_id: string
@@ -150,6 +152,7 @@ export type Database = {
           created_at?: string
           height?: number | null
           id?: string
+          line_id?: string
           mime_type?: string
           original_filename?: string
           request_id?: string
@@ -161,6 +164,13 @@ export type Database = {
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "receipts_line_fkey"
+            columns: ["request_id", "line_id"]
+            isOneToOne: false
+            referencedRelation: "request_lines"
+            referencedColumns: ["request_id", "id"]
+          },
           {
             foreignKeyName: "receipts_request_id_fkey"
             columns: ["request_id"]
@@ -345,6 +355,51 @@ export type Database = {
           },
           {
             foreignKeyName: "request_events_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "request_report"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      request_lines: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          position: number
+          request_id: string
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          position: number
+          request_id: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          position?: number
+          request_id?: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_lines_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "reimbursement_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_lines_request_id_fkey"
             columns: ["request_id"]
             isOneToOne: false
             referencedRelation: "request_report"
@@ -584,7 +639,54 @@ export type Database = {
         Args: { p_note: string; p_request_id: string }
         Returns: undefined
       }
+      request_lines_summary: { Args: { p_request_id: string }; Returns: Json }
+      request_vendor_list: { Args: { p_request_id: string }; Returns: string }
       require_note: { Args: { p_note: string }; Returns: string }
+      save_request: {
+        Args: {
+          p_description: string
+          p_event_name: string
+          p_lines: Json
+          p_no_receipt: boolean
+          p_no_receipt_reason: string
+          p_payee_id: string
+          p_purchase_date: string
+          p_request_id: string
+          p_type: Database["public"]["Enums"]["reimbursement_type"]
+        }
+        Returns: {
+          admin_note: string | null
+          amount_cents: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          event_name: string | null
+          external_approver: string | null
+          id: string
+          no_receipt: boolean
+          no_receipt_reason: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payee_id: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference: string | null
+          purchase_date: string
+          request_number: number
+          status: Database["public"]["Enums"]["request_status"]
+          submitted_at: string | null
+          type: Database["public"]["Enums"]["reimbursement_type"]
+          updated_at: string
+          vendor: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reimbursement_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_member_active: {
         Args: { p_is_active: boolean; p_user_id: string }
         Returns: undefined
@@ -607,6 +709,7 @@ export type Database = {
         Args: { p_note: string; p_request_id: string }
         Returns: undefined
       }
+      vendor_list: { Args: { p_vendors: string[] }; Returns: string }
     }
     Enums: {
       payment_method: "cash_app" | "bank_transfer" | "check" | "cash" | "other"

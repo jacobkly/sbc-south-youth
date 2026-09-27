@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(45);
+select plan(47);
 
 -- Fake people. New auth users get a member row from the signup trigger.
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -110,22 +110,21 @@ select is_empty(
 );
 
 select throws_ok(
-  $$ insert into public.reimbursement_requests (payee_id, type, amount_cents, purchase_date, vendor, description)
-     values ('00000000-0000-4000-8000-00000000b002', 'youth', 500, '2026-01-10', 'Fake Store', 'Member made') $$,
+  $$ select public.save_request(
+       null, '00000000-0000-4000-8000-00000000b002', 'youth', '2026-01-10', 'Member made', null, true, 'Lost it',
+       '[{"id": "00000000-0000-4000-8000-00000000f009", "amount_cents": 500, "vendor": "Fake Store"}]'
+     ) $$,
   '42501',
-  null,
+  'Only an admin can save reimbursements.',
   'a member can''t create requests'
 );
 
 select throws_ok(
-  $$ insert into public.reimbursement_requests (
-       payee_id, type, amount_cents, purchase_date, vendor, description, no_receipt, no_receipt_reason
-     ) values (
-       '00000000-0000-4000-8000-00000000b002', 'youth', 500, '2026-01-10', 'Fake Store', 'Member made', true, 'Lost it'
-     ) $$,
+  $$ insert into public.reimbursement_requests (payee_id, type, amount_cents, purchase_date, vendor, description)
+     values ('00000000-0000-4000-8000-00000000b002', 'youth', 500, '2026-01-10', 'Fake Store', 'Member made') $$,
   '42501',
-  'Only an admin can mark a request as having no receipt.',
-  'a member can''t claim the no-receipt exception'
+  null,
+  'a member can''t insert requests directly'
 );
 
 with changed as (
@@ -155,10 +154,12 @@ select results_eq(
 );
 
 select throws_ok(
-  $$ insert into public.reimbursement_requests (payee_id, type, amount_cents, purchase_date, vendor, description)
-     values ('00000000-0000-4000-8000-00000000b001', 'youth', 500, '2026-01-10', 'Fake Store', 'Viewer made') $$,
+  $$ select public.save_request(
+       null, '00000000-0000-4000-8000-00000000b001', 'youth', '2026-01-10', 'Viewer made', null, false, null,
+       '[{"id": "00000000-0000-4000-8000-00000000f009", "amount_cents": 500, "vendor": "Fake Store"}]'
+     ) $$,
   '42501',
-  null,
+  'Only an admin can save reimbursements.',
   'a viewer can''t create requests'
 );
 
@@ -185,10 +186,10 @@ select is(
 );
 
 select lives_ok(
-  $$ insert into public.reimbursement_requests (payee_id, type, amount_cents, purchase_date, vendor, description)
-     values (
-       '00000000-0000-4000-8000-00000000b001', 'cafe', 725,
-       (now() at time zone 'America/Los_Angeles')::date, 'Fake Store', 'Bought today'
+  $$ select public.save_request(
+       null, '00000000-0000-4000-8000-00000000b001', 'cafe',
+       (now() at time zone 'America/Los_Angeles')::date, 'Bought today', null, false, null,
+       '[{"id": "00000000-0000-4000-8000-00000000f010", "amount_cents": 725, "vendor": "Fake Store"}]'
      ) $$,
   'an admin can create a request dated today in LA'
 );
@@ -201,10 +202,10 @@ select results_eq(
 );
 
 select throws_ok(
-  $$ insert into public.reimbursement_requests (payee_id, type, amount_cents, purchase_date, vendor, description)
-     values (
-       '00000000-0000-4000-8000-00000000b001', 'cafe', 725,
-       (now() at time zone 'America/Los_Angeles')::date + 1, 'Fake Store', 'Bought tomorrow'
+  $$ select public.save_request(
+       null, '00000000-0000-4000-8000-00000000b001', 'cafe',
+       (now() at time zone 'America/Los_Angeles')::date + 1, 'Bought tomorrow', null, false, null,
+       '[{"id": "00000000-0000-4000-8000-00000000f011", "amount_cents": 725, "vendor": "Fake Store"}]'
      ) $$,
   '22023',
   'The purchase date can''t be in the future.',
@@ -212,49 +213,57 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ insert into public.reimbursement_requests (payee_id, type, amount_cents, purchase_date, vendor, description)
-     values ('00000000-0000-4000-8000-00000000b001', 'cafe', 725, '1999-12-31', 'Fake Store', 'Too old') $$,
+  $$ select public.save_request(
+       null, '00000000-0000-4000-8000-00000000b001', 'cafe', '1999-12-31', 'Too old', null, false, null,
+       '[{"id": "00000000-0000-4000-8000-00000000f011", "amount_cents": 725, "vendor": "Fake Store"}]'
+     ) $$,
   '23514',
   null,
   'the purchase date can''t be before 2000'
 );
 
 select throws_ok(
-  $$ insert into public.reimbursement_requests (payee_id, type, amount_cents, purchase_date, vendor, description)
-     values ('00000000-0000-4000-8000-00000000b001', 'cafe', 0, '2026-01-10', 'Fake Store', 'Free') $$,
+  $$ select public.save_request(
+       null, '00000000-0000-4000-8000-00000000b001', 'cafe', '2026-01-10', 'Free', null, false, null,
+       '[{"id": "00000000-0000-4000-8000-00000000f011", "amount_cents": 0, "vendor": "Fake Store"}]'
+     ) $$,
   '23514',
-  null,
+  'Each receipt needs an amount more than $0.',
   'the amount must be more than zero'
 );
 
 select throws_ok(
-  $$ insert into public.reimbursement_requests (payee_id, type, amount_cents, purchase_date, vendor, description)
-     values ('00000000-0000-4000-8000-00000000b001', 'cafe', 100000001, '2026-01-10', 'Fake Store', 'Huge') $$,
+  $$ select public.save_request(
+       null, '00000000-0000-4000-8000-00000000b001', 'cafe', '2026-01-10', 'Huge', null, false, null,
+       '[{"id": "00000000-0000-4000-8000-00000000f011", "amount_cents": 100000001, "vendor": "Fake Store"}]'
+     ) $$,
   '23514',
-  null,
+  'A receipt can''t be more than $1,000,000.',
   'the amount is capped at $1,000,000'
 );
 
-select throws_ok(
-  $$ insert into public.reimbursement_requests (payee_id, type, amount_cents, purchase_date, vendor, description)
-     values ('00000000-0000-4000-8000-00000000b001', 'cafe', 500, '2026-01-10', '   ', 'No vendor') $$,
-  '23514',
-  null,
-  'a vendor can''t be only spaces'
+select public.save_request(
+  null, '00000000-0000-4000-8000-00000000b001', 'cafe', '2026-01-10', '  ', null, false, null,
+  '[{"id": "00000000-0000-4000-8000-00000000f012", "amount_cents": 501, "vendor": "   "}]'
 );
 
-select throws_ok(
-  $$ insert into public.reimbursement_requests (payee_id, type, amount_cents, purchase_date, vendor, description)
-     values ('00000000-0000-4000-8000-00000000b001', 'cafe', 500, '2026-01-10', 'Fake Store', '') $$,
-  '23514',
+select is(
+  (select vendor from public.reimbursement_requests where amount_cents = 501),
   null,
-  'a description can''t be blank'
+  'a vendor of only spaces is saved as none'
+);
+
+select is(
+  (select description from public.reimbursement_requests where amount_cents = 501),
+  null,
+  'a blank description is saved as none'
 );
 
 select lives_ok(
-  $$ insert into public.reimbursement_requests (
-       payee_id, type, amount_cents, purchase_date, no_receipt, no_receipt_reason
-     ) values ('00000000-0000-4000-8000-00000000b001', 'youth', 432, '2026-01-10', true, 'Lost it') $$,
+  $$ select public.save_request(
+       null, '00000000-0000-4000-8000-00000000b001', 'youth', '2026-01-10', null, null, true, 'Lost it',
+       '[{"id": "00000000-0000-4000-8000-00000000f013", "amount_cents": 432}]'
+     ) $$,
   'a request can leave out the vendor and description'
 );
 
@@ -266,31 +275,19 @@ select lives_ok(
 );
 
 select lives_ok(
-  $$ insert into public.reimbursement_requests (
-       payee_id, type, amount_cents, purchase_date, no_receipt
-     ) values ('00000000-0000-4000-8000-00000000b001', 'cafe', 433, '2026-01-10', true) $$,
+  $$ select public.save_request(
+       null, '00000000-0000-4000-8000-00000000b001', 'cafe', '2026-01-10', null, null, true, null,
+       '[{"id": "00000000-0000-4000-8000-00000000f014", "amount_cents": 433}]'
+     ) $$,
   'the no-receipt exception can leave out the reason'
 );
 
 select lives_ok(
-  $$ insert into public.reimbursement_requests (
-       payee_id, type, amount_cents, purchase_date, vendor, description, no_receipt, no_receipt_reason
-     ) values (
-       '00000000-0000-4000-8000-00000000b001', 'cafe', 500, '2026-01-10', 'Fake Store', 'Lost receipt', true, 'Lost it'
+  $$ select public.save_request(
+       null, '00000000-0000-4000-8000-00000000b001', 'cafe', '2026-01-10', 'Lost receipt', null, true, 'Lost it',
+       '[{"id": "00000000-0000-4000-8000-00000000f015", "amount_cents": 500, "vendor": "Fake Store"}]'
      ) $$,
   'an admin can use the no-receipt exception with a reason'
-);
-
-select throws_ok(
-  $$ insert into public.reimbursement_requests (
-       payee_id, created_by, type, amount_cents, purchase_date, vendor, description
-     ) values (
-       '00000000-0000-4000-8000-00000000b001', '00000000-0000-4000-8000-00000000a004',
-       'cafe', 500, '2026-01-10', 'Fake Store', 'Someone else'
-     ) $$,
-  '42501',
-  null,
-  'an admin can''t enter a request as someone else'
 );
 
 select throws_ok(
@@ -298,15 +295,31 @@ select throws_ok(
      values ('00000000-0000-4000-8000-00000000b001', 'cafe', 500, '2026-01-10', 'Fake Store', 'Pre-approved', 'approved') $$,
   '42501',
   null,
-  'an admin can''t create a request in another status'
+  'an admin can''t insert a request directly'
 );
 
-with changed as (
-  update public.reimbursement_requests set vendor = 'Other Store', amount_cents = 1050
-  where id = '00000000-0000-4000-8000-00000000c001'
-  returning 1
-)
-select is(count(*)::int, 1, 'an admin can edit a draft') from changed;
+select throws_ok(
+  $$ update public.reimbursement_requests set amount_cents = 1
+     where id = '00000000-0000-4000-8000-00000000c003' $$,
+  '42501',
+  null,
+  'an admin can''t change the total directly, only through its receipts'
+);
+
+select lives_ok(
+  $$ select public.save_request(
+       '00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000b001', 'youth', '2026-01-10',
+       'Draft', null, false, null,
+       '[{"id": "00000000-0000-4000-8000-00000000f001", "amount_cents": 1050, "vendor": "Other Store"}]'
+     ) $$,
+  'an admin can edit a draft'
+);
+
+select results_eq(
+  $$ select amount_cents, vendor from public.reimbursement_requests where id = '00000000-0000-4000-8000-00000000c001' $$,
+  $$ values (1050, 'Other Store') $$,
+  'the edit saved the new amount and vendor'
+);
 
 with changed as (
   update public.reimbursement_requests set description = 'Clarified'
@@ -323,11 +336,22 @@ with changed as (
 select is(count(*)::int, 0, 'an approved request is locked') from changed;
 
 with changed as (
-  update public.reimbursement_requests set amount_cents = 1
+  update public.reimbursement_requests set description = 'Too late'
   where id = '00000000-0000-4000-8000-00000000c005'
   returning 1
 )
 select is(count(*)::int, 0, 'a paid request is locked') from changed;
+
+select throws_ok(
+  $$ select public.save_request(
+       '00000000-0000-4000-8000-00000000c005', '00000000-0000-4000-8000-00000000b001', 'youth', '2026-01-10',
+       'Paid', null, false, null,
+       '[{"id": "00000000-0000-4000-8000-00000000f005", "amount_cents": 1, "vendor": "Fake Store"}]'
+     ) $$,
+  '55000',
+  'This reimbursement can''t be edited anymore.',
+  'a paid request can''t be saved'
+);
 
 select throws_ok(
   $$ update public.reimbursement_requests set status = 'approved'
