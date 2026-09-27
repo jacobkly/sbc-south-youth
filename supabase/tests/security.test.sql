@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(18);
+select plan(19);
 
 select tables_are(
   'public',
@@ -98,15 +98,23 @@ select policies_are(
   array[
     'Receipt files are readable with their request',
     'Admins upload receipt files to open requests',
-    'Admins delete receipt files from open requests'
+    'Admins delete receipt files from open requests',
+    'Avatars are readable by their owner, admins, and viewers',
+    'Active users upload their own avatar',
+    'Active users delete their own avatars'
   ],
-  'storage has only the receipt file policies'
+  'storage has only the receipt and avatar file policies'
 );
 
 select is_empty(
   $$ select policyname from pg_policies
      where schemaname = 'storage' and tablename = 'objects' and roles <> array['authenticated']::name[] $$,
-  'every receipt file policy applies to signed-in users only'
+  'every file policy applies to signed-in users only'
+);
+
+select is_empty(
+  $$ select id from storage.buckets where public $$,
+  'every bucket is private'
 );
 
 -- A deactivated admin reads nothing: one row in every table, then a check of
