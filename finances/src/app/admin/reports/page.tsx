@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ReportView } from "@/components/reports/report-view";
 import { todayInLA } from "@/lib/dates";
-import { parseReportFilters, parseReportPages } from "@/lib/reports/filters";
+import { parseReportFilters, parseReportPage } from "@/lib/reports/filters";
 import { loadReport } from "@/lib/requests/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,5 +17,5 @@ export default async function ReportsPage({ searchParams }: PageProps<"/admin/re
   // loadReport throws on failure, and admin/error.tsx handles it.
   const rows = await loadReport(supabase, filters);
 
-  return <ReportView filters={filters} pages={parseReportPages(params)} today={today} rows={rows} />;
+  return <ReportView filters={filters} page={parseReportPage(params)} today={today} rows={rows} />;
 }

@@ -4,12 +4,12 @@ import {
   customPeriod,
   parsePeriodSlug,
   parseReportFilters,
-  parseReportPages,
+  parseReportPage,
   periodSlug,
   reportBounds,
   reportExportHref,
   reportHref,
-  reportPagesHref,
+  reportPageHref,
   reportPayeeTotals,
   reportTotals,
   switchPeriodKind,
@@ -102,21 +102,21 @@ describe("parseReportFilters", () => {
 });
 
 describe("report pages", () => {
-  it("reads how many pages to show, at least one", () => {
-    expect(parseReportPages({ pages: "3" })).toBe(3);
-    expect(parseReportPages({ pages: ["2", "5"] })).toBe(2);
-    expect(parseReportPages({})).toBe(1);
-    for (const pages of ["", "0", "-2", "2.5", "lots"]) expect(parseReportPages({ pages })).toBe(1);
+  it("reads which page of requests to show, the first by default", () => {
+    expect(parseReportPage({ page: "3" })).toBe(3);
+    expect(parseReportPage({ page: ["2", "5"] })).toBe(2);
+    expect(parseReportPage({})).toBe(1);
+    for (const page of ["", "0", "-2", "2.5", "lots"]) expect(parseReportPage({ page })).toBe(1);
   });
 
-  it("adds the pages to the report's URL after the filters", () => {
+  it("adds the page to the report's URL after the filters", () => {
     const filters = parseReportFilters({ period: "2026-09", status: "all" }, TODAY);
-    expect(reportPagesHref(filters, 3)).toBe("/admin/reports?period=2026-09&status=all&pages=3");
-    expect(reportPagesHref(filters, 1)).toBe(reportHref(filters));
+    expect(reportPageHref(filters, 3)).toBe("/admin/reports?period=2026-09&status=all&page=3");
+    expect(reportPageHref(filters, 1)).toBe(reportHref(filters));
   });
 
-  it("leaves the pages out of the filters and exports", () => {
-    const filters = parseReportFilters({ period: "2026-09", pages: "3" }, TODAY);
+  it("leaves the page out of the filters and exports", () => {
+    const filters = parseReportFilters({ period: "2026-09", page: "3" }, TODAY);
     expect(reportHref(filters)).toBe("/admin/reports?period=2026-09");
     expect(reportExportHref(filters)).toBe("/admin/reports/export?period=2026-09");
   });

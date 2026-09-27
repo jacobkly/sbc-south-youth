@@ -122,22 +122,22 @@ export function reportHref(filters: ReportFilters): string {
   return `/admin/reports?${reportParams(filters)}`;
 }
 
-/** How many of a report's requests show at first, and how many each "Show more" adds. */
-export const REPORT_PAGE_SIZE = 25;
+/** How many of a report's requests show on each page. */
+export const REPORT_PAGE_SIZE = 15;
 
 /**
- * How many pages of requests the URL shows. Kept apart from the filters,
- * since it doesn't change what the report counts or exports.
+ * Which page of requests the URL shows. Kept apart from the filters, since
+ * it doesn't change what the report counts or exports.
  */
-export function parseReportPages(params: SearchParams): number {
-  const pages = Number(single(params, "pages"));
-  return Number.isInteger(pages) && pages > 1 ? pages : 1;
+export function parseReportPage(params: SearchParams): number {
+  const page = Number(single(params, "page"));
+  return Number.isInteger(page) && page > 1 ? page : 1;
 }
 
-/** The report's URL with this many pages of requests showing. */
-export function reportPagesHref(filters: ReportFilters, pages: number): string {
+/** The report's URL showing this page of requests. */
+export function reportPageHref(filters: ReportFilters, page: number): string {
   const params = reportParams(filters);
-  if (pages > 1) params.set("pages", String(pages));
+  if (page > 1) params.set("page", String(page));
   return `/admin/reports?${params}`;
 }
 

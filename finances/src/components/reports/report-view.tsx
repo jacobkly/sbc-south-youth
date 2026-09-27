@@ -3,6 +3,7 @@
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "cn";
 import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
 import { ExportMenu } from "@/components/reports/export-menu";
@@ -13,6 +14,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { sharePercent } from "@/lib/dashboard/summary";
 import { periodLabel, type IsoDate } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
+import { pageCount, pageItems, pageSlice } from "@/lib/pagination";
 import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
 import type { ReportRow } from "@/lib/requests/queries";
 import { REQUEST_TYPES } from "@/lib/requests/schema";
@@ -21,7 +23,7 @@ import {
   REPORT_BASIS_LABELS,
   REPORT_PAGE_SIZE,
   reportHref,
-  reportPagesHref,
+  reportPageHref,
   reportPayeeTotals,
   reportTotals,
   type PayeeTotals,
@@ -58,13 +60,13 @@ function emptyMessage(filters: ReportFilters): string {
  */
 export function ReportView({
   filters,
-  pages,
+  page,
   today,
   rows,
 }: {
   filters: ReportFilters;
-  /** How many pages of requests to show. */
-  pages: number;
+  /** Which page of requests to show. */
+  page: number;
   today: IsoDate;
   rows: ReportRow[];
 }) {
@@ -72,7 +74,7 @@ export function ReportView({
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(filters);
 
-  /** Leaves the pages out of the URL, so a new report starts from the first page. */
+  /** Leaves the page out of the URL, so a new report starts from the first page. */
   function update(changes: Partial<ReportFilters>) {
     const next = { ...shown, ...changes };
     startTransition(() => {
@@ -155,7 +157,7 @@ export function ReportView({
           <>
             <TotalsSection totals={totals} subject={reportSubject(filters)} />
             <PayeeTotalsSection payees={reportPayeeTotals(rows)} totalCents={totals.cents} />
-            <RequestsSection rows={rows} filters={filters} pages={pages} disabled={pending} />
+            <RequestsSection rows={rows} filters={filters} page={page} disabled={pending} />
           </>
         ) : (
           <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground @4xl/main:col-span-2">
@@ -216,65 +218,117 @@ function TotalsSection({ totals, subject }: { totals: ReportTotals; subject: str
 }
 
 /**
- * The report's requests, a page at a time. How many pages show is kept in
- * the URL, so coming back from a request brings back the same spot.
+ * The report's requests, a page at a time. The page is kept in the URL, so
+ * coming back from a request brings back the same page.
  */
 function RequestsSection({
   rows,
   filters,
-  pages: loadedPages,
+  page: loadedPage,
   disabled,
 }: {
   rows: ReportRow[];
   filters: ReportFilters;
-  pages: number;
+  page: number;
   disabled: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  // Every row is already here, so more show right away while the URL catches up.
-  const [pages, setPages] = useOptimistic(loadedPages);
-  const shown = rows.slice(0, pages * REPORT_PAGE_SIZE);
-  const remaining = rows.length - shown.length;
-  // The row to focus once the last page shows, since the button goes away.
-  const focusRow = useRef<number | null>(null);
+  // Every row is already here, so the page changes right away while the URL catches up.
+  const [page, setPage] = useOptimistic(loadedPage);
+  const { page: current, items: shown, first, last } = pageSlice(rows, page, REPORT_PAGE_SIZE);
+  const count = pageCount(rows.length, REPORT_PAGE_SIZE);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const moved = useRef(false);
 
+  // A new page starts from the top of the list, with focus on its heading.
   useEffect(() => {
-    if (focusRow.current === null) return;
-    document.querySelectorAll<HTMLElement>("#report-requests a")[focusRow.current]?.focus();
-    focusRow.current = null;
-  }, [pages]);
+    if (!moved.current) return;
+    moved.current = false;
+    const top = heading.current;
+    if (!top) return;
+    if (top.getBoundingClientRect().top < 0) top.scrollIntoView({ block: "start" });
+    top.focus({ preventScroll: true });
+  }, [current]);
 
   // Through the router, not history.replaceState, so Next knows the page's URL.
   // Otherwise refreshing the page after going back to it would scroll to the top.
-  function showMore() {
-    if (remaining <= REPORT_PAGE_SIZE) focusRow.current = shown.length;
+  function goTo(next: number) {
+    if (next === current) return;
+    moved.current = true;
     startTransition(() => {
-      setPages(pages + 1);
-      router.replace(reportPagesHref(filters, pages + 1), { scroll: false });
+      setPage(next);
+      router.replace(reportPageHref(filters, next), { scroll: false });
     });
   }
 
   return (
     <section aria-labelledby="report-requests-heading" className="space-y-3 @4xl/main:col-span-2">
-      <h2 id="report-requests-heading" className="text-lg font-semibold">
+      <h2
+        ref={heading}
+        id="report-requests-heading"
+        tabIndex={-1}
+        className="scroll-mt-4 text-lg font-semibold outline-none"
+      >
         Requests
       </h2>
       <ReportList id="report-requests" rows={shown} basis={filters.basis} showStatus={filters.basis === "purchase"} />
-      {remaining > 0 && (
+      {count > 1 && (
         <>
-          <p className="text-center text-sm text-muted-foreground">
-            Showing {shown.length.toLocaleString()} of {rows.length.toLocaleString()}
+          <p className="text-center text-sm text-muted-foreground tabular-nums">
+            Showing {first.toLocaleString()}–{last.toLocaleString()} of {rows.length.toLocaleString()}
           </p>
-          <Button
-            variant="outline"
-            className="h-11 w-full @4xl/main:mx-auto @4xl/main:flex @4xl/main:w-auto @4xl/main:px-8"
-            aria-controls="report-requests"
-            disabled={disabled}
-            onClick={showMore}
-          >
-            Show {Math.min(REPORT_PAGE_SIZE, remaining)} more
-          </Button>
+          {/* A phone gets previous and next. A wider list shows the page numbers between them. */}
+          <nav aria-label="Pages of requests" className="@container">
+            <div className="flex items-center justify-between gap-2 @md:justify-center">
+              <Button
+                variant="outline"
+                className="h-11 px-3 @md:w-11 @md:px-0"
+                aria-controls="report-requests"
+                disabled={disabled || current === 1}
+                onClick={() => goTo(current - 1)}
+              >
+                <ChevronLeftIcon aria-hidden />
+                <span className="@md:sr-only">Previous</span>
+              </Button>
+              <p className="text-sm tabular-nums @md:hidden">
+                Page {current} of {count}
+              </p>
+              <ul className="hidden items-center gap-1 @md:flex">
+                {pageItems(current, count).map((item, index) =>
+                  item === "gap" ? (
+                    <li key={`gap-${index}`} aria-hidden className="w-11 text-center text-muted-foreground">
+                      …
+                    </li>
+                  ) : (
+                    <li key={item}>
+                      <Button
+                        variant={item === current ? "default" : "ghost"}
+                        className="size-11 tabular-nums"
+                        aria-label={`Page ${item}`}
+                        aria-current={item === current ? "page" : undefined}
+                        aria-controls="report-requests"
+                        disabled={disabled}
+                        onClick={() => goTo(item)}
+                      >
+                        {item}
+                      </Button>
+                    </li>
+                  ),
+                )}
+              </ul>
+              <Button
+                variant="outline"
+                className="h-11 px-3 @md:w-11 @md:px-0"
+                aria-controls="report-requests"
+                disabled={disabled || current === count}
+                onClick={() => goTo(current + 1)}
+              >
+                <span className="@md:sr-only">Next</span>
+                <ChevronRightIcon aria-hidden />
+              </Button>
+            </div>
+          </nav>
         </>
       )}
     </section>
