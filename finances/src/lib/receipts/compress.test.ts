@@ -214,6 +214,15 @@ describe("processReceipt with images", () => {
   describe("fitting the target size", () => {
     const target = RECEIPT_COMPRESSION.targetBytes;
 
+    it("aims for 300 KB, so a few thousand receipts fit in 1 GB", () => {
+      expect(target).toBe(300 * 1024);
+    });
+
+    it("starts WebP and JPEG above every lower quality, so both can step down", () => {
+      const lowest = Math.min(RECEIPT_COMPRESSION.quality, RECEIPT_COMPRESSION.jpegFallbackQuality);
+      expect(RECEIPT_COMPRESSION.lowerQualities.every((quality) => quality < lowest)).toBe(true);
+    });
+
     it("encodes once when the first try fits", async () => {
       const { encodes } = stubBrowser({ width: 3024, height: 4032, encodable: both, bytes: () => target });
       const result = await processReceipt(photo());
@@ -243,12 +252,12 @@ describe("processReceipt with images", () => {
 
     it("shrinks the image when no quality fits at full size", async () => {
       // Grows with pixels and quality, like a real encoder. At 1500x2000 even
-      // 0.5 is 600,000 bytes; 1200x1600 first fits at 0.6 (460,800 bytes).
+      // 0.5 is 375,000 bytes; 1200x1600 first fits at 0.6 (288,000 bytes).
       const { drawn } = stubBrowser({
         width: 3024,
         height: 4032,
         encodable: both,
-        bytes: (width, height, quality) => Math.round(width * height * quality * 0.4),
+        bytes: (width, height, quality) => Math.round(width * height * quality * 0.25),
       });
       const result = await processReceipt(photo());
 
@@ -270,7 +279,7 @@ describe("processReceipt with images", () => {
         height: 1333,
         quality: 0.5,
       });
-      expect(encodes).toHaveLength(12);
+      expect(encodes).toHaveLength(9);
     });
 
     it("steps down from the JPEG quality when WebP isn't available (Safari)", async () => {
@@ -278,14 +287,14 @@ describe("processReceipt with images", () => {
         width: 3024,
         height: 4032,
         encodable: ["image/jpeg"],
-        bytes: (_width, _height, quality) => (quality > 0.8 ? 2 * target : target),
+        bytes: (_width, _height, quality) => (quality > 0.65 ? 2 * target : target),
       });
       const result = await processReceipt(photo());
 
       expect(result.mimeType).toBe("image/jpeg");
       expect(encodes).toEqual([
         { size: "1500x2000", type: "image/jpeg", quality: RECEIPT_COMPRESSION.jpegFallbackQuality },
-        { size: "1500x2000", type: "image/jpeg", quality: 0.7 },
+        { size: "1500x2000", type: "image/jpeg", quality: 0.6 },
       ]);
     });
   });

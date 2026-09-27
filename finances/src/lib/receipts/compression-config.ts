@@ -1,11 +1,13 @@
 /**
  * Receipt compression settings, shared by the real upload path and the
  * /dev/compression-test page. Receipts must stay readable at full zoom
- * while averaging about 500 KB, so the 1 GB storage tier lasts for years.
+ * while landing under about 300 KB, so the 1 GB storage tier holds a few
+ * thousand of them.
  *
- * Photos start at `shortEdge` and `quality`. Detailed or noisy photos can
- * come out well over 1 MB that way, so anything over `targetBytes` steps
- * down through `lowerQualities`, then `smallerShortEdges`, until it fits.
+ * Photos start at `shortEdge` and `quality`. Anything over `targetBytes`
+ * steps down through `lowerQualities`, then `smallerShortEdges`, until it
+ * fits. Tiny print holds up better at full size and lower quality than at
+ * a smaller size, so size is the last thing to give.
  */
 
 import type { ImageFormat } from "@/lib/images/canvas";
@@ -35,9 +37,9 @@ export const RECEIPT_COMPRESSION: CompressionSettings = {
   shortEdge: 1500,
   maxLongEdge: 4000,
   format: "image/webp",
-  quality: 0.82,
-  jpegFallbackQuality: 0.85,
-  targetBytes: 500 * 1024,
-  lowerQualities: [0.7, 0.6, 0.5],
+  quality: 0.7,
+  jpegFallbackQuality: 0.7,
+  targetBytes: 300 * 1024,
+  lowerQualities: [0.6, 0.5],
   smallerShortEdges: [1200, 1000],
 };

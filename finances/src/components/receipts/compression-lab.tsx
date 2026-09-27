@@ -10,8 +10,6 @@ import { canEncode } from "@/lib/images/canvas";
 import { extensionFor, processReceipt, type ProcessedReceipt } from "@/lib/receipts/compress";
 import { RECEIPT_COMPRESSION, type CompressionSettings, type OutputFormat } from "@/lib/receipts/compression-config";
 
-/** Average size that keeps a few years of receipts inside the 1 GB free tier. */
-const TARGET_AVERAGE_BYTES = 500 * 1024;
 const GIGABYTE = 1024 ** 3;
 const SELECTED = "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:data-[state=on]:bg-primary/90";
 
@@ -27,10 +25,11 @@ function optionsWith(options: number[], value: number): number[] {
   return [...new Set([...options, value])].sort((a, b) => a - b);
 }
 
-const SHORT_EDGES = optionsWith([1200, 1500, 2000], RECEIPT_COMPRESSION.shortEdge);
+const SHORT_EDGES = optionsWith([1000, 1200, 1500, 2000], RECEIPT_COMPRESSION.shortEdge);
 const LONG_CAPS = optionsWith([3000, 4000, 5000], RECEIPT_COMPRESSION.maxLongEdge);
-const QUALITIES = optionsWith([0.7, 0.75, 0.8, 0.85, 0.9], RECEIPT_COMPRESSION.quality);
-const FALLBACK_QUALITIES = optionsWith([0.8, 0.85, 0.9], RECEIPT_COMPRESSION.jpegFallbackQuality);
+const QUALITIES = optionsWith([0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9], RECEIPT_COMPRESSION.quality);
+const FALLBACK_QUALITIES = optionsWith([0.6, 0.7, 0.8, 0.85], RECEIPT_COMPRESSION.jpegFallbackQuality);
+const TARGET_KB = optionsWith([200, 250, 300, 400, 500], RECEIPT_COMPRESSION.targetBytes / 1024);
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -220,6 +219,13 @@ export function CompressionLab() {
             options={QUALITIES.map((q) => ({ value: String(q), label: String(q) }))}
             onChange={(value) => changeSettings({ quality: Number(value) })}
           />
+          <SettingGroup
+            label="Target size"
+            hint="Photos over this step down in quality, then size, until they fit."
+            value={String(settings.targetBytes / 1024)}
+            options={TARGET_KB.map((kb) => ({ value: String(kb), label: `${kb} KB` }))}
+            onChange={(value) => changeSettings({ targetBytes: Number(value) * 1024 })}
+          />
           {settings.format === "image/webp" && (
             <SettingGroup
               label="JPEG fallback quality"
@@ -254,8 +260,8 @@ export function CompressionLab() {
           <Stat
             label="Average size"
             value={average === null ? "–" : formatBytes(average)}
-            tone={average === null ? undefined : average <= TARGET_AVERAGE_BYTES ? "good" : "bad"}
-            detail={`Target ${formatBytes(TARGET_AVERAGE_BYTES)} or less`}
+            tone={average === null ? undefined : average <= settings.targetBytes ? "good" : "bad"}
+            detail={`Target ${formatBytes(settings.targetBytes)} or less`}
           />
           <Stat
             label="Total"
