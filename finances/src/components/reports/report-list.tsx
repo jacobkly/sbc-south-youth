@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { RequestRow, RequestTable } from "@/components/requests/request-list";
 import { StatusBadge } from "@/components/requests/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, laDateOf } from "@/lib/dates";
@@ -8,8 +8,8 @@ import type { ReportRow } from "@/lib/requests/queries";
 import type { ReportBasis } from "@/lib/reports/filters";
 
 /**
- * A report's requests as tappable cards, each linking to its detail page.
- * Shows the date the report goes by, and the type, since reports split by it.
+ * A report's requests, each linking to its detail page. Shows the date the
+ * report goes by, and the type, since reports split by it.
  */
 export function ReportList({
   id,
@@ -23,22 +23,19 @@ export function ReportList({
   showStatus: boolean;
 }) {
   return (
-    <ul id={id} className="divide-y rounded-lg border">
-      {rows.map((row) => (
-        <li key={row.id}>
-          <Link
-            href={`/admin/requests/${row.id}`}
-            className="flex min-h-16 items-start gap-3 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted"
-          >
+    <RequestTable id={id} showPayee showStatus={showStatus} dateLabel={basis === "paid" ? "Date paid" : "Date"}>
+      {rows.map((row) => {
+        const paid = basis === "paid" && row.paid_at ? laDateOf(row.paid_at) : null;
+
+        return (
+          <RequestRow key={row.id} row={row} date={paid ?? row.purchase_date} showPayee showStatus={showStatus}>
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">{row.payee?.full_name ?? "Unknown payee"}</p>
               <p className="truncate text-sm text-muted-foreground">{requestTitle(row)}</p>
               <p className="text-sm text-muted-foreground tabular-nums">
                 {formatRequestNumber(row.request_number)} ·{" "}
-                {basis === "paid" && row.paid_at
-                  ? `Paid ${formatDate(laDateOf(row.paid_at))}`
-                  : formatDate(row.purchase_date)}{" "}
-                · {REQUEST_TYPE_LABELS[row.type]}
+                {paid ? `Paid ${formatDate(paid)}` : formatDate(row.purchase_date)} ·{" "}
+                {REQUEST_TYPE_LABELS[row.type]}
               </p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
@@ -46,9 +43,9 @@ export function ReportList({
               {showStatus && <StatusBadge status={row.status} />}
               {row.no_receipt && <Badge variant="outline">No receipt</Badge>}
             </div>
-          </Link>
-        </li>
-      ))}
-    </ul>
+          </RequestRow>
+        );
+      })}
+    </RequestTable>
   );
 }

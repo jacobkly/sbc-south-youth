@@ -111,7 +111,7 @@ export function RequestQueue({
         {hasMore && (
           <Button
             variant="outline"
-            className="h-11 w-full"
+            className="h-11 w-full @4xl/main:mx-auto @4xl/main:flex @4xl/main:w-auto @4xl/main:px-8"
             disabled={loadingMore}
             onClick={() => navigate({ ...shown, pages: shown.pages + 1 })}
           >

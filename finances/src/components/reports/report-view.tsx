@@ -143,7 +143,14 @@ export function ReportView({
         </div>
       </section>
 
-      <div aria-busy={pending} className={cn("space-y-6 transition-opacity", pending && "opacity-60")}>
+      {/* On a PC the totals and payees sit side by side, above the full-width requests. */}
+      <div
+        aria-busy={pending}
+        className={cn(
+          "grid grid-cols-1 gap-6 transition-opacity @4xl/main:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] @4xl/main:items-start",
+          pending && "opacity-60",
+        )}
+      >
         {rows.length > 0 ? (
           <>
             <TotalsSection totals={totals} subject={reportSubject(filters)} />
@@ -151,7 +158,7 @@ export function ReportView({
             <RequestsSection rows={rows} filters={filters} pages={pages} disabled={pending} />
           </>
         ) : (
-          <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+          <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground @4xl/main:col-span-2">
             {emptyMessage(filters)}
           </p>
         )}
@@ -249,7 +256,7 @@ function RequestsSection({
   }
 
   return (
-    <section aria-labelledby="report-requests-heading" className="space-y-3">
+    <section aria-labelledby="report-requests-heading" className="space-y-3 @4xl/main:col-span-2">
       <h2 id="report-requests-heading" className="text-lg font-semibold">
         Requests
       </h2>
@@ -261,7 +268,7 @@ function RequestsSection({
           </p>
           <Button
             variant="outline"
-            className="h-11 w-full"
+            className="h-11 w-full @4xl/main:mx-auto @4xl/main:flex @4xl/main:w-auto @4xl/main:px-8"
             aria-controls="report-requests"
             disabled={disabled}
             onClick={showMore}
@@ -289,9 +296,14 @@ function PayeeTotalsSection({ payees, totalCents }: { payees: PayeeTotals[]; tot
 
   return (
     <section aria-labelledby="report-payees-heading" className="space-y-3">
-      <h2 id="report-payees-heading" className="text-lg font-semibold">
-        By payee
-      </h2>
+      <div>
+        <h2 id="report-payees-heading" className="text-lg font-semibold">
+          By payee
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {payees.length.toLocaleString()} {payees.length === 1 ? "payee" : "payees"}, most paid first
+        </p>
+      </div>
       <ul id="report-payee-totals" className="divide-y rounded-lg border">
         {shown.map((payee) => (
           <li key={payee.payeeId}>
