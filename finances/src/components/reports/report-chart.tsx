@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { ChevronDownIcon } from "lucide-react";
 import { Bar, CartesianGrid, ComposedChart, Line, Text, XAxis, YAxis, type XAxisTickContentProps } from "recharts";
 import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
@@ -17,7 +18,8 @@ import { REQUEST_TYPES, type RequestType } from "@/lib/requests/schema";
 import { beforeBucketLabel } from "@/lib/reports/comparison";
 import { bucketLabel, bucketTick, type BeforeBucket, type Timeline, type TimelineUnit } from "@/lib/reports/timeline";
 
-const compactUsd = new Intl.NumberFormat("en-US", {
+/** Axis amounts, e.g. "$1.2K". */
+export const compactUsd = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   notation: "compact",
@@ -31,7 +33,7 @@ const UNIT_TITLES: Record<TimelineUnit, string> = {
   year: "By year",
 };
 
-const UNIT_COLUMNS: Record<TimelineUnit, string> = {
+export const UNIT_COLUMNS: Record<TimelineUnit, string> = {
   day: "Day",
   week: "Week",
   month: "Month",
@@ -53,7 +55,7 @@ const TICK_STEPS: Record<TimelineUnit, number[]> = {
 const INITIAL_WIDTH = 12;
 
 /** A short dashed line, for the period before in the legend and tooltip. */
-function DashedLineIcon() {
+export function DashedLineIcon() {
   return (
     <svg viewBox="0 0 12 12" aria-hidden>
       <line x1="0" y1="6" x2="12" y2="6" stroke="currentColor" strokeWidth="2" strokeDasharray="3 2" />
@@ -84,7 +86,7 @@ export type ChartBefore = { label: string; buckets: BeforeBucket[] };
  * Labels as many bars as fit. Months fall back to initials first, like the
  * iPhone Health app, and every unit then skips bars in even steps.
  */
-function BucketTick({ x, y, payload, index, width, visibleTicksCount, unit }: XAxisTickContentProps & { unit: TimelineUnit }) {
+export function BucketTick({ x, y, payload, index, width, visibleTicksCount, unit }: XAxisTickContentProps & { unit: TimelineUnit }) {
   const room = Number(width) / visibleTicksCount;
   const name = String(payload.value);
   const initials = unit === "month" && room < TICK_WIDTHS.month;
@@ -210,65 +212,75 @@ export function ReportChart({ timeline, before }: { timeline: Timeline; before: 
           </ChartContainer>
         </div>
 
-        <details className="group border-t">
-          <summary className="cursor-pointer list-none rounded-b-lg outline-none hover:bg-muted focus-visible:bg-muted group-open:rounded-none [&::-webkit-details-marker]:hidden">
-            <span className="flex h-11 items-center justify-between gap-2 px-4 text-sm font-medium">
-              Show the numbers
-              <ChevronDownIcon className="size-4 transition-transform group-open:rotate-180" aria-hidden />
-            </span>
-          </summary>
-          <div className="overflow-x-auto px-2 pb-2">
-            <table className="w-full text-sm tabular-nums">
-              <caption className="sr-only">
-                {title}, oldest first.{" "}
-                {before
-                  ? `Only ${unit}s with requests in either period are listed. Before is the matching stretch of ${before.label}.`
-                  : `Only ${unit}s with requests are listed.`}
-              </caption>
-              <thead>
-                <tr className="text-muted-foreground">
-                  <th scope="col" className="px-2 py-2 text-left font-normal">
-                    {UNIT_COLUMNS[unit]}
+        <ChartNumbers>
+          <table className="w-full text-sm tabular-nums">
+            <caption className="sr-only">
+              {title}, oldest first.{" "}
+              {before
+                ? `Only ${unit}s with requests in either period are listed. Before is the matching stretch of ${before.label}.`
+                : `Only ${unit}s with requests are listed.`}
+            </caption>
+            <thead>
+              <tr className="text-muted-foreground">
+                <th scope="col" className="px-2 py-2 text-left font-normal">
+                  {UNIT_COLUMNS[unit]}
+                </th>
+                {REQUEST_TYPES.map((type) => (
+                  <th key={type} scope="col" className="px-2 py-2 text-right font-normal">
+                    {REQUEST_TYPE_LABELS[type]}
+                  </th>
+                ))}
+                <th scope="col" className="px-2 py-2 text-right font-normal">
+                  Total
+                </th>
+                {before && (
+                  <th scope="col" className="px-2 py-2 text-right font-normal">
+                    Before
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {filled.map((row) => (
+                <tr key={row.key}>
+                  <th scope="row" className="px-2 py-2 text-left font-normal whitespace-nowrap">
+                    {row.label}
                   </th>
                   {REQUEST_TYPES.map((type) => (
-                    <th key={type} scope="col" className="px-2 py-2 text-right font-normal">
-                      {REQUEST_TYPE_LABELS[type]}
-                    </th>
+                    <td key={type} className="px-2 py-2 text-right">
+                      {formatCents(row[type])}
+                    </td>
                   ))}
-                  <th scope="col" className="px-2 py-2 text-right font-normal">
-                    Total
-                  </th>
+                  <td className="px-2 py-2 text-right font-medium">{formatCents(row.total)}</td>
                   {before && (
-                    <th scope="col" className="px-2 py-2 text-right font-normal">
-                      Before
-                    </th>
+                    <td className="px-2 py-2 text-right text-muted-foreground">
+                      {row.before === null ? "—" : formatCents(row.before)}
+                    </td>
                   )}
                 </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filled.map((row) => (
-                  <tr key={row.key}>
-                    <th scope="row" className="px-2 py-2 text-left font-normal whitespace-nowrap">
-                      {row.label}
-                    </th>
-                    {REQUEST_TYPES.map((type) => (
-                      <td key={type} className="px-2 py-2 text-right">
-                        {formatCents(row[type])}
-                      </td>
-                    ))}
-                    <td className="px-2 py-2 text-right font-medium">{formatCents(row.total)}</td>
-                    {before && (
-                      <td className="px-2 py-2 text-right text-muted-foreground">
-                        {row.before === null ? "—" : formatCents(row.before)}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
+              ))}
+            </tbody>
+          </table>
+        </ChartNumbers>
       </div>
     </section>
+  );
+}
+
+/**
+ * A chart's numbers as a table, closed until opened. The chart is hidden from
+ * screen readers, so this is how they get its data.
+ */
+export function ChartNumbers({ children }: { children: ReactNode }) {
+  return (
+    <details className="group border-t">
+      <summary className="cursor-pointer list-none rounded-b-lg outline-none hover:bg-muted focus-visible:bg-muted group-open:rounded-none [&::-webkit-details-marker]:hidden">
+        <span className="flex h-11 items-center justify-between gap-2 px-4 text-sm font-medium">
+          Show the numbers
+          <ChevronDownIcon className="size-4 transition-transform group-open:rotate-180" aria-hidden />
+        </span>
+      </summary>
+      <div className="overflow-x-auto px-2 pb-2">{children}</div>
+    </details>
   );
 }

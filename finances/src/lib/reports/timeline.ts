@@ -77,13 +77,13 @@ function spans(range: DateRange, unit: TimelineUnit): DateRange[] {
 }
 
 /** The date that puts a request in the report: its purchase date, or the LA date it was paid. */
-function dateOf(row: TimelineRow, basis: ReportBasis): IsoDate | null {
+export function reportDate(row: Pick<TimelineRow, "purchase_date" | "paid_at">, basis: ReportBasis): IsoDate | null {
   if (basis === "paid") return row.paid_at ? laDateOf(row.paid_at) : null;
   return row.purchase_date;
 }
 
 /** The last bucket that starts on or before the date. */
-function bucketIndex(buckets: readonly DateRange[], date: IsoDate): number {
+export function bucketIndex(buckets: readonly DateRange[], date: IsoDate): number {
   let low = 0;
   let high = buckets.length - 1;
   while (low < high) {
@@ -110,7 +110,7 @@ export function reportTimeline(rows: readonly TimelineRow[], range: DateRange, b
   }));
 
   for (const row of rows) {
-    const date = dateOf(row, basis);
+    const date = reportDate(row, basis);
     if (!date || date < range.start || date > range.end) continue;
     const bucket = buckets[bucketIndex(buckets, date)];
     bucket.cents += row.amount_cents;
@@ -167,7 +167,7 @@ export function timelineBefore(
   if (buckets.length === 0) return lined;
 
   for (const row of before.rows) {
-    const date = dateOf(row, basis);
+    const date = reportDate(row, basis);
     if (!date || date < before.range.start || date > before.range.end) continue;
     const at = lineUp(date, before.range.start, range.start, unit);
     // Before the first bar only happens when a years chart skips its empty first years.

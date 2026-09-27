@@ -118,7 +118,7 @@ function reportParams(filters: ReportFilters): URLSearchParams {
 }
 
 /** The report's tabs, in order. The first opens by default. */
-export const REPORT_TABS = ["overview", "requests", "payees"] as const;
+export const REPORT_TABS = ["overview", "requests", "payees", "timing"] as const;
 
 export type ReportTab = (typeof REPORT_TABS)[number];
 
@@ -126,6 +126,7 @@ export const REPORT_TAB_LABELS: Record<ReportTab, string> = {
   overview: "Overview",
   requests: "Requests",
   payees: "Payees",
+  timing: "Timing",
 };
 
 /**

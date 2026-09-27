@@ -15,7 +15,8 @@ import {
 
 const QUEUE_COLUMNS =
   "id, request_number, status, type, amount_cents, purchase_date, vendor, description, missing_receipt, payee:payees(full_name)";
-const REPORT_COLUMNS = `${QUEUE_COLUMNS}, payee_id, paid_at, payment_method` as const;
+const REPORT_COLUMNS =
+  `${QUEUE_COLUMNS}, payee_id, submitted_at, approved_at, paid_at, payment_method, no_receipt_reason` as const;
 const EXPORT_COLUMNS = `
   request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
   submitted_at, external_approver, approved_at, paid_at, payment_method, payment_reference, no_receipt, no_receipt_reason,
@@ -154,7 +155,11 @@ export async function loadPayeeRequests(
 }
 
 /** A request as a report lists it. */
-export type ReportRow = QueueRow & Pick<Tables<"reimbursement_requests">, "payee_id" | "paid_at" | "payment_method">;
+export type ReportRow = QueueRow &
+  Pick<
+    Tables<"reimbursement_requests">,
+    "payee_id" | "submitted_at" | "approved_at" | "paid_at" | "payment_method" | "no_receipt_reason"
+  >;
 
 /** The requests in a report with the given columns, newest first by the report's date. */
 function reportQuery<Columns extends string>(

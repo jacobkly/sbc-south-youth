@@ -12,6 +12,8 @@ import { PeriodPicker } from "@/components/reports/period-picker";
 import { ReportChart } from "@/components/reports/report-chart";
 import { ReportList } from "@/components/reports/report-list";
 import { RequestBreakdowns } from "@/components/reports/request-breakdowns";
+import { RunningTotalChart } from "@/components/reports/running-total-chart";
+import { TimingBreakdowns } from "@/components/reports/timing-breakdowns";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -121,6 +123,7 @@ export function ReportView({
     comparison.totals.count > 0
       ? timelineBefore(timeline, range, { range: periodRange(before.period), rows: before.rows }, filters.basis)
       : null;
+  const chartBefore = beforeBuckets && { label: comparison.label, buckets: beforeBuckets };
 
   return (
     <div className="space-y-6">
@@ -198,10 +201,16 @@ export function ReportView({
                 <TotalsSection totals={totals} subject={reportSubject(filters)} comparison={comparison} />
                 {/* A one-day report would be a single bar. */}
                 {timeline.buckets.length > 1 && (
-                  <ReportChart
-                    timeline={timeline}
-                    before={beforeBuckets && { label: comparison.label, buckets: beforeBuckets }}
-                  />
+                  <>
+                    <ReportChart timeline={timeline} before={chartBefore} />
+                    <RunningTotalChart
+                      timeline={timeline}
+                      before={chartBefore && { ...chartBefore, cents: comparison.totals.cents }}
+                      label={comparisonLabel(filters.period)}
+                      today={today}
+                      running={range.end > today}
+                    />
+                  </>
                 )}
               </>
             ) : (
@@ -226,6 +235,13 @@ export function ReportView({
                 returning={new Set(returning)}
                 filters={filters}
               />
+            ) : (
+              <EmptyReport filters={filters} />
+            )}
+          </TabsContent>
+          <TabsContent value="timing" className="text-base">
+            {rows.length > 0 ? (
+              <TimingBreakdowns rows={rows} timeline={timeline} filters={filters} />
             ) : (
               <EmptyReport filters={filters} />
             )}

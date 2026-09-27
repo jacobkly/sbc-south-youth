@@ -106,6 +106,7 @@ describe("report tabs and pages", () => {
     expect(parseReportTab({})).toBe("overview");
     expect(parseReportTab({ tab: "requests" })).toBe("requests");
     expect(parseReportTab({ tab: "payees" })).toBe("payees");
+    expect(parseReportTab({ tab: "timing" })).toBe("timing");
     expect(parseReportTab({ tab: ["payees", "requests"] })).toBe("payees");
     for (const tab of ["", "Overview", "charts"]) expect(parseReportTab({ tab })).toBe("overview");
   });
