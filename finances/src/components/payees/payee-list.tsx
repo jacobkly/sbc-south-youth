@@ -25,6 +25,9 @@ import { cn } from "@/lib/utils";
 
 type StatusFilter = "active" | "inactive";
 
+/** Name, payment handle, email, paid this year, and the chevron, once the list is wide. */
+const COLUMNS = "@4xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1.25fr)_8rem_1rem] @4xl:gap-4";
+
 /**
  * Payees with search, a sort, and an active/inactive filter. There are few
  * enough payees to filter and sort in the browser, which keeps it instant.
@@ -93,44 +96,67 @@ export function PayeeList({
     }
 
     return (
-      <>
+      <div className="@container">
         <div className="flex items-center justify-between gap-3">
           <SortMenu sort={shownSort} year={year} onChange={changeSort} />
-          {/* Screen readers get the year on each amount instead. */}
-          <p className="pr-11 text-xs text-muted-foreground" aria-hidden>
+          {/* Screen readers get the year on each amount instead. A wide list has it in its header. */}
+          <p className="pr-11 text-xs text-muted-foreground @4xl:hidden" aria-hidden>
             Paid in {year}
           </p>
         </div>
-        <ul className="divide-y rounded-lg border">
-          {visible.map((payee) => {
-            const details = [payee.payment_handle, payee.email].filter(Boolean).join(" · ");
-            const paid = yearTotals[payee.id] ?? 0;
+        <div className="overflow-hidden rounded-lg border">
+          <div
+            aria-hidden
+            className={cn(COLUMNS, "hidden border-b bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground @4xl:grid")}
+          >
+            <span>Name</span>
+            <span>Payment handle</span>
+            <span>Email</span>
+            <span className="text-right">Paid in {year}</span>
+          </div>
+          <ul className="divide-y">
+            {visible.map((payee) => {
+              const details = [payee.payment_handle, payee.email].filter(Boolean).join(" · ");
+              const paid = yearTotals[payee.id] ?? 0;
+              const account = payee.user_id && <Badge variant="secondary">Has account</Badge>;
 
-            return (
-              <li key={payee.id}>
-                <Link
-                  href={`/admin/payees/${payee.id}`}
-                  className="flex min-h-16 items-center gap-3 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{payee.full_name}</p>
-                    {/* The badge sits on this line so the name gets the full width on a phone. */}
-                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {payee.user_id && <Badge variant="secondary">Has account</Badge>}
-                      <span className="truncate">{details || "No contact info"}</span>
-                    </p>
-                  </div>
-                  <span className={cn("shrink-0 text-sm tabular-nums", paid === 0 && "text-muted-foreground")}>
-                    {formatCents(paid)}
-                    <span className="sr-only"> paid in {year}</span>
-                  </span>
-                  <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </>
+              return (
+                <li key={payee.id}>
+                  <Link
+                    href={`/admin/payees/${payee.id}`}
+                    className={cn(
+                      COLUMNS,
+                      "flex min-h-16 items-center gap-3 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted @4xl:grid @4xl:min-h-0",
+                    )}
+                  >
+                    <div className="min-w-0 flex-1 @4xl:hidden">
+                      <p className="truncate font-medium">{payee.full_name}</p>
+                      {/* The badge sits on this line so the name gets the full width on a phone. */}
+                      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                        {account}
+                        <span className="truncate">{details || "No contact info"}</span>
+                      </p>
+                    </div>
+                    <span className="hidden min-w-0 items-center gap-2 @4xl:flex">
+                      <span className="truncate font-medium">{payee.full_name}</span>
+                      {account}
+                    </span>
+                    <Detail value={payee.payment_handle} missing="No payment handle" />
+                    <Detail value={payee.email} missing="No email" />
+                    <span
+                      className={cn("shrink-0 text-right text-sm tabular-nums", paid === 0 && "text-muted-foreground")}
+                    >
+                      {formatCents(paid)}
+                      <span className="sr-only"> paid in {year}</span>
+                    </span>
+                    <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
     );
   }
 
@@ -146,27 +172,29 @@ export function PayeeList({
         )}
       </div>
 
-      <div className="relative">
-        <SearchIcon
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden
-        />
-        <Input
-          type="search"
-          aria-label="Search payees"
-          placeholder="Search name, email, or handle"
-          autoComplete="off"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          className="h-11 pl-9"
-        />
-      </div>
-
       <Tabs value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>
-        <TabsList className="w-full group-data-horizontal/tabs:h-10">
-          <TabsTrigger value="active">Active ({byStatus.active.length})</TabsTrigger>
-          <TabsTrigger value="inactive">Inactive ({byStatus.inactive.length})</TabsTrigger>
-        </TabsList>
+        {/* Stacked on a phone, and one toolbar row on a PC. */}
+        <div className="space-y-4 @4xl/main:flex @4xl/main:items-center @4xl/main:gap-4 @4xl/main:space-y-0">
+          <div className="relative @4xl/main:w-96">
+            <SearchIcon
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              aria-label="Search payees"
+              placeholder="Search name, email, or handle"
+              autoComplete="off"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="h-11 pl-9"
+            />
+          </div>
+          <TabsList className="w-full group-data-horizontal/tabs:h-10 @4xl/main:w-72 @4xl/main:group-data-horizontal/tabs:h-11">
+            <TabsTrigger value="active">Active ({byStatus.active.length})</TabsTrigger>
+            <TabsTrigger value="inactive">Inactive ({byStatus.inactive.length})</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="active" className="mt-2">
           {renderList("active")}
         </TabsContent>
@@ -177,6 +205,20 @@ export function PayeeList({
 
       {canEdit && <PayeeSheet payee={adding ? "new" : null} onClose={() => setAdding(false)} />}
     </div>
+  );
+}
+
+/** A contact detail in a wide list, or a dash when there isn't one. */
+function Detail({ value, missing }: { value: string | null; missing: string }) {
+  return (
+    <span className="hidden truncate text-muted-foreground @4xl:block">
+      {value || (
+        <>
+          <span aria-hidden>—</span>
+          <span className="sr-only">{missing}</span>
+        </>
+      )}
+    </span>
   );
 }
 
