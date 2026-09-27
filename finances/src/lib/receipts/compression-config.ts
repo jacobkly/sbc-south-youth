@@ -8,7 +8,9 @@
  * down through `lowerQualities`, then `smallerShortEdges`, until it fits.
  */
 
-export type OutputFormat = "image/webp" | "image/jpeg";
+import type { ImageFormat } from "@/lib/images/canvas";
+
+export type OutputFormat = ImageFormat;
 
 export type CompressionSettings = {
   /** Target length of the shorter side, in px. Images are never upscaled. */

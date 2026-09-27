@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { extensionFor, processReceipt, ReceiptFileError, type ReceiptMimeType } from "./compress";
+import { UnusableFileError } from "@/lib/images/canvas";
+import { extensionFor, processReceipt, type ReceiptMimeType } from "./compress";
 import { sha256Hex } from "./hash";
 
 export const RECEIPTS_BUCKET = "receipts";
@@ -31,7 +32,7 @@ export function receiptPath(requestId: string, receiptId: string, mimeType: Rece
 
 /**
  * Compresses a picked file, then hashes the result. Throws a
- * `ReceiptFileError` whose message is safe to show.
+ * `UnusableFileError` whose message is safe to show.
  */
 export async function prepareReceipt(file: File): Promise<PreparedReceipt> {
   const processed = await processReceipt(file);
@@ -41,7 +42,7 @@ export async function prepareReceipt(file: File): Promise<PreparedReceipt> {
     sha256 = await sha256Hex(processed.blob);
   } catch {
     // Web Crypto only exists on HTTPS and localhost.
-    throw new ReceiptFileError("Receipts can only be added over a secure (https://) connection.");
+    throw new UnusableFileError("Receipts can only be added over a secure (https://) connection.");
   }
 
   return {

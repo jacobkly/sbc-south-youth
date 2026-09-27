@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ReceiptFileError } from "@/lib/receipts/compress";
+import { UnusableFileError } from "@/lib/images/canvas";
 import { findReceiptMatches, type ReceiptMatch } from "@/lib/receipts/duplicates";
 import { MAX_RECEIPTS, prepareReceipt, type PreparedReceipt } from "@/lib/receipts/upload";
 import { createClient } from "@/lib/supabase/client";
@@ -95,7 +95,7 @@ export function usePendingReceipts(limit: number = MAX_RECEIPTS, requestId?: str
           update(item.key, { status: "ready", prepared, url });
           findMatches(item.key, prepared.sha256);
         } catch (error) {
-          const reason = error instanceof ReceiptFileError ? error.message : "It couldn't be processed.";
+          const reason = error instanceof UnusableFileError ? error.message : "It couldn't be processed.";
           setReceipts((current) => current.filter((receipt) => receipt.key !== item.key));
           setProblems((current) => [...current, `${item.name}: ${reason}`]);
         }

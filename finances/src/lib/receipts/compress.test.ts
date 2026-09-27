@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { UnusableFileError } from "@/lib/images/canvas";
 import { RECEIPT_COMPRESSION } from "./compression-config";
 import {
   MAX_RECEIPT_BYTES,
-  ReceiptFileError,
   compressionAttempts,
   extensionFor,
   processReceipt,
@@ -57,7 +57,7 @@ describe("processReceipt with PDFs and non-images", () => {
 
   it("rejects PDFs over the bucket limit", async () => {
     const big = new File([new Uint8Array(MAX_RECEIPT_BYTES + 1)], "big.pdf", { type: "application/pdf" });
-    await expect(processReceipt(big)).rejects.toThrow(ReceiptFileError);
+    await expect(processReceipt(big)).rejects.toThrow(UnusableFileError);
   });
 
   it("rejects files that aren't photos or PDFs", async () => {
@@ -193,7 +193,7 @@ describe("processReceipt with images", () => {
 
   it("fails clearly when the browser can encode neither format", async () => {
     stubBrowser({ width: 3024, height: 4032, encodable: [] });
-    await expect(processReceipt(photo())).rejects.toThrow(ReceiptFileError);
+    await expect(processReceipt(photo())).rejects.toThrow(UnusableFileError);
   });
 
   it("keeps small images at their original size", async () => {

@@ -6,7 +6,8 @@ import { ReceiptCompare } from "@/components/receipts/receipt-compare";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { canEncode, extensionFor, processReceipt, type ProcessedReceipt } from "@/lib/receipts/compress";
+import { canEncode } from "@/lib/images/canvas";
+import { extensionFor, processReceipt, type ProcessedReceipt } from "@/lib/receipts/compress";
 import { RECEIPT_COMPRESSION, type CompressionSettings, type OutputFormat } from "@/lib/receipts/compression-config";
 
 /** Average size that keeps a few years of receipts inside the 1 GB free tier. */
