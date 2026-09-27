@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FileSpreadsheetIcon } from "lucide-react";
 import { SettingsForm, SettingsSummary } from "@/components/settings/settings-form";
+import { ThemePicker } from "@/components/settings/theme-picker";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { SETTINGS_COLUMNS } from "@/lib/settings/schema";
@@ -26,6 +27,8 @@ export default async function SettingsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       {/* Viewers can read the settings. The update policy lets only admins change them. */}
       {user?.role === "admin" ? <SettingsForm settings={settings} /> : <SettingsSummary settings={settings} />}
+
+      <ThemePicker className="border-t pt-6" />
 
       {user?.role === "admin" && (
         <section aria-labelledby="settings-import-heading" className="space-y-3 border-t pt-6">
