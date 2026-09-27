@@ -16,7 +16,9 @@ import {
   REQUESTS,
   SETTINGS,
   type NavItem,
+  type NavUser,
 } from "@/components/nav/nav-items";
+import { UserAvatar } from "@/components/nav/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,20 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ROLE_LABELS } from "@/lib/auth/roles";
-import type { Enums } from "@/lib/database.types";
 
 const MAIN_ITEMS = [DASHBOARD, REQUESTS, PAYEES, REPORTS];
-
-/** Up to two initials, like "PE" for Pat Example. */
-function initials(name: string): string {
-  const letters = name
-    .trim()
-    .split(/\s+/)
-    .map((word) => word[0])
-    .filter(Boolean);
-  const picked = letters.length > 1 ? [letters[0], letters.at(-1)] : letters;
-  return picked.join("").toUpperCase() || "?";
-}
 
 function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
   return (
@@ -54,18 +44,13 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
   );
 }
 
-function AccountMenu({ role, name }: { role: Enums<"user_role">; name: string }) {
+function AccountMenu({ role, name, avatarPath }: NavUser) {
   const { pending, signOut } = useSignOut();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-md p-2 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent">
-        <span
-          aria-hidden
-          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-xs font-semibold text-sidebar-primary-foreground"
-        >
-          {initials(name)}
-        </span>
+        <UserAvatar name={name} path={avatarPath} />
         <span className="min-w-0 flex-1 leading-tight">
           <span className="block truncate text-sm font-medium">{name}</span>
           <span className="block truncate text-xs text-muted-foreground">{ROLE_LABELS[role]}</span>
@@ -98,7 +83,7 @@ function AccountMenu({ role, name }: { role: Enums<"user_role">; name: string })
 }
 
 /** Navigation on PCs. Phones and tablets get the tab bar instead. */
-export function Sidebar({ role, name }: { role: Enums<"user_role">; name: string }) {
+export function Sidebar({ role, name, avatarPath }: NavUser) {
   const pathname = usePathname();
   const allowed = allowedFor(role);
   const creating = isActive(pathname, NEW_REQUEST.href);
@@ -143,7 +128,7 @@ export function Sidebar({ role, name }: { role: Enums<"user_role">; name: string
       </nav>
 
       <div className="border-t border-sidebar-border p-2">
-        <AccountMenu role={role} name={name} />
+        <AccountMenu role={role} name={name} avatarPath={avatarPath} />
       </div>
     </aside>
   );

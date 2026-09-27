@@ -15,7 +15,9 @@ import {
   REPORTS,
   REQUESTS,
   SETTINGS,
+  type NavUser,
 } from "@/components/nav/nav-items";
+import { UserAvatar } from "@/components/nav/user-avatar";
 import { ResponsiveSheetContent } from "@/components/ui/responsive-sheet";
 import {
   Sheet,
@@ -25,7 +27,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import type { Enums } from "@/lib/database.types";
 
 const TAB_ITEMS = [DASHBOARD, REQUESTS, NEW_REQUEST, PAYEES];
 const MORE_ITEMS = [REPORTS, SETTINGS, ACCOUNT];
@@ -38,7 +39,7 @@ const ACTIVE_TAB_CLASSES = "bg-foreground/[0.07] text-foreground";
  * Navigation on phones and tablets: a floating frosted bar, like iOS. PCs get
  * the sidebar instead.
  */
-export function TabBar({ role, name }: { role: Enums<"user_role">; name: string }) {
+export function TabBar({ role, name, avatarPath }: NavUser) {
   const pathname = usePathname();
   const allowed = allowedFor(role);
   const moreActive = MORE_ITEMS.some((item) => isActive(pathname, item.href));
@@ -81,9 +82,12 @@ export function TabBar({ role, name }: { role: Enums<"user_role">; name: string 
               <span className="max-w-full truncate px-1">More</span>
             </SheetTrigger>
             <ResponsiveSheetContent>
-              <SheetHeader>
-                <SheetTitle>More</SheetTitle>
-                <SheetDescription>Signed in as {name}</SheetDescription>
+              <SheetHeader className="flex-row items-center gap-3">
+                <UserAvatar name={name} path={avatarPath} className="size-10 text-sm" />
+                <div className="min-w-0 space-y-0.5">
+                  <SheetTitle>More</SheetTitle>
+                  <SheetDescription className="truncate">Signed in as {name}</SheetDescription>
+                </div>
               </SheetHeader>
               <ul className="px-4">
                 {MORE_ITEMS.filter(allowed).map((item) => (

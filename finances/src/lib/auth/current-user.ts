@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import type { Tables } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/server";
 
-export type AppUser = Pick<Tables<"users">, "id" | "full_name" | "email" | "role" | "is_active">;
+export type AppUser = Pick<Tables<"users">, "id" | "full_name" | "email" | "role" | "is_active" | "avatar_path">;
 
 /**
  * The signed-in user's app account, loaded once per request. Redirects to
@@ -20,7 +20,7 @@ export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
 
   const { data: user, error } = await supabase
     .from("users")
-    .select("id, full_name, email, role, is_active")
+    .select("id, full_name, email, role, is_active, avatar_path")
     .eq("id", userId)
     .maybeSingle();
 

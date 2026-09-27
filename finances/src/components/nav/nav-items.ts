@@ -12,6 +12,9 @@ import type { Enums } from "@/lib/database.types";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon; adminOnly?: boolean };
 
+/** The signed-in user, as the navigation shows them. */
+export type NavUser = { role: Enums<"user_role">; name: string; avatarPath: string | null };
+
 export const DASHBOARD: NavItem = { href: "/admin", label: "Dashboard", icon: LayoutDashboardIcon };
 export const REQUESTS: NavItem = { href: "/admin/requests", label: "Requests", icon: ReceiptTextIcon };
 export const NEW_REQUEST: NavItem = { href: "/admin/requests/new", label: "New", icon: PlusIcon, adminOnly: true };

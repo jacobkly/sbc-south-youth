@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AccountForm } from "@/components/account/account-form";
+import { AvatarForm } from "@/components/account/avatar-form";
 import { PasswordForm } from "@/components/account/password-form";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { NarrowPage } from "@/components/nav/app-shell";
@@ -19,6 +20,8 @@ export default async function AccountPage() {
   return (
     <NarrowPage className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+
+      <AvatarForm userId={user.id} name={user.full_name} avatarPath={user.avatar_path} />
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
         <dt className="text-muted-foreground">Email</dt>
