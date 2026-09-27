@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ReportView } from "@/components/reports/report-view";
 import { todayInLA } from "@/lib/dates";
 import { comparisonPeriod } from "@/lib/reports/comparison";
-import { parseReportFilters, parseReportPage } from "@/lib/reports/filters";
+import { parseReportFilters, parseReportPage, parseReportTab } from "@/lib/reports/filters";
 import { loadReport, loadReportAmounts } from "@/lib/requests/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -25,6 +25,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/admin/re
   return (
     <ReportView
       filters={filters}
+      tab={parseReportTab(params)}
       page={parseReportPage(params)}
       today={today}
       rows={rows}

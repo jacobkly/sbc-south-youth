@@ -135,7 +135,7 @@ export function ReportChart({ timeline, before }: { timeline: Timeline; before: 
       <div className="rounded-lg border">
         {/* Pointer and touch only. "Show the numbers" has the same data for everyone. */}
         <div aria-hidden className="px-2 pt-4">
-          <ChartContainer config={CHART_CONFIG} className="aspect-auto h-48 w-full">
+          <ChartContainer config={CHART_CONFIG} className="aspect-auto h-48 w-full @4xl/main:h-64">
             <ComposedChart data={rows} accessibilityLayer={false} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
               <CartesianGrid vertical={false} />
               <XAxis

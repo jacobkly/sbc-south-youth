@@ -117,26 +117,42 @@ function reportParams(filters: ReportFilters): URLSearchParams {
   return params;
 }
 
-/** The report's URL for these filters. */
-export function reportHref(filters: ReportFilters): string {
-  return `/admin/reports?${reportParams(filters)}`;
+/** The report's tabs, in order. The first opens by default. */
+export const REPORT_TABS = ["overview", "requests", "payees"] as const;
+
+export type ReportTab = (typeof REPORT_TABS)[number];
+
+export const REPORT_TAB_LABELS: Record<ReportTab, string> = {
+  overview: "Overview",
+  requests: "Requests",
+  payees: "Payees",
+};
+
+/**
+ * Which tab the URL opens. Kept apart from the filters, like the page,
+ * since neither changes what the report counts or exports.
+ */
+export function parseReportTab(params: SearchParams): ReportTab {
+  const tab = single(params, "tab");
+  return REPORT_TABS.find((candidate) => candidate === tab) ?? REPORT_TABS[0];
 }
 
 /** How many of a report's requests show on each page. */
 export const REPORT_PAGE_SIZE = 15;
 
-/**
- * Which page of requests the URL shows. Kept apart from the filters, since
- * it doesn't change what the report counts or exports.
- */
+/** Which page of requests the URL shows. */
 export function parseReportPage(params: SearchParams): number {
   const page = Number(single(params, "page"));
   return Number.isInteger(page) && page > 1 ? page : 1;
 }
 
-/** The report's URL showing this page of requests. */
-export function reportPageHref(filters: ReportFilters, page: number): string {
+/** Where in the report to land: a tab, and a page of its requests. */
+export type ReportPlace = { tab?: ReportTab; page?: number };
+
+/** The report's URL for these filters, open at this tab and page. */
+export function reportHref(filters: ReportFilters, { tab, page = 1 }: ReportPlace = {}): string {
   const params = reportParams(filters);
+  if (tab && tab !== REPORT_TABS[0]) params.set("tab", tab);
   if (page > 1) params.set("page", String(page));
   return `/admin/reports?${params}`;
 }

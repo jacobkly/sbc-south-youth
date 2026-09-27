@@ -5,11 +5,11 @@ import {
   parsePeriodSlug,
   parseReportFilters,
   parseReportPage,
+  parseReportTab,
   periodSlug,
   reportBounds,
   reportExportHref,
   reportHref,
-  reportPageHref,
   reportPayeeTotals,
   reportTotals,
   switchPeriodKind,
@@ -101,7 +101,15 @@ describe("parseReportFilters", () => {
   });
 });
 
-describe("report pages", () => {
+describe("report tabs and pages", () => {
+  it("reads which tab is open, Overview by default", () => {
+    expect(parseReportTab({})).toBe("overview");
+    expect(parseReportTab({ tab: "requests" })).toBe("requests");
+    expect(parseReportTab({ tab: "payees" })).toBe("payees");
+    expect(parseReportTab({ tab: ["payees", "requests"] })).toBe("payees");
+    for (const tab of ["", "Overview", "charts"]) expect(parseReportTab({ tab })).toBe("overview");
+  });
+
   it("reads which page of requests to show, the first by default", () => {
     expect(parseReportPage({ page: "3" })).toBe(3);
     expect(parseReportPage({ page: ["2", "5"] })).toBe(2);
@@ -109,14 +117,28 @@ describe("report pages", () => {
     for (const page of ["", "0", "-2", "2.5", "lots"]) expect(parseReportPage({ page })).toBe(1);
   });
 
-  it("adds the page to the report's URL after the filters", () => {
+  it("adds the tab and then the page after the filters, leaving out Overview and the first page", () => {
     const filters = parseReportFilters({ period: "2026-09", status: "all" }, TODAY);
-    expect(reportPageHref(filters, 3)).toBe("/admin/reports?period=2026-09&status=all&page=3");
-    expect(reportPageHref(filters, 1)).toBe(reportHref(filters));
+    expect(reportHref(filters, { tab: "requests", page: 3 })).toBe(
+      "/admin/reports?period=2026-09&status=all&tab=requests&page=3",
+    );
+    expect(reportHref(filters, { tab: "payees" })).toBe("/admin/reports?period=2026-09&status=all&tab=payees");
+    expect(reportHref(filters, { tab: "requests", page: 1 })).toBe(reportHref(filters, { tab: "requests" }));
+    expect(reportHref(filters, { tab: "overview" })).toBe(reportHref(filters));
   });
 
-  it("leaves the page out of the filters and exports", () => {
-    const filters = parseReportFilters({ period: "2026-09", page: "3" }, TODAY);
+  it("keeps the tab through a new filter, which starts from the first page", () => {
+    const params = { period: "2026-09", tab: "requests", page: "4" };
+    const filters = { ...parseReportFilters(params, TODAY), basis: "paid" as const };
+    const href = reportHref(filters, { tab: parseReportTab(params) });
+    const next = Object.fromEntries(new URL(href, "http://x").searchParams);
+    expect(parseReportFilters(next, TODAY)).toEqual(filters);
+    expect(parseReportTab(next)).toBe("requests");
+    expect(parseReportPage(next)).toBe(1);
+  });
+
+  it("leaves the tab and page out of the exports", () => {
+    const filters = parseReportFilters({ period: "2026-09", tab: "payees", page: "3" }, TODAY);
     expect(reportHref(filters)).toBe("/admin/reports?period=2026-09");
     expect(reportExportHref(filters)).toBe("/admin/reports/export?period=2026-09");
   });

@@ -12,6 +12,7 @@ import { PeriodPicker } from "@/components/reports/period-picker";
 import { ReportChart } from "@/components/reports/report-chart";
 import { ReportList } from "@/components/reports/report-list";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { sharePercent } from "@/lib/dashboard/summary";
 import { periodLabel, periodRange, type IsoDate, type Period } from "@/lib/dates";
@@ -25,13 +26,15 @@ import {
   REPORT_BASES,
   REPORT_BASIS_LABELS,
   REPORT_PAGE_SIZE,
+  REPORT_TAB_LABELS,
+  REPORT_TABS,
   reportHref,
-  reportPageHref,
   reportPayeeTotals,
   reportTotals,
   type PayeeTotals,
   type ReportBasis,
   type ReportFilters,
+  type ReportTab,
   type ReportTotals,
 } from "@/lib/reports/filters";
 import { reportTimeline, timelineBefore, type TimelineRow } from "@/lib/reports/timeline";
@@ -64,18 +67,20 @@ export type ReportBefore = { period: Period; rows: TimelineRow[] };
 type Comparison = { label: string; totals: ReportTotals };
 
 /**
- * The reports page. The period and filters live in the URL, so the back
- * button and shared links bring back the same report. The server loads
- * the rows; this shows each change right away while they load.
+ * The reports page. The period, filters, and open tab live in the URL, so
+ * the back button and shared links bring back the same report. The server
+ * loads the rows; this shows each change right away while they load.
  */
 export function ReportView({
   filters,
+  tab,
   page,
   today,
   rows,
   before,
 }: {
   filters: ReportFilters;
+  tab: ReportTab;
   /** Which page of requests to show. */
   page: number;
   today: IsoDate;
@@ -85,13 +90,23 @@ export function ReportView({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(filters);
+  // Apart from the filters, so switching tabs doesn't dim the report while the URL catches up.
+  const [, startTabTransition] = useTransition();
+  const [shownTab, setShownTab] = useOptimistic(tab);
 
-  /** Leaves the page out of the URL, so a new report starts from the first page. */
+  /** Keeps the tab but leaves out the page, so a new report starts from the first page. */
   function update(changes: Partial<ReportFilters>) {
     const next = { ...shown, ...changes };
     startTransition(() => {
       setShown(next);
-      router.replace(reportHref(next), { scroll: false });
+      router.replace(reportHref(next, { tab: shownTab }), { scroll: false });
+    });
+  }
+
+  function openTab(next: ReportTab) {
+    startTabTransition(() => {
+      setShownTab(next);
+      router.replace(reportHref(shown, { tab: next }), { scroll: false });
     });
   }
 
@@ -164,44 +179,61 @@ export function ReportView({
         </div>
       </section>
 
-      {/*
-        On a PC the totals and chart sit left of the payees, above the
-        full-width requests. Equal columns give the totals room to go across,
-        so the left side comes out about as tall as five payees.
-      */}
-      <div
-        aria-busy={pending}
-        className={cn(
-          "grid grid-cols-1 gap-6 transition-opacity @4xl/main:grid-cols-2 @4xl/main:items-start",
-          pending && "opacity-60",
-        )}
-      >
-        {rows.length > 0 ? (
-          <>
-            <div className="space-y-6">
-              <TotalsSection totals={totals} subject={reportSubject(filters)} comparison={comparison} />
-              {/* A one-day report would be a single bar. */}
-              {timeline.buckets.length > 1 && (
-                <ReportChart
-                  timeline={timeline}
-                  before={beforeBuckets && { label: comparison.label, buckets: beforeBuckets }}
-                />
-              )}
-            </div>
-            <PayeeTotalsSection payees={reportPayeeTotals(rows)} totalCents={totals.cents} />
-            <RequestsSection rows={rows} filters={filters} page={page} disabled={pending} />
-          </>
-        ) : (
-          <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground @4xl/main:col-span-2">
-            {emptyMessage(filters)}
-          </p>
-        )}
-      </div>
+      {/* The filters above apply to every tab. */}
+      <Tabs value={shownTab} onValueChange={(value) => openTab(value as ReportTab)} className="gap-4">
+        <TabsList className="w-full group-data-horizontal/tabs:h-10 @4xl/main:w-96 @4xl/main:group-data-horizontal/tabs:h-11">
+          {REPORT_TABS.map((value) => (
+            <TabsTrigger key={value} value={value}>
+              {REPORT_TAB_LABELS[value]}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <div aria-busy={pending} className={cn("transition-opacity", pending && "opacity-60")}>
+          <TabsContent value="overview" className="space-y-6 text-base">
+            {rows.length > 0 ? (
+              <>
+                <TotalsSection totals={totals} subject={reportSubject(filters)} comparison={comparison} />
+                {/* A one-day report would be a single bar. */}
+                {timeline.buckets.length > 1 && (
+                  <ReportChart
+                    timeline={timeline}
+                    before={beforeBuckets && { label: comparison.label, buckets: beforeBuckets }}
+                  />
+                )}
+              </>
+            ) : (
+              <EmptyReport filters={filters} />
+            )}
+          </TabsContent>
+          <TabsContent value="requests" className="text-base">
+            {rows.length > 0 ? (
+              <RequestsSection rows={rows} filters={filters} page={page} disabled={pending} />
+            ) : (
+              <EmptyReport filters={filters} />
+            )}
+          </TabsContent>
+          <TabsContent value="payees" className="text-base">
+            {rows.length > 0 ? (
+              <PayeeTotalsSection payees={reportPayeeTotals(rows)} totalCents={totals.cents} />
+            ) : (
+              <EmptyReport filters={filters} />
+            )}
+          </TabsContent>
+        </div>
+      </Tabs>
 
       <p className="sr-only" role="status">
         {pending ? "" : `${requestCount(totals.count)}, ${formatCents(totals.cents)}`}
       </p>
     </div>
+  );
+}
+
+function EmptyReport({ filters }: { filters: ReportFilters }) {
+  return (
+    <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+      {emptyMessage(filters)}
+    </p>
   );
 }
 
@@ -325,12 +357,12 @@ function RequestsSection({
     moved.current = true;
     startTransition(() => {
       setPage(next);
-      router.replace(reportPageHref(filters, next), { scroll: false });
+      router.replace(reportHref(filters, { tab: "requests", page: next }), { scroll: false });
     });
   }
 
   return (
-    <section aria-labelledby="report-requests-heading" className="space-y-3 @4xl/main:col-span-2">
+    <section aria-labelledby="report-requests-heading" className="space-y-3">
       <h2
         ref={heading}
         id="report-requests-heading"
