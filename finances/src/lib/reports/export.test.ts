@@ -26,6 +26,7 @@ const PAID: ReportExportRow = {
   paid_at: "2026-09-26T06:30:00+00:00",
   payment_method: "bank_transfer",
   payment_reference: "TEST-001",
+  no_receipt: false,
   no_receipt_reason: null,
   payee: { full_name: "Test Payee" },
   entered_by: { full_name: "Test Admin" },
@@ -47,6 +48,7 @@ const DRAFT: ReportExportRow = {
   paid_at: null,
   payment_method: null,
   payment_reference: null,
+  no_receipt: true,
   no_receipt_reason: "Lost it",
   approver: null,
   payer: null,
@@ -77,6 +79,7 @@ describe("reportCsvRow", () => {
       payment_method: "Bank transfer",
       payment_reference: "TEST-001",
       receipt_count: 2,
+      no_receipt: "No",
       no_receipt_reason: null,
     });
   });
@@ -94,6 +97,7 @@ describe("reportCsvRow", () => {
       paid_at: null,
       payment_method: null,
       receipt_count: 0,
+      no_receipt: "Yes",
       no_receipt_reason: "Lost it",
     });
   });
@@ -104,7 +108,7 @@ describe("reportCsvRow", () => {
   });
 
   it("counts no receipts when the count is missing", () => {
-    expect(reportCsvRow({ ...DRAFT, receipts: [] }).at(-2)).toBe(0);
+    expect(reportCsvRow({ ...DRAFT, receipts: [] }).at(-3)).toBe(0);
   });
 });
 
@@ -113,9 +117,9 @@ describe("reportCsv", () => {
     const lines = reportCsv([PAID, DRAFT]).split("\r\n");
     expect(lines[0]).toBe(`﻿${REPORT_CSV_HEADER.join(",")}`);
     expect(lines[1]).toBe(
-      'R-0012,Paid,Test Payee,Test Admin,2026-08-14,Example Mart,Youth,"Snacks, drinks, and plates",Summer kickoff,45.99,2026-08-15 10:00,Test Admin,,2026-08-16 12:30,Test Admin,2026-09-25 23:30,Bank transfer,TEST-001,2,',
+      'R-0012,Paid,Test Payee,Test Admin,2026-08-14,Example Mart,Youth,"Snacks, drinks, and plates",Summer kickoff,45.99,2026-08-15 10:00,Test Admin,,2026-08-16 12:30,Test Admin,2026-09-25 23:30,Bank transfer,TEST-001,2,No,',
     );
-    expect(lines[2]).toBe("R-0003,Draft,Test Payee,Test Admin,2026-08-14,Example Mart,Cafe,Coffee,,5.00,,,,,,,,,0,Lost it");
+    expect(lines[2]).toBe("R-0003,Draft,Test Payee,Test Admin,2026-08-14,Example Mart,Cafe,Coffee,,5.00,,,,,,,,,0,Yes,Lost it");
     expect(lines).toHaveLength(4);
     expect(lines[3]).toBe("");
   });

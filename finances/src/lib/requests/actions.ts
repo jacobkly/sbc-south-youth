@@ -122,7 +122,7 @@ export function needsExternalApprover(
   return recordsApproval(action) && selfPayee && allowExternalApproval;
 }
 
-const RECEIPT_REQUIRED = "Add a receipt, or turn on “No receipt on file” and say why.";
+const RECEIPT_REQUIRED = "Add a receipt, or turn on “No receipt on file.”";
 
 function missingReceipt({ receiptCount, noReceipt }: Pick<SaveContext, "receiptCount" | "noReceipt">): boolean {
   return receiptCount === 0 && !noReceipt;
@@ -315,7 +315,7 @@ export function recordsPayment(action: RequestAction): action is "mark_paid" | "
   return action === "mark_paid" || action === "record_paid";
 }
 
-/** Sending a request on needs a receipt, or the no-receipt exception with a reason. */
+/** Sending a request on needs a receipt, or the no-receipt exception. */
 export function blockedByReceiptRule(
   action: RequestAction,
   context: Pick<SaveContext, "receiptCount" | "noReceipt">,

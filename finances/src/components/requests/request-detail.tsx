@@ -164,9 +164,11 @@ export function RequestDetail({
               <Alert role="note">
                 <FileXIcon />
                 <AlertTitle>No receipt on file</AlertTitle>
-                <AlertDescription className="break-words whitespace-pre-wrap">
-                  {request.no_receipt_reason}
-                </AlertDescription>
+                {request.no_receipt_reason && (
+                  <AlertDescription className="break-words whitespace-pre-wrap">
+                    {request.no_receipt_reason}
+                  </AlertDescription>
+                )}
               </Alert>
             )}
             {receipts.length > 0 ? (

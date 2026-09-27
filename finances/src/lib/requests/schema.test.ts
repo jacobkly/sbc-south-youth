@@ -74,7 +74,6 @@ describe("requestSchema", () => {
       type: "Choose Cafe or Youth.",
       amount: "Enter an amount.",
       purchase_date: "Enter the purchase date.",
-      no_receipt_reason: "Say why there's no receipt.",
     });
   });
 
@@ -82,6 +81,13 @@ describe("requestSchema", () => {
     expect(schema.parse({ ...valid, vendor: "  ", description: "\n " })).toMatchObject({
       vendor: null,
       description: null,
+    });
+  });
+
+  it("lets the no-receipt exception go without a reason", () => {
+    expect(schema.parse({ ...valid, no_receipt: true, no_receipt_reason: "  " })).toMatchObject({
+      no_receipt: true,
+      no_receipt_reason: null,
     });
   });
 

@@ -314,7 +314,7 @@ function ActionForm({
         <Alert role="note">
           <InfoIcon />
           <AlertDescription>
-            It needs a receipt first. Edit it to add one, or mark it as having no receipt and say why.
+            It needs a receipt first. Edit it to add one, or mark it as having no receipt.
           </AlertDescription>
         </Alert>
       )}

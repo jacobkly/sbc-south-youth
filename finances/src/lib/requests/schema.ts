@@ -107,18 +107,12 @@ export function requestSchema(today: IsoDate = todayInLA()) {
         .trim()
         .max(MAX_NO_RECEIPT_REASON, "Keep the reason to 500 characters or fewer."),
     })
-    .refine((values) => !values.no_receipt || values.no_receipt_reason, {
-      path: ["no_receipt_reason"],
-      message: "Say why there's no receipt.",
-      // Check even when other fields fail, so every error shows on the first try.
-      when: ({ issues }) => !issues.some((issue) => String(issue.path?.[0]).startsWith("no_receipt")),
-    })
-    // A reason only makes sense with the exception turned on.
+    // A reason is optional, and only makes sense with the exception turned on.
     .transform(({ amount, no_receipt, no_receipt_reason, ...rest }) => ({
       ...rest,
       amount_cents: amount,
       no_receipt,
-      no_receipt_reason: no_receipt ? no_receipt_reason : null,
+      no_receipt_reason: (no_receipt && no_receipt_reason) || null,
     }));
 }
 

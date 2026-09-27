@@ -265,13 +265,11 @@ select lives_ok(
   'a request without a vendor or description can still be paid'
 );
 
-select throws_ok(
+select lives_ok(
   $$ insert into public.reimbursement_requests (
-       payee_id, type, amount_cents, purchase_date, vendor, description, no_receipt
-     ) values ('00000000-0000-4000-8000-00000000b001', 'cafe', 500, '2026-01-10', 'Fake Store', 'No reason', true) $$,
-  '23514',
-  null,
-  'the no-receipt exception needs a reason'
+       payee_id, type, amount_cents, purchase_date, no_receipt
+     ) values ('00000000-0000-4000-8000-00000000b001', 'cafe', 433, '2026-01-10', true) $$,
+  'the no-receipt exception can leave out the reason'
 );
 
 select lives_ok(
@@ -362,7 +360,7 @@ select throws_ok(
      where id = '00000000-0000-4000-8000-00000000c001' $$,
   '23514',
   null,
-  'an edit can''t leave the no-receipt reason blank'
+  'a blank no-receipt reason is stored as null, not blank'
 );
 
 with removed as (

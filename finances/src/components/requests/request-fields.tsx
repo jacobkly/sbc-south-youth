@@ -279,6 +279,7 @@ export function RequestFields({
         <FormField
           id={requestFieldId("no_receipt_reason")}
           label="Why there's no receipt"
+          optional
           hint="Like a lost receipt, or backfilled from payment history."
           error={errors.no_receipt_reason}
         >

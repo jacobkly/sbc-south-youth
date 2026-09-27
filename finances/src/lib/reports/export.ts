@@ -34,6 +34,7 @@ export const REPORT_CSV_HEADER = [
   "payment_method",
   "payment_reference",
   "receipt_count",
+  "no_receipt",
   "no_receipt_reason",
 ] as const;
 
@@ -63,6 +64,7 @@ export function reportCsvRow(row: ReportExportRow): CsvValue[] {
     row.payment_method && PAYMENT_METHOD_LABELS[row.payment_method],
     row.payment_reference,
     row.receipts[0]?.count ?? 0,
+    row.no_receipt ? "Yes" : "No",
     row.no_receipt_reason,
   ];
 }

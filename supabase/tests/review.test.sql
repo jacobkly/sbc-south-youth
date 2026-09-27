@@ -149,7 +149,7 @@ select throws_ok(
 select throws_ok(
   $$ select public.submit_request('00000000-0000-4000-8000-00000000c001') $$,
   '23514',
-  'Add at least one receipt, or mark it as having no receipt and give a reason.',
+  'Add at least one receipt, or mark it as having no receipt.',
   'a request with no receipt and no exception can''t be submitted'
 );
 

@@ -18,7 +18,7 @@ const QUEUE_COLUMNS =
 const REPORT_COLUMNS = `${QUEUE_COLUMNS}, payee_id, paid_at` as const;
 const EXPORT_COLUMNS = `
   request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
-  submitted_at, external_approver, approved_at, paid_at, payment_method, payment_reference, no_receipt_reason,
+  submitted_at, external_approver, approved_at, paid_at, payment_method, payment_reference, no_receipt, no_receipt_reason,
   payee:payees(full_name),
   entered_by:users!reimbursement_requests_created_by_fkey(full_name),
   approver:users!reimbursement_requests_approved_by_fkey(full_name),
