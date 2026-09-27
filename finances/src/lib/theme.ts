@@ -1,7 +1,9 @@
 /**
- * The color theme, picked in Settings and saved on each device. Grey sits on
- * top of dark (`class="dark grey"`), so every `dark:` style still applies and
- * grey only swaps the color tokens in globals.css.
+ * The color theme, picked in Settings. It's saved on the account so it
+ * follows the user to every device, and on each device so it applies before
+ * the first paint, even on the sign-in page. Grey sits on top of dark
+ * (`class="dark grey"`), so every `dark:` style still applies and grey only
+ * swaps the color tokens in globals.css.
  */
 
 export const THEMES = ["light", "grey", "dark", "system"] as const;
@@ -40,17 +42,30 @@ export const THEME_CONFIG: ThemeConfig = {
   colors: { light: "#ffffff", grey: "#262626", dark: "#0a0a0a" },
 };
 
-export function parseTheme(value: string | null): Theme {
-  return THEMES.find((theme) => theme === value) ?? DEFAULT_THEME;
+/** A known theme, or null for nothing or anything else. */
+export function parseSavedTheme(value: string | null | undefined): Theme | null {
+  return THEMES.find((theme) => theme === value) ?? null;
 }
 
-/** The saved theme, or the default when nothing's saved or storage is blocked. */
-export function readTheme(): Theme {
+export function parseTheme(value: string | null): Theme {
+  return parseSavedTheme(value) ?? DEFAULT_THEME;
+}
+
+/** This page load's pick, for when storage is blocked. */
+let pickedTheme: Theme | null = null;
+
+/** This device's saved theme, or null when it hasn't picked one. */
+export function readSavedTheme(): Theme | null {
   try {
-    return parseTheme(localStorage.getItem(THEME_KEY));
+    return parseSavedTheme(localStorage.getItem(THEME_KEY));
   } catch {
-    return DEFAULT_THEME;
+    return pickedTheme;
   }
+}
+
+/** The theme on screen: this device's pick, or the default. */
+export function readTheme(): Theme {
+  return readSavedTheme() ?? DEFAULT_THEME;
 }
 
 /**
@@ -81,8 +96,31 @@ export function applyTheme({ key, themes, fallback, colors }: ThemeConfig, picke
 /** The `<head>` script that applies the theme before the page first paints. */
 export const THEME_SCRIPT = `(${applyTheme.toString()})(${JSON.stringify(THEME_CONFIG)})`;
 
-/** Saves a new theme and applies it, without animating every color at once. */
+/**
+ * A script for the signed-in page's HTML: it saves the account's theme on
+ * this device and applies it, before the page first paints.
+ */
+export function accountThemeScript(theme: Theme): string {
+  const value = JSON.stringify(theme);
+  return `try{localStorage.setItem(${JSON.stringify(THEME_KEY)},${value})}catch(e){};(${applyTheme.toString()})(${JSON.stringify(THEME_CONFIG)},${value})`;
+}
+
+/**
+ * What to do when a signed-in page loads. The account's theme wins over this
+ * device's. A device that picked one before the account had any saves it to
+ * the account.
+ */
+export function reconcileTheme(
+  account: Theme | null,
+  device: Theme | null,
+): { apply: Theme } | { upload: Theme } | null {
+  if (account) return account === device ? null : { apply: account };
+  return device ? { upload: device } : null;
+}
+
+/** Saves a new theme on this device and applies it, without animating every color at once. */
 export function saveTheme(theme: Theme): void {
+  pickedTheme = theme;
   try {
     localStorage.setItem(THEME_KEY, theme);
   } catch {

@@ -169,6 +169,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "receipts_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "request_report"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "receipts_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
@@ -336,6 +343,13 @@ export type Database = {
             referencedRelation: "reimbursement_requests"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "request_events_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "request_report"
+            referencedColumns: ["id"]
+          },
         ]
       }
       users: {
@@ -347,6 +361,7 @@ export type Database = {
           id: string
           is_active: boolean
           role: Database["public"]["Enums"]["user_role"]
+          theme: string | null
           updated_at: string
         }
         Insert: {
@@ -357,6 +372,7 @@ export type Database = {
           id: string
           is_active?: boolean
           role?: Database["public"]["Enums"]["user_role"]
+          theme?: string | null
           updated_at?: string
         }
         Update: {
@@ -367,6 +383,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           role?: Database["public"]["Enums"]["user_role"]
+          theme?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -397,6 +414,54 @@ export type Database = {
           submitted_at: string | null
           type: Database["public"]["Enums"]["reimbursement_type"] | null
           vendor: string | null
+        }
+        Insert: {
+          amount_cents?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_by?: string | null
+          description?: string | null
+          event_name?: string | null
+          external_approver?: string | null
+          id?: string | null
+          no_receipt?: boolean | null
+          no_receipt_reason?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          paid_date?: never
+          payee_id?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference?: string | null
+          purchase_date?: string | null
+          request_number?: number | null
+          status?: Database["public"]["Enums"]["request_status"] | null
+          submitted_at?: string | null
+          type?: Database["public"]["Enums"]["reimbursement_type"] | null
+          vendor?: string | null
+        }
+        Update: {
+          amount_cents?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_by?: string | null
+          description?: string | null
+          event_name?: string | null
+          external_approver?: string | null
+          id?: string | null
+          no_receipt?: boolean | null
+          no_receipt_reason?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          paid_date?: never
+          payee_id?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference?: string | null
+          purchase_date?: string | null
+          request_number?: number | null
+          status?: Database["public"]["Enums"]["request_status"] | null
+          submitted_at?: string | null
+          type?: Database["public"]["Enums"]["reimbursement_type"] | null
+          vendor?: string | null
         }
         Relationships: [
           {

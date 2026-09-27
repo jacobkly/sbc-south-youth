@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { cn } from "cn";
+import { AccountTheme } from "@/components/account-theme";
 import { AdminNav } from "@/components/nav/admin-nav";
 import type { NavUser } from "@/components/nav/nav-items";
 import { NoAccess } from "@/components/nav/no-access";
 import { RefreshOnHistory } from "@/components/nav/refresh-on-history";
 import { canUseApp, getCurrentUser } from "@/lib/auth/current-user";
+import { parseSavedTheme } from "@/lib/theme";
 
 /**
  * Role gate and navigation for every signed-in screen. This is a UX gate:
@@ -17,9 +19,13 @@ export async function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ShellLayout role={user.role} name={user.full_name} avatarPath={user.avatar_path}>
-      {children}
-    </ShellLayout>
+    <>
+      {/* First, so its script applies the account's theme before the page paints. */}
+      <AccountTheme userId={user.id} theme={parseSavedTheme(user.theme)} />
+      <ShellLayout role={user.role} name={user.full_name} avatarPath={user.avatar_path}>
+        {children}
+      </ShellLayout>
+    </>
   );
 }
 

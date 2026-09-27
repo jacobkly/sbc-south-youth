@@ -1,9 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { cn } from "cn";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { saveAccountTheme } from "@/lib/account-theme";
+import { createClient } from "@/lib/supabase/client";
 import { parseTheme, readTheme, saveTheme, THEME_EVENT, THEME_LABELS, THEMES, type Appearance, type Theme } from "@/lib/theme";
 
 const ID = "settings-theme";
@@ -50,10 +52,25 @@ function ThemePreview({ theme }: { theme: Theme }) {
   );
 }
 
-/** Light, Grey, Dark, or System, saved on this device only. It applies right away. */
-export function ThemePicker({ className }: { className?: string }) {
+/**
+ * Light, Grey, Dark, or System. It applies right away and is saved on this
+ * device, then on the account so other devices get it too.
+ */
+export function ThemePicker({ userId, className }: { userId: string | null; className?: string }) {
   // Unknown until the page is in the browser, so nothing's picked while it loads.
   const theme = useSyncExternalStore(subscribe, readTheme, () => null);
+  const [notSaved, setNotSaved] = useState(false);
+
+  function pick(value: string) {
+    const next = parseTheme(value);
+    saveTheme(next);
+    if (!userId) return;
+    // Saves finish in order, so the last one to finish is the latest pick.
+    saveAccountTheme(createClient(), userId, next).then(
+      () => setNotSaved(false),
+      () => setNotSaved(true),
+    );
+  }
 
   return (
     <section aria-labelledby={`${ID}-heading`} className={cn("space-y-3", className)}>
@@ -62,7 +79,7 @@ export function ThemePicker({ className }: { className?: string }) {
       </h2>
       <RadioGroup
         value={theme ?? ""}
-        onValueChange={(value) => saveTheme(parseTheme(value))}
+        onValueChange={pick}
         aria-labelledby={`${ID}-heading`}
         aria-describedby={`${ID}-hint`}
         className="grid-cols-2 gap-3 sm:grid-cols-4"
@@ -82,8 +99,14 @@ export function ThemePicker({ className }: { className?: string }) {
         ))}
       </RadioGroup>
       <p id={`${ID}-hint`} className="text-sm text-muted-foreground">
-        Saved on this device only. System follows the device&apos;s light or dark mode.
+        Saved to your account, so it follows you to every device. System follows each device&apos;s light or dark
+        mode.
       </p>
+      {notSaved && (
+        <p role="alert" className="text-sm text-destructive">
+          Couldn&apos;t save it to your account, so only this device has it. Check your connection and pick it again.
+        </p>
+      )}
     </section>
   );
 }

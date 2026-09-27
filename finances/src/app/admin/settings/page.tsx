@@ -29,7 +29,7 @@ export default async function SettingsPage() {
       {/* Viewers can read the settings. The update policy lets only admins change them. */}
       {user?.role === "admin" ? <SettingsForm settings={settings} /> : <SettingsSummary settings={settings} />}
 
-      <ThemePicker className="border-t pt-6" />
+      <ThemePicker userId={user?.id ?? null} className="border-t pt-6" />
 
       {user?.role === "admin" && (
         <section aria-labelledby="settings-import-heading" className="space-y-3 border-t pt-6">
