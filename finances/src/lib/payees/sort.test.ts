@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePayeeSort, payeesHref, sortPayees } from "./sort";
+import { sortPayees } from "./sort";
 
 const PAYEES = [
   { id: "p1", full_name: "Sam Sample", created_at: "2026-03-01T17:00:00+00:00" },
@@ -46,21 +46,5 @@ describe("sortPayees", () => {
     const copy = [...PAYEES];
     sortPayees(PAYEES, "name", PAID);
     expect(PAYEES).toEqual(copy);
-  });
-});
-
-describe("payee sort URL", () => {
-  it("reads the sort, falling back to name", () => {
-    expect(parsePayeeSort({ sort: "paid" })).toBe("paid");
-    expect(parsePayeeSort({ sort: ["newest", "paid"] })).toBe("newest");
-    expect(parsePayeeSort({})).toBe("name");
-    expect(parsePayeeSort({ sort: "loudest" })).toBe("name");
-  });
-
-  it("leaves the default out of the URL", () => {
-    expect(payeesHref("name")).toBe("/admin/payees");
-    expect(payeesHref("paid")).toBe("/admin/payees?sort=paid");
-    const params = new URL(payeesHref("newest"), "http://x").searchParams;
-    expect(parsePayeeSort(Object.fromEntries(params))).toBe("newest");
   });
 });

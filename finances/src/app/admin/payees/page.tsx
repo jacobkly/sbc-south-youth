@@ -3,8 +3,8 @@ import { PayeeList } from "@/components/payees/payee-list";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { todayInLA } from "@/lib/dates";
 import { PAYEE_LIST_COLUMNS } from "@/lib/payees/columns";
-import { parsePayeeSort } from "@/lib/payees/sort";
 import { loadYearTotals } from "@/lib/payees/totals";
+import { parsePayeeView } from "@/lib/payees/view";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -25,7 +25,7 @@ export default async function PayeesPage({ searchParams }: PageProps<"/admin/pay
   return (
     <PayeeList
       payees={payees}
-      sort={parsePayeeSort(await searchParams)}
+      view={parsePayeeView(await searchParams)}
       canEdit={user?.role === "admin"}
       yearTotals={yearTotals}
       year={year}

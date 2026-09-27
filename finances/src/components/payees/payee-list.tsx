@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useEffectEvent, useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowDownUpIcon, ChevronDownIcon, ChevronRightIcon, PlusIcon, SearchIcon } from "lucide-react";
@@ -20,29 +20,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCents } from "@/lib/money";
 import type { PayeeListRow } from "@/lib/payees/columns";
 import { payeeMatches, payeeSearchNeedle } from "@/lib/payees/search";
-import { PAYEE_SORTS, payeesHref, sortPayees, type PayeeSort } from "@/lib/payees/sort";
+import { PAYEE_SORTS, sortPayees, type PayeeSort } from "@/lib/payees/sort";
+import { payeesHref, type PayeeStatus, type PayeeView } from "@/lib/payees/view";
 import { cn } from "@/lib/utils";
-
-type StatusFilter = "active" | "inactive";
 
 /** Name, payment handle, email, paid this year, and the chevron, once the list is wide. */
 const COLUMNS = "@4xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1.25fr)_8rem_1rem] @4xl:gap-4";
 
+const SEARCH_DELAY_MS = 300;
+
 /**
  * Payees with search, a sort, and an active/inactive filter. There are few
  * enough payees to filter and sort in the browser, which keeps it instant.
- * The sort lives in the URL, so coming back from a payee keeps it. Each row
- * shows what the payee was paid this year and opens their page.
+ * The tab, search, and sort live in the URL, so coming back from a payee
+ * keeps them. Each row shows what the payee was paid this year and opens
+ * their page.
  */
 export function PayeeList({
   payees,
-  sort,
+  view,
   canEdit,
   yearTotals,
   year,
 }: {
   payees: PayeeListRow[];
-  sort: PayeeSort;
+  view: PayeeView;
   canEdit: boolean;
   /** Cents paid to each payee id during `year`. */
   yearTotals: Record<string, number>;
@@ -50,27 +52,45 @@ export function PayeeList({
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [shownSort, setShownSort] = useOptimistic(sort);
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("active");
+  const [shown, setShown] = useOptimistic(view);
+  const [query, setQuery] = useState(view.q);
+  const [loadedQuery, setLoadedQuery] = useState(view.q);
   const [adding, setAdding] = useState(false);
 
+  // The search can change without typing, like tapping Payees in the nav.
+  // Show it in the box, unless the user has typed something newer.
+  if (view.q !== loadedQuery) {
+    setLoadedQuery(view.q);
+    if (query.trim() === loadedQuery) setQuery(view.q);
+  }
+
   // Through the router, not history.replaceState, so a refresh after going back doesn't scroll to the top.
-  function changeSort(next: PayeeSort) {
+  function navigate(changes: Partial<PayeeView>) {
+    const next = { ...shown, ...changes };
     startTransition(() => {
-      setShownSort(next);
+      setShown(next);
       router.replace(payeesHref(next), { scroll: false });
     });
   }
 
+  const searchIfChanged = useEffectEvent((text: string) => {
+    if (text.trim() !== shown.q) navigate({ q: text.trim() });
+  });
+
+  // The list filters as you type. The URL catches up once typing pauses.
+  useEffect(() => {
+    const timer = setTimeout(() => searchIfChanged(query), SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
   const needle = payeeSearchNeedle(query);
-  const sorted = sortPayees(payees, shownSort, yearTotals);
+  const sorted = sortPayees(payees, shown.sort, yearTotals);
   const byStatus = {
     active: sorted.filter((payee) => payee.is_active),
     inactive: sorted.filter((payee) => !payee.is_active),
   };
 
-  function renderList(filter: StatusFilter) {
+  function renderList(filter: PayeeStatus) {
     const visible = byStatus[filter].filter((payee) => payeeMatches(payee, needle));
 
     if (visible.length === 0) {
@@ -98,7 +118,7 @@ export function PayeeList({
     return (
       <div className="@container">
         <div className="flex items-center justify-between gap-3">
-          <SortMenu sort={shownSort} year={year} onChange={changeSort} />
+          <SortMenu sort={shown.sort} year={year} onChange={(sort) => navigate({ sort })} />
           {/* Screen readers get the year on each amount instead. A wide list has it in its header. */}
           <p className="pr-11 text-xs text-muted-foreground @4xl:hidden" aria-hidden>
             Paid in {year}
@@ -172,7 +192,7 @@ export function PayeeList({
         )}
       </div>
 
-      <Tabs value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>
+      <Tabs value={shown.status} onValueChange={(value) => navigate({ status: value as PayeeStatus })}>
         {/* Stacked on a phone, and one toolbar row on a PC. */}
         <div className="space-y-4 @4xl/main:flex @4xl/main:items-center @4xl/main:gap-4 @4xl/main:space-y-0">
           <div className="relative @4xl/main:w-96">
