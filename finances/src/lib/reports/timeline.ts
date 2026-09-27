@@ -203,13 +203,15 @@ export function bucketTick({ start }: DateRange, unit: TimelineUnit): string {
 }
 
 /**
- * The full name of a bar, e.g. "Sep 5, 2026", "Jul 29 – Aug 4",
- * "September 2026", or "2026". Weeks show the year only when they cross one.
+ * The full name of a bar, e.g. "Sep 5", "Jul 29 – Aug 4", "September 2026",
+ * or "2026". The report's period already names the year, so days and weeks
+ * leave it out, unless a week crosses into a new one. That keeps the numbers
+ * table narrow enough for a phone.
  */
 export function bucketLabel({ start, end }: DateRange, unit: TimelineUnit): string {
   switch (unit) {
     case "day":
-      return formatDate(start);
+      return shortDate(start);
     case "week":
       if (start.slice(0, 4) !== end.slice(0, 4)) return `${formatDate(start)} – ${formatDate(end)}`;
       if (start.slice(0, 7) === end.slice(0, 7)) return `${shortDate(start)} – ${Number(end.slice(8))}`;
