@@ -17,6 +17,7 @@ import { ReceiptViewer } from "@/components/receipts/receipt-viewer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { formatCents } from "@/lib/money";
+import { neighborsOf } from "@/lib/receipts/swipe";
 import { MAX_RECEIPTS } from "@/lib/receipts/upload";
 import { formatRequestNumber, REQUEST_STATUS_LABELS } from "@/lib/requests/format";
 import { cn } from "@/lib/utils";
@@ -65,8 +66,14 @@ export function ReceiptPicker({
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [viewing, setViewing] = useState<PendingReceipt | null>(null);
+  const [viewingKey, setViewingKey] = useState<string | null>(null);
 
+  const viewingIndex = receipts.findIndex((receipt) => receipt.key === viewingKey);
+  const viewing = viewingIndex === -1 ? null : receipts[viewingIndex];
+  // Photos that are ready. PDFs open in a tab, so swiping skips them.
+  const { previous, next } = neighborsOf(receipts, viewingIndex, (receipt) =>
+    Boolean(receipt.url && receipt.prepared?.width && receipt.prepared.height),
+  );
   const full = receipts.length >= max;
   const canAdd = !full && !locked;
   const repeats = pickedTwice(receipts);
@@ -135,7 +142,7 @@ export function ReceiptPicker({
                 receipt={receipt}
                 duplicate={duplicates.includes(receipt)}
                 locked={locked}
-                onView={() => setViewing(receipt)}
+                onView={() => setViewingKey(receipt.key)}
                 onRemove={() => onRemove(receipt.key)}
               />
             </li>
@@ -217,7 +224,9 @@ export function ReceiptPicker({
           url={viewing.url}
           width={viewing.prepared.width}
           height={viewing.prepared.height}
-          onClose={() => setViewing(null)}
+          onPrevious={previous ? () => setViewingKey(previous.key) : undefined}
+          onNext={next ? () => setViewingKey(next.key) : undefined}
+          onClose={() => setViewingKey(null)}
         />
       )}
     </div>

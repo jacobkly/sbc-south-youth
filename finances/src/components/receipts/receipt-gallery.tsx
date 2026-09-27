@@ -6,6 +6,7 @@ import { ReceiptViewer } from "@/components/receipts/receipt-viewer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { isJustSigned, isSignedUrlStale, signReceiptUrls, type SignedReceiptUrls } from "@/lib/receipts/signed-urls";
+import { neighborsOf } from "@/lib/receipts/swipe";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -134,6 +135,9 @@ export function ReceiptGallery({
   }
 
   const viewingUrl = viewing ? signed.urls[viewing.path] : undefined;
+  const viewingIndex = viewing ? receipts.findIndex((receipt) => receipt.id === viewing.id) : -1;
+  // PDFs open in a tab, so swiping skips them.
+  const { previous, next } = neighborsOf(receipts, viewingIndex, (receipt) => receipt.mimeType !== "application/pdf");
 
   return (
     <div className="@container space-y-3">
@@ -240,10 +244,12 @@ export function ReceiptGallery({
 
       {viewing && viewingUrl && (
         <ReceiptViewer
-          title={receiptTitle(receipts.indexOf(viewing), receipts.length)}
+          title={receiptTitle(viewingIndex, receipts.length)}
           url={viewingUrl}
           width={viewing.width}
           height={viewing.height}
+          onPrevious={previous ? () => void openImage(previous) : undefined}
+          onNext={next ? () => void openImage(next) : undefined}
           onClose={() => setViewing(null)}
         />
       )}

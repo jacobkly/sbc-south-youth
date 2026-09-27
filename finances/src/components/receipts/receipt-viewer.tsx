@@ -9,9 +9,10 @@ import {
   type PointerEvent,
 } from "react";
 import { cn } from "cn";
-import { LoaderCircleIcon, MinusIcon, PlusIcon, XIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, LoaderCircleIcon, MinusIcon, PlusIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { releaseVelocity, swipeOffset, swipeStep, type Sample } from "@/lib/receipts/swipe";
 import {
   clampView,
   doubleTapView,
@@ -37,6 +38,8 @@ const STEP = 1.5;
 /** How far an arrow key pans. */
 const ARROW_PAN = 80;
 const CENTER: Point = { x: 0, y: 0 };
+/** How much of a drag to keep, to tell a flick from a careful drag. */
+const SAMPLE_MS = 100;
 
 const ARROWS: Record<string, Point> = {
   ArrowLeft: { x: ARROW_PAN, y: 0 },
@@ -49,21 +52,33 @@ const OVERLAY = "pointer-events-none absolute inset-x-0 transition-[opacity,visi
 const OVERLAY_HIDDEN = "invisible opacity-0";
 const OVERLAY_BUTTON =
   "pointer-events-auto size-11 rounded-full text-white hover:bg-white/15 hover:text-white focus-visible:border-white/60 focus-visible:ring-white/40 disabled:opacity-40 dark:hover:bg-white/15";
+// aria-disabled rather than disabled at the ends, so a focused button keeps focus and the arrow keys keep working.
+const SIDE_BUTTON =
+  "bg-black/50 ring-1 ring-white/15 aria-disabled:cursor-default aria-disabled:opacity-40 aria-disabled:hover:bg-black/50 dark:bg-black/50 dark:aria-disabled:hover:bg-black/50 touch:sr-only";
 
-/** The pan or pinch in progress: the view and fingers when it started. */
-type Gesture = { start: View; from: Pinch; tap: Point | null; pinched: boolean };
+/** 1 for the next receipt, -1 for the previous one. */
+type Direction = 1 | -1;
 
 /**
- * Full-screen view of one receipt image on black. Pinch, double-tap, or
+ * The pan, pinch, or swipe in progress: the view and fingers when it
+ * started, and where the finger has been lately.
+ */
+type Gesture = { start: View; from: Pinch; tap: Point | null; pinched: boolean; samples: Sample[] };
+
+/**
+ * Full-screen view of a receipt image on black. Pinch, double-tap, or
  * scroll to zoom and drag to pan, all inside the viewer, so the page itself
  * never zooms. Tapping the image shows or hides the title and buttons, and
- * tapping the black around it closes the viewer, like Esc and the X.
+ * tapping the black around it closes the viewer, like Esc and the X. With
+ * more than one receipt, swipe or use the arrow keys to step through them.
  */
 export function ReceiptViewer({
   title,
   url,
   width,
   height,
+  onPrevious,
+  onNext,
   onClose,
 }: {
   title: string;
@@ -71,15 +86,22 @@ export function ReceiptViewer({
   /** Unknown for older receipts, which are measured once they load. */
   width: number | null;
   height: number | null;
+  /** Shows the receipt before this one. Left out for the first. */
+  onPrevious?: () => void;
+  /** Shows the receipt after this one. Left out for the last. */
+  onNext?: () => void;
   onClose: () => void;
 }) {
   const [stageEl, setStageEl] = useState<HTMLDivElement | null>(null);
   const [stage, setStage] = useState<Size | null>(null);
-  const [measured, setMeasured] = useState<Size | null>(null);
-  const [status, setStatus] = useState<"loading" | "loaded" | "failed">("loading");
+  // By URL, so stepping to another receipt starts out loading.
+  const [loaded, setLoaded] = useState<{ url: string; size: Size } | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   const [view, setView] = useState<View>(FIT);
   const [animate, setAnimate] = useState(false);
   const [chrome, setChrome] = useState(true);
+  // The receipt just stepped away from, so the new one slides in from the side it came from.
+  const [entered, setEntered] = useState<{ from: string; direction: Direction } | null>(null);
 
   // Handlers can run several times between renders, so they read these.
   const viewRef = useRef<View>(FIT);
@@ -89,9 +111,13 @@ export function ReceiptViewer({
   // There's no DialogTrigger, so the dialog can't find the tile that opened it.
   const opener = useRef<HTMLElement | null>(null);
 
-  const natural = width && height ? { width, height } : measured;
+  const status = failed === url ? "failed" : loaded?.url === url ? "loaded" : "loading";
+  const natural = width && height ? { width, height } : loaded?.url === url ? loaded.size : null;
   const fit = natural && stage && status === "loaded" ? fitSize(natural, stage) : null;
   const zoomed = view.scale > 1;
+  const sides = { previous: Boolean(onPrevious), next: Boolean(onNext) };
+  const several = sides.previous || sides.next;
+  const sliding = fit && entered && entered.from !== url ? entered.direction : 0;
 
   function show(next: View, animated = false) {
     viewRef.current = next;
@@ -119,7 +145,13 @@ export function ReceiptViewer({
     pointers.current.set(event.pointerId, point);
 
     if (pointers.current.size === 1) {
-      gesture.current = { start: viewRef.current, from: { mid: point, distance: 0 }, tap: point, pinched: false };
+      gesture.current = {
+        start: viewRef.current,
+        from: { mid: point, distance: 0 },
+        tap: point,
+        pinched: false,
+        samples: [{ x: point.x, t: event.timeStamp }],
+      };
     } else if (gesture.current) {
       gesture.current.tap = null;
       gesture.current.pinched = true;
@@ -134,14 +166,18 @@ export function ReceiptViewer({
     const point = stagePoint(event.currentTarget, event.clientX, event.clientY);
     pointers.current.set(event.pointerId, point);
     if (g.tap && Math.hypot(point.x - g.tap.x, point.y - g.tap.y) > TAP_SLOP) g.tap = null;
-    if (!fit || !stage) return;
+    g.samples = [...g.samples.filter((sample) => event.timeStamp - sample.t <= SAMPLE_MS), { x: point.x, t: event.timeStamp }];
+    if (!stage) return;
 
     const [a, b] = pointers.current.values();
     if (b) {
       // A little give past the limits while pinching, then it settles back.
-      show(clampView(pinchView(g.start, g.from, pinchOf(a, b)), fit, stage, 0.75, MAX_SCALE * 1.25));
+      if (fit) show(clampView(pinchView(g.start, g.from, pinchOf(a, b)), fit, stage, 0.75, MAX_SCALE * 1.25));
     } else if (g.start.scale > 1) {
-      show(clampView({ ...g.start, x: g.start.x + a.x - g.from.mid.x, y: g.start.y + a.y - g.from.mid.y }, fit, stage));
+      if (fit) show(clampView({ ...g.start, x: g.start.x + a.x - g.from.mid.x, y: g.start.y + a.y - g.from.mid.y }, fit, stage));
+    } else if (several && !g.pinched) {
+      // At fit, a sideways drag carries the receipt with the finger, even while it loads.
+      show({ ...FIT, x: swipeOffset(a.x - g.from.mid.x, stage.width, sides) });
     }
   }
 
@@ -153,8 +189,39 @@ export function ReceiptViewer({
       return;
     }
     gesture.current = null;
-    if (g?.pinched && fit && stage) show(clampView(viewRef.current, fit, stage), true);
-    else if (g?.tap && event.type === "pointerup") tapped(g.tap);
+    if (!g) return;
+    if (g.pinched) {
+      if (fit && stage) show(clampView(viewRef.current, fit, stage), true);
+      return;
+    }
+
+    const swiped = g.start.scale <= 1 && viewRef.current.x !== 0;
+    if (g.tap) {
+      if (swiped) show(FIT, true);
+      if (event.type === "pointerup") tapped(g.tap);
+      return;
+    }
+    if (!swiped || !stage) return;
+    if (event.type === "pointerup") {
+      const point = stagePoint(event.currentTarget, event.clientX, event.clientY);
+      const drag = { x: point.x - g.from.mid.x, y: point.y - g.from.mid.y };
+      const direction = swipeStep(drag, releaseVelocity(g.samples, event.timeStamp), stage.width, sides);
+      if (direction) {
+        step(direction);
+        return;
+      }
+    }
+    show(FIT, true);
+  }
+
+  function step(direction: Direction) {
+    const go = direction === 1 ? onNext : onPrevious;
+    if (!go) return;
+    show(FIT);
+    // One that failed gets another try when it comes back around.
+    setFailed(null);
+    setEntered({ from: url, direction });
+    go();
   }
 
   function tapped(point: Point) {
@@ -180,7 +247,14 @@ export function ReceiptViewer({
   }
 
   function onKeyDown(event: KeyboardEvent) {
-    if (!fit || !stage || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    // Zoomed in, the arrows pan instead.
+    if (several && !zoomed && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+      event.preventDefault();
+      step(event.key === "ArrowRight" ? 1 : -1);
+      return;
+    }
+    if (!fit || !stage) return;
     const pan = ARROWS[event.key];
     if (event.key === "+" || event.key === "=") zoomStep(STEP);
     else if (event.key === "-") zoomStep(1 / STEP);
@@ -259,20 +333,25 @@ export function ReceiptViewer({
             // Blob and signed URLs, so next/image doesn't apply.
             // eslint-disable-next-line @next/next/no-img-element
             <img
+              // A new element for each receipt, so the last one never shows at the new one's size.
+              key={url}
               src={url}
               alt={title}
               draggable={false}
               onLoad={(event) => {
                 const img = event.currentTarget;
-                setMeasured({ width: img.naturalWidth, height: img.naturalHeight });
-                setStatus("loaded");
+                setLoaded({ url, size: { width: img.naturalWidth, height: img.naturalHeight } });
               }}
-              onError={() => setStatus("failed")}
+              onError={() => setFailed(url)}
+              onAnimationEnd={() => setEntered(null)}
               // Sized rather than scaled with a transform, so zoomed-in text is drawn sharp.
               className={cn(
                 "absolute max-w-none",
                 !fit && "invisible",
                 animate && "transition-[left,top,width,height] duration-250 ease-out motion-reduce:transition-none",
+                sliding !== 0 && "animate-in duration-250 ease-out fade-in motion-reduce:animate-none",
+                sliding === 1 && "slide-in-from-right-12",
+                sliding === -1 && "slide-in-from-left-12",
               )}
               style={
                 fit && stage
@@ -306,7 +385,10 @@ export function ReceiptViewer({
             !chrome && OVERLAY_HIDDEN,
           )}
         >
-          <DialogTitle className="min-w-0 flex-1 truncate leading-6 text-white">{title}</DialogTitle>
+          {/* Live, so a screen reader hears which receipt it stepped to. */}
+          <DialogTitle aria-live="polite" className="min-w-0 flex-1 truncate leading-6 text-white">
+            {title}
+          </DialogTitle>
           <DialogClose asChild>
             <Button variant="ghost" size="icon" className={OVERLAY_BUTTON} aria-label="Close">
               <XIcon className="size-5" />
@@ -314,8 +396,35 @@ export function ReceiptViewer({
           </DialogClose>
         </div>
         <DialogDescription className="sr-only">
-          Pinch, double-tap, or scroll to zoom. Tap outside the receipt to close.
+          Pinch, double-tap, or scroll to zoom.
+          {several && " Swipe or use the arrow keys to see the other receipts."} Tap outside the receipt to close.
         </DialogDescription>
+
+        {/* Phones swipe, so there these are only for screen readers. */}
+        {several && (
+          <div className={cn(OVERLAY, "top-1/2 flex -translate-y-1/2 justify-between px-2", !chrome && OVERLAY_HIDDEN)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(OVERLAY_BUTTON, SIDE_BUTTON)}
+              aria-label="Previous receipt"
+              aria-disabled={!onPrevious}
+              onClick={() => step(-1)}
+            >
+              <ChevronLeftIcon className="size-6" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(OVERLAY_BUTTON, SIDE_BUTTON)}
+              aria-label="Next receipt"
+              aria-disabled={!onNext}
+              onClick={() => step(1)}
+            >
+              <ChevronRightIcon className="size-6" />
+            </Button>
+          </div>
+        )}
 
         {/* Phones pinch, so the buttons are only for a mouse or trackpad. */}
         <div
