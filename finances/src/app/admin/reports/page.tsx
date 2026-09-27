@@ -3,7 +3,7 @@ import { ReportView } from "@/components/reports/report-view";
 import { todayInLA } from "@/lib/dates";
 import { comparisonPeriod } from "@/lib/reports/comparison";
 import { parseReportFilters, parseReportPage, parseReportTab } from "@/lib/reports/filters";
-import { loadReport, loadReportAmounts } from "@/lib/requests/queries";
+import { loadReport, loadReportAmounts, loadReturningPayees } from "@/lib/requests/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -16,10 +16,11 @@ export default async function ReportsPage({ searchParams }: PageProps<"/admin/re
   const filters = parseReportFilters(params, today);
   const beforePeriod = comparisonPeriod(filters.period, today);
   const supabase = await createClient();
-  // Both throw on failure, and admin/error.tsx handles it.
-  const [rows, beforeRows] = await Promise.all([
+  // Each throws on failure, and admin/error.tsx handles it.
+  const [rows, beforeRows, returning] = await Promise.all([
     loadReport(supabase, filters),
     loadReportAmounts(supabase, { ...filters, period: beforePeriod }),
+    loadReturningPayees(supabase, filters),
   ]);
 
   return (
@@ -30,6 +31,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/admin/re
       today={today}
       rows={rows}
       before={{ period: beforePeriod, rows: beforeRows }}
+      returning={returning}
     />
   );
 }

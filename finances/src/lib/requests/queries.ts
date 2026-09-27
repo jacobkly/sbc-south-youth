@@ -180,6 +180,25 @@ export async function loadReportAmounts(supabase: SupabaseClient<Database>, filt
   );
 }
 
+/**
+ * The payees with a request the report would count from before its period,
+ * so its other payees are new. One request each is enough to know. Throws if
+ * a query fails.
+ */
+export async function loadReturningPayees(supabase: SupabaseClient<Database>, filters: ReportFilters) {
+  const { column, from, statuses } = reportBounds(filters);
+  const rows = await fetchAll((start, end) => {
+    let query = supabase
+      .from("payees")
+      .select("id, reimbursement_requests!inner(id)")
+      .lt(`reimbursement_requests.${column}`, from)
+      .limit(1, { referencedTable: "reimbursement_requests" });
+    if (statuses) query = query.in("reimbursement_requests.status", statuses);
+    return query.order("id").range(start, end);
+  });
+  return rows.map((row) => row.id);
+}
+
 /** Every request in a report with everything the CSV needs. Throws if a query fails. */
 export async function loadReportExport(supabase: SupabaseClient<Database>, filters: ReportFilters) {
   return fetchAll((from, to) => reportQuery(supabase, filters, EXPORT_COLUMNS).range(from, to));

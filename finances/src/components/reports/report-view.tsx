@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
-import Link from "next/link";
+import { useEffect, useOptimistic, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "cn";
 import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
 import { TrendIcon } from "@/components/dashboard/stat-cards";
 import { ExportMenu } from "@/components/reports/export-menu";
+import { PayeeBreakdowns } from "@/components/reports/payee-breakdowns";
 import { PeriodPicker } from "@/components/reports/period-picker";
 import { ReportChart } from "@/components/reports/report-chart";
 import { ReportList } from "@/components/reports/report-list";
@@ -32,7 +32,6 @@ import {
   reportHref,
   reportPayeeTotals,
   reportTotals,
-  type PayeeTotals,
   type ReportBasis,
   type ReportFilters,
   type ReportTab,
@@ -79,6 +78,7 @@ export function ReportView({
   today,
   rows,
   before,
+  returning,
 }: {
   filters: ReportFilters;
   tab: ReportTab;
@@ -87,6 +87,8 @@ export function ReportView({
   today: IsoDate;
   rows: ReportRow[];
   before: ReportBefore;
+  /** Payees with a request the report would count from before its period. */
+  returning: string[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -218,7 +220,12 @@ export function ReportView({
           </TabsContent>
           <TabsContent value="payees" className="text-base">
             {rows.length > 0 ? (
-              <PayeeTotalsSection payees={reportPayeeTotals(rows)} totalCents={totals.cents} />
+              <PayeeBreakdowns
+                payees={reportPayeeTotals(rows)}
+                totals={totals}
+                returning={new Set(returning)}
+                filters={filters}
+              />
             ) : (
               <EmptyReport filters={filters} />
             )}
@@ -433,62 +440,6 @@ function RequestsSection({
             </div>
           </nav>
         </>
-      )}
-    </section>
-  );
-}
-
-/** How many payees a long list shows before "Show all". */
-const PAYEES_SHOWN = 5;
-
-/**
- * Each payee's total and share, biggest first, linking to the payee.
- * A long list starts with the top few.
- */
-function PayeeTotalsSection({ payees, totalCents }: { payees: PayeeTotals[]; totalCents: number }) {
-  const [expanded, setExpanded] = useState(false);
-  // Hiding only one or two payees would save less than the button takes.
-  const collapsible = payees.length > PAYEES_SHOWN + 2;
-  const shown = collapsible && !expanded ? payees.slice(0, PAYEES_SHOWN) : payees;
-
-  return (
-    <section aria-labelledby="report-payees-heading" className="space-y-3">
-      <div>
-        <h2 id="report-payees-heading" className="text-lg font-semibold">
-          By payee
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {payees.length.toLocaleString()} {payees.length === 1 ? "payee" : "payees"}, most paid first
-        </p>
-      </div>
-      <ul id="report-payee-totals" className="divide-y rounded-lg border">
-        {shown.map((payee) => (
-          <li key={payee.payeeId}>
-            <Link
-              href={`/admin/payees/${payee.payeeId}`}
-              className="flex items-start justify-between gap-3 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted"
-            >
-              <span className="min-w-0 truncate text-sm font-medium">{payee.name}</span>
-              <span className="shrink-0 text-right tabular-nums">
-                <span className="block font-semibold">{formatCents(payee.cents)}</span>
-                <span className="block text-sm text-muted-foreground">
-                  {requestCount(payee.count)} · {sharePercent(payee.cents, totalCents)}
-                </span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      {collapsible && (
-        <Button
-          variant="outline"
-          className="h-11 w-full"
-          aria-controls="report-payee-totals"
-          aria-expanded={expanded}
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? `Show the top ${PAYEES_SHOWN}` : `Show all ${payees.length} payees`}
-        </Button>
       )}
     </section>
   );
