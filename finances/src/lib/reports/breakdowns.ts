@@ -84,3 +84,75 @@ export function paymentMethodBreakdown(rows: BreakdownRow[]): Slice<PaymentMetho
     .filter((slice) => slice.count > 0)
     .sort((a, b) => b.cents - a.cents || b.count - a.count);
 }
+
+/** How many vendors or events show before the rest are added up in one row. */
+export const TOP_NAMES = 10;
+
+/** A vendor or event. `key` is "name:" and the grouped name, "other" for the rest added up, or "none". */
+export type NamedSlice = Slice<string> & { label: string };
+
+/** Something spent under a name, or under no name. */
+type NamedAmount = { name: string | null; cents: number };
+
+/**
+ * Adds up amounts by name, most money first. Names that differ only in case
+ * or spacing count once, using the first spelling seen. Past the top `limit`,
+ * the rest are added up in one row, unless that's just one. Amounts with no
+ * name go last. Empty when nothing has a name.
+ */
+function byName(
+  amounts: readonly NamedAmount[],
+  words: { none: string; others: (count: number) => string },
+  limit: number,
+): NamedSlice[] {
+  const groups = new Map<string, NamedSlice>();
+  const none: NamedSlice = { key: "none", label: words.none, count: 0, cents: 0 };
+  for (const { name, cents } of amounts) {
+    const label = name?.trim();
+    let group = none;
+    if (label) {
+      const key = `name:${label.toLowerCase().replace(/\s+/g, " ")}`;
+      group = groups.get(key) ?? { key, label, count: 0, cents: 0 };
+      groups.set(key, group);
+    }
+    group.count += 1;
+    group.cents += cents;
+  }
+  if (groups.size === 0) return [];
+
+  const named = [...groups.values()].sort(
+    (a, b) => b.cents - a.cents || b.count - a.count || a.label.localeCompare(b.label),
+  );
+  const shown = named.length <= limit + 1 ? named : named.slice(0, limit);
+  if (shown.length < named.length) {
+    const rest = named.slice(limit);
+    shown.push({
+      key: "other",
+      label: words.others(rest.length),
+      count: rest.reduce((sum, slice) => sum + slice.count, 0),
+      cents: rest.reduce((sum, slice) => sum + slice.cents, 0),
+    });
+  }
+  return none.count > 0 ? [...shown, none] : shown;
+}
+
+/** What vendorBreakdown reads from each request: its receipts' amounts and vendors. */
+export type VendorRow = { lines: readonly Pick<Tables<"request_lines">, "vendor" | "amount_cents">[] };
+
+/**
+ * Where the money was spent, from each receipt, so a request with receipts
+ * from two stores counts under both. `count` is receipts, not requests.
+ */
+export function vendorBreakdown(rows: readonly VendorRow[], limit = TOP_NAMES): NamedSlice[] {
+  const amounts = rows.flatMap((row) => row.lines.map((line) => ({ name: line.vendor, cents: line.amount_cents })));
+  return byName(amounts, { none: "No vendor", others: (count) => `${count.toLocaleString()} other vendors` }, limit);
+}
+
+/** Spending on each event. */
+export function eventBreakdown(
+  rows: readonly Pick<Tables<"reimbursement_requests">, "event_name" | "amount_cents">[],
+  limit = TOP_NAMES,
+): NamedSlice[] {
+  const amounts = rows.map((row) => ({ name: row.event_name, cents: row.amount_cents }));
+  return byName(amounts, { none: "No event", others: (count) => `${count.toLocaleString()} other events` }, limit);
+}

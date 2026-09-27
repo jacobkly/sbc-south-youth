@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  eventBreakdown,
   paymentMethodBreakdown,
   receiptBreakdown,
   sizeBreakdown,
   statusBreakdown,
+  vendorBreakdown,
   type BreakdownRow,
 } from "./breakdowns";
 
@@ -101,5 +103,88 @@ describe("paymentMethodBreakdown", () => {
     const rows = [row({ status: "approved", amount_cents: 9000 }), paid("bank_transfer", 700)];
     expect(paymentMethodBreakdown(rows)).toEqual([{ key: "bank_transfer", count: 1, cents: 700 }]);
     expect(paymentMethodBreakdown([row()])).toEqual([]);
+  });
+});
+
+describe("vendorBreakdown", () => {
+  function lines(...entries: [vendor: string | null, cents: number][]) {
+    return { lines: entries.map(([vendor, amount_cents]) => ({ vendor, amount_cents })) };
+  }
+
+  it("adds up each receipt under its vendor, grouping spellings that differ only in case or spacing", () => {
+    const rows = [
+      lines(["Test  Market", 1200], ["Test Grocer", 300]),
+      lines([" test market ", 800]),
+      lines(["TEST GROCER", 2500]),
+    ];
+    expect(vendorBreakdown(rows)).toEqual([
+      { key: "name:test grocer", label: "Test Grocer", count: 2, cents: 2800 },
+      { key: "name:test market", label: "Test  Market", count: 2, cents: 2000 },
+    ]);
+  });
+
+  it("puts receipts with no vendor last, whatever they add up to", () => {
+    const rows = [lines([null, 9000], ["Test Market", 100]), lines(["  ", 50])];
+    expect(vendorBreakdown(rows)).toEqual([
+      { key: "name:test market", label: "Test Market", count: 1, cents: 100 },
+      { key: "none", label: "No vendor", count: 2, cents: 9050 },
+    ]);
+  });
+
+  it("adds up the vendors past the top ones in one row", () => {
+    const rows = [lines(["Shop A", 500], ["Shop B", 400], ["Shop C", 300], ["Shop D", 200], ["Shop D", 50], [null, 10])];
+    expect(vendorBreakdown(rows, 2)).toEqual([
+      { key: "name:shop a", label: "Shop A", count: 1, cents: 500 },
+      { key: "name:shop b", label: "Shop B", count: 1, cents: 400 },
+      { key: "other", label: "2 other vendors", count: 3, cents: 550 },
+      { key: "none", label: "No vendor", count: 1, cents: 10 },
+    ]);
+  });
+
+  it("shows one vendor past the top on its own, since adding up one saves nothing", () => {
+    const rows = [lines(["Shop A", 500], ["Shop B", 400], ["Shop C", 300])];
+    expect(vendorBreakdown(rows, 2).map((slice) => slice.label)).toEqual(["Shop A", "Shop B", "Shop C"]);
+  });
+
+  it("breaks ties by count, then by name", () => {
+    const rows = [lines(["Shop B", 500], ["Shop A", 500], ["Shop C", 250], ["Shop C", 250])];
+    expect(vendorBreakdown(rows).map((slice) => slice.label)).toEqual(["Shop C", "Shop A", "Shop B"]);
+  });
+
+  it("is empty when no receipt has a vendor", () => {
+    expect(vendorBreakdown([lines([null, 500])])).toEqual([]);
+    expect(vendorBreakdown([])).toEqual([]);
+  });
+});
+
+describe("eventBreakdown", () => {
+  function request(event_name: string | null, amount_cents: number) {
+    return { event_name, amount_cents };
+  }
+
+  it("adds up each event's requests, grouping spellings, with no event last", () => {
+    const rows = [
+      request("Test Retreat", 4000),
+      request(null, 9000),
+      request("test retreat ", 1000),
+      request("Test Kickoff", 2500),
+    ];
+    expect(eventBreakdown(rows)).toEqual([
+      { key: "name:test retreat", label: "Test Retreat", count: 2, cents: 5000 },
+      { key: "name:test kickoff", label: "Test Kickoff", count: 1, cents: 2500 },
+      { key: "none", label: "No event", count: 1, cents: 9000 },
+    ]);
+  });
+
+  it("adds up the events past the top ones in one row", () => {
+    const rows = [request("Event A", 300), request("Event B", 200), request("Event C", 100)];
+    expect(eventBreakdown(rows, 1)).toEqual([
+      { key: "name:event a", label: "Event A", count: 1, cents: 300 },
+      { key: "other", label: "2 other events", count: 2, cents: 300 },
+    ]);
+  });
+
+  it("is empty when no request is for an event", () => {
+    expect(eventBreakdown([request(null, 500)])).toEqual([]);
   });
 });
