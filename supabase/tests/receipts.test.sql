@@ -6,6 +6,11 @@ create extension if not exists pgtap with schema extensions;
 
 select plan(40);
 
+-- Receipts already in a local database, from trying the app, aren't counted.
+select set_config('test.usage_before', coalesce(sum(size_bytes), 0)::text, true)
+from public.receipts
+where storage_location = 'supabase';
+
 -- Fake people. New auth users get a member row from the signup trigger.
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-4000-8000-00000000a001', 'admin@example.test', '{"full_name": "Test Admin"}'),
@@ -223,7 +228,7 @@ select throws_ok(
 );
 
 select is(
-  public.storage_usage(),
+  public.storage_usage() - current_setting('test.usage_before')::bigint,
   8400::bigint,
   'storage_usage adds up every receipt'
 );
@@ -321,7 +326,11 @@ select throws_ok(
   'a viewer can''t upload files'
 );
 
-select is(public.storage_usage(), 7400::bigint, 'a viewer can see storage usage');
+select is(
+  public.storage_usage() - current_setting('test.usage_before')::bigint,
+  7400::bigint,
+  'a viewer can see storage usage'
+);
 
 -- As a member.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a003", "role": "authenticated"}', true);
