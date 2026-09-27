@@ -48,6 +48,9 @@ export type LateWarning = {
   sent: boolean;
 };
 
+/** A column on a PC. On a phone it drops out of the layout, so its sections join the page's single column. */
+const COLUMN = "contents @4xl/main:flex @4xl/main:flex-col @4xl/main:gap-6";
+
 /** Each detail and its value. A null value wasn't recorded. */
 function detailRows(request: RequestDetailData): [string, string | null][] {
   const rows: [string, string | null][] = [
@@ -115,69 +118,82 @@ export function RequestDetail({
         </div>
       </div>
 
-      {late && (
-        <Alert role="note">
-          <TriangleAlertIcon />
-          <AlertTitle>Late</AlertTitle>
-          <AlertDescription>
-            {late.sent ? `Sent ${late.days} days after purchase.` : `Bought ${late.days} days ago.`} Requests are due
-            within {late.limitDays} days of purchase.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/*
+        On a PC the actions and details sit on the left, and the receipts and
+        history on the right. On a phone the two columns merge into one, and
+        `order` keeps the receipts above the details.
+      */}
+      <div className="flex flex-col gap-6 @4xl/main:grid @4xl/main:grid-cols-2 @4xl/main:items-start">
+        <div className={COLUMN}>
+          {late && (
+            <Alert role="note">
+              <TriangleAlertIcon />
+              <AlertTitle>Late</AlertTitle>
+              <AlertDescription>
+                {late.sent ? `Sent ${late.days} days after purchase.` : `Bought ${late.days} days ago.`} Requests are
+                due within {late.limitDays} days of purchase.
+              </AlertDescription>
+            </Alert>
+          )}
 
-      {actions}
+          {actions}
 
-      <section aria-labelledby="receipts-heading" className="space-y-3">
-        <h2 id="receipts-heading" className="text-lg font-semibold">
-          Receipts
-        </h2>
-        {request.no_receipt && (
-          <Alert role="note">
-            <FileXIcon />
-            <AlertTitle>No receipt on file</AlertTitle>
-            <AlertDescription className="break-words whitespace-pre-wrap">{request.no_receipt_reason}</AlertDescription>
-          </Alert>
-        )}
-        {receipts.length > 0 ? (
-          <ReceiptGallery
-            receipts={receipts.map((receipt) => ({
-              id: receipt.id,
-              path: receipt.storage_path,
-              name: receipt.original_filename,
-              mimeType: receipt.mime_type,
-              width: receipt.width,
-              height: receipt.height,
-            }))}
-            initial={signed}
-          />
-        ) : (
-          !request.no_receipt && <p className="text-muted-foreground">No receipts yet.</p>
-        )}
-      </section>
+          <section aria-labelledby="details-heading" className="order-1 space-y-3">
+            <h2 id="details-heading" className="text-lg font-semibold">
+              Details
+            </h2>
+            <dl className="divide-y rounded-lg border">
+              {detailRows(request).map(([term, value]) => (
+                <div key={term} className="space-y-1 px-4 py-3">
+                  <dt className="text-sm text-muted-foreground">{term}</dt>
+                  <dd className="break-words whitespace-pre-wrap">
+                    {value ?? <span className="text-muted-foreground">Not recorded</span>}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </div>
 
-      <section aria-labelledby="details-heading" className="space-y-3">
-        <h2 id="details-heading" className="text-lg font-semibold">
-          Details
-        </h2>
-        <dl className="divide-y rounded-lg border">
-          {detailRows(request).map(([term, value]) => (
-            <div key={term} className="space-y-1 px-4 py-3">
-              <dt className="text-sm text-muted-foreground">{term}</dt>
-              <dd className="break-words whitespace-pre-wrap">
-                {value ?? <span className="text-muted-foreground">Not recorded</span>}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+        <div className={COLUMN}>
+          <section aria-labelledby="receipts-heading" className="space-y-3">
+            <h2 id="receipts-heading" className="text-lg font-semibold">
+              Receipts
+            </h2>
+            {request.no_receipt && (
+              <Alert role="note">
+                <FileXIcon />
+                <AlertTitle>No receipt on file</AlertTitle>
+                <AlertDescription className="break-words whitespace-pre-wrap">
+                  {request.no_receipt_reason}
+                </AlertDescription>
+              </Alert>
+            )}
+            {receipts.length > 0 ? (
+              <ReceiptGallery
+                receipts={receipts.map((receipt) => ({
+                  id: receipt.id,
+                  path: receipt.storage_path,
+                  name: receipt.original_filename,
+                  mimeType: receipt.mime_type,
+                  width: receipt.width,
+                  height: receipt.height,
+                }))}
+                initial={signed}
+              />
+            ) : (
+              !request.no_receipt && <p className="text-muted-foreground">No receipts yet.</p>
+            )}
+          </section>
 
-      <section aria-labelledby="history-heading" className="space-y-3">
-        <h2 id="history-heading" className="text-lg font-semibold">
-          History
-        </h2>
-        <StatusTimeline events={events} payeeNames={payeeNames} />
-      </section>
+          <section aria-labelledby="history-heading" className="order-1 space-y-3">
+            <h2 id="history-heading" className="text-lg font-semibold">
+              History
+            </h2>
+            <StatusTimeline events={events} payeeNames={payeeNames} />
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

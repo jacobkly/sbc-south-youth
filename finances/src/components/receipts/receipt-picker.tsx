@@ -78,7 +78,7 @@ export function ReceiptPicker({
 
   return (
     <div
-      className={cn("space-y-3 rounded-lg", dragging && "ring-2 ring-ring ring-offset-2 ring-offset-background")}
+      className={cn("@container space-y-3 rounded-lg", dragging && "ring-2 ring-ring ring-offset-2 ring-offset-background")}
       onDragOver={(event) => {
         if (!canAdd || !event.dataTransfer.types.includes("Files")) return;
         event.preventDefault();
@@ -127,7 +127,8 @@ export function ReceiptPicker({
           </Button>
         )
       ) : (
-        <ul className="grid grid-cols-3 gap-2 md:grid-cols-4" aria-label={label}>
+        // Matches the gallery, which goes by its own width.
+        <ul className="grid grid-cols-3 gap-2 @xl:grid-cols-4" aria-label={label}>
           {receipts.map((receipt) => (
             <li key={receipt.key}>
               <ReceiptTile

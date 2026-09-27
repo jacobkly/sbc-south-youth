@@ -136,8 +136,9 @@ export function ReceiptGallery({
   const viewingUrl = viewing ? signed.urls[viewing.path] : undefined;
 
   return (
-    <div className="space-y-3">
-      <ul className="grid grid-cols-3 gap-2 md:grid-cols-4" aria-label={label}>
+    <div className="@container space-y-3">
+      {/* By its own width, so tiles stay big in a narrow column on a PC. */}
+      <ul className="grid grid-cols-3 gap-2 @xl:grid-cols-4" aria-label={label}>
         {receipts.map((receipt, index) => {
           const url = signed.urls[receipt.path];
           const isPdf = receipt.mimeType === "application/pdf";

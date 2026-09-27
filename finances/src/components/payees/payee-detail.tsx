@@ -74,39 +74,43 @@ export function PayeeDetail({
         </div>
       </div>
 
-      <section aria-labelledby="totals-heading">
-        <h2 id="totals-heading" className="sr-only">
-          Totals
-        </h2>
-        <dl className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <Stat label={`Paid in ${year}`} cents={totals.paidInYear} />
-          <Stat label="Paid all time" cents={totals.paidAllTime} />
-          <Stat
-            label="Waiting to be paid"
-            cents={totals.toPay}
-            note={totals.toPayCount > 0 ? waiting : undefined}
-            className="col-span-2 md:col-span-1"
-          />
-        </dl>
-      </section>
-
-      <section aria-labelledby="details-heading" className="space-y-3">
-        <h2 id="details-heading" className="text-lg font-semibold">
-          Details
-        </h2>
-        {details.length > 0 ? (
-          <dl className="divide-y rounded-lg border">
-            {details.map(([term, value]) => (
-              <div key={term} className="space-y-1 px-4 py-3">
-                <dt className="text-sm text-muted-foreground">{term}</dt>
-                <dd className="break-words whitespace-pre-wrap">{value}</dd>
-              </div>
-            ))}
+      {/* On a PC the totals and details sit side by side, above the full-width requests. */}
+      <div className="space-y-6 @4xl/main:grid @4xl/main:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl/main:items-start @4xl/main:gap-6 @4xl/main:space-y-0">
+        <section aria-labelledby="totals-heading" className="@4xl/main:space-y-3">
+          {/* A phone leaves it out, since the totals sit right under the name. */}
+          <h2 id="totals-heading" className="sr-only text-lg font-semibold @4xl/main:not-sr-only">
+            Totals
+          </h2>
+          <dl className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            <Stat label={`Paid in ${year}`} cents={totals.paidInYear} />
+            <Stat label="Paid all time" cents={totals.paidAllTime} />
+            <Stat
+              label="Waiting to be paid"
+              cents={totals.toPay}
+              note={totals.toPayCount > 0 ? waiting : undefined}
+              className="col-span-2 md:col-span-1"
+            />
           </dl>
-        ) : (
-          <p className="text-muted-foreground">No contact info.</p>
-        )}
-      </section>
+        </section>
+
+        <section aria-labelledby="details-heading" className="space-y-3">
+          <h2 id="details-heading" className="text-lg font-semibold">
+            Details
+          </h2>
+          {details.length > 0 ? (
+            <dl className="divide-y rounded-lg border">
+              {details.map(([term, value]) => (
+                <div key={term} className="space-y-1 px-4 py-3">
+                  <dt className="text-sm text-muted-foreground">{term}</dt>
+                  <dd className="break-words whitespace-pre-wrap">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="text-muted-foreground">No contact info.</p>
+          )}
+        </section>
+      </div>
 
       <section aria-labelledby="requests-heading" className="space-y-3">
         <h2 id="requests-heading" className="text-lg font-semibold">
@@ -116,7 +120,11 @@ export function PayeeDetail({
           <>
             <RequestList rows={requests} showStatus showPayee={false} />
             {totalRequests > requests.length && (
-              <Button variant="outline" className="h-11 w-full md:w-auto md:px-5" asChild>
+              <Button
+                variant="outline"
+                className="h-11 w-full md:w-auto md:px-5 @4xl/main:mx-auto @4xl/main:flex @4xl/main:w-fit @4xl/main:px-8"
+                asChild
+              >
                 <Link href={allRequestsHref}>See all {totalRequests} requests</Link>
               </Button>
             )}
