@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "cn";
 import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
+import { TrendIcon } from "@/components/dashboard/stat-cards";
 import { ExportMenu } from "@/components/reports/export-menu";
 import { PeriodPicker } from "@/components/reports/period-picker";
 import { ReportChart } from "@/components/reports/report-chart";
@@ -13,12 +14,13 @@ import { ReportList } from "@/components/reports/report-list";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { sharePercent } from "@/lib/dashboard/summary";
-import { periodLabel, periodRange, type IsoDate } from "@/lib/dates";
+import { periodLabel, periodRange, type IsoDate, type Period } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { pageCount, pageItems, pageSlice } from "@/lib/pagination";
 import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
 import type { ReportRow } from "@/lib/requests/queries";
 import { REQUEST_TYPES } from "@/lib/requests/schema";
+import { changeSentence, compareAmounts, comparisonLabel, formatChange } from "@/lib/reports/comparison";
 import {
   REPORT_BASES,
   REPORT_BASIS_LABELS,
@@ -32,7 +34,7 @@ import {
   type ReportFilters,
   type ReportTotals,
 } from "@/lib/reports/filters";
-import { reportTimeline } from "@/lib/reports/timeline";
+import { reportTimeline, timelineBefore, type TimelineRow } from "@/lib/reports/timeline";
 
 const SELECTED = "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:data-[state=on]:bg-primary/90";
 
@@ -55,6 +57,12 @@ function emptyMessage(filters: ReportFilters): string {
   return `No ${filters.allStatuses ? "" : "approved or paid "}requests bought ${when}.`;
 }
 
+/** The period a report compares with, and its requests. */
+export type ReportBefore = { period: Period; rows: TimelineRow[] };
+
+/** The period before's name and totals, for the changes under each total. */
+type Comparison = { label: string; totals: ReportTotals };
+
 /**
  * The reports page. The period and filters live in the URL, so the back
  * button and shared links bring back the same report. The server loads
@@ -65,12 +73,14 @@ export function ReportView({
   page,
   today,
   rows,
+  before,
 }: {
   filters: ReportFilters;
   /** Which page of requests to show. */
   page: number;
   today: IsoDate;
   rows: ReportRow[];
+  before: ReportBefore;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -85,8 +95,14 @@ export function ReportView({
     });
   }
 
+  const range = periodRange(filters.period);
   const totals = reportTotals(rows);
-  const timeline = reportTimeline(rows, periodRange(filters.period), filters.basis);
+  const timeline = reportTimeline(rows, range, filters.basis);
+  const comparison: Comparison = { label: comparisonLabel(before.period), totals: reportTotals(before.rows) };
+  const beforeBuckets =
+    comparison.totals.count > 0
+      ? timelineBefore(timeline, range, { range: periodRange(before.period), rows: before.rows }, filters.basis)
+      : null;
 
   return (
     <div className="space-y-6">
@@ -163,9 +179,14 @@ export function ReportView({
         {rows.length > 0 ? (
           <>
             <div className="space-y-6">
-              <TotalsSection totals={totals} subject={reportSubject(filters)} />
+              <TotalsSection totals={totals} subject={reportSubject(filters)} comparison={comparison} />
               {/* A one-day report would be a single bar. */}
-              {timeline.buckets.length > 1 && <ReportChart timeline={timeline} />}
+              {timeline.buckets.length > 1 && (
+                <ReportChart
+                  timeline={timeline}
+                  before={beforeBuckets && { label: comparison.label, buckets: beforeBuckets }}
+                />
+              )}
             </div>
             <PayeeTotalsSection payees={reportPayeeTotals(rows)} totalCents={totals.cents} />
             <RequestsSection rows={rows} filters={filters} page={page} disabled={pending} />
@@ -184,8 +205,32 @@ export function ReportView({
   );
 }
 
-/** Cafe, youth, and the total, one row each on a phone and side by side when there's room. */
-function TotalsSection({ totals, subject }: { totals: ReportTotals; subject: string }) {
+/** How an amount changed from the period before, with an arrow and, for screen readers, in words. */
+function ChangeLine({ current, before, label }: { current: number; before: number; label: string }) {
+  const change = compareAmounts(current, before);
+  const { amount, percent } = formatChange(change);
+  return (
+    <span className="flex flex-wrap items-center justify-end gap-x-1 text-sm text-muted-foreground @md:justify-start">
+      <span aria-hidden className="flex items-center gap-1 whitespace-nowrap">
+        <TrendIcon direction={change.direction} />
+        {amount}
+      </span>
+      {percent && (
+        <span aria-hidden className="whitespace-nowrap">
+          {percent}
+        </span>
+      )}
+      <span className="sr-only">{changeSentence(current, before, label)}</span>
+    </span>
+  );
+}
+
+/**
+ * Cafe, youth, and the total, one row each on a phone and side by side when
+ * there's room. Each shows how it changed from the period before.
+ */
+function TotalsSection({ totals, subject, comparison }: { totals: ReportTotals; subject: string; comparison: Comparison }) {
+  const compared = comparison.totals.count > 0;
   return (
     <section aria-labelledby="report-totals-heading" className="@container space-y-3">
       <div>
@@ -193,6 +238,9 @@ function TotalsSection({ totals, subject }: { totals: ReportTotals; subject: str
           Totals
         </h2>
         <p className="text-sm text-muted-foreground">{subject}</p>
+        <p className="text-sm text-muted-foreground">
+          {compared ? `Compared with ${comparison.label}` : `No requests in ${comparison.label} to compare with`}
+        </p>
       </div>
       <dl className="grid divide-y rounded-lg border @md:grid-cols-3 @md:divide-x @md:divide-y-0">
         {REQUEST_TYPES.map((type) => (
@@ -213,6 +261,13 @@ function TotalsSection({ totals, subject }: { totals: ReportTotals; subject: str
               <span className="block text-sm text-muted-foreground">
                 {requestCount(totals.byType[type].count)} · {sharePercent(totals.byType[type].cents, totals.cents)}
               </span>
+              {compared && (
+                <ChangeLine
+                  current={totals.byType[type].cents}
+                  before={comparison.totals.byType[type].cents}
+                  label={comparison.label}
+                />
+              )}
             </dd>
           </div>
         ))}
@@ -221,6 +276,7 @@ function TotalsSection({ totals, subject }: { totals: ReportTotals; subject: str
           <dd className="text-right tabular-nums @md:text-left">
             <span className="block font-semibold">{formatCents(totals.cents)}</span>
             <span className="block text-sm text-muted-foreground">{requestCount(totals.count)}</span>
+            {compared && <ChangeLine current={totals.cents} before={comparison.totals.cents} label={comparison.label} />}
           </dd>
         </div>
       </dl>

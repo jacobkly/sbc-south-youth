@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { addDays } from "@/lib/dates";
 import { reportTotals } from "./filters";
-import { bucketLabel, bucketTick, reportTimeline, timelineUnit, type TimelineBucket, type TimelineRow } from "./timeline";
+import {
+  bucketLabel,
+  bucketTick,
+  reportTimeline,
+  timelineBefore,
+  timelineUnit,
+  type TimelineBucket,
+  type TimelineRow,
+} from "./timeline";
 
 function bought(date: string, type: TimelineRow["type"], cents: number): TimelineRow {
   return { purchase_date: date, paid_at: null, type, amount_cents: cents };
@@ -161,5 +169,113 @@ describe("bucket labels", () => {
     expect(bucketLabel({ start: "2025-12-29", end: "2026-01-04" }, "week")).toBe("Dec 29, 2025 – Jan 4, 2026");
     expect(bucketLabel({ start: "2025-09-15", end: "2025-09-30" }, "month")).toBe("September 2025");
     expect(bucketLabel({ start: "2026-01-01", end: "2026-09-26" }, "year")).toBe("2026");
+  });
+});
+
+describe("timelineBefore", () => {
+  it("lines up days, and stops where a running month's comparison ends", () => {
+    const range = { start: "2026-09-01", end: "2026-09-30" };
+    const before = { start: "2026-08-01", end: "2026-08-27" };
+    const timeline = reportTimeline([], range, "purchase");
+    const lined = timelineBefore(
+      timeline,
+      range,
+      { range: before, rows: [bought("2026-08-01", "cafe", 500), bought("2026-08-01", "cafe", 250), bought("2026-08-27", "cafe", 900)] },
+      "purchase",
+    );
+
+    expect(lined).toHaveLength(30);
+    expect(lined[0]).toEqual({ start: "2026-08-01", end: "2026-08-01", cents: 750 });
+    expect(lined[1]).toEqual({ start: "2026-08-02", end: "2026-08-02", cents: 0 });
+    expect(lined[26]).toEqual({ start: "2026-08-27", end: "2026-08-27", cents: 900 });
+    expect(lined.slice(27)).toEqual([null, null, null]);
+  });
+
+  it("leaves out rows outside the period before, and days past the end of the report", () => {
+    const range = { start: "2026-09-01", end: "2026-09-30" };
+    const before = { start: "2026-08-01", end: "2026-08-31" };
+    const timeline = reportTimeline([], range, "purchase");
+    const lined = timelineBefore(
+      timeline,
+      range,
+      // August 31 has no September 31 to line up with.
+      { range: before, rows: [bought("2026-07-31", "cafe", 100), bought("2026-08-30", "cafe", 200), bought("2026-08-31", "cafe", 400)] },
+      "purchase",
+    );
+
+    expect(lined[29]).toEqual({ start: "2026-08-30", end: "2026-08-30", cents: 200 });
+    expect(lined.reduce((sum, bucket) => sum + (bucket?.cents ?? 0), 0)).toBe(200);
+  });
+
+  it("lines up weeks by the day, and cuts the last one where the comparison ends", () => {
+    const range = { start: "2026-07-01", end: "2026-09-30" };
+    const before = { start: "2026-04-01", end: "2026-06-28" };
+    const timeline = reportTimeline([], range, "purchase");
+    const lined = timelineBefore(
+      timeline,
+      range,
+      { range: before, rows: [bought("2026-04-07", "cafe", 300), bought("2026-04-08", "cafe", 50), bought("2026-06-24", "cafe", 700)] },
+      "purchase",
+    );
+
+    expect(lined).toHaveLength(13);
+    expect(lined[0]).toEqual({ start: "2026-04-01", end: "2026-04-07", cents: 300 });
+    expect(lined[1]).toEqual({ start: "2026-04-08", end: "2026-04-14", cents: 50 });
+    // The report's last week runs 8 days, September 23 to 30.
+    expect(lined[12]).toEqual({ start: "2026-06-24", end: "2026-06-28", cents: 700 });
+  });
+
+  it("lines up months by the calendar", () => {
+    const range = { start: "2026-01-01", end: "2026-12-31" };
+    const before = { start: "2025-01-01", end: "2025-09-27" };
+    const timeline = reportTimeline([], range, "purchase");
+    const lined = timelineBefore(
+      timeline,
+      range,
+      { range: before, rows: [bought("2025-02-28", "cafe", 1000), bought("2025-09-27", "cafe", 600)] },
+      "purchase",
+    );
+
+    expect(lined).toHaveLength(12);
+    expect(lined[1]).toEqual({ start: "2025-02-01", end: "2025-02-28", cents: 1000 });
+    expect(lined[8]).toEqual({ start: "2025-09-01", end: "2025-09-27", cents: 600 });
+    expect(lined.slice(9)).toEqual([null, null, null]);
+  });
+
+  it("places paid requests by the day they were paid in LA", () => {
+    const range = { start: "2026-09-01", end: "2026-09-30" };
+    const before = { start: "2026-08-01", end: "2026-08-31" };
+    const timeline = reportTimeline([], range, "paid");
+    const lined = timelineBefore(
+      timeline,
+      range,
+      {
+        range: before,
+        // 9:30 PM PDT on August 4 is August 5 in UTC.
+        rows: [{ purchase_date: "2020-01-01", paid_at: "2026-08-05T04:30:00Z", type: "youth", amount_cents: 800 }],
+      },
+      "paid",
+    );
+
+    expect(lined[3]).toEqual({ start: "2026-08-04", end: "2026-08-04", cents: 800 });
+  });
+
+  it("follows the report's years, which start at its first year with a request", () => {
+    // 1,096 days each: 2023 to 2025, and 2020 to 2022.
+    const range = { start: "2023-01-01", end: "2025-12-31" };
+    const before = { start: "2020-01-01", end: "2022-12-31" };
+    const timeline = reportTimeline([bought("2024-05-01", "cafe", 100)], range, "purchase");
+    const lined = timelineBefore(
+      timeline,
+      range,
+      { range: before, rows: [bought("2020-06-01", "cafe", 50), bought("2021-06-01", "cafe", 70)] },
+      "purchase",
+    );
+
+    expect(timeline.buckets.map((bucket) => bucket.start)).toEqual(["2024-01-01", "2025-01-01"]);
+    expect(lined).toEqual([
+      { start: "2021-01-01", end: "2021-12-31", cents: 70 },
+      { start: "2022-01-01", end: "2022-12-31", cents: 0 },
+    ]);
   });
 });

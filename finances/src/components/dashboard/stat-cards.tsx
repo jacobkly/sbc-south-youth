@@ -19,7 +19,8 @@ const KINDS: { kind: PaidKind; label: string; before: string }[] = [
   { kind: "year", label: "This year", before: "last year" },
 ];
 
-function TrendIcon({ direction }: { direction: Trend["direction"] }) {
+/** An arrow for which way an amount went. Spending isn't good or bad, so it has no color of its own. */
+export function TrendIcon({ direction }: { direction: Trend["direction"] }) {
   const className = "size-3.5 shrink-0";
   if (direction === "up") return <TrendingUpIcon className={className} aria-hidden />;
   if (direction === "down") return <TrendingDownIcon className={className} aria-hidden />;
