@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { NarrowPage } from "@/components/nav/app-shell";
 import { RequestForm } from "@/components/requests/request-form";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { todayInLA } from "@/lib/dates";
@@ -33,13 +34,15 @@ export default async function NewRequestPage() {
   if (settings.error) throw settings.error;
 
   return (
-    <RequestForm
-      payees={payees.data}
-      eventNames={recentEventNames(events.data)}
-      today={todayInLA()}
-      currentUserId={user.id}
-      allowExternalApproval={settings.data.allow_external_approval}
-      lateLimitDays={settings.data.late_submission_days}
-    />
+    <NarrowPage>
+      <RequestForm
+        payees={payees.data}
+        eventNames={recentEventNames(events.data)}
+        today={todayInLA()}
+        currentUserId={user.id}
+        allowExternalApproval={settings.data.allow_external_approval}
+        lateLimitDays={settings.data.late_submission_days}
+      />
+    </NarrowPage>
   );
 }

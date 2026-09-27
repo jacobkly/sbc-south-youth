@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ImportFlow } from "@/components/import/import-flow";
+import { NarrowPage } from "@/components/nav/app-shell";
 import { BackLink } from "@/components/nav/back-link";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { createClient } from "@/lib/supabase/server";
@@ -24,12 +25,12 @@ export default async function ImportPage() {
   if (error) throw error;
 
   return (
-    <div className="space-y-6">
+    <NarrowPage className="space-y-6">
       <div className="space-y-2">
         <BackLink fallbackHref="/admin/settings" fallbackLabel="Settings" />
         <h1 className="text-2xl font-semibold tracking-tight">Import from a spreadsheet</h1>
       </div>
       <ImportFlow currentUserId={user.id} allowExternalApproval={settings.allow_external_approval} />
-    </div>
+    </NarrowPage>
   );
 }

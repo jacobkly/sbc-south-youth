@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AccountForm } from "@/components/account/account-form";
 import { PasswordForm } from "@/components/account/password-form";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { NarrowPage } from "@/components/nav/app-shell";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { ROLE_LABELS } from "@/lib/auth/roles";
@@ -16,7 +17,7 @@ export default async function AccountPage() {
   if (!user) return null;
 
   return (
-    <div className="space-y-6">
+    <NarrowPage className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
@@ -40,6 +41,6 @@ export default async function AccountPage() {
       <Separator />
 
       <SignOutButton variant="outline" className="h-11 w-full sm:w-auto sm:px-6" />
-    </div>
+    </NarrowPage>
   );
 }

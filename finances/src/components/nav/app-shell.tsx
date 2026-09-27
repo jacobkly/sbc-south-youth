@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "cn";
 import { AdminNav } from "@/components/nav/admin-nav";
 import { NoAccess } from "@/components/nav/no-access";
 import { RefreshOnHistory } from "@/components/nav/refresh-on-history";
@@ -22,15 +23,25 @@ export async function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** The navigation and page frame. The bottom padding keeps content clear of the floating tab bar. */
+/**
+ * The navigation and page frame. The bottom padding keeps content clear of the
+ * floating tab bar. On a PC it widens to 1440px, and pages lay out in columns
+ * with `@4xl/main:` and wider container queries. Phones and tablets keep the
+ * 768px column, which never reaches those sizes, so they don't change.
+ */
 export function ShellLayout({ role, name, children }: { role: Enums<"user_role">; name: string; children: ReactNode }) {
   return (
     <div className="min-h-dvh desktop:pl-64">
       <AdminNav role={role} name={name} />
       <RefreshOnHistory />
-      <main className="mx-auto w-full max-w-3xl px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 desktop:px-8 desktop:py-10">
+      <main className="@container/main mx-auto w-full max-w-3xl px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 desktop:max-w-[90rem] desktop:px-8 desktop:py-10">
         {children}
       </main>
     </div>
   );
+}
+
+/** Keeps forms and settings in a readable column, centered in the wide PC frame. */
+export function NarrowPage({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cn("mx-auto w-full max-w-3xl", className)}>{children}</div>;
 }

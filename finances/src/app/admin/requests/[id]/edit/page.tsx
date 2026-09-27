@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { NarrowPage } from "@/components/nav/app-shell";
 import { EditRequestForm } from "@/components/requests/edit-request-form";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { todayInLA } from "@/lib/dates";
@@ -68,38 +69,40 @@ export default async function EditRequestPage({ params }: PageProps<"/admin/requ
   if (payees.error) throw payees.error;
 
   return (
-    <EditRequestForm
-      request={{
-        id,
-        requestNumber: request.request_number,
-        status: request.status,
-        values: {
-          payee_id: request.payee_id,
-          type: request.type,
-          amount: centsToDecimal(request.amount_cents),
-          purchase_date: request.purchase_date,
-          vendor: request.vendor ?? "",
-          description: request.description ?? "",
-          event_name: request.event_name ?? "",
-          no_receipt: request.no_receipt,
-          no_receipt_reason: request.no_receipt_reason ?? "",
-        },
-        amountCents: request.amount_cents,
-        payeeName: request.payee?.full_name ?? "",
-        receipts: request.receipts.map((receipt) => ({
-          id: receipt.id,
-          path: receipt.storage_path,
-          name: receipt.original_filename,
-          mimeType: receipt.mime_type,
-          width: receipt.width,
-          height: receipt.height,
-        })),
-        signed,
-      }}
-      payees={payees.data}
-      eventNames={recentEventNames(events.data)}
-      today={todayInLA()}
-      deletableBy={request.status === "draft" && request.created_by === user.id ? user.id : null}
-    />
+    <NarrowPage>
+      <EditRequestForm
+        request={{
+          id,
+          requestNumber: request.request_number,
+          status: request.status,
+          values: {
+            payee_id: request.payee_id,
+            type: request.type,
+            amount: centsToDecimal(request.amount_cents),
+            purchase_date: request.purchase_date,
+            vendor: request.vendor ?? "",
+            description: request.description ?? "",
+            event_name: request.event_name ?? "",
+            no_receipt: request.no_receipt,
+            no_receipt_reason: request.no_receipt_reason ?? "",
+          },
+          amountCents: request.amount_cents,
+          payeeName: request.payee?.full_name ?? "",
+          receipts: request.receipts.map((receipt) => ({
+            id: receipt.id,
+            path: receipt.storage_path,
+            name: receipt.original_filename,
+            mimeType: receipt.mime_type,
+            width: receipt.width,
+            height: receipt.height,
+          })),
+          signed,
+        }}
+        payees={payees.data}
+        eventNames={recentEventNames(events.data)}
+        today={todayInLA()}
+        deletableBy={request.status === "draft" && request.created_by === user.id ? user.id : null}
+      />
+    </NarrowPage>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FileSpreadsheetIcon } from "lucide-react";
+import { NarrowPage } from "@/components/nav/app-shell";
 import { SettingsForm, SettingsSummary } from "@/components/settings/settings-form";
 import { ThemePicker } from "@/components/settings/theme-picker";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ export default async function SettingsPage() {
   if (error) throw error;
 
   return (
-    <div className="space-y-6">
+    <NarrowPage className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       {/* Viewers can read the settings. The update policy lets only admins change them. */}
       {user?.role === "admin" ? <SettingsForm settings={settings} /> : <SettingsSummary settings={settings} />}
@@ -47,6 +48,6 @@ export default async function SettingsPage() {
           </Button>
         </section>
       )}
-    </div>
+    </NarrowPage>
   );
 }
