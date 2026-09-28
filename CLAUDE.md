@@ -78,7 +78,7 @@ The maintainer runs `link` and `db push` against the hosted project. Claude does
 
 - **Design-led, not a productivity tool.** Dark-first "night service poster" look: near-black, big display type, real photos, and one bright accent. Design tokens live in `site/src/app/globals.css`. Check every screen at 375 px and 1280 px, in dark and light.
 - No shadcn or Radix on the public site. Use styled native form controls (native `<select>` gives the iOS picker) and native `<dialog>`.
-- Server Components by default. Client Components only for interactive islands. Motion (`motion/react` through `LazyMotion`) animates only `transform` and `opacity`, and every animation respects reduced motion.
+- Server Components by default. Client Components only for interactive islands. Animate with CSS transitions and keyframes (no animation library), only `transform`, `translate`, `scale`, and `opacity`, and every animation respects reduced motion. Home JS stays under 150 KB gzipped, and the framework alone is about 135 KB.
 - Page copy lives in `site/src/content/`. Anything leadership must approve (times, address, bios, safety policy, giving wording) is a placeholder marked `TODO(leadership)`. Never invent facts about the church, its people, or its policies.
 - Minors' privacy: never commit photos of students, and never show a student's last name, school, contact details, or social handle. Never render a group chat invite link.
 - Placeholder photos are hotlinked, never committed. Every one is replaced before launch.

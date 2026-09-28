@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "light";
-export type ButtonSize = "md" | "lg";
+export type ButtonSize = "sm" | "md" | "lg";
 
 const variants: Record<ButtonVariant, string> = {
   primary: "bg-accent text-on-accent hover:brightness-110",
@@ -13,6 +13,8 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const sizes: Record<ButtonSize, string> = {
+  // Looks 36 px tall, but the invisible edge makes the tap target 44 px.
+  sm: "relative h-9 px-4 text-sm after:absolute after:-inset-1",
   md: "h-11 px-5 text-[0.9375rem]",
   lg: "h-14 px-7 text-base",
 };
