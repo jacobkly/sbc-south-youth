@@ -19,12 +19,6 @@ export const site = {
     postalCode: "00000",
   },
 
-  // TODO(leadership): the real weekly times.
-  times: [
-    { audience: "High school", when: "Wednesdays, 7 PM" },
-    { audience: "College", when: "Thursdays, 7:30 PM" },
-  ],
-
   // TODO(leadership): the youth inbox, once email routing is set up.
   email: "hello@example.org",
 

@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
+import type { Audience } from "@/lib/content/types";
 
-export type Audience = "all" | "hs" | "college";
-
-const audienceLabels: Record<Audience, string> = {
+export const audienceLabels: Record<Audience, string> = {
   all: "Everyone",
   hs: "High school",
   college: "College",

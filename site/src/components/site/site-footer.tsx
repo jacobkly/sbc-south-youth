@@ -2,7 +2,10 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SocialIcon } from "@/components/icons/social-icon";
+import { audienceLabels } from "@/components/tag";
 import { site } from "@/content/site";
+import { getSchedule } from "@/lib/content/loaders";
+import { formatClockRange, weekdayName } from "@/lib/schedule";
 import { LogoMark } from "./logo";
 
 const exploreLinks = [
@@ -26,8 +29,9 @@ function Column({ title, className = "", children }: { title: string; className?
   );
 }
 
-export function SiteFooter() {
+export async function SiteFooter() {
   const { address } = site;
+  const schedule = await getSchedule();
 
   return (
     <footer className="relative mt-24 overflow-hidden border-t border-line lg:mt-32">
@@ -55,10 +59,12 @@ export function SiteFooter() {
 
         <Column title="When">
           <dl className="space-y-3">
-            {site.times.map((time) => (
-              <div key={time.audience}>
-                <dt className="font-semibold">{time.audience}</dt>
-                <dd className="text-muted">{time.when}</dd>
+            {schedule.map((gathering) => (
+              <div key={gathering.slug}>
+                <dt className="font-semibold">{audienceLabels[gathering.audience]}</dt>
+                <dd className="text-muted">
+                  {weekdayName(gathering.weekday, { plural: true })}, {formatClockRange(gathering.startTime, gathering.endTime)}
+                </dd>
               </div>
             ))}
           </dl>

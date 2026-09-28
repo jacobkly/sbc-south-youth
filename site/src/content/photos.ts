@@ -4,12 +4,7 @@
  * replaced before launch.
  */
 
-export type Photo = {
-  src: string;
-  alt: string;
-  /** True until the photo is replaced with one of our own. */
-  placeholder: boolean;
-};
+import type { Photo } from "@/lib/content/types";
 
 // Matches the one query next.config.ts allows for Unsplash images.
 function unsplash(id: string, alt: string): Photo {

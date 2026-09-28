@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "light";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "light" | "inverse";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const variants: Record<ButtonVariant, string> = {
@@ -10,6 +10,8 @@ const variants: Record<ButtonVariant, string> = {
   ghost: "text-fg hover:bg-surface-2",
   // For use over photos, where the page colors don't apply.
   light: "bg-white/12 text-white ring-1 ring-white/25 ring-inset backdrop-blur-md hover:bg-white/20",
+  // For use on an accent fill.
+  inverse: "bg-on-accent text-accent hover:opacity-90",
 };
 
 const sizes: Record<ButtonSize, string> = {

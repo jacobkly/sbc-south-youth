@@ -1,0 +1,38 @@
+import { MapPin } from "lucide-react";
+import { AudienceTag } from "@/components/tag";
+import type { WeeklyGathering } from "@/lib/content/types";
+import { formatClockRange, weekdayName } from "@/lib/schedule";
+import { Photo } from "./photo";
+
+/** A weekly night: the day and time big over a photo, then what it is and where. */
+export function GatheringCard({ gathering }: { gathering: WeeklyGathering }) {
+  const day = weekdayName(gathering.weekday, { plural: true });
+  const time = formatClockRange(gathering.startTime, gathering.endTime);
+
+  return (
+    <article className="overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset">
+      <div className="relative isolate aspect-[4/3] overflow-hidden sm:aspect-[16/10]">
+        <Photo photo={gathering.photo} seed={gathering.slug} sizes="(min-width: 1240px) 600px, (min-width: 768px) 50vw, 100vw" className="-z-10" />
+        <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/85 via-black/35 to-black/5" />
+        {/* Always dark over the photo, so tags and text keep their contrast in light mode. */}
+        <div data-theme="dark" className="flex h-full flex-col justify-between p-5 text-white">
+          <div>
+            <AudienceTag audience={gathering.audience} />
+          </div>
+          <div>
+            <p className="font-display text-h1">{day}</p>
+            <p className="mt-1 font-display text-h3 font-bold text-accent">{time}</p>
+          </div>
+        </div>
+      </div>
+      <div className="p-5">
+        <h3 className="text-h3">{gathering.title}</h3>
+        <p className="mt-1.5 text-pretty text-muted">{gathering.description}</p>
+        <p className="mt-4 flex items-center gap-2 text-small font-medium">
+          <MapPin aria-hidden className="size-4 text-accent-ink" />
+          {gathering.locationName}
+        </p>
+      </div>
+    </article>
+  );
+}
