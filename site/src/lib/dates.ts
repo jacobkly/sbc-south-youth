@@ -156,12 +156,18 @@ export function formatTime(instant: Date | string): string {
   return timeLabel.format(toInstant(instant));
 }
 
-/** The instant when the LA clock reads the given hour and minute on a date. */
+/**
+ * The instant when the LA clock reads the given hour and minute on a date.
+ * The first pass uses the offset at the guess, which can be on the other
+ * side of a daylight saving change, so the second pass uses the offset at
+ * the first answer.
+ */
 function laClockTime(date: IsoDate, hour: number, minute: number): Date {
   const { year, month, day } = parseIsoDate(date);
   const guess = Date.UTC(year, month - 1, day, hour, minute);
-  const wall = laWallTime(new Date(guess));
-  return new Date(guess - (wall - guess));
+  const offsetAt = (instant: number) => laWallTime(new Date(instant)) - instant;
+  const first = guess - offsetAt(guess);
+  return new Date(guess - offsetAt(first));
 }
 
 /** The LA wall-clock time of an instant, read as if it were UTC. */

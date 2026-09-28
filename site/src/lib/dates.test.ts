@@ -73,6 +73,19 @@ describe("laInstant", () => {
     expect(laInstant("2026-11-01", "19:00").toISOString()).toBe("2026-11-02T03:00:00.000Z");
   });
 
+  it("uses the new offset in the morning after the clocks change", () => {
+    // In UTC these mornings still fall before the 2 AM switch, so the
+    // offset has to come from the answer, not the first guess.
+    expect(laInstant("2026-03-08", "03:00").toISOString()).toBe("2026-03-08T10:00:00.000Z");
+    expect(laInstant("2026-03-08", "09:00").toISOString()).toBe("2026-03-08T16:00:00.000Z");
+    expect(laInstant("2026-11-01", "05:00").toISOString()).toBe("2026-11-01T13:00:00.000Z");
+    expect(laInstant("2026-11-01", "09:00").toISOString()).toBe("2026-11-01T17:00:00.000Z");
+  });
+
+  it("picks the first 1:30 AM on the night the clocks fall back", () => {
+    expect(laInstant("2026-11-01", "01:30").toISOString()).toBe("2026-11-01T08:30:00.000Z");
+  });
+
   it("rejects bad times", () => {
     expect(() => laInstant("2026-09-30", "7pm")).toThrow(RangeError);
     expect(() => laInstant("2026-09-30", "24:00")).toThrow(RangeError);
