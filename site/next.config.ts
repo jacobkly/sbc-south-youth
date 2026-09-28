@@ -8,6 +8,17 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*"],
   // The dev badge covers page content at phone width.
   devIndicators: false,
+  // The repo root has its own lockfile. This app only resolves files from
+  // its own folder.
+  turbopack: { root: __dirname },
+  images: {
+    formats: ["image/avif", "image/webp"],
+    // Placeholder photos until the media team's photos arrive. Only this
+    // exact query is allowed, so nobody can resize other Unsplash URLs here.
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com", pathname: "/photo-*", search: "?w=1600&q=80&auto=format" },
+    ],
+  },
   cacheComponents: true,
   cacheLife: {
     // Time-sensitive sections (Next Up, This Week) refresh every 5 minutes.

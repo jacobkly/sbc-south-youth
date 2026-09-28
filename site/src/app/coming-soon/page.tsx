@@ -26,7 +26,10 @@ export const metadata: Metadata = {
  */
 export default function ComingSoon() {
   return (
-    <main className="relative isolate flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-black px-6 pt-[max(3rem,env(safe-area-inset-top))] pb-[max(3rem,env(safe-area-inset-bottom))] text-center text-white [color-scheme:dark]">
+    <main
+      data-theme="dark"
+      className="relative isolate flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-black px-6 pt-[max(3rem,env(safe-area-inset-top))] pb-[max(3rem,env(safe-area-inset-bottom))] text-center text-white"
+    >
       <div aria-hidden className="grain pointer-events-none absolute inset-0 -z-10 opacity-[0.035]" />
       <div
         aria-hidden

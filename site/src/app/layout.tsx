@@ -1,10 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Bricolage_Grotesque, Geist } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
+});
+
+// The optical size axis gives big headlines their tighter display cut.
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  axes: ["opsz"],
 });
 
 const description = "Youth nights, events, and a place to belong for high school and college students at SBC South.";
@@ -27,14 +34,17 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   // Lets the page run under the iPhone notch and home indicator; the page pads with safe-area insets.
   viewportFit: "cover",
-  themeColor: "#000000",
-  colorScheme: "dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0f" },
+    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
+  ],
+  colorScheme: "dark light",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={geistSans.variable}>
-      <body className="bg-black font-sans text-white antialiased">{children}</body>
+    <html lang="en" className={`${geist.variable} ${bricolage.variable}`}>
+      <body className="bg-bg font-sans text-fg antialiased">{children}</body>
     </html>
   );
 }

@@ -1,10 +1,107 @@
 @import "tailwindcss";
 
+/* Dev-only pages aren't in git, and Tailwind skips ignored files unless told. */
+@source "./dev";
+
+/*
+ * Design tokens. Dark is the main design; light follows the phone's
+ * setting. `data-theme` forces either one on a subtree (the style tile
+ * and the coming-soon page use it).
+ */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0b0f;
+  --surface: #15151b;
+  --surface-2: #1e1e26;
+  --text: #f5f3ee;
+  --text-muted: #a7a5a0;
+  --border: rgb(255 255 255 / 0.08);
+  --border-strong: rgb(255 255 255 / 0.16);
+  --scrim: 11 11 15;
+
+  /* Accent: fills, the active tab, and highlights. */
+  --accent: #c6ff3d;
+  /* Text on an accent fill. */
+  --accent-contrast: #0b0b0f;
+  /* Accent-colored text on the page background. */
+  --accent-ink: #c6ff3d;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --surface-2: #f1efea;
+    --text: #0b0b0f;
+    --text-muted: #55534f;
+    --border: rgb(0 0 0 / 0.08);
+    --border-strong: rgb(0 0 0 / 0.16);
+    --accent-ink: #3f6212;
+  }
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #faf9f6;
+  --surface: #ffffff;
+  --surface-2: #f1efea;
+  --text: #0b0b0f;
+  --text-muted: #55534f;
+  --border: rgb(0 0 0 / 0.08);
+  --border-strong: rgb(0 0 0 / 0.16);
+  --accent-ink: #3f6212;
+}
+
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-geist);
+  --font-display: var(--font-bricolage);
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--accent-contrast);
+  --color-accent-ink: var(--accent-ink);
 }
 
 @theme {
+  /* Type scale. Display and headings use Bricolage Grotesque. */
+  --text-display: clamp(2.75rem, 11vw, 5.5rem);
+  --text-display--line-height: 0.95;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 800;
+  --text-h1: clamp(2.25rem, 8vw, 3.75rem);
+  --text-h1--line-height: 1;
+  --text-h1--letter-spacing: -0.015em;
+  --text-h1--font-weight: 700;
+  --text-h2: clamp(1.75rem, 6vw, 2.5rem);
+  --text-h2--line-height: 1.1;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 700;
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.3;
+  --text-h3--font-weight: 600;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.5;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.4;
+  --text-eyebrow: 0.75rem;
+  --text-eyebrow--line-height: 1.2;
+  --text-eyebrow--letter-spacing: 0.08em;
+  --text-eyebrow--font-weight: 600;
+
+  --radius-card: 24px;
+  --radius-tile: 20px;
+  --radius-input: 14px;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
   --animate-rise: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-breathe: breathe 8s ease-in-out infinite;
 
@@ -23,12 +120,54 @@
   }
 }
 
-html {
-  color-scheme: dark;
-  background: #000;
+/* Page width: 1200 px max, with 20 px gutters on phones and 32 px on desktop. */
+@utility page-x {
+  margin-inline: auto;
+  width: 100%;
+  max-width: calc(1200px + 2 * 20px);
+  padding-inline: 20px;
+
+  @media (width >= 64rem) {
+    max-width: calc(1200px + 2 * 32px);
+    padding-inline: 32px;
+  }
 }
 
-/* Film grain over the black background. */
+/* Press feedback for buttons and cards. Plain CSS, so it works without JS. */
+@utility pressable {
+  transition-property: scale, background-color, border-color, color, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out-soft);
+
+  &:active {
+    scale: 0.97;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:active {
+      scale: none;
+    }
+  }
+}
+
+html {
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 3px;
+}
+
+/* Film grain over dark sections. */
 .grain {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
