@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "light" | "inverse";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "light" | "inverse" | "inverse-outline";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const variants: Record<ButtonVariant, string> = {
@@ -12,6 +12,8 @@ const variants: Record<ButtonVariant, string> = {
   light: "bg-white/12 text-white ring-1 ring-white/25 ring-inset backdrop-blur-md hover:bg-white/20",
   // For use on an accent fill.
   inverse: "bg-on-accent text-accent hover:opacity-90",
+  // The quieter button beside an inverse one.
+  "inverse-outline": "text-on-accent ring-1 ring-on-accent/30 ring-inset hover:bg-on-accent/10",
 };
 
 const sizes: Record<ButtonSize, string> = {

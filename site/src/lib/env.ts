@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cashtagPattern } from "./cash-app";
 
 /**
  * Server environment variables. They're read at build time for static
@@ -14,7 +15,7 @@ const serverSchema = z.object({
     .pipe(
       z
         .string()
-        .regex(/^\$[A-Za-z0-9_]{1,20}$/, "must be a $ followed by up to 20 letters or numbers")
+        .regex(cashtagPattern, "must be a $ followed by up to 20 letters, numbers, or underscores")
         .optional(),
     )
     .optional(),

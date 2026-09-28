@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { PageIntro } from "@/components/site/page-intro";
-import { Stub } from "@/components/site/stub";
+import { GiveContent } from "@/components/site/give-content";
+import { readServerEnv } from "@/lib/env";
 
-export const metadata: Metadata = { title: "Give" };
+export const metadata: Metadata = {
+  title: "Give",
+  description: "Give to SBC South Youth with Cash App, and see what your gift does.",
+};
 
 export default function GivePage() {
-  return (
-    <>
-      <PageIntro eyebrow="Give" title="Fuel the mission.">
-        Your gift helps fund camps, trips, and youth nights.
-      </PageIntro>
-      <Stub note="Cash App giving and the FAQ go here." />
-    </>
-  );
+  return <GiveContent cashtag={readServerEnv().giveCashtag} />;
 }

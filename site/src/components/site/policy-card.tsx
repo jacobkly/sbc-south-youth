@@ -7,10 +7,10 @@ export function PendingTag() {
   return <Tag tone="pending">To confirm</Tag>;
 }
 
-/** One safety commitment: an icon, a title, and what it means. */
-export function PolicyCard({ point, icon }: { point: PolicyPoint; icon: ReactNode }) {
+/** One commitment or policy: an icon, a title, what it means, and an optional action. */
+export function PolicyCard({ point, icon, children }: { point: PolicyPoint; icon: ReactNode; children?: ReactNode }) {
   return (
-    <div className="h-full rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-6">
+    <div className="flex h-full flex-col rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <span aria-hidden className="grid size-12 place-items-center rounded-full bg-accent text-on-accent [&_svg]:size-5">
           {icon}
@@ -19,6 +19,7 @@ export function PolicyCard({ point, icon }: { point: PolicyPoint; icon: ReactNod
       </div>
       <h3 className="mt-6 text-h3">{point.title}</h3>
       <p className="mt-1.5 text-pretty text-muted">{point.body}</p>
+      {children && <div className="mt-auto pt-6">{children}</div>}
     </div>
   );
 }

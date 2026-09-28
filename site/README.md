@@ -40,4 +40,4 @@ All optional until launch. Pages show a placeholder when one is missing.
 | Variable | Used for |
 | --- | --- |
 | `SITE_LIVE` | `true` opens the launch gate (read at build time) |
-| `GIVE_CASHTAG` | The Cash App cashtag on the Give page, like `$ExampleYouth` |
+| `GIVE_CASHTAG` | The Cash App cashtag on the Give page, like `$ExampleYouth`. Without it, Give shows a "coming soon" card and the Give buttons stay hidden |
