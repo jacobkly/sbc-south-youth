@@ -5,6 +5,8 @@ import {
   formatDate,
   formatDateTime,
   formatListDate,
+  formatTime,
+  formatWeekdayDate,
   isIsoDate,
   laDateOf,
   laDateTime,
@@ -204,6 +206,16 @@ describe("labels", () => {
 
   it("formats instants in LA time", () => {
     expect(formatDateTime("2026-09-26T06:30:00Z")).toBe("Sep 25, 2026, 11:30 PM");
+  });
+
+  it("formats the time of an instant in LA time", () => {
+    expect(formatTime("2026-09-26T06:30:00Z")).toBe("11:30 PM");
+    expect(formatTime("2026-09-25T16:05:00Z")).toBe("9:05 AM");
+  });
+
+  it("formats a date with its weekday, leaving out this year", () => {
+    expect(formatWeekdayDate("2026-09-25", "2026-09-28")).toBe("Fri, Sep 25");
+    expect(formatWeekdayDate("2025-12-31", "2026-01-02")).toBe("Wed, Dec 31, 2025");
   });
 
   it("writes instants as LA date and time for spreadsheets", () => {

@@ -7,6 +7,7 @@ import { cn } from "cn";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import {
   ACCOUNT,
+  ACTIVITY,
   allowedFor,
   DASHBOARD,
   isActive,
@@ -29,7 +30,7 @@ import {
 } from "@/components/ui/sheet";
 
 const TAB_ITEMS = [DASHBOARD, REQUESTS, NEW_REQUEST, PAYEES];
-const MORE_ITEMS = [REPORTS, SETTINGS, ACCOUNT];
+const MORE_ITEMS = [REPORTS, ACTIVITY, SETTINGS, ACCOUNT];
 
 const TAB_CLASSES =
   "flex h-14 w-full flex-col items-center justify-center gap-0.5 rounded-full text-[0.6875rem] font-medium text-muted-foreground outline-none transition-[color,background-color,scale] focus-visible:ring-2 focus-visible:ring-ring active:scale-95 motion-reduce:active:scale-100";

@@ -7,6 +7,7 @@ import { useSignOut } from "@/components/auth/sign-out-button";
 import { LogoMark } from "@/components/nav/logo-mark";
 import {
   ACCOUNT,
+  ACTIVITY,
   allowedFor,
   DASHBOARD,
   isActive,
@@ -29,7 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 
-const MAIN_ITEMS = [DASHBOARD, REQUESTS, PAYEES, REPORTS];
+const MAIN_ITEMS = [DASHBOARD, REQUESTS, PAYEES, REPORTS, ACTIVITY];
 
 function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
   return (

@@ -1,5 +1,6 @@
 import {
   ChartColumnIcon,
+  HistoryIcon,
   LayoutDashboardIcon,
   PlusIcon,
   ReceiptTextIcon,
@@ -20,6 +21,7 @@ export const REQUESTS: NavItem = { href: "/admin/requests", label: "Requests", i
 export const NEW_REQUEST: NavItem = { href: "/admin/requests/new", label: "New", icon: PlusIcon, adminOnly: true };
 export const PAYEES: NavItem = { href: "/admin/payees", label: "Payees", icon: UsersIcon };
 export const REPORTS: NavItem = { href: "/admin/reports", label: "Reports", icon: ChartColumnIcon };
+export const ACTIVITY: NavItem = { href: "/admin/activity", label: "Activity", icon: HistoryIcon, adminOnly: true };
 export const SETTINGS: NavItem = { href: "/admin/settings", label: "Settings", icon: SettingsIcon };
 export const ACCOUNT: NavItem = { href: "/account", label: "Account", icon: UserRoundIcon };
 
@@ -29,7 +31,7 @@ export function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Hiding an item for viewers is only a convenience; RLS blocks the writes. */
+/** Hiding an item for viewers is only a convenience; RLS blocks the writes, and admin-only pages redirect. */
 export function allowedFor(role: Enums<"user_role">) {
   return (item: NavItem) => !item.adminOnly || role === "admin";
 }

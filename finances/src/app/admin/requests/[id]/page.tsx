@@ -7,6 +7,7 @@ import { todayInLA } from "@/lib/dates";
 import { signReceiptUrls } from "@/lib/receipts/signed-urls";
 import { lateSubmissionDays } from "@/lib/requests/actions";
 import { isEditable } from "@/lib/requests/format";
+import { loadPayeeNames } from "@/lib/requests/queries";
 import { changedPayeeIds, lateCheckDate } from "@/lib/requests/status";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/utils";
@@ -56,16 +57,7 @@ export default async function RequestPage({ params }: PageProps<"/admin/requests
       supabase,
       details.receipts.map((receipt) => receipt.storage_path),
     ),
-    payeeIds.length === 0
-      ? new Map<string, string>()
-      : supabase
-          .from("payees")
-          .select("id, full_name")
-          .in("id", payeeIds)
-          .then(({ data, error }) => {
-            if (error) throw error;
-            return new Map(data.map((payee) => [payee.id, payee.full_name]));
-          }),
+    loadPayeeNames(supabase, payeeIds),
   ]);
 
   const limitDays = settings.late_submission_days;

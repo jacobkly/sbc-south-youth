@@ -214,3 +214,14 @@ export async function loadReportExport(supabase: SupabaseClient<Database>, filte
 
 /** A request as the CSV export has it. */
 export type ReportExportRow = Awaited<ReturnType<typeof loadReportExport>>[number];
+
+/** Payees' names by id, for the payees that edits mention. Throws if the query fails. */
+export async function loadPayeeNames(
+  supabase: SupabaseClient<Database>,
+  ids: readonly string[],
+): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const { data, error } = await supabase.from("payees").select("id, full_name").in("id", ids);
+  if (error) throw error;
+  return new Map(data.map((payee) => [payee.id, payee.full_name]));
+}

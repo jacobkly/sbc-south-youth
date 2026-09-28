@@ -56,6 +56,27 @@ const monthDayLabel = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
+const weekdayLabel = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+
+const weekdayYearLabel = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+const timeLabel = new Intl.DateTimeFormat("en-US", {
+  timeZone: APP_TIME_ZONE,
+  hour: "numeric",
+  minute: "2-digit",
+});
+
 const dateTimeLabel = new Intl.DateTimeFormat("en-US", {
   timeZone: APP_TIME_ZONE,
   month: "short",
@@ -222,6 +243,20 @@ export function formatListDate(date: IsoDate, today: IsoDate = todayInLA()): str
   if (date.slice(0, 4) !== today.slice(0, 4)) return formatDate(date);
   const { year, month, day } = parseIsoDate(date);
   return monthDayLabel.format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+/** Formats a date with its weekday, leaving out this year, e.g. "Fri, Sep 25", or "Wed, Dec 31, 2025". */
+export function formatWeekdayDate(date: IsoDate, today: IsoDate = todayInLA()): string {
+  const { year, month, day } = parseIsoDate(date);
+  const format = date.slice(0, 4) === today.slice(0, 4) ? weekdayLabel : weekdayYearLabel;
+  return format.format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+/** Formats the time of an instant in Los Angeles, e.g. "3:04 PM". */
+export function formatTime(instant: Date | string): string {
+  const date = typeof instant === "string" ? new Date(instant) : instant;
+  if (Number.isNaN(date.getTime())) throw new RangeError(`Invalid instant: ${String(instant)}`);
+  return timeLabel.format(date);
 }
 
 /** Formats an instant in Los Angeles time, e.g. "Sep 25, 2026, 3:04 PM". */

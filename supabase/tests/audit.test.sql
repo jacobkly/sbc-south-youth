@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(22);
+select plan(23);
 
 -- Fake people. New auth users get a member row from the signup trigger.
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -36,6 +36,11 @@ from (values
   ('00000000-0000-4000-8000-00000000c004', 'Rejected'),
   ('00000000-0000-4000-8000-00000000c005', 'Cancelled')
 ) as r (id, description);
+
+select has_index(
+  'public', 'request_events', 'request_events_created_at_idx',
+  'the activity feed can page through every event newest first'
+);
 
 -- Grants.
 select ok(not has_table_privilege('anon', 'public.request_events', 'select'), 'anon can''t read the audit log');
