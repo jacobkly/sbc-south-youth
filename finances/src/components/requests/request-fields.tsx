@@ -42,6 +42,14 @@ export const requestFieldId = (key: RequestField | "receipts" | "no_receipt" | "
  */
 export const lineFieldId = (index: number, field: LineField | "files") => `request-line-${index}-${field}`;
 
+/** A receipt card's "Receipt N" heading. */
+const lineHeadingId = (index: number) => `${lineFieldId(index, "files")}-heading`;
+
+const ADD_LINE_ID = "request-add-line";
+
+/** Scrolled to after adding or removing a receipt, it stops clear of the phone tab bar, like the page's own bottom padding. */
+const SCROLL_CLEAR = "scroll-mt-4 scroll-mb-[calc(7rem+env(safe-area-inset-bottom))] desktop:scroll-mb-4";
+
 /** Where focus goes for a field's error. The type is a group, so its first option. */
 function requestFocusId(key: Exclude<keyof RequestFormErrors, "lines">): string {
   return key === "type" ? `request-type-${REQUEST_TYPES[0]}` : requestFieldId(key);
@@ -155,13 +163,17 @@ export function RequestFields({
   // Files that can still be picked, on any receipt.
   const room = Math.max(0, pendingReceipts.limit - picked.length);
 
-  // After adding or removing a receipt, focus moves to an amount once it's on screen.
+  // After adding or removing a receipt, focus moves to the receipt now in its
+  // place (or the add button) and scrolls it into view. Never to a field, so
+  // the phone keyboard doesn't open over the change before it's seen.
   const focusAfterRender = useRef<string | null>(null);
   useEffect(() => {
     const id = focusAfterRender.current;
     if (!id) return;
     focusAfterRender.current = null;
-    document.getElementById(id)?.focus();
+    const target = document.getElementById(id);
+    target?.focus({ preventScroll: true });
+    (target?.closest("li") ?? target)?.scrollIntoView({ block: "nearest" });
   }, [lines]);
 
   function textProps(key: TextField, hint?: boolean) {
@@ -184,14 +196,15 @@ export function RequestFields({
   }
 
   function addLine() {
-    focusAfterRender.current = lineFieldId(lines.length, "amount");
+    focusAfterRender.current = lineHeadingId(lines.length);
     onChange("lines", [...lines, blankLine()]);
   }
 
   function removeLine(index: number) {
     pendingReceipts.removeLine(lines[index].id);
     const next = lines.filter((_, i) => i !== index);
-    focusAfterRender.current = lineFieldId(Math.min(index, next.length - 1), "amount");
+    // Back to one receipt, the cards go away, so the add button is next.
+    focusAfterRender.current = next.length === 1 ? ADD_LINE_ID : lineHeadingId(Math.min(index, next.length - 1));
     onChange("lines", next);
   }
 
@@ -282,7 +295,14 @@ export function RequestFields({
   );
 
   const addLineButton = lines.length < MAX_LINES && (
-    <Button type="button" variant="outline" className="h-11 w-full" onClick={addLine} disabled={locked}>
+    <Button
+      id={ADD_LINE_ID}
+      type="button"
+      variant="outline"
+      className={`h-11 w-full ${SCROLL_CLEAR}`}
+      onClick={addLine}
+      disabled={locked}
+    >
       <PlusIcon aria-hidden />
       Add another receipt
     </Button>
@@ -418,16 +438,16 @@ export function RequestFields({
           <Label id={`${requestFieldId("receipts")}-label`}>Receipts</Label>
           <ol className="space-y-3">
             {lines.map((line, index) => {
-              const headingId = `${lineFieldId(index, "files")}-heading`;
+              const headingId = lineHeadingId(index);
               return (
                 <li
                   key={line.id}
                   role="group"
                   aria-labelledby={headingId}
-                  className="space-y-3 rounded-lg border p-3"
+                  className={`space-y-3 rounded-lg border p-3 ${SCROLL_CLEAR}`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <h2 id={headingId} className="text-sm font-medium">
+                    <h2 id={headingId} tabIndex={-1} className="text-sm font-medium outline-none">
                       Receipt {index + 1}
                     </h2>
                     <Button

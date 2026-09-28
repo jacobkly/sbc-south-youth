@@ -37,7 +37,8 @@ const ACTIVE_TAB_CLASSES = "bg-foreground/[0.07] text-foreground";
 
 /**
  * Navigation on phones and tablets: a floating frosted bar, like iOS. PCs get
- * the sidebar instead.
+ * the sidebar instead. It steps aside while the keyboard is up, so the field
+ * being typed in has the little room that's left, and comes back after.
  */
 export function TabBar({ role, name, avatarPath }: NavUser) {
   const pathname = usePathname();
@@ -47,7 +48,7 @@ export function TabBar({ role, name, avatarPath }: NavUser) {
   return (
     <nav
       aria-label="Main"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)-0.5rem))] desktop:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)-0.5rem))] desktop:hidden typing:hidden"
     >
       <ul className="glass pointer-events-auto mx-auto flex max-w-md rounded-full p-1">
         {TAB_ITEMS.filter(allowed).map((item) => {

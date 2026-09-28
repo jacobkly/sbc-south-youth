@@ -10,6 +10,10 @@
 @custom-variant desktop (@media (min-width: 64rem) and (hover: hover) and (pointer: fine));
 @custom-variant touch (@media not all and (min-width: 64rem) and (hover: hover) and (pointer: fine));
 
+/* typing: a text field has focus, so on a phone or tablet the on-screen
+   keyboard is up. */
+@custom-variant typing (body:has(:is(textarea, input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"])):focus) &);
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: var(--font-sans);

@@ -54,9 +54,9 @@ function KeyboardInset() {
 
 /**
  * Sheet content that fits the device. On phones and tablets it's a bottom
- * sheet that rides above the keyboard and doesn't focus a field on open, so
- * the keyboard doesn't cover it before it's read. On PCs it's a centered
- * dialog with no sliding. Use inside `Sheet`.
+ * sheet that rides above the keyboard. On PCs it's a centered dialog with no
+ * sliding. Either way it focuses itself on open, not its first field, so the
+ * keyboard doesn't cover it before it's read. Use inside `Sheet`.
  */
 function ResponsiveSheetContent({
   className,
@@ -81,7 +81,7 @@ function ResponsiveSheetContent({
         )}
         onOpenAutoFocus={(event) => {
           onOpenAutoFocus?.(event)
-          if (event.defaultPrevented || isDesktop()) return
+          if (event.defaultPrevented) return
           event.preventDefault()
           if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus()
         }}
