@@ -1,41 +1,9 @@
-import Image from "next/image";
-import logo from "@/assets/logo.png";
-
+// A stand-in until the home page is built. Production shows /coming-soon
+// instead while the launch gate is closed.
 export default function Home() {
   return (
-    <main className="relative isolate flex min-h-dvh flex-col items-center justify-center overflow-hidden px-6 pt-[max(3rem,env(safe-area-inset-top))] pb-[max(3rem,env(safe-area-inset-bottom))] text-center">
-      <div aria-hidden className="grain pointer-events-none absolute inset-0 -z-10 opacity-[0.035]" />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-2/3 bg-[radial-gradient(ellipse_70%_60%_at_50%_0%,rgb(255_255_255/0.07),transparent)]"
-      />
-
-      <div className="relative animate-rise motion-reduce:animate-none">
-        <div
-          aria-hidden
-          className="absolute -inset-20 -z-10 animate-breathe rounded-full bg-[radial-gradient(closest-side,rgb(255_255_255/0.16),transparent)] motion-reduce:animate-none sm:-inset-28"
-        />
-        {/* The heading names the page, so the logo is decorative. Already small, so no resizing needed. */}
-        <Image src={logo} alt="" preload unoptimized className="h-auto w-32 sm:w-40" />
-      </div>
-
-      <h1 className="mt-10 animate-rise text-4xl font-semibold tracking-tight [animation-delay:120ms] motion-reduce:animate-none sm:text-6xl">
-        SBC South Youth
-      </h1>
-
-      <p className="mt-5 inline-flex animate-rise items-center gap-2.5 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium tracking-[0.2em] text-white/80 uppercase [animation-delay:240ms] motion-reduce:animate-none">
-        <span aria-hidden className="relative flex size-2">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-400 opacity-75 motion-reduce:animate-none" />
-          <span className="relative inline-flex size-2 rounded-full bg-amber-400" />
-        </span>
-        Under construction
-      </p>
-
-      <p className="mt-6 animate-rise text-base text-white/60 [animation-delay:360ms] motion-reduce:animate-none sm:text-lg">
-        Our new website is on the way.
-        <br />
-        Check back soon.
-      </p>
+    <main className="grid min-h-dvh place-items-center p-6 text-center">
+      <h1 className="text-3xl font-semibold tracking-tight">SBC South Youth</h1>
     </main>
   );
 }

@@ -7,12 +7,12 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const description = "The new SBC South Youth website is under construction. Check back soon.";
+const description = "Youth nights, events, and a place to belong for high school and college students at SBC South.";
 
 export const metadata: Metadata = {
   // Makes the link preview image URL absolute. Vercel previews use their own URL instead.
   metadataBase: new URL("https://sbcsouthyouth.com"),
-  title: "SBC South Youth",
+  title: { default: "SBC South Youth", template: "%s · SBC South Youth" },
   description,
   applicationName: "SBC South Youth",
   openGraph: {
