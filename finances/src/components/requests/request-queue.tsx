@@ -18,6 +18,7 @@ import {
   QUEUE_TAB_STATUSES,
   QUEUE_TABS,
   queueHref,
+  sortsByPurchaseDate,
   type QueueTab,
   type ShownQueueFilters,
 } from "@/lib/requests/queue";
@@ -100,7 +101,11 @@ export function RequestQueue({
   } else {
     content = (
       <div className="space-y-3">
-        <RequestList rows={rows} showStatus={QUEUE_TAB_STATUSES[filters.tab]?.length !== 1} />
+        <RequestList
+          rows={rows}
+          showStatus={QUEUE_TAB_STATUSES[filters.tab]?.length !== 1}
+          byPurchaseDate={sortsByPurchaseDate(filters)}
+        />
         {(hasMore || capped) && (
           <p className="text-center text-sm text-muted-foreground">
             {capped

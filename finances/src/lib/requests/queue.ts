@@ -123,6 +123,15 @@ export function isFiltered(filters: QueueFilters): boolean {
   return Boolean(filters.q) || activeFilterCount(filters) > 0;
 }
 
+/**
+ * Whether the list goes by purchase date, because a purchase date range is
+ * set. Otherwise it goes by the day each request was paid, or created while
+ * it's unpaid.
+ */
+export function sortsByPurchaseDate(filters: Pick<QueueFilters, "from" | "to">): boolean {
+  return Boolean(filters.from || filters.to);
+}
+
 /** The request number in a search like "R-0012", "r12", or "12". */
 export function requestNumberIn(term: string): number | null {
   const match = /^r?-?\s*0*(\d{1,9})$/i.exec(term.trim());

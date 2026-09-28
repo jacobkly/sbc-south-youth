@@ -4,6 +4,7 @@ import {
   daysBetween,
   formatDate,
   formatDateTime,
+  formatListDate,
   isIsoDate,
   laDateOf,
   laDateTime,
@@ -194,6 +195,11 @@ describe("labels", () => {
   it("formats plain dates without shifting the day", () => {
     expect(formatDate("2026-01-01")).toBe("Jan 1, 2026");
     expect(formatDate("2026-12-31")).toBe("Dec 31, 2026");
+  });
+
+  it("leaves this year out of dates in a list", () => {
+    expect(formatListDate("2026-09-27", "2026-09-28")).toBe("Sep 27");
+    expect(formatListDate("2025-12-31", "2026-01-02")).toBe("Dec 31, 2025");
   });
 
   it("formats instants in LA time", () => {

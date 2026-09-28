@@ -6,9 +6,9 @@ import { StatusBadge } from "@/components/requests/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate, type IsoDate } from "@/lib/dates";
+import { formatListDate, type IsoDate } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
-import { formatRequestNumber, REQUEST_TYPE_LABELS, requestTitle } from "@/lib/requests/format";
+import { formatRequestNumber, listedDate, REQUEST_TYPE_LABELS, requestTitle } from "@/lib/requests/format";
 import type { QueueRow } from "@/lib/requests/queries";
 import type { QueueTab } from "@/lib/requests/queue";
 
@@ -24,9 +24,9 @@ type Shown = { showPayee: boolean; showStatus: boolean };
  * The columns a wide list shows, as a `grid-template-columns` value. The
  * header and every row share it through a CSS variable, so they line up.
  */
-function columnTemplate({ showPayee, showStatus }: Shown): string {
+function columnTemplate({ showPayee, showStatus, labeledDates }: Shown & { labeledDates: boolean }): string {
   return [
-    "6.5rem", // Date
+    labeledDates ? "9.5rem" : "6.5rem", // Date
     "4.5rem", // Number
     showPayee && "minmax(0,1fr)",
     showPayee ? "minmax(0,1.5fr)" : "minmax(0,1fr)", // Purchase
@@ -49,19 +49,22 @@ export function RequestTable({
   showPayee,
   showStatus,
   dateLabel = "Date",
+  labeledDates = false,
   className,
   children,
 }: Shown & {
   /** Goes on the list, for aria-controls. */
   id?: string;
   dateLabel?: string;
+  /** Rows put a word like "Paid" before their date, so the column is wider. */
+  labeledDates?: boolean;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <div
       className={cn("@container overflow-hidden rounded-lg border", className)}
-      style={{ "--request-columns": columnTemplate({ showPayee, showStatus }) } as CSSProperties}
+      style={{ "--request-columns": columnTemplate({ showPayee, showStatus, labeledDates }) } as CSSProperties}
     >
       {/* Screen readers get each row as one link instead. */}
       <div
@@ -85,15 +88,17 @@ export function RequestTable({
 
 /**
  * One request in a RequestTable, linking to its page. `children` is the
- * stacked card; a wide list shows `date` and the rest in columns instead.
+ * stacked card; a wide list shows `date` and the rest in columns instead,
+ * with `dateLabel` before the date when the rows differ in what it means.
  */
 export function RequestRow({
   row,
   date,
+  dateLabel,
   showPayee,
   showStatus,
   children,
-}: Shown & { row: QueueRow; date: IsoDate; children: ReactNode }) {
+}: Shown & { row: QueueRow; date: IsoDate; dateLabel?: string; children: ReactNode }) {
   return (
     <li>
       <Link
@@ -102,7 +107,10 @@ export function RequestRow({
       >
         <div className="flex items-start gap-3 @4xl:hidden">{children}</div>
         <div className={cn(COLUMNS, "hidden text-sm @4xl:grid")}>
-          <span className="tabular-nums">{formatDate(date)}</span>
+          <span className="tabular-nums">
+            {dateLabel && <span className="text-muted-foreground">{dateLabel} </span>}
+            {formatListDate(date)}
+          </span>
           <span className="text-muted-foreground tabular-nums">{formatRequestNumber(row.request_number)}</span>
           {showPayee && <span className="truncate font-medium">{row.payee?.full_name ?? "Unknown payee"}</span>}
           <span className="flex min-w-0 items-center gap-2">
@@ -122,42 +130,57 @@ export function RequestRow({
   );
 }
 
-/** Requests by purchase date. Leave out the payee on a page that's already about one payee. */
+/**
+ * Requests with the date they're listed by: when each was paid, or created
+ * while it's unpaid, or the purchase date when `byPurchaseDate`. Leave out
+ * the payee on a page that's already about one payee.
+ */
 export function RequestList({
   rows,
   showStatus,
   showPayee = true,
+  byPurchaseDate = false,
   className,
 }: {
   rows: QueueRow[];
   showStatus: boolean;
   showPayee?: boolean;
+  byPurchaseDate?: boolean;
   className?: string;
 }) {
   return (
-    <RequestTable showPayee={showPayee} showStatus={showStatus} className={className}>
-      {rows.map((row) => (
-        <RequestRow key={row.id} row={row} date={row.purchase_date} showPayee={showPayee} showStatus={showStatus}>
-          <div className="min-w-0 flex-1">
-            {showPayee ? (
-              <>
-                <p className="truncate font-medium">{row.payee?.full_name ?? "Unknown payee"}</p>
-                <p className="truncate text-sm text-muted-foreground">{requestTitle(row)}</p>
-              </>
-            ) : (
-              <p className="truncate font-medium">{requestTitle(row)}</p>
-            )}
-            <p className="text-sm text-muted-foreground tabular-nums">
-              {formatRequestNumber(row.request_number)} · {formatDate(row.purchase_date)}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <span className="font-medium tabular-nums">{formatCents(row.amount_cents)}</span>
-            {showStatus && <StatusBadge status={row.status} />}
-            {row.missing_receipt && <MissingReceiptBadge />}
-          </div>
-        </RequestRow>
-      ))}
+    <RequestTable
+      showPayee={showPayee}
+      showStatus={showStatus}
+      dateLabel={byPurchaseDate ? "Purchased" : "Date"}
+      labeledDates={!byPurchaseDate}
+      className={className}
+    >
+      {rows.map((row) => {
+        const { label, date } = byPurchaseDate ? { label: undefined, date: row.purchase_date } : listedDate(row);
+        return (
+          <RequestRow key={row.id} row={row} date={date} dateLabel={label} showPayee={showPayee} showStatus={showStatus}>
+            <div className="min-w-0 flex-1">
+              {showPayee ? (
+                <>
+                  <p className="truncate font-medium">{row.payee?.full_name ?? "Unknown payee"}</p>
+                  <p className="truncate text-sm text-muted-foreground">{requestTitle(row)}</p>
+                </>
+              ) : (
+                <p className="truncate font-medium">{requestTitle(row)}</p>
+              )}
+              <p className="text-sm text-muted-foreground tabular-nums">
+                {formatRequestNumber(row.request_number)} · {label ? `${label} ${formatListDate(date)}` : formatListDate(date)}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <span className="font-medium tabular-nums">{formatCents(row.amount_cents)}</span>
+              {showStatus && <StatusBadge status={row.status} />}
+              {row.missing_receipt && <MissingReceiptBadge />}
+            </div>
+          </RequestRow>
+        );
+      })}
     </RequestTable>
   );
 }
@@ -165,7 +188,7 @@ export function RequestList({
 export function RequestListSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading requests">
-      <RequestTable showPayee showStatus>
+      <RequestTable showPayee showStatus labeledDates>
         {[0, 1, 2].map((index) => (
           <li key={index} className="min-h-16 px-4 py-3 @4xl:min-h-0">
             <div className="flex items-start gap-3 @4xl:hidden">

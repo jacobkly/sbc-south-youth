@@ -215,6 +215,7 @@ export type Database = {
           payment_reference: string | null
           purchase_date: string
           request_number: number
+          sort_at: string
           status: Database["public"]["Enums"]["request_status"]
           submitted_at: string | null
           type: Database["public"]["Enums"]["reimbursement_type"]
@@ -242,6 +243,7 @@ export type Database = {
           payment_reference?: string | null
           purchase_date: string
           request_number?: never
+          sort_at?: never
           status?: Database["public"]["Enums"]["request_status"]
           submitted_at?: string | null
           type: Database["public"]["Enums"]["reimbursement_type"]
@@ -268,6 +270,7 @@ export type Database = {
           payment_reference?: string | null
           purchase_date?: string
           request_number?: never
+          sort_at?: never
           status?: Database["public"]["Enums"]["request_status"]
           submitted_at?: string | null
           type?: Database["public"]["Enums"]["reimbursement_type"]
@@ -600,6 +603,7 @@ export type Database = {
           payment_reference: string | null
           purchase_date: string
           request_number: number
+          sort_at: string
           status: Database["public"]["Enums"]["request_status"]
           submitted_at: string | null
           type: Database["public"]["Enums"]["reimbursement_type"]
@@ -683,6 +687,7 @@ export type Database = {
           payment_reference: string | null
           purchase_date: string
           request_number: number
+          sort_at: string
           status: Database["public"]["Enums"]["request_status"]
           submitted_at: string | null
           type: Database["public"]["Enums"]["reimbursement_type"]

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatRequestNumber, isEditable, requestTitle } from "./format";
+import { formatRequestNumber, isEditable, listedDate, requestTitle } from "./format";
 
 describe("requestTitle", () => {
   it("uses the vendor first", () => {
@@ -32,5 +32,21 @@ describe("isEditable", () => {
     expect(isEditable("paid")).toBe(false);
     expect(isEditable("rejected")).toBe(false);
     expect(isEditable("cancelled")).toBe(false);
+  });
+});
+
+describe("listedDate", () => {
+  it("shows the day it was paid, in Los Angeles", () => {
+    expect(listedDate({ paid_at: "2026-09-29T02:00:00Z", sort_at: "2026-09-29T02:00:00Z" })).toEqual({
+      label: "Paid",
+      date: "2026-09-28",
+    });
+  });
+
+  it("shows the day it was created while it's unpaid", () => {
+    expect(listedDate({ paid_at: null, sort_at: "2026-09-01T18:00:00Z" })).toEqual({
+      label: "Created",
+      date: "2026-09-01",
+    });
   });
 });

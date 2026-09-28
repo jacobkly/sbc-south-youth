@@ -10,6 +10,7 @@ import {
   queueHref,
   requestNumberIn,
   searchFilter,
+  sortsByPurchaseDate,
 } from "./queue";
 
 const PAYEE = "0b7c6a8e-4f1d-4c2a-9e3b-5d6f7a8b9c0d";
@@ -137,6 +138,14 @@ describe("activeFilterCount and isFiltered", () => {
     expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, tab: "all" })).toBe(false);
     expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, q: "x" })).toBe(true);
     expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, missingReceipt: true })).toBe(true);
+  });
+});
+
+describe("sortsByPurchaseDate", () => {
+  it("goes by paid or created date until a purchase date range is set", () => {
+    expect(sortsByPurchaseDate(DEFAULT_QUEUE_FILTERS)).toBe(false);
+    expect(sortsByPurchaseDate({ ...DEFAULT_QUEUE_FILTERS, from: "2026-09-01" })).toBe(true);
+    expect(sortsByPurchaseDate({ ...DEFAULT_QUEUE_FILTERS, to: "2026-09-30" })).toBe(true);
   });
 });
 

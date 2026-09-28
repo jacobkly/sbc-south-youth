@@ -50,6 +50,12 @@ const dateLabel = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const monthDayLabel = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "short",
+  day: "numeric",
+});
+
 const dateTimeLabel = new Intl.DateTimeFormat("en-US", {
   timeZone: APP_TIME_ZONE,
   month: "short",
@@ -206,6 +212,16 @@ export function periodLabel(period: Period): string {
 export function formatDate(date: IsoDate): string {
   const { year, month, day } = parseIsoDate(date);
   return dateLabel.format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+/**
+ * Formats a date in a list, leaving out this year so it fits beside the
+ * amount on a phone, e.g. "Sep 25", or "Dec 31, 2025" from last year.
+ */
+export function formatListDate(date: IsoDate, today: IsoDate = todayInLA()): string {
+  if (date.slice(0, 4) !== today.slice(0, 4)) return formatDate(date);
+  const { year, month, day } = parseIsoDate(date);
+  return monthDayLabel.format(new Date(Date.UTC(year, month - 1, day)));
 }
 
 /** Formats an instant in Los Angeles time, e.g. "Sep 25, 2026, 3:04 PM". */

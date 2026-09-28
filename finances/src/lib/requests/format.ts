@@ -1,4 +1,5 @@
 import type { Enums } from "@/lib/database.types";
+import { laDateOf, type IsoDate } from "@/lib/dates";
 import type { RequestType } from "./schema";
 
 export type RequestStatus = Enums<"request_status">;
@@ -36,4 +37,15 @@ export function requestTitle(request: { vendor: string | null; description: stri
 /** The number people see, e.g. 7 -> "R-0007". */
 export function formatRequestNumber(requestNumber: number): string {
   return `R-${String(requestNumber).padStart(4, "0")}`;
+}
+
+/**
+ * The day a list goes by for a request: when it was paid back, or when it was
+ * created while it's unpaid.
+ */
+export function listedDate(request: { paid_at: string | null; sort_at: string }): {
+  label: "Paid" | "Created";
+  date: IsoDate;
+} {
+  return { label: request.paid_at ? "Paid" : "Created", date: laDateOf(request.sort_at) };
 }

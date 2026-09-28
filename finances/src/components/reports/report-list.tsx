@@ -1,6 +1,6 @@
 import { MissingReceiptBadge, RequestRow, RequestTable } from "@/components/requests/request-list";
 import { StatusBadge } from "@/components/requests/status-badge";
-import { formatDate, laDateOf } from "@/lib/dates";
+import { formatListDate, laDateOf } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { formatRequestNumber, REQUEST_TYPE_LABELS, requestTitle } from "@/lib/requests/format";
 import type { ReportRow } from "@/lib/requests/queries";
@@ -33,7 +33,7 @@ export function ReportList({
               <p className="truncate text-sm text-muted-foreground">{requestTitle(row)}</p>
               <p className="text-sm text-muted-foreground tabular-nums">
                 {formatRequestNumber(row.request_number)} ·{" "}
-                {paid ? `Paid ${formatDate(paid)}` : formatDate(row.purchase_date)} ·{" "}
+                {paid ? `Paid ${formatListDate(paid)}` : formatListDate(row.purchase_date)} ·{" "}
                 {REQUEST_TYPE_LABELS[row.type]}
               </p>
             </div>

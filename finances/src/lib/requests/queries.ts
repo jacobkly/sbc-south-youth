@@ -9,14 +9,15 @@ import {
   QUEUE_TAB_STATUSES,
   QUEUE_TABS,
   searchFilter,
+  sortsByPurchaseDate,
   type QueueFilters,
   type QueueTab,
 } from "./queue";
 
 const QUEUE_COLUMNS =
-  "id, request_number, status, type, amount_cents, purchase_date, vendor, description, missing_receipt, payee:payees(full_name)";
+  "id, request_number, status, type, amount_cents, purchase_date, paid_at, sort_at, vendor, description, missing_receipt, payee:payees(full_name)";
 const REPORT_COLUMNS =
-  `${QUEUE_COLUMNS}, payee_id, event_name, submitted_at, approved_at, paid_at, payment_method, no_receipt_reason, lines:request_lines(vendor, amount_cents)` as const;
+  `${QUEUE_COLUMNS}, payee_id, event_name, submitted_at, approved_at, payment_method, no_receipt_reason, lines:request_lines(vendor, amount_cents)` as const;
 const EXPORT_COLUMNS = `
   request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
   submitted_at, external_approver, approved_at, paid_at, payment_method, payment_reference, no_receipt, no_receipt_reason,
@@ -36,6 +37,8 @@ export type QueueRow = Pick<
   | "type"
   | "amount_cents"
   | "purchase_date"
+  | "paid_at"
+  | "sort_at"
   | "vendor"
   | "description"
   | "missing_receipt"
@@ -44,7 +47,7 @@ export type QueueRow = Pick<
 export type QueuePage = {
   /** The tab shown: the one in the URL, or the one picked for it. */
   tab: QueueTab;
-  /** Newest purchase first. */
+  /** Newest first, by paid or created date, or by purchase date when a range is set. */
   rows: QueueRow[];
   /** How many requests in each tab match the filters. */
   counts: Record<QueueTab, number>;
@@ -104,7 +107,7 @@ export async function loadQueue(
   const tab = filters.tab ?? defaultTab(await counting);
   const [rows, counts] = await Promise.all([
     queueQuery(supabase, tab, filters, payeeIds)
-      .order("purchase_date", { ascending: false })
+      .order(sortsByPurchaseDate(filters) ? "purchase_date" : "sort_at", { ascending: false })
       .order("request_number", { ascending: false })
       .range(0, filters.pages * QUEUE_PAGE_SIZE - 1),
     counting,
@@ -120,7 +123,7 @@ export async function loadQueue(
   };
 }
 
-/** The newest requests by purchase date, and how many there are in all. Throws if the query fails. */
+/** The newest requests by paid or created date, and how many there are in all. Throws if the query fails. */
 export async function loadRecentRequests(
   supabase: SupabaseClient<Database>,
   limit: number,
@@ -128,7 +131,7 @@ export async function loadRecentRequests(
   const { data, count, error } = await supabase
     .from("reimbursement_requests")
     .select(QUEUE_COLUMNS, { count: "exact" })
-    .order("purchase_date", { ascending: false })
+    .order("sort_at", { ascending: false })
     .order("request_number", { ascending: false })
     .limit(limit);
 
@@ -136,7 +139,7 @@ export async function loadRecentRequests(
   return { rows: data, total: count ?? data.length };
 }
 
-/** A payee's newest requests, and how many they have in all. Throws if the query fails. */
+/** A payee's newest requests by paid or created date, and how many they have in all. Throws if the query fails. */
 export async function loadPayeeRequests(
   supabase: SupabaseClient<Database>,
   payeeId: string,
@@ -146,7 +149,7 @@ export async function loadPayeeRequests(
     .from("reimbursement_requests")
     .select(QUEUE_COLUMNS, { count: "exact" })
     .eq("payee_id", payeeId)
-    .order("purchase_date", { ascending: false })
+    .order("sort_at", { ascending: false })
     .order("request_number", { ascending: false })
     .limit(limit);
 
@@ -158,7 +161,7 @@ export async function loadPayeeRequests(
 export type ReportRow = QueueRow &
   Pick<
     Tables<"reimbursement_requests">,
-    "payee_id" | "event_name" | "submitted_at" | "approved_at" | "paid_at" | "payment_method" | "no_receipt_reason"
+    "payee_id" | "event_name" | "submitted_at" | "approved_at" | "payment_method" | "no_receipt_reason"
   > & { lines: Pick<Tables<"request_lines">, "vendor" | "amount_cents">[] };
 
 /** The requests in a report with the given columns, newest first by the report's date. */
