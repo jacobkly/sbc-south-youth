@@ -6,9 +6,11 @@ import { ButtonLink, buttonClasses } from "@/components/button";
 import { DirectionsButton } from "@/components/site/directions-button";
 import { FaqAccordion } from "@/components/site/faq-accordion";
 import { GatheringCard } from "@/components/site/gathering-card";
+import { JumpNav } from "@/components/site/jump-nav";
 import { MapArt } from "@/components/site/map-art";
 import { PageIntro } from "@/components/site/page-intro";
 import { SectionHeader } from "@/components/site/section-header";
+import { Steps } from "@/components/site/steps";
 import { visitFaq } from "@/content/faq";
 import { formatAddress, site } from "@/content/site";
 import { visit } from "@/content/visit";
@@ -42,20 +44,7 @@ export default async function VisitPage() {
         When and where we meet, where to park, and what to expect when you walk in. No sign-up needed. Just show up.
       </PageIntro>
 
-      <nav aria-label="On this page" className="page-x">
-        <ul className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:px-0">
-          {sections.map((section) => (
-            <li key={section.id} className="shrink-0">
-              <a
-                href={`#${section.id}`}
-                className="pressable inline-flex h-11 items-center rounded-full bg-surface px-4 text-[0.9375rem] font-medium ring-1 ring-line ring-inset hover:bg-surface-2"
-              >
-                {section.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <JumpNav sections={sections} />
 
       <section id="when" aria-labelledby="when-title" className="page-x mt-12 scroll-mt-24 lg:mt-16">
         <SectionHeader id="when-title" eyebrow="When" title="Every week">
@@ -117,26 +106,9 @@ export default async function VisitPage() {
 
       <section id="first-night" aria-labelledby="first-night-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
         <SectionHeader id="first-night-title" eyebrow="Your first night" title="What happens when you walk in" />
-        <ol className="mt-8 grid gap-x-6 lg:grid-cols-4">
-          {firstNight.map((step, index) => (
-            <li
-              key={step.title}
-              className="relative flex gap-5 pb-8 last:pb-0 lg:flex-col lg:gap-4 lg:border-t lg:border-line lg:pt-6 lg:pb-0"
-            >
-              {/* The line that joins the numbers on phones. */}
-              {index < firstNight.length - 1 && (
-                <span aria-hidden className="absolute top-12 bottom-1 left-[1.375rem] w-px bg-line-strong lg:hidden" />
-              )}
-              <span className="relative grid size-11 shrink-0 place-items-center rounded-full bg-accent font-display text-[1.0625rem] font-extrabold text-on-accent">
-                {index + 1}
-              </span>
-              <div className="pt-2 lg:pt-0">
-                <h3 className="text-h3">{step.title}</h3>
-                <p className="mt-1 text-pretty text-muted">{step.body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <div className="mt-8">
+          <Steps steps={firstNight} />
+        </div>
       </section>
 
       <section id="faq" aria-labelledby="faq-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">

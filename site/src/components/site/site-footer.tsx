@@ -63,7 +63,8 @@ export async function SiteFooter() {
               <div key={gathering.slug}>
                 <dt className="font-semibold">{audienceLabels[gathering.audience]}</dt>
                 <dd className="text-muted">
-                  {weekdayName(gathering.weekday, { plural: true })}, {formatClockRange(gathering.startTime, gathering.endTime)}
+                  {weekdayName(gathering.weekday, { plural: true })},{" "}
+                  <span className="whitespace-nowrap">{formatClockRange(gathering.startTime, gathering.endTime)}</span>
                 </dd>
               </div>
             ))}
@@ -74,7 +75,10 @@ export async function SiteFooter() {
           <address className="text-muted not-italic">
             {address.street}
             <br />
-            {address.city}, {address.region} {address.postalCode}
+            {address.city},{" "}
+            <span className="whitespace-nowrap">
+              {address.region} {address.postalCode}
+            </span>
           </address>
           <Link href="/visit" className={`${linkClasses} gap-1 font-semibold`}>
             Plan a visit <ArrowUpRight aria-hidden className="size-4" />

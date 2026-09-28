@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { visitFaq } from "@/content/faq";
+import { leaders } from "@/content/leaders";
 import { photos } from "@/content/photos";
+import { privacy } from "@/content/privacy";
+import { safety } from "@/content/safety";
 import { gatherings } from "@/content/schedule";
 import { site } from "@/content/site";
 import { visit } from "@/content/visit";
@@ -49,9 +52,10 @@ describe("contentProblems", () => {
     expect(
       contentProblems({
         gatherings,
+        leaders,
         faq: visitFaq,
-        photos: [...Object.values(photos), visit.parking.entrancePhoto],
-        extra: [site, visit],
+        photos: [...Object.values(photos), visit.parking.entrancePhoto, safety.dropOff.photo],
+        extra: [site, visit, safety, privacy],
       }),
     ).toEqual([]);
   });

@@ -11,6 +11,7 @@ const tones = {
   accent: "bg-accent text-on-accent",
   solid: "bg-fg text-bg",
   outline: "text-fg ring-1 ring-line-strong ring-inset",
+  pending: "border border-dashed border-line-strong text-muted",
 } as const;
 
 export type TagTone = keyof typeof tones;
