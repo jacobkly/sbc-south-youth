@@ -36,7 +36,7 @@ select throws_ok(
        'cash_app'
      ) $$,
   '42501',
-  'Only an admin can import reimbursements.',
+  'Only an admin can import requests.',
   'a viewer can''t import'
 );
 

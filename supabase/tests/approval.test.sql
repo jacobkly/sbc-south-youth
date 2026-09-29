@@ -73,7 +73,7 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-000000
 
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c002') $$,
-  '42501', 'Only an admin can approve reimbursements.', 'a viewer can''t approve'
+  '42501', 'Only an admin can approve requests.', 'a viewer can''t approve'
 );
 select throws_ok(
   $$ select public.record_as_paid('00000000-0000-4000-8000-00000000c004', 'cash', null, now()) $$,
@@ -81,7 +81,7 @@ select throws_ok(
 );
 select throws_ok(
   $$ select public.mark_paid('00000000-0000-4000-8000-00000000c002', 'cash') $$,
-  '42501', 'Only an admin can mark reimbursements as paid.', 'a viewer can''t mark paid'
+  '42501', 'Only an admin can mark requests paid.', 'a viewer can''t mark paid'
 );
 select throws_ok(
   $$ select public.unmark_paid('00000000-0000-4000-8000-00000000c002', 'Oops') $$,
@@ -89,21 +89,21 @@ select throws_ok(
 );
 select throws_ok(
   $$ select public.unapprove_request('00000000-0000-4000-8000-00000000c002', 'Oops') $$,
-  '42501', 'Only an admin can unapprove reimbursements.', 'a viewer can''t unapprove'
+  '42501', 'Only an admin can unapprove requests.', 'a viewer can''t unapprove'
 );
 
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a003", "role": "authenticated"}', true);
 
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c002') $$,
-  '42501', 'Only an admin can approve reimbursements.', 'a member can''t approve'
+  '42501', 'Only an admin can approve requests.', 'a member can''t approve'
 );
 
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a005", "role": "authenticated"}', true);
 
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c002') $$,
-  '42501', 'Only an admin can approve reimbursements.', 'a deactivated admin can''t approve'
+  '42501', 'Only an admin can approve requests.', 'a deactivated admin can''t approve'
 );
 
 -- As the admin: approving.
@@ -111,20 +111,20 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-000000
 
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-0000000fffff') $$,
-  'P0002', 'That reimbursement doesn''t exist.', 'approving needs a real request'
+  'P0002', 'That request doesn''t exist.', 'approving needs a real request'
 );
 
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c001') $$,
   '23514',
-  'Add at least one receipt, or mark it as having no receipt.',
+  'Add a receipt first, or turn on “No receipt on file” for this request.',
   'a request with no receipt and no exception can''t be approved'
 );
 
 select throws_ok(
   $$ select public.record_as_paid('00000000-0000-4000-8000-00000000c001', 'cash', null, now()) $$,
   '23514',
-  'Add at least one receipt, or mark it as having no receipt.',
+  'Add a receipt first, or turn on “No receipt on file” for this request.',
   'a request with no receipt and no exception can''t be recorded as paid'
 );
 
@@ -160,21 +160,21 @@ select results_eq(
 
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c002') $$,
-  '55000', 'Only a draft or submitted reimbursement can be approved.', 'an approved request can''t be approved again'
+  '55000', 'Only a draft or submitted request can be approved.', 'an approved request can''t be approved again'
 );
 
 -- Self-approval, with outside approvers allowed (the default).
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c003') $$,
   '23514',
-  'This reimbursement is paid to you, so enter the name of the person who approved it.',
+  'This request is paid to you, so enter who approved it.',
   'approving your own reimbursement needs an outside approver'
 );
 
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c003', '   ') $$,
   '23514',
-  'This reimbursement is paid to you, so enter the name of the person who approved it.',
+  'This request is paid to you, so enter who approved it.',
   'a blank outside approver doesn''t count'
 );
 
@@ -224,7 +224,7 @@ select results_eq(
 
 select throws_ok(
   $$ select public.mark_paid('00000000-0000-4000-8000-00000000c002', 'cash') $$,
-  '55000', 'Only an approved reimbursement can be marked as paid.', 'a paid request can''t be paid again'
+  '55000', 'Only an approved request can be marked paid.', 'a paid request can''t be paid again'
 );
 
 select throws_ok(
@@ -251,7 +251,7 @@ select results_eq(
 
 select throws_ok(
   $$ select public.unmark_paid('00000000-0000-4000-8000-00000000c002', 'Again') $$,
-  '55000', 'Only a paid reimbursement can be unmarked as paid.', 'only a paid request can be unmarked'
+  '55000', 'Only a paid request can have its payment undone.', 'only a paid request can be unmarked'
 );
 
 select throws_ok(
@@ -273,7 +273,7 @@ select results_eq(
 
 select throws_ok(
   $$ select public.unapprove_request('00000000-0000-4000-8000-00000000c002', 'Again') $$,
-  '55000', 'Only an approved reimbursement can be unapproved.', 'only an approved request can be unapproved'
+  '55000', 'Only an approved request can be unapproved.', 'only an approved request can be unapproved'
 );
 
 -- Unapproving cleared the outside approver, so the rule applies again.
@@ -285,7 +285,7 @@ select lives_ok(
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c003') $$,
   '23514',
-  'This reimbursement is paid to you, so enter the name of the person who approved it.',
+  'This request is paid to you, so enter who approved it.',
   're-approving your own reimbursement needs an outside approver again'
 );
 
@@ -323,14 +323,14 @@ select results_eq(
 select throws_ok(
   $$ select public.record_as_paid('00000000-0000-4000-8000-00000000c006', 'cash', null, now()) $$,
   '55000',
-  'Only a draft can be recorded as paid. Use Mark paid for approved reimbursements.',
+  'Only a draft can be recorded as paid. Use Mark paid for an approved request.',
   'only a draft can be recorded as paid'
 );
 
 select throws_ok(
   $$ select public.record_as_paid('00000000-0000-4000-8000-00000000c005', 'cash', null, now()) $$,
   '23514',
-  'This reimbursement is paid to you, so enter the name of the person who approved it.',
+  'This request is paid to you, so enter who approved it.',
   'recording your own payment needs an outside approver'
 );
 
@@ -345,14 +345,14 @@ update public.app_settings set allow_external_approval = false where id = 1;
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c007', 'Pastor Example') $$,
   '42501',
-  'You can''t approve a reimbursement that''s paid to you. Another admin has to approve it.',
+  'You can''t approve a request that''s paid to you. Another admin has to approve it.',
   'with outside approvers off, an admin can''t approve their own reimbursement'
 );
 
 select throws_ok(
   $$ select public.record_as_paid('00000000-0000-4000-8000-00000000c007', 'cash', null, now(), 'Pastor Example') $$,
   '42501',
-  'You can''t approve a reimbursement that''s paid to you. Another admin has to approve it.',
+  'You can''t approve a request that''s paid to you. Another admin has to approve it.',
   'with outside approvers off, an admin can''t record their own payment'
 );
 

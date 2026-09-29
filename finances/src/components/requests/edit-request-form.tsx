@@ -49,7 +49,7 @@ const CLOSED_MESSAGE = "You can't edit it anymore. Someone may have approved or 
 
 /** The database turned the save down because the request isn't open anymore. */
 function isClosedError(error: { code?: string; message?: string }): boolean {
-  return error.code === "55000" && error.message === "This reimbursement can't be edited anymore.";
+  return error.code === "55000" && error.message === "This request can't be edited anymore.";
 }
 
 function count(n: number, one: string, many: string): string {

@@ -91,7 +91,7 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-000000
 
 select throws_ok(
   $$ select public.submit_request('00000000-0000-4000-8000-00000000c002') $$,
-  '42501', 'You don''t have permission to submit reimbursements.', 'a viewer can''t submit'
+  '42501', 'You don''t have permission to submit requests.', 'a viewer can''t submit'
 );
 select throws_ok(
   $$ select public.request_info('00000000-0000-4000-8000-00000000c003', 'Why?') $$,
@@ -99,11 +99,11 @@ select throws_ok(
 );
 select throws_ok(
   $$ select public.reject_request('00000000-0000-4000-8000-00000000c003', 'No') $$,
-  '42501', 'Only an admin can reject reimbursements.', 'a viewer can''t reject'
+  '42501', 'Only an admin can reject requests.', 'a viewer can''t reject'
 );
 select throws_ok(
   $$ select public.cancel_request('00000000-0000-4000-8000-00000000c003') $$,
-  '42501', 'You don''t have permission to cancel reimbursements.', 'a viewer can''t cancel'
+  '42501', 'You don''t have permission to cancel requests.', 'a viewer can''t cancel'
 );
 
 -- As a deactivated member.
@@ -111,7 +111,7 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-000000
 
 select throws_ok(
   $$ select public.submit_request('00000000-0000-4000-8000-00000000c002') $$,
-  '42501', 'You don''t have permission to submit reimbursements.', 'a deactivated user can''t submit'
+  '42501', 'You don''t have permission to submit requests.', 'a deactivated user can''t submit'
 );
 
 -- As the member, whose payee is b002.
@@ -119,11 +119,11 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-000000
 
 select throws_ok(
   $$ select public.submit_request('00000000-0000-4000-8000-00000000c006') $$,
-  'P0002', 'That reimbursement doesn''t exist.', 'a member can''t submit someone else''s request, or learn it exists'
+  'P0002', 'That request doesn''t exist.', 'a member can''t submit someone else''s request, or learn it exists'
 );
 select throws_ok(
   $$ select public.cancel_request('00000000-0000-4000-8000-00000000c003') $$,
-  'P0002', 'That reimbursement doesn''t exist.', 'a member can''t cancel someone else''s request, or learn it exists'
+  'P0002', 'That request doesn''t exist.', 'a member can''t cancel someone else''s request, or learn it exists'
 );
 select throws_ok(
   $$ select public.request_info('00000000-0000-4000-8000-00000000c003', 'Why?') $$,
@@ -143,13 +143,13 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-000000
 
 select throws_ok(
   $$ select public.submit_request('00000000-0000-4000-8000-0000000fffff') $$,
-  'P0002', 'That reimbursement doesn''t exist.', 'submitting needs a real request'
+  'P0002', 'That request doesn''t exist.', 'submitting needs a real request'
 );
 
 select throws_ok(
   $$ select public.submit_request('00000000-0000-4000-8000-00000000c001') $$,
   '23514',
-  'Add at least one receipt, or mark it as having no receipt.',
+  'Add a receipt first, or turn on “No receipt on file” for this request.',
   'a request with no receipt and no exception can''t be submitted'
 );
 
@@ -214,7 +214,7 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-000000
 select throws_ok(
   $$ select public.cancel_request('00000000-0000-4000-8000-00000000c003') $$,
   '42501',
-  'Only the admin who entered this reimbursement can cancel it. Reject it instead.',
+  'Only the admin who entered this request can cancel it. Reject it instead.',
   'an admin can''t cancel a request another admin entered'
 );
 

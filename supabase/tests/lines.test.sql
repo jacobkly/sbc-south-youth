@@ -103,7 +103,7 @@ select throws_ok(
        '[{"id": "00000000-0000-4000-8000-00000000f009", "amount_cents": 500}]'
      ) $$,
   '42501',
-  'Only an admin can save reimbursements.',
+  'Only an admin can save requests.',
   'a member can''t save requests'
 );
 
@@ -289,7 +289,7 @@ select throws_ok(
        '[{"id": "00000000-0000-4000-8000-00000000f003", "amount_cents": 600}]'
      ) $$,
   '22023',
-  'That receipt is on another reimbursement.',
+  'That receipt is on another request.',
   'an edit can''t take a receipt from another request'
 );
 
@@ -335,7 +335,7 @@ select throws_ok(
        ]'
      ) $$,
   '55000',
-  'This reimbursement can''t be edited anymore.',
+  'This request can''t be edited anymore.',
   'an approved request can''t be saved'
 );
 
@@ -397,7 +397,7 @@ select ok(
 select throws_ok(
   $$ update public.request_lines set amount_cents = 1 where id = '00000000-0000-4000-8000-00000000f003' $$,
   '55000',
-  'Receipts can''t change once a reimbursement is approved or closed.',
+  'Receipts can''t change once a request is approved or closed.',
   'an approved request''s receipts can''t change'
 );
 
@@ -405,14 +405,14 @@ select throws_ok(
   $$ insert into public.request_lines (request_id, position, amount_cents)
      select id, 3, 100 from public.reimbursement_requests where description = 'Three stores' $$,
   '55000',
-  'Receipts can''t change once a reimbursement is approved or closed.',
+  'Receipts can''t change once a request is approved or closed.',
   'an approved request can''t get another receipt'
 );
 
 select throws_ok(
   $$ delete from public.request_lines where id = '00000000-0000-4000-8000-00000000f003' $$,
   '55000',
-  'Receipts can''t change once a reimbursement is approved or closed.',
+  'Receipts can''t change once a request is approved or closed.',
   'an approved request''s receipts can''t be removed'
 );
 

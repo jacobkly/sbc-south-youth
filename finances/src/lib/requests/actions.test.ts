@@ -245,7 +245,7 @@ describe("applySaveAction", () => {
   });
 
   it("returns the RPC's error", async () => {
-    const error = { code: "55000", message: "Only a draft or submitted reimbursement can be approved." };
+    const error = { code: "55000", message: "Only a draft or submitted request can be approved." };
     const { client } = fakeClient(error);
     expect(await applySaveAction(client, REQUEST_ID, { option: "approve", external_approver: null })).toBe(error);
   });
@@ -256,10 +256,10 @@ describe("saveActionErrorMessage", () => {
     expect(
       saveActionErrorMessage("paid", {
         code: "23514",
-        message: "This reimbursement is paid to you, so enter the name of the person who approved it.",
+        message: "This request is paid to you, so enter who approved it.",
       }),
     ).toBe(
-      "The draft is saved, but it wasn't recorded as paid. This reimbursement is paid to you, so enter the name of the person who approved it.",
+      "The draft is saved, but it wasn't recorded as paid. This request is paid to you, so enter who approved it.",
     );
   });
 
@@ -481,7 +481,7 @@ describe("applyRequestAction", () => {
 
 describe("appErrorMessage", () => {
   it("passes the app's sentences through and hides the rest", () => {
-    const wrongStatus = { code: "55000", message: "Only an approved reimbursement can be marked as paid." };
+    const wrongStatus = { code: "55000", message: "Only an approved request can be marked paid." };
     expect(appErrorMessage(wrongStatus)).toBe(wrongStatus.message);
     expect(appErrorMessage({ code: "22023", message: "Add a note explaining why." })).toBe("Add a note explaining why.");
     expect(appErrorMessage({ code: "42501", message: "permission denied for table payees" })).toBeNull();

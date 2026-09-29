@@ -115,7 +115,7 @@ select throws_ok(
        '[{"id": "00000000-0000-4000-8000-00000000f009", "amount_cents": 500, "vendor": "Fake Store"}]'
      ) $$,
   '42501',
-  'Only an admin can save reimbursements.',
+  'Only an admin can save requests.',
   'a member can''t create requests'
 );
 
@@ -159,7 +159,7 @@ select throws_ok(
        '[{"id": "00000000-0000-4000-8000-00000000f009", "amount_cents": 500, "vendor": "Fake Store"}]'
      ) $$,
   '42501',
-  'Only an admin can save reimbursements.',
+  'Only an admin can save requests.',
   'a viewer can''t create requests'
 );
 
@@ -349,7 +349,7 @@ select throws_ok(
        '[{"id": "00000000-0000-4000-8000-00000000f005", "amount_cents": 1, "vendor": "Fake Store"}]'
      ) $$,
   '55000',
-  'This reimbursement can''t be edited anymore.',
+  'This request can''t be edited anymore.',
   'a paid request can''t be saved'
 );
 
