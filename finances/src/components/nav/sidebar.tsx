@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronsUpDownIcon, LogOutIcon, PlusIcon, UserRoundIcon } from "lucide-react";
+import { cn } from "cn";
 import { useSignOut } from "@/components/auth/sign-out-button";
 import { LogoMark } from "@/components/nav/logo-mark";
 import {
@@ -25,19 +26,24 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 
-const MAIN_ITEMS = [DASHBOARD, REQUESTS, PAYEES, REPORTS, ACTIVITY];
+export const MAIN_ITEMS = [DASHBOARD, REQUESTS, PAYEES, REPORTS, ACTIVITY];
+
+/** How a sidebar or rail link looks when hovered, focused, or showing the current page. */
+export const NAV_LINK_STATES =
+  "text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring aria-[current=page]:bg-background aria-[current=page]:text-sidebar-foreground aria-[current=page]:shadow-xs aria-[current=page]:ring-1 aria-[current=page]:ring-sidebar-border dark:aria-[current=page]:bg-sidebar-accent";
 
 function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
   return (
     <Link
       href={item.href}
       aria-current={isActive(pathname, item.href) ? "page" : undefined}
-      className="group flex h-9 items-center gap-3 rounded-md px-2.5 text-sm font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring aria-[current=page]:bg-background aria-[current=page]:text-sidebar-foreground aria-[current=page]:shadow-xs aria-[current=page]:ring-1 aria-[current=page]:ring-sidebar-border dark:aria-[current=page]:bg-sidebar-accent"
+      className={cn("group flex h-9 items-center gap-3 rounded-md px-2.5 text-sm font-medium touch:h-11", NAV_LINK_STATES)}
     >
       <item.icon className="size-4 shrink-0 opacity-70 group-aria-[current=page]:opacity-100" aria-hidden />
       {item.label}
@@ -45,20 +51,43 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
   );
 }
 
-function AccountMenu({ role, name, avatarPath }: NavUser) {
+/**
+ * The signed-in user, with Account and Sign out. In the sidebar it shows the
+ * name and role. In the rail it's just the picture, so the menu names them.
+ */
+export function AccountMenu({ role, name, avatarPath, compact = false }: NavUser & { compact?: boolean }) {
   const { pending, signOut } = useSignOut();
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-md p-2 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent">
-        <UserAvatar name={name} path={avatarPath} />
-        <span className="min-w-0 flex-1 leading-tight">
-          <span className="block truncate text-sm font-medium">{name}</span>
-          <span className="block truncate text-xs text-muted-foreground">{ROLE_LABELS[role]}</span>
-        </span>
-        <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <DropdownMenuTrigger
+        aria-label={compact ? `Account menu for ${name}` : undefined}
+        className={cn(
+          "flex items-center rounded-md outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent",
+          compact ? "size-12 justify-center rounded-full" : "w-full gap-3 p-2 text-left",
+        )}
+      >
+        <UserAvatar name={name} path={avatarPath} className={compact ? "size-9" : undefined} />
+        {!compact && (
+          <>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-sm font-medium">{name}</span>
+              <span className="block truncate text-xs text-muted-foreground">{ROLE_LABELS[role]}</span>
+            </span>
+            <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          </>
+        )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" className="min-w-56">
+      <DropdownMenuContent side={compact ? "right" : "top"} align={compact ? "end" : "start"} className="min-w-56">
+        {compact && (
+          <>
+            <DropdownMenuLabel className="leading-tight">
+              <span className="block truncate text-sm font-medium">{name}</span>
+              <span className="block truncate text-xs font-normal text-muted-foreground">{ROLE_LABELS[role]}</span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem asChild className="h-8">
           <Link href={ACCOUNT.href}>
             <UserRoundIcon aria-hidden />
@@ -83,14 +112,17 @@ function AccountMenu({ role, name, avatarPath }: NavUser) {
   );
 }
 
-/** Navigation on PCs. Phones and tablets get the tab bar instead. */
+/**
+ * Navigation on wide screens: PCs, and tablets held sideways, where the links
+ * grow to finger size. Narrower PC windows get the rail and phones the tab bar.
+ */
 export function Sidebar({ role, name, avatarPath }: NavUser) {
   const pathname = usePathname();
   const allowed = allowedFor(role);
   const creating = isActive(pathname, NEW_REQUEST.href);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground desktop:flex">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground wide:flex">
       <Link
         href={DASHBOARD.href}
         className="m-2 flex items-center gap-3 rounded-lg p-2 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
@@ -104,7 +136,7 @@ export function Sidebar({ role, name, avatarPath }: NavUser) {
 
       {allowed(NEW_REQUEST) && (
         <div className="px-3 pb-4">
-          <Button asChild variant={creating ? "outline" : "default"} className="h-9 w-full justify-start gap-2 px-3">
+          <Button asChild variant={creating ? "outline" : "default"} className="h-9 w-full justify-start gap-2 px-3 touch:h-11 touch:text-base">
             <Link href={NEW_REQUEST.href} aria-current={creating ? "page" : undefined}>
               <PlusIcon aria-hidden />
               New request

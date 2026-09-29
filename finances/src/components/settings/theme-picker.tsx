@@ -99,8 +99,8 @@ export function ThemePicker({ userId, className }: { userId: string | null; clas
         ))}
       </RadioGroup>
       <p id={`${ID}-hint`} className="text-sm text-muted-foreground">
-        Saved to your account, so it follows you to every device. System follows each device&apos;s light or dark
-        mode.
+        Saved to your account, so it&apos;s the same on every device. System matches each device&apos;s light or
+        dark mode.
       </p>
       {notSaved && (
         <p role="alert" className="text-sm text-destructive">

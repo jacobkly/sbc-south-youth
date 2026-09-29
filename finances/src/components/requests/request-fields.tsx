@@ -48,7 +48,7 @@ const lineHeadingId = (index: number) => `${lineFieldId(index, "files")}-heading
 const ADD_LINE_ID = "request-add-line";
 
 /** Scrolled to after adding or removing a receipt, it stops clear of the phone tab bar, like the page's own bottom padding. */
-const SCROLL_CLEAR = "scroll-mt-4 scroll-mb-[calc(7rem+env(safe-area-inset-bottom))] desktop:scroll-mb-4";
+const SCROLL_CLEAR = "scroll-mt-4 scroll-mb-[calc(7rem+env(safe-area-inset-bottom))] rail:scroll-mb-4 wide:scroll-mb-4";
 
 /** Where focus goes for a field's error. The type is a group, so its first option. */
 function requestFocusId(key: Exclude<keyof RequestFormErrors, "lines">): string {
@@ -267,8 +267,8 @@ export function RequestFields({
         receipts={files}
         problems={problems.map((problem) => problem.text)}
         max={files.length + room}
-        label={compact ? `Receipt ${index + 1} files` : "Receipt files"}
-        addLabel="Add photo"
+        label={compact ? `Files for receipt ${index + 1}` : "Receipt files"}
+        addLabel="Add file"
         compact={compact}
         repeats={repeats}
         onAdd={(added) => onAddReceipts(added, line.id)}
@@ -516,7 +516,7 @@ export function RequestFields({
           id={requestFieldId("no_receipt_reason")}
           label="Why there's no receipt"
           optional
-          hint="Like a lost receipt, or backfilled from payment history."
+          hint="Like a lost receipt, or entered later from payment history."
           error={errors.no_receipt_reason}
         >
           <Textarea {...textProps("no_receipt_reason", true)} rows={2} maxLength={MAX_NO_RECEIPT_REASON} />

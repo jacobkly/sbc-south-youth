@@ -74,7 +74,7 @@ export function MonthTotals({ months }: { months: MonthTotal[] }) {
         <CardTitle>
           <h2>Totals by month</h2>
         </CardTitle>
-        <CardDescription>Every row in the file. These should match your spreadsheet.</CardDescription>
+        <CardDescription>Every row, including skipped ones. These should match your spreadsheet.</CardDescription>
       </CardHeader>
       <div className="overflow-x-auto px-2 pb-2">
         <table className="w-full text-sm tabular-nums">

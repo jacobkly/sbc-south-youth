@@ -30,9 +30,9 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
     if (error) {
       setPending(false);
       if (error.status === 429) {
-        setError("Too many sign-in attempts. Wait a few minutes, then try again.");
+        setError("Too many attempts. Wait a few minutes, then try again.");
       } else if (!error.status || error.status >= 500) {
-        setError("Couldn't reach the sign-in service. Check your connection and try again.");
+        setError("Couldn't sign you in. Check your connection and try again.");
       } else {
         setError("Wrong email or password.");
       }

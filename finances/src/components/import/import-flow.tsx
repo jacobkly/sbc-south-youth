@@ -162,7 +162,7 @@ export function ImportFlow({
     >
       <div className="space-y-2 text-sm text-muted-foreground">
         <p>
-          Bring in reimbursements that were already paid, from a spreadsheet with the columns{" "}
+          Add requests that were already paid from a spreadsheet with the columns{" "}
           <span className="font-medium text-foreground">Date, Name, Amount, Type, Notes</span>. A header row is
           optional. Type is Cafe or Youth, and Notes can be blank.
         </p>
@@ -179,7 +179,7 @@ export function ImportFlow({
       <FormField
         id={TEXT_ID}
         label="Rows"
-        hint="Select the rows in your spreadsheet, copy, and paste them here."
+        hint="Copy the rows from your spreadsheet and paste them here."
       >
         <Textarea
           id={TEXT_ID}
@@ -403,8 +403,8 @@ export function ImportPreview({
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Each row is saved as paid on its date, with no vendor and no receipt, marked “Imported from spreadsheet.”
-        Notes become the description.
+        Each row is saved as paid on its date, with no vendor or receipt, and “Imported from spreadsheet” as the
+        reason. Notes become the description.
       </p>
 
       <div className="flex flex-col gap-2 desktop:flex-row">
@@ -421,9 +421,9 @@ export function ImportPreview({
           <SheetHeader className="pr-12">
             <SheetTitle>Import {requestCount(toImport.length)}?</SheetTitle>
             <SheetDescription>
-              This adds {requestCount(toImport.length)} paid for {formatCents(total)}
-              {plan.newPayees.length > 0 ? `, and ${newPayeeCount(plan.newPayees.length)}` : ""}. To undo it later,
-              each request has to be undone one at a time.
+              This adds {requestCount(toImport.length)} totaling {formatCents(total)}
+              {plan.newPayees.length > 0 ? ` and ${newPayeeCount(plan.newPayees.length)}` : ""}. To undo it later,
+              you&apos;d undo each request one at a time.
             </SheetDescription>
           </SheetHeader>
           <div className="flex flex-col-reverse gap-2 px-4 pt-2 desktop:flex-row desktop:justify-end">

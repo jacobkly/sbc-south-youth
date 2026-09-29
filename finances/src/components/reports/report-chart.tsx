@@ -254,7 +254,7 @@ export function ReportChart({ timeline, before }: { timeline: Timeline; before: 
                   <td className="px-2 py-2 text-right font-medium">{formatCents(row.total)}</td>
                   {before && (
                     <td className="px-2 py-2 text-right text-muted-foreground">
-                      {row.before === null ? "—" : formatCents(row.before)}
+                      {row.before === null ? <NoValue /> : formatCents(row.before)}
                     </td>
                   )}
                 </tr>
@@ -264,6 +264,16 @@ export function ReportChart({ timeline, before }: { timeline: Timeline; before: 
         </ChartNumbers>
       </div>
     </section>
+  );
+}
+
+/** An empty cell in a chart's numbers: a dash on screen, "None" to a screen reader. */
+export function NoValue() {
+  return (
+    <>
+      <span aria-hidden>—</span>
+      <span className="sr-only">None</span>
+    </>
   );
 }
 

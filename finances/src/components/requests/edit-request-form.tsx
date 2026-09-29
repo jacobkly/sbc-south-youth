@@ -45,7 +45,7 @@ export type EditableRequest = {
   signed: SignedReceiptUrls | null;
 };
 
-const CLOSED_MESSAGE = "It can't be edited anymore. It may have been approved or closed since this page loaded.";
+const CLOSED_MESSAGE = "You can't edit it anymore. Someone may have approved or closed it since this page loaded.";
 
 /** The database turned the save down because the request isn't open anymore. */
 function isClosedError(error: { code?: string; message?: string }): boolean {
@@ -201,7 +201,7 @@ export function EditRequestForm({
         receipts={files}
         title={title}
         initial={request.signed}
-        label="Saved files"
+        label="Saved receipts"
         removal={{
           marked,
           onToggle: toggleRemove,
@@ -260,7 +260,7 @@ export function EditRequestForm({
             asChild
           >
             <Link href={detailHref} replace>
-              Cancel
+              Go back
             </Link>
           </Button>
         </div>

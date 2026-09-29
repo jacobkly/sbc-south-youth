@@ -25,7 +25,7 @@ const OPTION_HINTS: Record<SaveOption, string> = {
   draft: "Keeps it as a draft to finish later.",
   submit: "Marks it ready for review.",
   approve: "Approves it now, to pay later.",
-  paid: "Approves it and records the payment in one step, like for past payments.",
+  paid: "Approves it and records the payment in one step. Good for past payments.",
 };
 
 /**

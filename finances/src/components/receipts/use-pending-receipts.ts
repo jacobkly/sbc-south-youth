@@ -102,7 +102,7 @@ export function usePendingReceipts(limit: number = MAX_RECEIPTS, requestId?: str
           update(item.key, { status: "ready", prepared, url });
           findMatches(item.key, prepared.sha256);
         } catch (error) {
-          const reason = error instanceof UnusableFileError ? error.message : "It couldn't be processed.";
+          const reason = error instanceof UnusableFileError ? error.message : "It couldn't be used. Try another file.";
           setReceipts((current) => current.filter((receipt) => receipt.key !== item.key));
           setProblems((current) => [...current, { line, text: `${item.name}: ${reason}` }]);
         }

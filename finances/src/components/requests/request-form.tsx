@@ -327,8 +327,8 @@ function SavedPanel({
           {SAVED_HEADINGS[saved.option]}
         </h1>
         <p className="text-muted-foreground">
-          {formatRequestNumber(saved.requestNumber)}: <span className="tabular-nums">{formatCents(saved.amountCents)}</span>{" "}
-          for {saved.payeeName}
+          {formatRequestNumber(saved.requestNumber)} · <span className="tabular-nums">{formatCents(saved.amountCents)}</span>{" "}
+          to {saved.payeeName}
         </p>
       </div>
 

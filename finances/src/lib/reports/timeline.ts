@@ -214,7 +214,7 @@ export function bucketLabel({ start, end }: DateRange, unit: TimelineUnit): stri
       return shortDate(start);
     case "week":
       if (start.slice(0, 4) !== end.slice(0, 4)) return `${formatDate(start)} – ${formatDate(end)}`;
-      if (start.slice(0, 7) === end.slice(0, 7)) return `${shortDate(start)} – ${Number(end.slice(8))}`;
+      if (start.slice(0, 7) === end.slice(0, 7)) return `${shortDate(start)}–${Number(end.slice(8))}`;
       return `${shortDate(start)} – ${shortDate(end)}`;
     case "month":
       return periodLabel(monthOf(start));

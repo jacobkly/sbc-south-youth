@@ -205,8 +205,8 @@ export function PayeeForm({
         <div className="space-y-2 border-t pt-4">
           <p className="text-sm text-muted-foreground">
             {payee.is_active
-              ? "Deactivating hides this payee when entering new requests. Their past requests stay."
-              : "This payee is inactive, so they're hidden when entering new requests."}
+              ? "Deactivating hides this payee from new requests. Their past requests stay."
+              : "This payee is inactive, so they're hidden from new requests."}
           </p>
           <Button
             type="button"

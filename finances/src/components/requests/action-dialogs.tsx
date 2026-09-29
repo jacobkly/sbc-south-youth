@@ -82,11 +82,11 @@ const COPY: Record<RequestAction, ActionCopy> = {
     done: "Recorded as paid.",
   },
   request_info: {
-    label: "Request info",
-    title: "Ask for more info",
+    label: "Ask for info",
+    title: "Ask for more info?",
     description: "It's on hold until you have what's missing. Resubmit it then.",
     failed: "Couldn't ask for more info",
-    done: "Marked as needing more info.",
+    done: "Asked for more info.",
   },
   reject: {
     label: "Reject",
@@ -113,7 +113,7 @@ const COPY: Record<RequestAction, ActionCopy> = {
   },
   mark_paid: {
     label: "Mark paid",
-    title: "Mark as paid",
+    title: "Mark it paid?",
     description: "Records how and when it was paid.",
     failed: "Couldn't mark it paid",
     done: "Marked paid.",
@@ -121,7 +121,7 @@ const COPY: Record<RequestAction, ActionCopy> = {
   unmark_paid: {
     label: "Undo payment",
     title: "Undo the payment?",
-    description: "It goes back to approved, and the payment details are cleared.",
+    description: "It goes back to approved and the payment details are removed.",
     failed: "Couldn't undo the payment",
     done: "Payment undone.",
   },
@@ -314,7 +314,7 @@ function ActionForm({
         <Alert role="note">
           <InfoIcon />
           <AlertDescription>
-            It needs a receipt first. Edit it to add one, or mark it as having no receipt.
+            It needs a receipt first. Edit it to add one, or turn on “No receipt on file.”
           </AlertDescription>
         </Alert>
       )}

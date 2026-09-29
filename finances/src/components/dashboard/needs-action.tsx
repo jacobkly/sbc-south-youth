@@ -63,7 +63,7 @@ export function NeedsAction({ summary }: { summary: DashboardSummary }) {
     },
     {
       tab: "review",
-      label: "Awaiting review",
+      label: "To review",
       total: awaitingReview,
       icon: InboxIcon,
       tint: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200",

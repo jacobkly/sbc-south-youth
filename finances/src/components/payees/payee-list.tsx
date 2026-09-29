@@ -100,6 +100,8 @@ export function PayeeList({
             <p>No {filter} payees match &ldquo;{query.trim()}&rdquo;.</p>
           ) : filter === "inactive" ? (
             <p>No inactive payees.</p>
+          ) : byStatus.inactive.length > 0 ? (
+            <p>No active payees.</p>
           ) : (
             <div className="space-y-3">
               <p>No payees yet.</p>

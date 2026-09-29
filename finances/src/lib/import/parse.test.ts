@@ -130,7 +130,7 @@ describe("parseImport", () => {
     expect(result.ok && result.problems.map((problem) => problem.messages)).toEqual([
       ["The date can't be in the future."],
       ["The date can't be before 2000."],
-      ["The amount can't be over $1,000,000.00."],
+      ["The amount can't be more than $1,000,000.00."],
     ]);
   });
 

@@ -42,7 +42,7 @@ export async function decodeImage(file: File): Promise<Decoded> {
     throw new UnusableFileError(
       isHeic(file)
         ? "This browser can't open HEIC photos. Save the photo as a JPEG first, or upload it from your iPhone."
-        : "This image couldn't be opened. Try taking the photo again or choose a JPEG or PNG.",
+        : "This image couldn't be opened. Take the photo again, or choose a JPEG or PNG.",
     );
   }
   return {
@@ -62,7 +62,7 @@ function createCanvas(width: number, height: number): HTMLCanvasElement {
 
 function context2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new UnusableFileError("This browser couldn't process the image.");
+  if (!ctx) throw new UnusableFileError("This browser couldn't open the image. Try another browser.");
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   return ctx;

@@ -90,7 +90,7 @@ export function PayeePicker({
                   Back to payees
                 </Button>
                 <SheetTitle>Add payee</SheetTitle>
-                <SheetDescription>They&rsquo;ll be chosen for this request once saved.</SheetDescription>
+                <SheetDescription>Once you save them, they&apos;re picked for this request.</SheetDescription>
               </SheetHeader>
               <PayeeForm
                 payee={null}
@@ -104,7 +104,7 @@ export function PayeePicker({
           ) : (
             <>
               <SheetHeader>
-                <SheetTitle>Choose payee</SheetTitle>
+                <SheetTitle>Choose a payee</SheetTitle>
                 <SheetDescription className="sr-only">Search for the person to reimburse.</SheetDescription>
               </SheetHeader>
               <div className="space-y-2 px-4 pb-3">
@@ -127,7 +127,7 @@ export function PayeePicker({
                 <Button type="button" variant="outline" className="h-11 w-full justify-start" onClick={() => setAdding(true)}>
                   <PlusIcon />
                   <span className="truncate">
-                    {needle ? <>Add &ldquo;{query.trim()}&rdquo; as a new payee</> : "Add new payee"}
+                    {needle ? <>Add &ldquo;{query.trim()}&rdquo; as a new payee</> : "Add payee"}
                   </span>
                 </Button>
               </div>

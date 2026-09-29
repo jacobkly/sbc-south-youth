@@ -6,9 +6,7 @@ import { periodLabel } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import {
   formatStorage,
-  STORAGE_CRITICAL_PERCENT,
   STORAGE_LIMIT_BYTES,
-  STORAGE_WARNING_PERCENT,
   storageUsage,
   type StorageLevel,
 } from "@/lib/receipts/storage";
@@ -66,10 +64,10 @@ const BAR_STYLES: Record<StorageLevel, string> = {
 };
 
 const STORAGE_NOTES: Record<StorageLevel, { text: string; className?: string }> = {
-  ok: { text: "of 1 GB free plan" },
-  warning: { text: `Over ${STORAGE_WARNING_PERCENT}% full`, className: "text-amber-900 dark:text-amber-200" },
+  ok: { text: "of the 1 GB free plan" },
+  warning: { text: "of the 1 GB free plan. It's getting full.", className: "text-amber-900 dark:text-amber-200" },
   critical: {
-    text: `Over ${STORAGE_CRITICAL_PERCENT}% full. Past 1 GB, Supabase can limit the app.`,
+    text: "of the 1 GB free plan. Past 1 GB, the free plan may limit the app.",
     className: "text-red-700 dark:text-red-300",
   },
 };
@@ -114,14 +112,14 @@ function StorageCard({ bytes }: { bytes: number }) {
 export function StatCards({ summary }: { summary: DashboardSummary }) {
   return (
     <section aria-label="Totals" className="space-y-2">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 @4xl/main:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 @min-[45rem]/main:grid-cols-4 @4xl/main:grid-cols-2">
         {KINDS.map((item) => (
           <PaidCard key={item.kind} summary={summary} {...item} />
         ))}
         <StorageCard bytes={summary.storageBytes} />
       </div>
       <p className="text-xs text-muted-foreground">
-        Paid totals go by the date paid. Changes compare with the same point last month, quarter, or year.
+        Totals use the date paid. Changes compare with the same point last month, quarter, or year.
       </p>
     </section>
   );

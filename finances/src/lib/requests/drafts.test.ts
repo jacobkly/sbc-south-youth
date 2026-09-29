@@ -82,7 +82,7 @@ describe("deleteDraft", () => {
   it("leaves everything alone when it isn't a draft anymore", async () => {
     const { client, calls } = fakeClient({ current: { data: { status: "submitted", created_by: USER_ID }, error: null } });
 
-    expect(await deleteDraft(client, REQUEST_ID, USER_ID)).toMatch(/^Only a draft can be deleted/);
+    expect(await deleteDraft(client, REQUEST_ID, USER_ID)).toMatch(/^This isn't a draft anymore/);
 
     expect(calls).toEqual(["check"]);
   });

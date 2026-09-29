@@ -59,7 +59,7 @@ function emptyMessage(filters: ReportFilters): string {
   const label = periodLabel(filters.period);
   const when = filters.period.kind === "custom" ? label : `in ${label}`;
   if (filters.basis === "paid") return `Nothing paid ${when}.`;
-  return `No ${filters.allStatuses ? "" : "approved or paid "}requests bought ${when}.`;
+  return `No ${filters.allStatuses ? "" : "approved or paid "}purchases ${when}.`;
 }
 
 /** The period a report compares with, and its requests. */

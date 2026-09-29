@@ -79,14 +79,14 @@ export async function processAvatar(file: File): Promise<ProcessedAvatar> {
         canvas = drawScaled(image, attempt.size, attempt.size, crop);
       }
       const blob = await toBlob(canvas, mimeType, attempt.quality);
-      if (!blob || blob.type !== mimeType) throw new UnusableFileError("This browser couldn't save the picture. Try another browser.");
+      if (!blob || blob.type !== mimeType) throw new UnusableFileError("This browser couldn't prepare the photo. Try another browser.");
       encoded = { blob, ...attempt };
       if (blob.size <= AVATAR_TARGET_BYTES) break;
     }
 
     // avatarAttempts always returns at least one attempt.
-    if (!encoded) throw new UnusableFileError("This picture couldn't be processed.");
-    if (encoded.blob.size > MAX_AVATAR_BYTES) throw new UnusableFileError("This picture couldn't be made small enough. Try another photo.");
+    if (!encoded) throw new UnusableFileError("This photo couldn't be used. Try another one.");
+    if (encoded.blob.size > MAX_AVATAR_BYTES) throw new UnusableFileError("This photo is too big to use. Try another one.");
 
     return { blob: encoded.blob, mimeType, size: encoded.size, quality: encoded.quality };
   } finally {

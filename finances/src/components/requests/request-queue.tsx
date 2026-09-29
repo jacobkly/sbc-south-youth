@@ -110,7 +110,7 @@ export function RequestQueue({
           <p className="text-center text-sm text-muted-foreground">
             {capped
               ? `Showing the newest ${rows.length.toLocaleString()}. Narrow the filters to see older ones.`
-              : `Showing ${rows.length.toLocaleString()} of ${total.toLocaleString()}`}
+              : `Showing ${rows.length.toLocaleString()} of ${total.toLocaleString()}.`}
           </p>
         )}
         {hasMore && (

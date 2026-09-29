@@ -75,7 +75,7 @@ export function DeleteDraft({
           <SheetTitle>Delete this draft?</SheetTitle>
           <SheetDescription>
             {formatRequestNumber(request.requestNumber)} · {formatCents(request.amountCents)} to {request.payeeName}.
-            Its receipts are deleted too. This can&apos;t be undone.
+            This also deletes its receipts and can&apos;t be undone.
           </SheetDescription>
         </SheetHeader>
 

@@ -37,7 +37,7 @@ export default async function SettingsPage() {
             Import
           </h2>
           <p className="text-sm text-muted-foreground">
-            Bring in reimbursements that were already paid, from a spreadsheet with Date, Name, Amount, Type, and Notes
+            Add requests that were already paid from a spreadsheet with Date, Name, Amount, Type, and Notes
             columns.
           </p>
           <Button variant="outline" className="h-11 px-5" asChild>

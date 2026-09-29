@@ -42,7 +42,7 @@ export async function prepareReceipt(file: File): Promise<PreparedReceipt> {
     sha256 = await sha256Hex(processed.blob);
   } catch {
     // Web Crypto only exists on HTTPS and localhost.
-    throw new UnusableFileError("Receipts can only be added over a secure (https://) connection.");
+    throw new UnusableFileError("Receipts can only be added on a secure connection. Open the app at its https:// address.");
   }
 
   return {

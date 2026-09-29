@@ -164,7 +164,7 @@ describe("bucket labels", () => {
 
   it("gives each unit a full label for the tooltip and table", () => {
     expect(bucketLabel({ start: "2026-09-05", end: "2026-09-05" }, "day")).toBe("Sep 5");
-    expect(bucketLabel({ start: "2026-07-01", end: "2026-07-07" }, "week")).toBe("Jul 1 – 7");
+    expect(bucketLabel({ start: "2026-07-01", end: "2026-07-07" }, "week")).toBe("Jul 1–7");
     expect(bucketLabel({ start: "2026-07-29", end: "2026-08-04" }, "week")).toBe("Jul 29 – Aug 4");
     expect(bucketLabel({ start: "2025-12-29", end: "2026-01-04" }, "week")).toBe("Dec 29, 2025 – Jan 4, 2026");
     expect(bucketLabel({ start: "2025-09-15", end: "2025-09-30" }, "month")).toBe("September 2025");

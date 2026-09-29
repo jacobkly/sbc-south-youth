@@ -85,7 +85,7 @@ export function PayeeDetail({
             <Stat label={`Paid in ${year}`} cents={totals.paidInYear} />
             <Stat label="Paid all time" cents={totals.paidAllTime} />
             <Stat
-              label="Waiting to be paid"
+              label="To pay"
               cents={totals.toPay}
               note={totals.toPayCount > 0 ? waiting : undefined}
               className="col-span-2 md:col-span-1"

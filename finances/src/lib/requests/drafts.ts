@@ -30,7 +30,7 @@ export async function deleteDraft(
   if (!current.data) return null;
   if (current.data.created_by !== userId) return NOT_YOURS;
   if (current.data.status !== "draft") {
-    return "Only a draft can be deleted, and this one has moved on. Reload to see where it stands.";
+    return "This isn't a draft anymore, so it can't be deleted. Reload to see where it stands.";
   }
 
   const bucket = supabase.storage.from(RECEIPTS_BUCKET);

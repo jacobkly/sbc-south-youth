@@ -124,14 +124,14 @@ export async function processReceipt(
         canvas = drawScaled(image, attempt.width, attempt.height);
       }
       const blob = await toBlob(canvas, mimeType, attempt.quality);
-      if (!blob || blob.type !== mimeType) throw new UnusableFileError("This browser couldn't save the image. Try another browser.");
+      if (!blob || blob.type !== mimeType) throw new UnusableFileError("This browser couldn't prepare the image. Try another browser.");
       encoded = { blob, ...attempt };
       if (blob.size <= settings.targetBytes) break;
     }
 
     // compressionAttempts always returns at least one attempt.
-    if (!encoded) throw new UnusableFileError("This image couldn't be processed.");
-    if (encoded.blob.size > MAX_RECEIPT_BYTES) throw new UnusableFileError("This image is still over 10 MB after compression.");
+    if (!encoded) throw new UnusableFileError("This image couldn't be used. Try another photo.");
+    if (encoded.blob.size > MAX_RECEIPT_BYTES) throw new UnusableFileError("This image is too big, even after shrinking it. Try another photo.");
 
     return {
       blob: encoded.blob,

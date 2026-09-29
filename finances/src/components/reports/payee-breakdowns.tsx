@@ -23,7 +23,7 @@ function newDescription(filters: ReportFilters): string {
   const label = periodLabel(filters.period);
   const when = filters.period.kind === "custom" ? label : `in ${label}`;
   if (filters.basis === "paid") return `New payees were first paid ${when}`;
-  return `New payees' first ${filters.allStatuses ? "" : "approved or paid "}request was bought ${when}`;
+  return `New payees made their first ${filters.allStatuses ? "" : "approved or paid "}purchase ${when}`;
 }
 
 /**

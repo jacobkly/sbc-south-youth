@@ -23,7 +23,7 @@ const DAYS_ID = "settings-late-days";
 
 function externalApprovalHint(on: boolean): string {
   return on
-    ? "You can approve a request paid to you by entering the name of whoever approved it outside the app."
+    ? "For a request paid to you, enter the name of whoever approved it outside the app."
     : "A request paid to you needs another admin to approve it in the app.";
 }
 
@@ -105,7 +105,7 @@ export function SettingsForm({ settings }: { settings: AppSettings }) {
         </h2>
         <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 py-2">
           <Label htmlFor="settings-external-approval" className="text-base font-normal desktop:text-sm">
-            Allow external approval
+            Allow approval outside the app
           </Label>
           <Switch
             id="settings-external-approval"

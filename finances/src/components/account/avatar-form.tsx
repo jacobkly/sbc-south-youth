@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { processAvatar, type ProcessedAvatar } from "@/lib/avatars/compress";
 import { removeAvatar, saveAvatar } from "@/lib/avatars/upload";
 import { UnusableFileError } from "@/lib/images/canvas";
-import { formatStorage } from "@/lib/receipts/storage";
 import { createClient } from "@/lib/supabase/client";
 
 /** A picked photo, shrunk and shown before it's saved. */
@@ -65,7 +64,7 @@ export function AvatarForm({ userId, name, avatarPath }: { userId: string; name:
       setMessage({ kind: "saved", text: "Saved." });
       router.refresh();
     } catch {
-      setMessage({ kind: "error", text: "Couldn't save your picture. Try again." });
+      setMessage({ kind: "error", text: "Couldn't save your photo. Try again." });
     } finally {
       setBusy(null);
     }
@@ -80,7 +79,7 @@ export function AvatarForm({ userId, name, avatarPath }: { userId: string; name:
       setMessage({ kind: "saved", text: "Removed." });
       router.refresh();
     } catch {
-      setMessage({ kind: "error", text: "Couldn't remove your picture. Try again." });
+      setMessage({ kind: "error", text: "Couldn't remove your photo. Try again." });
     } finally {
       setBusy(null);
     }
@@ -89,7 +88,7 @@ export function AvatarForm({ userId, name, avatarPath }: { userId: string; name:
   const status = message
     ? message.text
     : draft
-      ? `New picture, ${formatStorage(draft.picture.blob.size)}. Save it to use it.`
+      ? "New photo ready. Save it to use it."
       : null;
 
   return (
@@ -98,7 +97,7 @@ export function AvatarForm({ userId, name, avatarPath }: { userId: string; name:
 
       <div className="min-w-0 flex-1 space-y-2">
         <h2 id="picture-heading" className="text-sm font-medium">
-          Profile picture
+          Profile photo
         </h2>
 
         <input
@@ -151,7 +150,7 @@ export function AvatarForm({ userId, name, avatarPath }: { userId: string; name:
                 ) : (
                   <ImagePlusIcon aria-hidden />
                 )}
-                {busy === "processing" ? "Shrinking…" : path ? "Change photo" : "Choose photo"}
+                {busy === "processing" ? "Preparing…" : path ? "Change photo" : "Choose photo"}
               </Button>
               {path && (
                 <Button

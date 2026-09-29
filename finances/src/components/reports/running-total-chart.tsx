@@ -6,6 +6,7 @@ import {
   ChartNumbers,
   compactUsd,
   DashedLineIcon,
+  NoValue,
   UNIT_COLUMNS,
   type ChartBefore,
 } from "@/components/reports/report-chart";
@@ -81,7 +82,7 @@ export function RunningTotalChart({
         </h2>
         <p className="text-sm text-muted-foreground">
           {formatCents(latest.cents ?? 0)} {running ? "so far" : "in all"}
-          {before && `, against ${formatCents(before.cents)} in ${before.label}`}
+          {before && `, compared with ${formatCents(before.cents)} in ${before.label}`}
         </p>
       </div>
       <div className="rounded-lg border">
@@ -185,11 +186,11 @@ export function RunningTotalChart({
                       {row.label}
                     </th>
                     <td className="px-2 py-2 text-right font-medium">
-                      {row.cents === null ? "—" : formatCents(row.cents)}
+                      {row.cents === null ? <NoValue /> : formatCents(row.cents)}
                     </td>
                     {before && (
                       <td className="px-2 py-2 text-right text-muted-foreground">
-                        {row.before === null ? "—" : formatCents(row.before)}
+                        {row.before === null ? <NoValue /> : formatCents(row.before)}
                       </td>
                     )}
                   </tr>

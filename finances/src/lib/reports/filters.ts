@@ -19,7 +19,7 @@ export type ReportBasis = (typeof REPORT_BASES)[number];
 
 export const REPORT_BASIS_LABELS: Record<ReportBasis, string> = {
   purchase: "Purchase date",
-  paid: "Paid date",
+  paid: "Date paid",
 };
 
 /** The statuses a report counts unless all statuses are on. */

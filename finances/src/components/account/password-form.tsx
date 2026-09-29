@@ -81,7 +81,7 @@ export function PasswordForm({ email }: { email: string }) {
     await supabase.auth.signOut({ scope: "others" });
     setPending(false);
     setValues({ current: "", next: "", confirm: "" });
-    setMessage({ kind: "saved", text: "Password changed. Any other devices were signed out." });
+    setMessage({ kind: "saved", text: "Password changed. Your other devices are signed out." });
   }
 
   return (

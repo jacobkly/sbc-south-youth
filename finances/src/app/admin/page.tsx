@@ -28,7 +28,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4 desktop:flex desktop:items-end desktop:justify-between desktop:gap-4 desktop:space-y-0">
+      <div className="space-y-4 desktop:@2xl/main:flex desktop:@2xl/main:items-end desktop:@2xl/main:justify-between desktop:@2xl/main:gap-4 desktop:@2xl/main:space-y-0">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
             <div className="space-y-1">
               <h2 className="font-semibold">No requests yet</h2>
               <p className="text-sm text-muted-foreground">
-                Totals, charts, and what needs doing show up here once requests are entered.
+                Totals and charts show up here once you enter requests.
               </p>
             </div>
             {canEdit && (

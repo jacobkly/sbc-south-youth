@@ -60,7 +60,7 @@ export function RequestBreakdowns({ rows, filters }: { rows: ReportRow[]; filter
         <Breakdown
           id="report-receipts"
           title="Receipts"
-          description="Missing means a receipt has no file, or “No receipt” is checked"
+          description="Missing means a receipt has no file, or “No receipt on file” is on"
           items={labeled(receiptBreakdown(rows), RECEIPT_GROUP_LABELS)}
         />
       </Cell>

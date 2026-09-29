@@ -79,7 +79,7 @@ export function PaymentFields<T extends PaymentValues>({
       </FormField>
 
       <div className="grid grid-cols-2 gap-3">
-        <FormField id={paymentFieldId(idPrefix, "paid_date")} label="Paid date" error={errors.paid_date}>
+        <FormField id={paymentFieldId(idPrefix, "paid_date")} label="Date paid" error={errors.paid_date}>
           <Input
             {...textProps("paid_date")}
             type="date"

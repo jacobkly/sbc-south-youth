@@ -30,10 +30,10 @@ export async function AppShell({ children }: { children: ReactNode }) {
 }
 
 /**
- * The navigation and page frame. The bottom padding keeps content clear of the
- * floating tab bar. On a PC it widens to 1440px, and pages lay out in columns
- * with `@4xl/main:` and wider container queries. Phones and tablets keep the
- * 768px column, which never reaches those sizes, so they don't change.
+ * The navigation and page frame. Under the floating tab bar, the bottom
+ * padding keeps content clear of it. Beside the sidebar it widens to 1440px,
+ * and pages lay out in columns with `@4xl/main:` and wider container queries.
+ * Otherwise it's a 768px column, which never reaches those sizes.
  */
 export function ShellLayout({
   role,
@@ -42,10 +42,10 @@ export function ShellLayout({
   children,
 }: Omit<NavUser, "avatarPath"> & { avatarPath?: string | null; children: ReactNode }) {
   return (
-    <div className="min-h-dvh desktop:pl-64">
+    <div className="min-h-dvh rail:pl-18 wide:pl-64">
       <AdminNav role={role} name={name} avatarPath={avatarPath} />
       <RefreshOnHistory />
-      <main className="@container/main mx-auto w-full max-w-3xl px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 desktop:max-w-[90rem] desktop:px-8 desktop:py-10">
+      <main className="@container/main mx-auto w-full max-w-3xl px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 rail:pb-10 wide:max-w-[90rem] wide:px-8 wide:py-10">
         {children}
       </main>
     </div>

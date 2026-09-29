@@ -4,11 +4,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* desktop: PCs, a wide screen with a mouse or trackpad. touch: everything
-   else. Phones and tablets, even wide ones, get the touch layout: tab bar and
-   bottom sheets. Keep in sync with DESKTOP_QUERY in src/lib/media.ts. */
-@custom-variant desktop (@media (min-width: 64rem) and (hover: hover) and (pointer: fine));
-@custom-variant touch (@media not all and (min-width: 64rem) and (hover: hover) and (pointer: fine));
+/* desktop: PCs, with a mouse or trackpad, at any width. They get dialogs and
+   compact controls. touch: phones and tablets, even wide ones. They get bottom
+   sheets and bigger controls. Keep in sync with DESKTOP_QUERY in
+   src/lib/media.ts. */
+@custom-variant desktop (@media (hover: hover) and (pointer: fine));
+@custom-variant touch (@media not all and (hover: hover) and (pointer: fine));
+
+/* Navigation. wide: any screen 1024px or wider, including a tablet held
+   sideways, gets the sidebar. rail: a narrower PC window gets the icon rail.
+   Anything else, a phone or a tablet held upright, gets the floating tab bar. */
+@custom-variant wide (@media (width >= 64rem));
+@custom-variant rail (@media (width < 64rem) and (hover: hover) and (pointer: fine));
 
 /* typing: a text field has focus, so on a phone or tablet the on-screen
    keyboard is up. */

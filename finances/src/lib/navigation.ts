@@ -12,6 +12,7 @@ const PAGE_LABELS: Record<string, string> = {
   "/admin/requests/new": "New request",
   "/admin/payees": "Payees",
   "/admin/reports": "Reports",
+  "/admin/activity": "Activity",
   "/admin/settings": "Settings",
   "/admin/settings/import": "Import",
   "/account": "Account",

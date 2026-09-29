@@ -58,9 +58,9 @@ describe("describeChanges", () => {
       no_receipt_reason: { from: null, to: "Lost it" },
     };
     expect(describeChanges({ action: "updated", changes })).toEqual([
-      { field: "event_name", label: "Event", from: "none", to: "Test Retreat" },
+      { field: "event_name", label: "Event", from: "None", to: "Test Retreat" },
       { field: "no_receipt", label: "No receipt on file", from: "Off", to: "On" },
-      { field: "no_receipt_reason", label: "No-receipt reason", from: "none", to: "Lost it" },
+      { field: "no_receipt_reason", label: "Why there's no receipt", from: "None", to: "Lost it" },
     ]);
   });
 
@@ -93,7 +93,7 @@ describe("describeChanges", () => {
     const changes = { payee_id: { from: PAYEE_A, to: PAYEE_B } };
     const names = new Map([[PAYEE_A, "Test Payee"]]);
     expect(describeChanges({ action: "submitted", changes }, names)).toEqual([
-      { field: "payee_id", label: "Payee", from: "Test Payee", to: "unknown payee" },
+      { field: "payee_id", label: "Payee", from: "Test Payee", to: "Unknown payee" },
     ]);
   });
 

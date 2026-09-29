@@ -175,7 +175,7 @@ function amountProblem(text: string): { cents?: number; message?: string } {
   if (!text.trim()) return { message: "The amount is blank." };
   const cents = parseAmountToCents(text);
   if (cents === null) return { message: `The amount “${text.trim()}” isn't a dollar amount above $0.` };
-  if (cents > MAX_REQUEST_CENTS) return { message: `The amount can't be over ${formatCents(MAX_REQUEST_CENTS)}.` };
+  if (cents > MAX_REQUEST_CENTS) return { message: `The amount can't be more than ${formatCents(MAX_REQUEST_CENTS)}.` };
   return { cents };
 }
 

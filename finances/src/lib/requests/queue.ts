@@ -8,11 +8,11 @@ export const QUEUE_TABS = ["all", "pay", "review", "info", "paid", "closed"] as 
 export type QueueTab = (typeof QUEUE_TABS)[number];
 
 export const QUEUE_TAB_LABELS: Record<QueueTab, string> = {
-  review: "Awaiting review",
+  review: "To review",
   info: "Needs info",
   pay: "To pay",
   paid: "Paid",
-  closed: "Rejected/cancelled",
+  closed: "Closed",
   all: "All",
 };
 

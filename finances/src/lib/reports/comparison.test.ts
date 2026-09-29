@@ -125,7 +125,7 @@ describe("beforeBucketLabel", () => {
 
   it("names days and weeks like their bars", () => {
     expect(beforeBucketLabel({ start: "2026-08-05", end: "2026-08-05" }, "day")).toBe("Aug 5");
-    expect(beforeBucketLabel({ start: "2026-04-01", end: "2026-04-07" }, "week")).toBe("Apr 1 – 7");
+    expect(beforeBucketLabel({ start: "2026-04-01", end: "2026-04-07" }, "week")).toBe("Apr 1–7");
   });
 });
 

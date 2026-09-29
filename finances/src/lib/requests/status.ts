@@ -25,7 +25,7 @@ export const EVENT_ACTION_LABELS: Record<EventAction, string> = {
   submitted: "Submitted",
   approved: "Approved",
   recorded_paid: "Recorded as paid",
-  info_requested: "More info requested",
+  info_requested: "Asked for more info",
   rejected: "Rejected",
   cancelled: "Cancelled",
   unapproved: "Approval undone",
@@ -77,7 +77,7 @@ const CHANGE_FIELDS = [
   ["description", "Description"],
   ["event_name", "Event"],
   ["no_receipt", "No receipt on file"],
-  ["no_receipt_reason", "No-receipt reason"],
+  ["no_receipt_reason", "Why there's no receipt"],
 ] as const;
 
 type ChangeField = (typeof CHANGE_FIELDS)[number][0];
@@ -103,10 +103,10 @@ function formatLine(line: Json): string {
 }
 
 function formatValue(field: ChangeField, value: Json | undefined, payeeNames: ReadonlyMap<string, string>): string {
-  if (value === null || value === undefined || value === "") return "none";
+  if (value === null || value === undefined || value === "") return "None";
   switch (field) {
     case "payee_id":
-      return (typeof value === "string" && payeeNames.get(value)) || "unknown payee";
+      return (typeof value === "string" && payeeNames.get(value)) || "Unknown payee";
     case "type":
       return value === "cafe" || value === "youth" ? REQUEST_TYPE_LABELS[value] : String(value);
     case "amount_cents":
@@ -116,7 +116,7 @@ function formatValue(field: ChangeField, value: Json | undefined, payeeNames: Re
     case "no_receipt":
       return value === true ? "On" : "Off";
     case "lines":
-      return Array.isArray(value) && value.length > 0 ? value.map(formatLine).join(", ") : "none";
+      return Array.isArray(value) && value.length > 0 ? value.map(formatLine).join(", ") : "None";
     default:
       return typeof value === "string" ? value : JSON.stringify(value);
   }
