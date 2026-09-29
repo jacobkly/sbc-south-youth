@@ -28,8 +28,11 @@ export const metadata: Metadata = {
     description,
     siteName: "SBC South Youth",
     url: "/",
+    locale: "en_US",
     type: "website",
   },
+  // Big image previews where people share links. The title and image come from openGraph.
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

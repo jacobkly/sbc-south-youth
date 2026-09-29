@@ -4,13 +4,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { PageIntro } from "@/components/site/page-intro";
 import { SectionHeader } from "@/components/site/section-header";
+import { pages } from "@/content/pages";
 import { privacy } from "@/content/privacy";
 import { site } from "@/content/site";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Privacy",
-  description: "What our forms collect, why we ask, and how long we keep it.",
-};
+export const metadata: Metadata = pageMetadata(pages.privacy);
 
 const linkClasses = "font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-accent-ink";
 
@@ -32,7 +31,7 @@ export default function PrivacyPage() {
 
   return (
     <>
-      <PageIntro eyebrow="Privacy" title="Your privacy, in plain words.">
+      <PageIntro eyebrow={pages.privacy.eyebrow} title={pages.privacy.heading}>
         What our forms collect, why we ask, and how long we keep it. No accounts, no fine print.
       </PageIntro>
 

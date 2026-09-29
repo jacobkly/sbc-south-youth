@@ -5,15 +5,14 @@ import type { CSSProperties, ReactNode } from "react";
 import { SocialIcon } from "@/components/icons/social-icon";
 import { LogoMark } from "@/components/site/logo";
 import { audienceLabels } from "@/components/tag";
+import { pages } from "@/content/pages";
 import { site } from "@/content/site";
 import { getSchedule } from "@/lib/content/loaders";
 import { readServerEnv } from "@/lib/env";
+import { pageMetadata } from "@/lib/metadata";
 import { formatClock, weekdayName } from "@/lib/schedule";
 
-export const metadata: Metadata = {
-  title: "Links",
-  description: "This week, plan a visit, join the chat, and everywhere else to find SBC South Youth.",
-};
+export const metadata: Metadata = pageMetadata(pages.links);
 
 type LinkItem = { href: string; label: string; note?: string; icon: ReactNode; external?: boolean };
 

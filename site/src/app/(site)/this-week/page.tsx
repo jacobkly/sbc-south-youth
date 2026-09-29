@@ -12,25 +12,24 @@ import { EventCard } from "@/components/site/event-card";
 import { FeedGuard } from "@/components/site/feed-guard";
 import { PageIntro } from "@/components/site/page-intro";
 import { SubscribeCard } from "@/components/site/subscribe-card";
+import { pages } from "@/content/pages";
 import { site } from "@/content/site";
 import { audienceFilters, showKeys } from "@/lib/audience";
-import type { Announcement } from "@/lib/content/types";
 import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
+import type { Announcement } from "@/lib/content/types";
 import { addDays, formatDateRange, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
 import { groupAgenda, liveAnnouncements, upcomingItems, type AgendaGroup } from "@/lib/feed";
 import { FEED_ID, applyUrlAudience, inlineCall, refreshFeed } from "@/lib/feed-dom";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "This Week",
-  description: "Youth nights, events, and announcements for the next few weeks.",
-};
+export const metadata: Metadata = pageMetadata(pages.thisWeek);
 
-const PATH = "/this-week";
+const PATH = pages.thisWeek.path;
 
 export default function ThisWeekPage() {
   return (
     <>
-      <PageIntro eyebrow="This Week" title="What's happening.">
+      <PageIntro eyebrow={pages.thisWeek.eyebrow} title={pages.thisWeek.heading}>
         Youth nights, events, and announcements for the next few weeks.
       </PageIntro>
       <Feed />

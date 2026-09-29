@@ -1,6 +1,5 @@
 import { ArrowLeft, ArrowRight, CalendarDays, CalendarPlus, Clock, History, MapPin, Repeat, Star, Ticket, Users } from "lucide-react";
 import type { Metadata } from "next";
-import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
@@ -12,42 +11,13 @@ import { FeedGuard } from "@/components/site/feed-guard";
 import { Photo } from "@/components/site/photo";
 import { ShareButton } from "@/components/site/share-button";
 import { AudienceTag, Tag } from "@/components/tag";
-import { formatAddress, site } from "@/content/site";
-import { getBySlug, getEventSlugs } from "@/lib/content/loaders";
-import type { Audience, Photo as PhotoData } from "@/lib/content/types";
-import { addDays, todayInLA, type IsoDate } from "@/lib/dates";
-import { eventItem, itemAddress, itemDateLabel, itemTimeLabel, upcomingItems, type FeedItem } from "@/lib/feed";
+import { getEventSlugs } from "@/lib/content/loaders";
+import type { Audience } from "@/lib/content/types";
+import { addDays } from "@/lib/dates";
+import { eventView, type EventView } from "@/lib/event-view";
 import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
-import { eventEntry, gatheringEntry, googleCalendarUrl } from "@/lib/ics";
-import { formatClockRange, weekdayName } from "@/lib/schedule";
-
-/** How many upcoming nights a weekly page lists. */
-const NIGHTS_SHOWN = 4;
-
-/** Everything the page shows, for a one-off event or a weekly night. */
-type EventView = {
-  slug: string;
-  title: string;
-  description?: string;
-  photo?: PhotoData;
-  audience: Audience;
-  featured: boolean;
-  weekly: boolean;
-  /** "Saturday, October 10", or "Every Wednesday". */
-  date: string;
-  /** "9 AM–12 PM". */
-  time: string;
-  locationName?: string;
-  address?: string;
-  costNote?: string;
-  /** When the calendar buttons give way to "already happened". Weekly nights don't end. */
-  endsAt: number | null;
-  ended: boolean;
-  googleCalendar: string;
-  /** The next few weekly nights, plus one spare in case the first ends while the page is open. */
-  nights: FeedItem[];
-  today: IsoDate;
-};
+import { jsonLdScript } from "@/lib/json-ld";
+import { pageMetadata } from "@/lib/metadata";
 
 export async function generateStaticParams() {
   return (await getEventSlugs()).map((slug) => ({ slug }));
@@ -60,91 +30,26 @@ export async function generateStaticParams() {
  */
 export const instant = false;
 
-/**
- * Cached like the feed, so the dates and "already happened" stay current
- * as the page is rebuilt. The browser hides the calendar buttons if the
- * event ends between rebuilds.
- */
-async function load(slug: string): Promise<EventView | null> {
-  "use cache";
-  cacheLife("feed");
-
-  const content = await getBySlug(slug);
-  if (!content) return null;
-  const now = new Date();
-  const today = todayInLA(now);
-  const church = formatAddress();
-
-  if (content.kind === "gathering") {
-    const { gathering } = content;
-    return {
-      slug,
-      title: gathering.title,
-      description: gathering.description,
-      photo: gathering.photo,
-      audience: gathering.audience,
-      featured: false,
-      weekly: true,
-      date: `Every ${weekdayName(gathering.weekday)}`,
-      time: formatClockRange(gathering.startTime, gathering.endTime),
-      locationName: gathering.locationName,
-      address: church,
-      endsAt: null,
-      ended: false,
-      googleCalendar: googleCalendarUrl(gatheringEntry(gathering, church, now)),
-      nights: upcomingItems({ gatherings: [gathering], events: [], now, days: 7 * (NIGHTS_SHOWN + 1) }).slice(
-        0,
-        NIGHTS_SHOWN + 1,
-      ),
-      today,
-    };
-  }
-
-  const { event } = content;
-  const item = eventItem(event);
-  const endsAt = Date.parse(event.endsAt);
-  return {
-    slug,
-    title: event.title,
-    description: event.description,
-    photo: event.photo,
-    audience: event.audience,
-    featured: event.featured,
-    weekly: false,
-    date: itemDateLabel(item, today),
-    time: itemTimeLabel(item),
-    locationName: event.locationName,
-    address: itemAddress(item, church),
-    costNote: event.costNote,
-    endsAt,
-    ended: endsAt <= now.getTime(),
-    googleCalendar: googleCalendarUrl(eventEntry(event, church)),
-    nights: [],
-    today,
-  };
-}
-
 export async function generateMetadata({ params }: PageProps<"/events/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const view = await load(slug);
+  const view = await eventView(slug);
   // The page itself calls notFound(). This only names the tab.
   if (!view) return { title: "Page not found" };
-  const description = [view.date, view.time, view.locationName].filter(Boolean).join(" · ");
-  return {
+  return pageMetadata({
     title: view.title,
-    description,
-    alternates: { canonical: `/events/${slug}` },
-    openGraph: { title: view.title, description, url: `/events/${slug}`, siteName: site.name, type: "website" },
-  };
+    description: [view.date, view.time, view.locationName].filter(Boolean).join(" · "),
+    path: `/events/${slug}`,
+  });
 }
 
 export default async function EventPage({ params }: PageProps<"/events/[slug]">) {
   const { slug } = await params;
-  const view = await load(slug);
+  const view = await eventView(slug);
   if (!view) notFound();
 
   return (
     <div id={FEED_ID} data-for="all" suppressHydrationWarning className="pb-16 lg:pb-24">
+      {view.jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(view.jsonLd) }} />}
       <Hero view={view} />
 
       <div className="page-x mt-8 grid gap-12 lg:mt-12 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_24rem]">

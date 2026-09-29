@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import type { Metadata } from "next";
 import { ButtonLink } from "@/components/button";
 import { InlineScript } from "@/components/inline-script";
 import { BentoGrid } from "@/components/site/bento-grid";
@@ -10,6 +11,9 @@ import { RevealScript } from "@/components/site/reveal";
 import { home } from "@/content/home";
 import { site } from "@/content/site";
 import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
+
+// The title, description, and link preview come from the root layout.
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 // Production shows /coming-soon here until launch (see src/lib/launch-gate.ts).
 export default function HomePage() {

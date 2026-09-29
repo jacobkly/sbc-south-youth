@@ -5,19 +5,18 @@ import { LeaderCard } from "@/components/site/leader-card";
 import { LinkTile } from "@/components/site/link-tile";
 import { PageIntro } from "@/components/site/page-intro";
 import { leaders } from "@/content/leaders";
+import { pages } from "@/content/pages";
 import { safety } from "@/content/safety";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Leaders",
-  description: "Meet the people who lead youth nights, and how to reach them.",
-};
+export const metadata: Metadata = pageMetadata(pages.leaders);
 
 export default function LeadersPage() {
   const { screeningLine } = safety;
 
   return (
     <>
-      <PageIntro eyebrow="Leaders" title="Meet the team.">
+      <PageIntro eyebrow={pages.leaders.eyebrow} title={pages.leaders.heading}>
         The people who lead youth nights and would love to meet you. Come say hi, or send them an email.
       </PageIntro>
 

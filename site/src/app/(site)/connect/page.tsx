@@ -8,12 +8,11 @@ import { PageIntro } from "@/components/site/page-intro";
 import { Photo } from "@/components/site/photo";
 import { SectionHeader } from "@/components/site/section-header";
 import { connect } from "@/content/connect";
+import { pages } from "@/content/pages";
 import { photos } from "@/content/photos";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Connect & Serve",
-  description: "Come to a youth night, join the group chat or a small group, and find a team to serve on.",
-};
+export const metadata: Metadata = pageMetadata(pages.connect);
 
 /** A section with its header on the left and a form card on the right from `lg`. */
 function FormSection({
@@ -51,7 +50,7 @@ export default function ConnectPage() {
 
   return (
     <>
-      <PageIntro eyebrow="Connect & Serve" title="Come. Connect. Serve.">
+      <PageIntro eyebrow={pages.connect.eyebrow} title={pages.connect.heading}>
         Join a group chat, find your people, and help out on a team.
       </PageIntro>
 

@@ -13,18 +13,17 @@ import { SectionHeader } from "@/components/site/section-header";
 import { Steps } from "@/components/site/steps";
 import { AudienceTag } from "@/components/tag";
 import { leaders, parentContactSlug } from "@/content/leaders";
+import { pages } from "@/content/pages";
 import { photos } from "@/content/photos";
 import { safety } from "@/content/safety";
 import type { PolicyPoint } from "@/content/safety";
 import { formatAddress } from "@/content/site";
 import { visit } from "@/content/visit";
 import { getSchedule } from "@/lib/content/loaders";
+import { pageMetadata } from "@/lib/metadata";
 import { formatClockRange, weekdayName } from "@/lib/schedule";
 
-export const metadata: Metadata = {
-  title: "Parents & Safety",
-  description: "How we look after students, what a typical night looks like, drop-off and pick-up, and how to reach the youth pastor.",
-};
+export const metadata: Metadata = pageMetadata(pages.parents);
 
 const sections = [
   { id: "commitment", label: "Safety" },
@@ -45,7 +44,7 @@ export default async function ParentsPage() {
 
   return (
     <>
-      <PageIntro eyebrow="Parents & Safety" title="For parents.">
+      <PageIntro eyebrow={pages.parents.eyebrow} title={pages.parents.heading}>
         How we look after students, what a typical night looks like, and how to reach us. If anything here leaves you with a
         question, ask. We&apos;d love to hear from you.
       </PageIntro>

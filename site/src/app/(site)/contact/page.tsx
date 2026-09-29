@@ -8,12 +8,11 @@ import { Avatar } from "@/components/site/avatar";
 import { CopyButton } from "@/components/site/copy-button";
 import { PageIntro } from "@/components/site/page-intro";
 import { leaders, parentContactSlug } from "@/content/leaders";
+import { pages } from "@/content/pages";
 import { site } from "@/content/site";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Contact",
-  description: "Questions about youth nights, events, or anything else? Send us a message.",
-};
+export const metadata: Metadata = pageMetadata(pages.contact);
 
 const cardClasses = "rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-6";
 
@@ -23,7 +22,7 @@ export default function ContactPage() {
 
   return (
     <>
-      <PageIntro eyebrow="Contact" title="Say hi.">
+      <PageIntro eyebrow={pages.contact.eyebrow} title={pages.contact.heading}>
         Questions about youth nights, events, or anything else? Send us a message and a leader will write back.
       </PageIntro>
 

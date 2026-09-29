@@ -13,15 +13,14 @@ import { PageIntro } from "@/components/site/page-intro";
 import { SectionHeader } from "@/components/site/section-header";
 import { Steps } from "@/components/site/steps";
 import { visitFaq } from "@/content/faq";
+import { pages } from "@/content/pages";
 import { formatAddress, site } from "@/content/site";
 import { visit } from "@/content/visit";
 import { getSchedule } from "@/lib/content/loaders";
 import { readServerEnv } from "@/lib/env";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Plan a Visit",
-  description: "When and where youth meets, where to park, and what to expect on your first night.",
-};
+export const metadata: Metadata = pageMetadata(pages.visit);
 
 const sections = [
   { id: "when", label: "When" },
@@ -42,7 +41,7 @@ export default async function VisitPage() {
   return (
     <>
       {/* TODO(leadership): confirm "no sign-up needed" and that someone greets visitors at the door. */}
-      <PageIntro eyebrow="Plan a visit" title="Your first night, sorted.">
+      <PageIntro eyebrow={pages.visit.eyebrow} title={pages.visit.heading}>
         When and where we meet, where to park, and what to expect when you walk in. No sign-up needed. Just show up.
       </PageIntro>
 

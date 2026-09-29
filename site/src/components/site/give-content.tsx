@@ -2,6 +2,7 @@ import { ArrowRight, ArrowUpRight, Info, Landmark, Mail, ReceiptText } from "luc
 import Link from "next/link";
 import { ButtonLink, buttonClasses } from "@/components/button";
 import { give } from "@/content/give";
+import { pages } from "@/content/pages";
 import { site } from "@/content/site";
 import { cashAppUrl } from "@/lib/cash-app";
 import { CopyButton } from "./copy-button";
@@ -24,7 +25,7 @@ const receiptHref = `mailto:${site.email}?subject=${encodeURIComponent("Receipt 
 export function GiveContent({ cashtag }: { cashtag: string | null }) {
   return (
     <>
-      <PageIntro eyebrow="Give" title="Fuel the mission.">
+      <PageIntro eyebrow={pages.give.eyebrow} title={pages.give.heading}>
         {give.why}
       </PageIntro>
 
