@@ -1,6 +1,7 @@
 import type { Announcement, Audience, Photo, SiteEvent, WeeklyGathering } from "./content/types";
 import {
   addDays,
+  daysBetween,
   formatLongDate,
   formatWeekdayDate,
   laDateOf,
@@ -38,6 +39,8 @@ export type FeedItem = {
   date: IsoDate;
   allDay: boolean;
   locationName?: string;
+  /** Left out for rooms at the church. */
+  locationAddress?: string;
   photo?: Photo;
   costNote?: string;
   featured: boolean;
@@ -80,6 +83,7 @@ export function eventItem(event: SiteEvent): FeedItem {
     date: laDateOf(event.startsAt),
     allDay: event.allDay,
     locationName: event.locationName,
+    locationAddress: event.locationAddress,
     photo: event.photo,
     costNote: event.costNote,
     featured: event.featured,
@@ -112,9 +116,38 @@ export function upcomingItems({
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.title.localeCompare(b.title));
 }
 
-/** The soonest item, which may already be underway. */
-export function nextUp(items: FeedItem[]): FeedItem | null {
-  return items[0] ?? null;
+/**
+ * How soon something is: underway, today, tomorrow, or later (""). The
+ * feed script works this out again in the browser, since cached pages
+ * outlive the day they were made.
+ */
+export type RelativeDay = "now" | "today" | "tomorrow" | "";
+
+export function relativeDay(item: FeedItem, now: Date): RelativeDay {
+  if (Date.parse(item.startsAt) <= now.getTime()) return "now";
+  const today = todayInLA(now);
+  if (item.date === today) return "today";
+  return item.date === addDays(today, 1) ? "tomorrow" : "";
+}
+
+/** What to call each `RelativeDay`, like "Tonight" or "Wednesday". */
+export type WhenLabels = { now: string; today: string; tomorrow: string; later: string };
+
+/** "Tonight" for plans that start at 5 PM or later. A week or more out, the date. */
+export function whenLabels(item: FeedItem, today: IsoDate): WhenLabels {
+  const evening = !item.allDay && laTimeOf(item.startsAt) >= "17:00";
+  return {
+    now: "Happening now",
+    today: evening ? "Tonight" : "Today",
+    tomorrow: evening ? "Tomorrow night" : "Tomorrow",
+    later:
+      daysBetween(today, item.date) < 7 ? weekdayName(weekdayOf(item.date)) : formatWeekdayDate(item.date, today),
+  };
+}
+
+/** Where to get directions to: its own address, or the church's for a room there. */
+export function itemAddress(item: FeedItem, churchAddress: string): string | undefined {
+  return item.locationAddress ?? (item.locationName ? churchAddress : undefined);
 }
 
 export type AgendaDay = { date: IsoDate; items: FeedItem[] };

@@ -16,7 +16,7 @@ import { formatAddress, site } from "@/content/site";
 import { getBySlug, getEventSlugs } from "@/lib/content/loaders";
 import type { Audience, Photo as PhotoData } from "@/lib/content/types";
 import { addDays, todayInLA, type IsoDate } from "@/lib/dates";
-import { eventItem, itemDateLabel, itemTimeLabel, upcomingItems, type FeedItem } from "@/lib/feed";
+import { eventItem, itemAddress, itemDateLabel, itemTimeLabel, upcomingItems, type FeedItem } from "@/lib/feed";
 import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
 import { eventEntry, gatheringEntry, googleCalendarUrl } from "@/lib/ics";
 import { formatClockRange, weekdayName } from "@/lib/schedule";
@@ -114,7 +114,7 @@ async function load(slug: string): Promise<EventView | null> {
     date: itemDateLabel(item, today),
     time: itemTimeLabel(item),
     locationName: event.locationName,
-    address: event.locationAddress ?? (event.locationName ? church : undefined),
+    address: itemAddress(item, church),
     costNote: event.costNote,
     endsAt,
     ended: endsAt <= now.getTime(),

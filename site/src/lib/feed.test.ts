@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { Announcement, SiteEvent, WeeklyGathering } from "./content/types";
 import { forAudience, parseAudience, showKeys } from "./audience";
-import { groupAgenda, itemDateLabel, itemTimeLabel, liveAnnouncements, nextUp, upcomingItems, type FeedItem } from "./feed";
+import {
+  eventItem,
+  groupAgenda,
+  itemAddress,
+  itemDateLabel,
+  itemTimeLabel,
+  liveAnnouncements,
+  relativeDay,
+  upcomingItems,
+  whenLabels,
+  type FeedItem,
+} from "./feed";
 
 const wednesdayNight: WeeklyGathering = {
   slug: "weekly-hs",
@@ -131,11 +142,74 @@ describe("upcomingItems: events", () => {
   });
 });
 
-describe("nextUp", () => {
-  it("is the first item, or nothing", () => {
-    const items = upcomingItems({ gatherings: [wednesdayNight], events: [], now: at("2026-09-28T12:00:00-07:00") });
-    expect(nextUp(items)?.key).toBe("weekly-hs@2026-09-30");
-    expect(nextUp([])).toBeNull();
+describe("relativeDay", () => {
+  // Wednesday, Sep 30, 7–9 PM.
+  const night = upcomingItems({ gatherings: [wednesdayNight], events: [], now: at("2026-09-28T12:00:00-07:00") })[0];
+
+  it("is now from the moment it starts", () => {
+    expect(relativeDay(night, at("2026-09-30T18:59:59-07:00"))).toBe("today");
+    expect(relativeDay(night, at("2026-09-30T19:00:00-07:00"))).toBe("now");
+    expect(relativeDay(night, at("2026-09-30T20:30:00-07:00"))).toBe("now");
+  });
+
+  it("goes by the day in Los Angeles", () => {
+    // 11:30 PM Tuesday in LA is already Wednesday in UTC.
+    expect(relativeDay(night, at("2026-09-29T23:30:00-07:00"))).toBe("tomorrow");
+    expect(relativeDay(night, at("2026-09-30T00:00:00-07:00"))).toBe("today");
+    expect(relativeDay(night, at("2026-09-28T23:59:00-07:00"))).toBe("");
+  });
+
+  it("is now for an event that started days ago and hasn't ended", () => {
+    const retreat = eventItem(
+      event({ startsAt: "2026-10-09T17:00:00-07:00", endsAt: "2026-10-11T12:00:00-07:00" }),
+    );
+    expect(relativeDay(retreat, at("2026-10-10T09:00:00-07:00"))).toBe("now");
+  });
+});
+
+describe("whenLabels", () => {
+  const night = upcomingItems({ gatherings: [wednesdayNight], events: [], now: at("2026-09-28T12:00:00-07:00") })[0];
+
+  it("says tonight for evening plans", () => {
+    expect(whenLabels(night, "2026-09-28")).toEqual({
+      now: "Happening now",
+      today: "Tonight",
+      tomorrow: "Tomorrow night",
+      later: "Wednesday",
+    });
+  });
+
+  it("says today for daytime plans and dates anything a week or more out", () => {
+    const serve = eventItem(event({ startsAt: "2026-10-10T09:00:00-07:00", endsAt: "2026-10-10T12:00:00-07:00" }));
+    expect(whenLabels(serve, "2026-09-29")).toMatchObject({ today: "Today", tomorrow: "Tomorrow", later: "Sat, Oct 10" });
+    expect(whenLabels(serve, "2026-10-04").later).toBe("Saturday");
+    expect(whenLabels(serve, "2026-10-03").later).toBe("Sat, Oct 10");
+  });
+
+  it("never says tonight for an all-day event", () => {
+    const beach = eventItem(
+      event({ allDay: true, startsAt: "2026-10-17T00:00:00-07:00", endsAt: "2026-10-18T00:00:00-07:00" }),
+    );
+    expect(whenLabels(beach, "2026-10-16")).toMatchObject({ today: "Today", tomorrow: "Tomorrow" });
+  });
+});
+
+describe("itemAddress", () => {
+  const church = "123 Example Street, Anytown, CA 00000";
+  const base = { startsAt: "2026-10-10T09:00:00-07:00", endsAt: "2026-10-10T12:00:00-07:00" };
+
+  it("uses the place's own address", () => {
+    const item = eventItem(event({ ...base, locationName: "Beach", locationAddress: "1 Example Coast Highway" }));
+    expect(itemAddress(item, church)).toBe("1 Example Coast Highway");
+  });
+
+  it("uses the church's address for a room at the church", () => {
+    const night = upcomingItems({ gatherings: [wednesdayNight], events: [], now: at("2026-09-28T12:00:00-07:00") })[0];
+    expect(itemAddress(night, church)).toBe(church);
+  });
+
+  it("has nothing to give when there's no place", () => {
+    expect(itemAddress(eventItem(event(base)), church)).toBeUndefined();
   });
 });
 
