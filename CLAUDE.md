@@ -83,6 +83,7 @@ The maintainer runs `link` and `db push` against the hosted project. Claude does
 - Minors' privacy: never commit photos of students, and never show a student's last name, school, contact details, or social handle. Never render a group chat invite link.
 - Placeholder photos are hotlinked, never committed. Every one is replaced before launch.
 - **Launch gate:** a Vercel production build serves `/coming-soon` for every page until `SITE_LIVE=true` is set on the site's Vercel project. Never remove or bypass the gate without the maintainer.
+- **Staging:** the `dev` branch deploys to `staging.sbcsouthyouth.com`, a Vercel preview behind Vercel Authentication that always shows the full site. Before launch, the maintainer pushes `main` to both branches. After launch, site changes go to `dev` first and reach `main` once they're checked on staging.
 - The Supabase secret key is only for the site's server, in `server-only` modules. It may only call functions that `service_role` alone can execute, and never reads tables.
 
 ### Git
