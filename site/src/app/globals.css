@@ -20,12 +20,13 @@
   --border-strong: rgb(255 255 255 / 0.16);
   --scrim: 11 11 15;
 
-  /* Accent: fills, the active tab, and highlights. */
-  --accent: #c6ff3d;
+  /* Accent: fills, the active tab, and highlights. A brighter take on
+     the church's sky blue, with the same hue. */
+  --accent: #3db1ff;
   /* Text on an accent fill. */
   --accent-contrast: #0b0b0f;
   /* Accent-colored text on the page background. */
-  --accent-ink: #c6ff3d;
+  --accent-ink: #3db1ff;
 
   /* Form errors. */
   --danger: #ff6b6b;
@@ -41,7 +42,7 @@
     --text-muted: #55534f;
     --border: rgb(0 0 0 / 0.08);
     --border-strong: rgb(0 0 0 / 0.16);
-    --accent-ink: #3f6212;
+    --accent-ink: #1a6aa0;
     --danger: #b42318;
   }
 }
@@ -55,7 +56,7 @@
   --text-muted: #55534f;
   --border: rgb(0 0 0 / 0.08);
   --border-strong: rgb(0 0 0 / 0.16);
-  --accent-ink: #3f6212;
+  --accent-ink: #1a6aa0;
   --danger: #b42318;
 }
 

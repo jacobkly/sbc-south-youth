@@ -11,7 +11,7 @@ export function MapArt({ label, className = "" }: { label: string; className?: s
       <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 size-full">
         {/* A park and the church block. */}
         <rect x="36" y="206" width="120" height="70" rx="10" fill="#17a589" fillOpacity="0.14" />
-        <rect x="262" y="120" width="92" height="56" rx="8" fill="#c6ff3d" fillOpacity="0.1" stroke="#c6ff3d" strokeOpacity="0.35" />
+        <rect x="262" y="120" width="92" height="56" rx="8" className="fill-accent/10 stroke-accent/35" />
         <g stroke="#ffffff" strokeLinecap="round" fill="none">
           {/* Side streets. */}
           <g strokeOpacity="0.06" strokeWidth="3">
@@ -34,7 +34,7 @@ export function MapArt({ label, className = "" }: { label: string; className?: s
       {/* The pin sits on the church block. */}
       <div className="absolute top-[49%] left-[76%] -translate-1/2">
         <span className="absolute inset-0 rounded-full bg-accent/40 motion-safe:animate-ping" />
-        <span className="relative grid size-7 place-items-center rounded-full bg-accent shadow-[0_0_0_6px_rgb(198_255_61/0.18)]">
+        <span className="relative grid size-7 place-items-center rounded-full bg-accent ring-6 ring-accent/18">
           <span className="size-2.5 rounded-full bg-[#0b0b0f]" />
         </span>
       </div>

@@ -14,7 +14,7 @@ import { SHARE_SIZE, fontFileUrl, sharePhotoUrl, titleSize } from "./share";
  */
 
 // The dark theme's colors, from globals.css.
-const colors = { bg: "#0b0b0f", text: "#f5f3ee", muted: "#a7a5a0", accent: "#c6ff3d" };
+const colors = { bg: "#0b0b0f", text: "#f5f3ee", muted: "#a7a5a0", accent: "#3db1ff" };
 
 /** A Google font as a TrueType file, or null so the poster falls back to the built-in font. */
 async function googleFont(family: string): Promise<ArrayBuffer | null> {
@@ -174,7 +174,7 @@ function Backdrop({ photo, seed }: { photo?: string | null; seed?: string }) {
       <div
         style={{
           ...fill,
-          backgroundImage: "radial-gradient(circle at 100% 0%, rgba(198,255,61,0.3) 0%, rgba(198,255,61,0) 55%)",
+          backgroundImage: "radial-gradient(circle at 100% 0%, rgba(61,177,255,0.3) 0%, rgba(61,177,255,0) 55%)",
         }}
       />
       <div
@@ -185,7 +185,7 @@ function Backdrop({ photo, seed }: { photo?: string | null; seed?: string }) {
           width: 760,
           height: 760,
           borderRadius: 380,
-          border: "2px solid rgba(198,255,61,0.35)",
+          border: "2px solid rgba(61,177,255,0.35)",
         }}
       />
     </div>

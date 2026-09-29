@@ -51,7 +51,7 @@ function Hero() {
         {/* Phones: clear at the top, then solid black where the text starts. */}
         <div
           aria-hidden
-          className={`absolute inset-x-0 top-0 -z-10 bg-linear-to-b from-bg/20 via-bg/65 via-50% to-bg lg:hidden ${photoHeight}`}
+          className={`absolute inset-x-0 top-0 -z-10 bg-linear-to-b from-bg/20 via-bg/80 via-50% to-bg lg:hidden ${photoHeight}`}
         />
         {/* Desktop: dark behind the headline and Next Up, the photo clear up top. */}
         <div
@@ -60,7 +60,7 @@ function Hero() {
         />
         <div
           aria-hidden
-          className="absolute inset-0 -z-10 hidden bg-linear-to-r from-bg/70 via-bg/25 via-55% to-transparent lg:block"
+          className="absolute inset-0 -z-10 hidden bg-linear-to-r from-bg/75 via-bg/25 via-55% to-transparent lg:block"
         />
         {/* Faded out on phones, so it doesn't end in a hard line where the page starts. */}
         <div

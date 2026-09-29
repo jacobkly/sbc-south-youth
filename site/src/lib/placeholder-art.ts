@@ -8,7 +8,7 @@ export type Palette = { name: string; base: string; colors: [string, string] };
 
 // Night colors that sit well with the near-black page and the accent.
 export const PALETTES: Palette[] = [
-  { name: "lime", base: "#0b0b0f", colors: ["#c6ff3d", "#17a589"] },
+  { name: "sky", base: "#0b0b0f", colors: ["#3db1ff", "#2980b9"] },
   { name: "violet", base: "#0d0a18", colors: ["#7c5cff", "#ff4fd8"] },
   { name: "flare", base: "#120a08", colors: ["#ff5a1f", "#ffb800"] },
   { name: "ocean", base: "#070d18", colors: ["#2f6bff", "#22d3ee"] },
