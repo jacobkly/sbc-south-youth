@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { gateRewrites, isGated } from "./src/lib/launch-gate";
+import { securityHeaders } from "./src/lib/security-headers";
 
 const gated = isGated(process.env);
 
@@ -26,6 +27,10 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return { beforeFiles: gateRewrites(gated), afterFiles: [], fallback: [] };
+  },
+  async headers() {
+    const mode = { dev: process.env.NODE_ENV === "development", https: process.env.VERCEL === "1" };
+    return [{ source: "/:path*", headers: securityHeaders(mode) }];
   },
 };
 
