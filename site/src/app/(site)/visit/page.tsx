@@ -1,8 +1,9 @@
-import { ArrowRight, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ButtonLink, buttonClasses } from "@/components/button";
+import { buttonClasses } from "@/components/button";
+import { VisitForm } from "@/components/forms/visit-form";
 import { DirectionsButton } from "@/components/site/directions-button";
 import { FaqAccordion } from "@/components/site/faq-accordion";
 import { GatheringCard } from "@/components/site/gathering-card";
@@ -27,6 +28,7 @@ const sections = [
   { id: "where", label: "Where" },
   { id: "first-night", label: "First night" },
   { id: "faq", label: "FAQ" },
+  { id: "coming", label: "Let us know" },
 ];
 
 const TEXT_BODY = "Hi! I'm planning to come to youth this week.";
@@ -126,35 +128,36 @@ export default async function VisitPage() {
         </div>
       </section>
 
-      <section aria-labelledby="coming-title" className="page-x mt-16 lg:mt-24">
-        <div className="relative isolate overflow-hidden rounded-card bg-accent p-6 text-on-accent sm:p-10 lg:p-14">
-          <p
-            aria-hidden
-            className="absolute -right-4 -bottom-10 -z-10 font-display text-[11rem] leading-none font-extrabold tracking-[-0.05em] opacity-[0.08] select-none lg:text-[16rem]"
-          >
-            Hi!
-          </p>
-          <h2 id="coming-title" className="max-w-lg font-display text-h1 text-balance">
-            Coming this week?
-          </h2>
-          <p className="mt-3 max-w-md text-pretty">
-            Let us know and we&apos;ll look out for you at the door. Totally optional. You can always just show up.
-          </p>
-          <div className="mt-6">
-            {textNumber ? (
-              <a
-                href={`sms:${textNumber}?&body=${encodeURIComponent(TEXT_BODY)}`}
-                className={buttonClasses({ variant: "inverse", size: "lg" })}
-              >
-                <MessageCircle aria-hidden />
-                Text us
-              </a>
-            ) : (
-              // TODO: the inline Visit form replaces this link once the forms are built.
-              <ButtonLink href="/contact?topic=visit" variant="inverse" size="lg">
-                Let us know <ArrowRight aria-hidden />
-              </ButtonLink>
+      <section id="coming" aria-labelledby="coming-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-6">
+          <div className="relative isolate overflow-hidden rounded-card bg-accent p-6 text-on-accent sm:p-10 lg:sticky lg:top-24 lg:min-h-[28rem]">
+            <p
+              aria-hidden
+              className="absolute -right-4 -bottom-10 -z-10 font-display text-[11rem] leading-none font-extrabold tracking-[-0.05em] opacity-[0.08] select-none lg:text-[14rem]"
+            >
+              Hi!
+            </p>
+            <h2 id="coming-title" className="max-w-lg font-display text-h1 text-balance">
+              Coming this week?
+            </h2>
+            <p className="mt-3 max-w-md text-pretty">
+              Let us know and we&apos;ll look out for you at the door. Totally optional. You can always just show up.
+            </p>
+            {textNumber && (
+              <div className="mt-6">
+                <p className="text-small font-semibold">Rather text?</p>
+                <a
+                  href={`sms:${textNumber}?&body=${encodeURIComponent(TEXT_BODY)}`}
+                  className={`${buttonClasses({ variant: "inverse", size: "lg" })} mt-2`}
+                >
+                  <MessageCircle aria-hidden />
+                  Text us
+                </a>
+              </div>
             )}
+          </div>
+          <div className="rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8">
+            <VisitForm />
           </div>
         </div>
       </section>

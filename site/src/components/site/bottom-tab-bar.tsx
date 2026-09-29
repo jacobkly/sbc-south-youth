@@ -27,7 +27,11 @@ function TabFace({ icon: Icon, label, active }: { icon: LucideIcon; label: strin
   );
 }
 
-/** Phone navigation: four tabs and More, fixed above the home indicator. Hidden from 1024 px up. */
+/**
+ * Phone navigation: four tabs and More, fixed above the home indicator.
+ * Hidden from 1024 px up, and while someone types, so it doesn't ride up
+ * on the keyboard and cover the field.
+ */
 export function BottomTabBar() {
   const pathname = usePathname();
   // The page the sheet was opened on, so moving to a new page closes it.
@@ -39,7 +43,7 @@ export function BottomTabBar() {
     <>
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl backdrop-saturate-150 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl backdrop-saturate-150 typing:hidden lg:hidden"
       >
         <ul className="mx-auto grid h-16 max-w-lg grid-cols-5">
           {tabs.map((tab) => {

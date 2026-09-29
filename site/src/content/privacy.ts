@@ -26,7 +26,7 @@ export const privacy = {
     },
     {
       name: "Plan a visit",
-      href: "/visit",
+      href: "/visit#coming",
       collects: ["Name", "Email or phone", "High school or college", "A note (optional)"],
       why: "So a leader can look out for you on your first night.",
     },
