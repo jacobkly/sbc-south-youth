@@ -96,7 +96,7 @@ function Hero({ view }: { view: EventView }) {
                 </Tag>
               )}
               {view.weekly && (
-                <Tag>
+                <Tag tone="glass">
                   <Repeat aria-hidden className="mr-1 size-3" />
                   Weekly
                 </Tag>

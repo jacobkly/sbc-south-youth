@@ -22,8 +22,9 @@ export function PlaceholderArt({ seed, label, className = "" }: { seed: string; 
       <div className="grain absolute inset-0 opacity-25 mix-blend-overlay" />
       {label && (
         // Sized so the word spans the frame whatever its length, and sits on the bottom edge.
+        // The soft shadow keeps it readable if a bright glow lands behind it.
         <span
-          className="absolute bottom-0 left-[4cqw] translate-y-[0.13em] font-display text-[min(26cqw,calc(150cqw/var(--chars)))] leading-[0.8] font-extrabold tracking-[-0.04em] whitespace-nowrap text-white/90 uppercase"
+          className="absolute bottom-0 left-[4cqw] translate-y-[0.13em] font-display text-[min(26cqw,calc(150cqw/var(--chars)))] leading-[0.8] font-extrabold tracking-[-0.04em] whitespace-nowrap text-white/90 uppercase text-shadow-[0_0_0.3em_rgb(0_0_0/0.35)]"
           style={{ "--chars": label.length } as CSSProperties}
         >
           {label}

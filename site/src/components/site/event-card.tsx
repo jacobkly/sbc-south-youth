@@ -37,7 +37,7 @@ function When({ item, className }: { item: FeedItem; className: string }) {
     <p className={`flex flex-wrap items-center gap-x-2 text-small font-semibold ${className}`}>
       {itemTimeLabel(item)}
       {item.kind === "gathering" && (
-        <span className="inline-flex items-center gap-1 font-medium opacity-80">
+        <span className="inline-flex items-center gap-1 font-medium">
           <Repeat aria-hidden className="size-3" />
           Weekly
         </span>
@@ -87,7 +87,7 @@ function FeaturedCard({ item }: { item: FeedItem }) {
         sizes="(min-width: 1024px) 760px, 100vw"
         className="-z-10 transition-transform duration-700 ease-out-soft group-hover/card:scale-[1.03] motion-reduce:transition-none"
       />
-      <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/40 to-black/0" />
+      <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/65 via-50% to-black/20" />
       <div className="flex flex-wrap gap-1.5">
         <Tag tone="solid">
           <Star aria-hidden className="mr-1 size-3 fill-current" />

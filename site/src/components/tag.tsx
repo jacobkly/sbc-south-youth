@@ -12,6 +12,8 @@ const tones = {
   solid: "bg-fg text-bg",
   outline: "text-fg ring-1 ring-line-strong ring-inset",
   pending: "border border-dashed border-line-strong text-muted",
+  // Over a photo, where a see-through tag could land on a bright spot.
+  glass: "bg-black/45 text-white ring-1 ring-white/25 ring-inset backdrop-blur-md",
 } as const;
 
 export type TagTone = keyof typeof tones;

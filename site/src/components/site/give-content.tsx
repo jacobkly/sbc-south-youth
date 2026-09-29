@@ -47,7 +47,7 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
                 sizes="(min-width: 1240px) 400px, (min-width: 768px) 33vw, 100vw"
                 className="-z-10"
               />
-              <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/45 to-black/0" />
+              <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/65 via-50% to-black/20" />
               <p className="font-display text-[4.5rem] leading-[0.85] font-extrabold tracking-[-0.05em] text-accent lg:text-[5.5rem]">
                 <span className="sr-only">Gift of </span>${item.dollars}
               </p>

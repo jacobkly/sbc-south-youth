@@ -8,8 +8,9 @@ const variants: Record<ButtonVariant, string> = {
   primary: "bg-accent text-on-accent hover:brightness-110",
   secondary: "bg-surface-2 text-fg ring-1 ring-line-strong ring-inset hover:bg-surface",
   ghost: "text-fg hover:bg-surface-2",
-  // For use over photos, where the page colors don't apply.
-  light: "bg-white/12 text-white ring-1 ring-white/25 ring-inset backdrop-blur-md hover:bg-white/20",
+  // For use over photos, where the page colors don't apply. The dark glass
+  // keeps the white text readable even over a bright photo.
+  light: "bg-black/45 text-white ring-1 ring-white/25 ring-inset backdrop-blur-md hover:bg-black/60",
   // For use on an accent fill.
   inverse: "bg-on-accent text-accent hover:opacity-90",
   // The quieter button beside an inverse one.
