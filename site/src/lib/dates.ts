@@ -51,6 +51,21 @@ const weekdayYearLabel = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const longLabel = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+});
+
+const longYearLabel = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+
 const timeLabel = new Intl.DateTimeFormat("en-US", {
   timeZone: APP_TIME_ZONE,
   hour: "numeric",
@@ -161,6 +176,13 @@ export function formatDateRange(from: IsoDate, through: IsoDate): string {
 export function formatWeekdayDate(date: IsoDate, today: IsoDate = todayInLA()): string {
   const { year, month, day } = parseIsoDate(date);
   const format = date.slice(0, 4) === today.slice(0, 4) ? weekdayLabel : weekdayYearLabel;
+  return format.format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+/** Spells out a date, leaving out this year, e.g. "Saturday, October 10". */
+export function formatLongDate(date: IsoDate, today: IsoDate = todayInLA()): string {
+  const { year, month, day } = parseIsoDate(date);
+  const format = date.slice(0, 4) === today.slice(0, 4) ? longLabel : longYearLabel;
   return format.format(new Date(Date.UTC(year, month - 1, day)));
 }
 

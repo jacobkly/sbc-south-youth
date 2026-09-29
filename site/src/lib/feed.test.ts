@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Announcement, SiteEvent, WeeklyGathering } from "./content/types";
 import { forAudience, parseAudience, showKeys } from "./audience";
-import { groupAgenda, itemTimeLabel, liveAnnouncements, nextUp, upcomingItems, type FeedItem } from "./feed";
+import { groupAgenda, itemDateLabel, itemTimeLabel, liveAnnouncements, nextUp, upcomingItems, type FeedItem } from "./feed";
 
 const wednesdayNight: WeeklyGathering = {
   slug: "weekly-hs",
@@ -262,6 +262,28 @@ describe("itemTimeLabel", () => {
   it("says all day, or through the last day", () => {
     expect(itemTimeLabel(item("2026-10-17T00:00:00-07:00", "2026-10-18T00:00:00-07:00", true))).toBe("All day");
     expect(itemTimeLabel(item("2026-10-16T00:00:00-07:00", "2026-10-19T00:00:00-07:00", true))).toBe("All day, Fri–Sun");
+  });
+});
+
+describe("itemDateLabel", () => {
+  const today = "2026-10-01";
+  const item = (startsAt: string, endsAt: string, allDay = false) =>
+    upcomingItems({ gatherings: [], events: [event({ startsAt, endsAt, allDay })], now: at("2026-10-01T00:00:00-07:00") })[0];
+
+  it("spells out a single day", () => {
+    expect(itemDateLabel(item("2026-10-10T09:00:00-07:00", "2026-10-10T12:00:00-07:00"), today)).toBe("Saturday, October 10");
+    expect(itemDateLabel(item("2026-10-17T00:00:00-07:00", "2026-10-18T00:00:00-07:00", true), today)).toBe(
+      "Saturday, October 17",
+    );
+  });
+
+  it("gives the first and last day of a longer event", () => {
+    expect(itemDateLabel(item("2026-10-09T17:00:00-07:00", "2026-10-11T12:00:00-07:00"), today)).toBe(
+      "Fri, Oct 9 – Sun, Oct 11",
+    );
+    expect(itemDateLabel(item("2026-10-16T00:00:00-07:00", "2026-10-19T00:00:00-07:00", true), today)).toBe(
+      "Fri, Oct 16 – Sun, Oct 18",
+    );
   });
 });
 

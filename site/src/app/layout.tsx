@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist } from "next/font/google";
+import { site } from "@/content/site";
 import "./globals.css";
 
 const geist = Geist({
@@ -18,7 +19,7 @@ const description = "Youth nights, events, and a place to belong for high school
 
 export const metadata: Metadata = {
   // Makes the link preview image URL absolute. Vercel previews use their own URL instead.
-  metadataBase: new URL("https://sbcsouthyouth.com"),
+  metadataBase: new URL(site.url),
   title: { default: "SBC South Youth", template: "%s · SBC South Youth" },
   description,
   applicationName: "SBC South Youth",

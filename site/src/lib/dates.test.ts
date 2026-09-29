@@ -5,6 +5,7 @@ import {
   formatDate,
   formatDateRange,
   formatTime,
+  formatLongDate,
   formatWeekdayDate,
   isIsoDate,
   laDateOf,
@@ -170,5 +171,12 @@ describe("labels", () => {
   it("formats the time of an instant in LA time", () => {
     expect(formatTime("2026-09-26T06:30:00Z")).toBe("11:30 PM");
     expect(formatTime("2026-10-01T02:00:00Z")).toBe("7:00 PM");
+  });
+});
+
+describe("formatLongDate", () => {
+  it("spells out the date, adding the year when it isn't this one", () => {
+    expect(formatLongDate("2026-10-10", "2026-09-29")).toBe("Saturday, October 10");
+    expect(formatLongDate("2027-01-09", "2026-12-30")).toBe("Saturday, January 9, 2027");
   });
 });

@@ -25,6 +25,24 @@ export async function getEvents(): Promise<SiteEvent[]> {
   return sampleEvents(new Date());
 }
 
+/** What an `/events/[slug]` page shows: a one-off event or a weekly night. */
+export type EventPageContent = { kind: "event"; event: SiteEvent } | { kind: "gathering"; gathering: WeeklyGathering };
+
+/** The event or weekly night with this slug, or null. */
+export async function getBySlug(slug: string): Promise<EventPageContent | null> {
+  const [gatherings, events] = await Promise.all([getSchedule(), getEvents()]);
+  const gathering = gatherings.find((entry) => entry.slug === slug);
+  if (gathering) return { kind: "gathering", gathering };
+  const event = events.find((entry) => entry.slug === slug);
+  return event ? { kind: "event", event } : null;
+}
+
+/** Every slug with an `/events/[slug]` page, weekly nights first. */
+export async function getEventSlugs(): Promise<string[]> {
+  const [gatherings, events] = await Promise.all([getSchedule(), getEvents()]);
+  return [...gatherings, ...events].map((entry) => entry.slug);
+}
+
 /** Every announcement, including scheduled and expired ones. */
 export async function getAnnouncements(): Promise<Announcement[]> {
   "use cache";

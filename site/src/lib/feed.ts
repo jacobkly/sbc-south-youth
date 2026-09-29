@@ -1,5 +1,15 @@
 import type { Announcement, Audience, Photo, SiteEvent, WeeklyGathering } from "./content/types";
-import { addDays, laDateOf, laInstant, laTimeOf, todayInLA, weekdayOf, type IsoDate } from "./dates";
+import {
+  addDays,
+  formatLongDate,
+  formatWeekdayDate,
+  laDateOf,
+  laInstant,
+  laTimeOf,
+  todayInLA,
+  weekdayOf,
+  type IsoDate,
+} from "./dates";
 import { formatClock, formatClockRange, weekdayName } from "./schedule";
 
 /**
@@ -57,7 +67,8 @@ function gatheringNights(gathering: WeeklyGathering, from: IsoDate, through: Iso
   return nights;
 }
 
-function eventItem(event: SiteEvent): FeedItem {
+/** An event as it shows on the agenda. */
+export function eventItem(event: SiteEvent): FeedItem {
   return {
     kind: "event",
     key: event.id,
@@ -147,10 +158,22 @@ export function groupAgenda(items: FeedItem[], now: Date): AgendaGroup[] {
 
 const shortDay = (date: IsoDate) => weekdayName(weekdayOf(date)).slice(0, 3);
 
+/** The last day it runs into. An all-day event ends at midnight after it. */
+function lastDayOf(item: FeedItem): IsoDate {
+  return item.allDay ? addDays(laDateOf(item.endsAt), -1) : laDateOf(item.endsAt);
+}
+
+/** Which day, like "Saturday, October 10", or "Fri, Oct 9 – Sun, Oct 11". */
+export function itemDateLabel(item: FeedItem, today: IsoDate): string {
+  const lastDay = lastDayOf(item);
+  if (lastDay <= item.date) return formatLongDate(item.date, today);
+  return `${formatWeekdayDate(item.date, today)} – ${formatWeekdayDate(lastDay, today)}`;
+}
+
 /** When it happens, like "7–9 PM", "Fri 5 PM – Sun 12 PM", or "All day". */
 export function itemTimeLabel(item: FeedItem): string {
   if (item.allDay) {
-    const lastDay = addDays(laDateOf(item.endsAt), -1);
+    const lastDay = lastDayOf(item);
     return lastDay <= item.date ? "All day" : `All day, ${shortDay(item.date)}–${shortDay(lastDay)}`;
   }
   const endDate = laDateOf(item.endsAt);

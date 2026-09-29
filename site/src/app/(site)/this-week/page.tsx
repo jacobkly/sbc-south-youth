@@ -11,6 +11,7 @@ import { DateBlock } from "@/components/site/date-block";
 import { EventCard } from "@/components/site/event-card";
 import { FeedGuard } from "@/components/site/feed-guard";
 import { PageIntro } from "@/components/site/page-intro";
+import { SubscribeCard } from "@/components/site/subscribe-card";
 import { site } from "@/content/site";
 import { audienceFilters, showKeys } from "@/lib/audience";
 import type { Announcement } from "@/lib/content/types";
@@ -208,6 +209,8 @@ function Agenda({ groups, today }: { groups: AgendaGroup[]; today: IsoDate }) {
           <ArrowRight aria-hidden />
         </ButtonLink>
       </aside>
+
+      <SubscribeCard />
     </div>
   );
 }

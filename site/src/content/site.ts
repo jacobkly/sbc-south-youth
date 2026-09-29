@@ -9,6 +9,7 @@ export type SocialLink = { kind: SocialKind; label: string; href: string };
 
 export const site = {
   name: "SBC South Youth",
+  url: "https://sbcsouthyouth.com",
   tagline: "Youth nights, events, and a place to belong for high school and college students.",
 
   // TODO(leadership): the real street address.

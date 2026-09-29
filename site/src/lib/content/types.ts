@@ -51,6 +51,7 @@ export type SiteEvent = {
    */
   allDay: boolean;
   locationName?: string;
+  /** Left out for rooms at the church, which use the church's address. */
   locationAddress?: string;
   photo?: Photo;
   audience: Audience;
