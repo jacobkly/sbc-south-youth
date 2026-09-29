@@ -3,12 +3,14 @@ import {
   addDays,
   daysBetween,
   formatDate,
+  formatDateRange,
   formatTime,
   formatWeekdayDate,
   isIsoDate,
   laDateOf,
   laInstant,
   laMidnight,
+  laTimeOf,
   todayInLA,
   weekdayOf,
 } from "./dates";
@@ -90,6 +92,24 @@ describe("laInstant", () => {
     expect(() => laInstant("2026-09-30", "7pm")).toThrow(RangeError);
     expect(() => laInstant("2026-09-30", "24:00")).toThrow(RangeError);
     expect(() => laInstant("2026-02-30", "19:00")).toThrow(RangeError);
+  });
+});
+
+describe("laTimeOf", () => {
+  it("reads the LA clock, in daylight and standard time", () => {
+    expect(laTimeOf("2026-10-08T02:00:00Z")).toBe("19:00");
+    expect(laTimeOf("2026-12-03T03:30:00Z")).toBe("19:30");
+    expect(laTimeOf("2026-11-01T08:30:00Z")).toBe("01:30");
+    expect(laTimeOf("2026-11-01T09:30:00Z")).toBe("01:30");
+  });
+});
+
+describe("formatDateRange", () => {
+  it("shares the month when it can", () => {
+    expect(formatDateRange("2026-10-05", "2026-10-11")).toBe("Oct 5–11");
+    expect(formatDateRange("2026-09-28", "2026-10-04")).toBe("Sep 28 – Oct 4");
+    expect(formatDateRange("2026-12-28", "2027-01-03")).toBe("Dec 28 – Jan 3");
+    expect(formatDateRange("2026-10-05", "2026-10-05")).toBe("Oct 5");
   });
 });
 

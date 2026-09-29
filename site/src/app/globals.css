@@ -244,3 +244,14 @@
 .grain {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
+
+/*
+ * The audience filter on This Week. The feed's `data-for` picks a filter,
+ * and anything whose `data-show` list leaves it out is hidden. Unlayered,
+ * so it beats display utilities like `flex`.
+ */
+[data-for="all"] [data-show]:not([data-show~="all"]),
+[data-for="hs"] [data-show]:not([data-show~="hs"]),
+[data-for="college"] [data-show]:not([data-show~="college"]) {
+  display: none;
+}

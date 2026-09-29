@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { sampleAnnouncements } from "@/content/announcements";
+import { sampleEvents } from "@/content/events";
 import { visitFaq } from "@/content/faq";
 import { leaders } from "@/content/leaders";
 import { photos } from "@/content/photos";
@@ -7,6 +9,7 @@ import { safety } from "@/content/safety";
 import { gatherings } from "@/content/schedule";
 import { site } from "@/content/site";
 import { visit } from "@/content/visit";
+import { addDays, laInstant } from "@/lib/dates";
 import { contentProblems } from "./invariants";
 import type { Announcement, Leader, SiteEvent, WeeklyGathering } from "./types";
 
@@ -58,6 +61,15 @@ describe("contentProblems", () => {
         extra: [site, visit, safety, privacy],
       }),
     ).toEqual([]);
+  });
+
+  it("passes the sample events and announcements on every day of the week", () => {
+    for (let offset = 0; offset < 7; offset++) {
+      const now = laInstant(addDays("2026-09-28", offset), "12:00");
+      expect(contentProblems({ gatherings, events: sampleEvents(now), announcements: sampleAnnouncements(now) })).toEqual(
+        [],
+      );
+    }
   });
 
   it("passes a good fixture", () => {

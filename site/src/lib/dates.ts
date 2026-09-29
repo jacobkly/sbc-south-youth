@@ -34,6 +34,8 @@ const dateLabel = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const monthLabel = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short" });
+
 const weekdayLabel = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   weekday: "short",
@@ -144,11 +146,27 @@ export function formatDate(date: IsoDate): string {
   return dateLabel.format(new Date(Date.UTC(year, month - 1, day)));
 }
 
+/** Formats a span of dates, e.g. "Oct 5–11" or "Sep 28 – Oct 4". */
+export function formatDateRange(from: IsoDate, through: IsoDate): string {
+  const [start, end] = [from, through].map((date) => {
+    const { year, month, day } = parseIsoDate(date);
+    return { month: monthLabel.format(new Date(Date.UTC(year, month - 1, day))), day };
+  });
+  if (from === through) return `${start.month} ${start.day}`;
+  if (start.month === end.month && from.slice(0, 4) === through.slice(0, 4)) return `${start.month} ${start.day}–${end.day}`;
+  return `${start.month} ${start.day} – ${end.month} ${end.day}`;
+}
+
 /** Formats a date with its weekday, leaving out this year, e.g. "Fri, Sep 25". */
 export function formatWeekdayDate(date: IsoDate, today: IsoDate = todayInLA()): string {
   const { year, month, day } = parseIsoDate(date);
   const format = date.slice(0, 4) === today.slice(0, 4) ? weekdayLabel : weekdayYearLabel;
   return format.format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+/** The LA wall-clock time of an instant as "HH:MM", 24-hour. */
+export function laTimeOf(instant: Date | string): string {
+  return new Date(laWallTime(toInstant(instant))).toISOString().slice(11, 16);
 }
 
 /** Formats the time of an instant in Los Angeles, e.g. "7:00 PM". */

@@ -45,6 +45,10 @@ export type SiteEvent = {
   description?: string;
   startsAt: string;
   endsAt: string;
+  /**
+   * Shown as dates without times. Starts at midnight on the first day and
+   * ends at midnight after the last, in Los Angeles time.
+   */
   allDay: boolean;
   locationName?: string;
   locationAddress?: string;
