@@ -3,6 +3,7 @@ import type { Announcement, SiteEvent, WeeklyGathering } from "./content/types";
 import { forAudience, parseAudience, showKeys } from "./audience";
 import {
   eventItem,
+  featuredItems,
   groupAgenda,
   itemAddress,
   itemDateLabel,
@@ -139,6 +140,33 @@ describe("upcomingItems: events", () => {
   it("dates an event by the day it starts in Los Angeles", () => {
     const late = event({ startsAt: "2026-10-10T05:30:00Z", endsAt: "2026-10-10T06:30:00Z" });
     expect(upcomingItems({ gatherings: [], events: [late], now })[0].date).toBe("2026-10-09");
+  });
+});
+
+describe("featuredItems", () => {
+  const now = at("2026-10-07T18:00:00-07:00");
+  const retreat = event({
+    slug: "retreat",
+    featured: true,
+    startsAt: "2026-10-16T17:00:00-07:00",
+    endsAt: "2026-10-18T12:00:00-07:00",
+  });
+
+  it("keeps only featured events, soonest first", () => {
+    const worship = event({ slug: "worship", featured: true, startsAt: "2026-10-09T19:00:00-07:00", endsAt: "2026-10-09T21:00:00-07:00" });
+    const plain = event({ slug: "plain", startsAt: "2026-10-08T19:00:00-07:00", endsAt: "2026-10-08T21:00:00-07:00" });
+    expect(featuredItems([retreat, plain, worship], now).map((item) => item.slug)).toEqual(["worship", "retreat"]);
+  });
+
+  it("keeps one that's underway and drops one that's over", () => {
+    const underway = event({ slug: "underway", featured: true, startsAt: "2026-10-07T17:00:00-07:00", endsAt: "2026-10-07T19:00:00-07:00" });
+    const over = event({ slug: "over", featured: true, startsAt: "2026-10-07T15:00:00-07:00", endsAt: "2026-10-07T17:00:00-07:00" });
+    expect(featuredItems([over, underway, retreat], now).map((item) => item.slug)).toEqual(["underway", "retreat"]);
+  });
+
+  it("looks as far ahead as the agenda", () => {
+    const tooFar = event({ slug: "too-far", featured: true, startsAt: "2026-12-03T19:00:00-08:00", endsAt: "2026-12-03T21:00:00-08:00" });
+    expect(featuredItems([tooFar, retreat], now).map((item) => item.slug)).toEqual(["retreat"]);
   });
 });
 

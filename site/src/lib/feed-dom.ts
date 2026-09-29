@@ -11,7 +11,8 @@
  * - `data-empty` elements show under their one filter when their
  *   `data-scope` has nothing left for it.
  * - `data-date` elements get `data-rel` "today" or "tomorrow", or "now"
- *   once their `data-start` time (ms) passes, like `relativeDay`.
+ *   once their `data-start` time (ms) passes, like `relativeDay`. A
+ *   `data-days` element inside one shows how many days away it is.
  *
  * Each runs as an inline script before the first paint, so they can't
  * use imports or anything outside themselves.
@@ -66,6 +67,9 @@ export function refreshFeed(root: HTMLElement | null): void {
     const date = day.dataset.date;
     const started = day.dataset.start !== undefined && Number(day.dataset.start) <= now;
     day.dataset.rel = started ? "now" : date === today ? "today" : date === tomorrow ? "tomorrow" : "";
+    day.querySelectorAll<HTMLElement>("[data-days]").forEach((count) => {
+      count.textContent = String((Date.parse(date ?? "") - Date.parse(today)) / 864e5);
+    });
   });
 }
 

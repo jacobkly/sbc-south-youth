@@ -246,6 +246,25 @@
 }
 
 /*
+ * Scroll reveals (see reveal.tsx). The script arms each one, which hides
+ * it at once, then shows it with a fade and a 16 px rise. A transition
+ * uses the new state's timing, so only showing animates. A
+ * `--reveal-delay` staggers tiles in the same row.
+ */
+@media screen and (prefers-reduced-motion: no-preference) {
+  [data-reveal="armed"] {
+    opacity: 0;
+    translate: 0 1rem;
+  }
+
+  [data-reveal="shown"] {
+    transition:
+      opacity 700ms var(--ease-out-soft) var(--reveal-delay, 0ms),
+      translate 700ms var(--ease-out-soft) var(--reveal-delay, 0ms);
+  }
+}
+
+/*
  * The audience filter on This Week. The feed's `data-for` picks a filter,
  * and anything whose `data-show` list leaves it out is hidden. Unlayered,
  * so it beats display utilities like `flex`.

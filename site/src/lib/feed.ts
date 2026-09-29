@@ -116,6 +116,11 @@ export function upcomingItems({
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.title.localeCompare(b.title));
 }
 
+/** Featured events that haven't ended, soonest first, for the home countdown. */
+export function featuredItems(events: SiteEvent[], now: Date): FeedItem[] {
+  return upcomingItems({ gatherings: [], events: events.filter((event) => event.featured), now });
+}
+
 /**
  * How soon something is: underway, today, tomorrow, or later (""). The
  * feed script works this out again in the browser, since cached pages

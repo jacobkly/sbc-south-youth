@@ -1,11 +1,12 @@
 import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "@/components/button";
 import { InlineScript } from "@/components/inline-script";
+import { BentoGrid } from "@/components/site/bento-grid";
 import { FeedGuard } from "@/components/site/feed-guard";
 import { HeroMedia } from "@/components/site/hero-media";
 import { NextUpCard } from "@/components/site/next-up-card";
 import { QuickActions } from "@/components/site/quick-actions";
-import { Stub } from "@/components/site/stub";
+import { RevealScript } from "@/components/site/reveal";
 import { home } from "@/content/home";
 import { site } from "@/content/site";
 import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
@@ -13,13 +14,14 @@ import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
 // Production shows /coming-soon here until launch (see src/lib/launch-gate.ts).
 export default function HomePage() {
   return (
-    // The feed root, so Next Up drops what's over and keeps "Tonight" current.
+    // The feed root, so Next Up and the highlights drop what's over and keep "Tonight" current.
     <div id={FEED_ID} data-for="all" className="pb-16 lg:pb-24">
       <Hero />
       <QuickActions />
-      <div className="mt-12 lg:mt-16">
-        <Stub note="The highlights grid goes here." />
+      <div className="mt-14 lg:mt-20">
+        <BentoGrid />
       </div>
+      <RevealScript />
       <InlineScript html={inlineCall(refreshFeed)} />
       <FeedGuard />
     </div>
