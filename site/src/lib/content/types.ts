@@ -70,6 +70,18 @@ export type Announcement = {
   cta?: { label: string; href: string };
 };
 
+/**
+ * A Heads up note that's always true, like "bring a friend". It lives in
+ * code, never expires, and shows after the posts.
+ */
+export type StandingNote = {
+  id: string;
+  title: string;
+  body: string;
+  photo?: Photo;
+  cta?: { label: string; href: string };
+};
+
 export type Leader = {
   slug: string;
   name: string;

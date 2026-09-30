@@ -8,6 +8,7 @@ import { privacy } from "@/content/privacy";
 import { safety } from "@/content/safety";
 import { gatherings } from "@/content/schedule";
 import { site } from "@/content/site";
+import { standingNotes } from "@/content/standing-notes";
 import { visit } from "@/content/visit";
 import { addDays, laInstant } from "@/lib/dates";
 import { upcomingItems } from "@/lib/feed";
@@ -54,8 +55,13 @@ describe("contentProblems", () => {
         gatherings,
         leaders,
         faq: visitFaq,
-        photos: [...Object.values(photos), visit.parking.entrancePhoto, safety.dropOff.photo],
-        extra: [site, visit, safety, privacy],
+        photos: [
+          ...Object.values(photos),
+          visit.parking.entrancePhoto,
+          safety.dropOff.photo,
+          ...standingNotes.flatMap((note) => note.photo ?? []),
+        ],
+        extra: [site, visit, safety, privacy, standingNotes],
       }),
     ).toEqual([]);
   });
@@ -77,6 +83,34 @@ describe("contentProblems", () => {
       Date.parse(a.startsAt) < Date.parse(b.endsAt) && Date.parse(b.startsAt) < Date.parse(a.endsAt);
     const clashes = sampleEvents(now).filter((event) => nights.some((night) => overlaps(event, night)));
     expect(clashes.map((event) => event.slug)).toEqual([]);
+  });
+
+  it("keeps the sample calendar light but still shows every kind of event", () => {
+    const now = laInstant("2026-09-28", "12:00");
+    const events = sampleEvents(now);
+    const day = 24 * 60 * 60 * 1000;
+    const kinds = {
+      past: events.some((event) => Date.parse(event.endsAt) < now.getTime()),
+      allDay: events.some((event) => event.allDay),
+      multiDay: events.some((event) => Date.parse(event.endsAt) - Date.parse(event.startsAt) > day),
+      pastTheAgenda: events.some((event) => Date.parse(event.startsAt) > now.getTime() + 56 * day),
+      featuredPhoto: events.some((event) => event.featured && event.photo),
+      generatedArt: events.some((event) => !event.photo),
+      costNote: events.some((event) => event.costNote),
+      volleyball: events.some((event) => /volleyball/i.test(event.title)),
+    };
+    expect(kinds).toEqual(Object.fromEntries(Object.keys(kinds).map((kind) => [kind, true])));
+    expect(upcomingItems({ gatherings: [], events, now }).length).toBeLessThanOrEqual(6);
+  });
+
+  it("keeps a pinned, a scheduled, and an expired sample post", () => {
+    const now = laInstant("2026-09-28", "12:00");
+    const posts = sampleAnnouncements(now);
+    expect(posts.some((post) => post.pinned)).toBe(true);
+    expect(posts.some((post) => Date.parse(post.publishAt) > now.getTime())).toBe(true);
+    expect(posts.some((post) => Date.parse(post.expiresAt) < now.getTime())).toBe(true);
+    expect(posts.map((post) => post.title).join(" ")).toMatch(/hoodies/i);
+    expect(posts.map((post) => post.title).join(" ")).not.toMatch(/shirts|bring a friend/i);
   });
 
   it("keeps the safety page to what the church actually does", () => {

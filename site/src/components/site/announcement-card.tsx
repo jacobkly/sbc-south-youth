@@ -1,14 +1,14 @@
 import { ArrowRight, ArrowUpRight, Pin } from "lucide-react";
 import Link from "next/link";
 import { Tag } from "@/components/tag";
-import type { Announcement } from "@/lib/content/types";
+import type { StandingNote } from "@/lib/content/types";
 import { Photo } from "./photo";
 
 /**
- * A post in Heads up. With a button, the whole card is the link, and the
- * button's label names it.
+ * A post or standing note in Heads up. With a button, the whole card is
+ * the link, and the button's label names it.
  */
-export function AnnouncementCard({ post, eager = false }: { post: Announcement; eager?: boolean }) {
+export function AnnouncementCard({ post, eager = false }: { post: StandingNote & { pinned?: boolean }; eager?: boolean }) {
   const external = post.cta && /^https?:\/\//.test(post.cta.href);
   const Arrow = external ? ArrowUpRight : ArrowRight;
   const linkClasses =

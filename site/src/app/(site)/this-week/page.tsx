@@ -13,8 +13,9 @@ import { PageIntro } from "@/components/site/page-intro";
 import { SubscribeCard } from "@/components/site/subscribe-card";
 import { pages } from "@/content/pages";
 import { site } from "@/content/site";
+import { standingNotes } from "@/content/standing-notes";
 import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
-import type { Announcement } from "@/lib/content/types";
+import type { Announcement, StandingNote } from "@/lib/content/types";
 import { addDays, formatDateRange, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
 import { groupAgenda, liveAnnouncements, upcomingItems, type AgendaGroup } from "@/lib/feed";
 import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
@@ -47,13 +48,14 @@ async function Feed() {
   const groups = groupAgenda(upcomingItems({ gatherings, events, now }), now);
   const posts = liveAnnouncements(announcements, now);
   const today = todayInLA(now);
+  const headsUp = posts.length + standingNotes.length > 0;
 
   return (
     <div id={FEED_ID} className="pb-16 lg:pb-24">
       <div
-        className={`page-x mt-8 grid gap-14 lg:mt-12 ${posts.length > 0 ? "lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-12 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-x-16" : "max-w-4xl"}`}
+        className={`page-x mt-8 grid gap-14 lg:mt-12 ${headsUp ? "lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-12 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-x-16" : "max-w-4xl"}`}
       >
-        {posts.length > 0 && <HeadsUp posts={posts} />}
+        {headsUp && <HeadsUp posts={posts} notes={standingNotes} />}
         <Agenda groups={groups} today={today} />
       </div>
 
@@ -63,14 +65,15 @@ async function Feed() {
   );
 }
 
-function HeadsUp({ posts }: { posts: Announcement[] }) {
+/**
+ * Live posts first, then the standing notes. The notes never expire, so
+ * the section stays even after the last post ends.
+ */
+function HeadsUp({ posts, notes }: { posts: Announcement[]; notes: StandingNote[] }) {
+  const card = "w-[85%] max-w-[22rem] shrink-0 snap-start lg:w-auto lg:max-w-none";
+
   return (
-    <section
-      aria-labelledby="heads-up-title"
-      data-box
-      suppressHydrationWarning
-      className="min-w-0 lg:col-start-2 lg:row-start-1"
-    >
+    <section aria-labelledby="heads-up-title" className="min-w-0 lg:col-start-2 lg:row-start-1">
       <h2 id="heads-up-title" className="text-eyebrow text-accent-ink uppercase">
         Heads up
       </h2>
@@ -81,15 +84,14 @@ function HeadsUp({ posts }: { posts: Announcement[] }) {
         className="-mx-5 mt-4 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] sm:gap-4 lg:mx-0 lg:snap-none lg:flex-col lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden"
       >
         {posts.map((post, index) => (
-          <li
-            key={post.id}
-            data-item
-            data-until={Date.parse(post.expiresAt)}
-            suppressHydrationWarning
-            className="w-[85%] max-w-[22rem] shrink-0 snap-start lg:w-auto lg:max-w-none"
-          >
+          <li key={post.id} data-item data-until={Date.parse(post.expiresAt)} suppressHydrationWarning className={card}>
             {/* The first photo is the biggest thing on a phone's first screen. */}
             <AnnouncementCard post={post} eager={index === 0} />
+          </li>
+        ))}
+        {notes.map((note, index) => (
+          <li key={note.id} className={card}>
+            <AnnouncementCard post={note} eager={posts.length === 0 && index === 0} />
           </li>
         ))}
       </ul>

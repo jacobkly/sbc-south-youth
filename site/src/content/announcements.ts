@@ -29,19 +29,10 @@ export function sampleAnnouncements(now: Date): Announcement[] {
       cta: { label: "See the retreat", href: "/events/weekend-retreat" },
     },
     {
-      id: "sample-bring-a-friend",
-      title: "Bring a friend to youth night",
-      body: "Invite someone who's never been. Send them the Plan a Visit page so they know what to expect.",
-      pinned: false,
-      publishAt: at(-2),
-      expiresAt: at(5),
-      cta: { label: "Plan a visit", href: "/visit" },
-    },
-    {
-      id: "sample-shirts",
-      title: "New youth shirts are here",
-      body: "Find them at the welcome table before and after youth night, in every size.",
-      photo: photos.friendsLaughing,
+      // TODO(leadership): where to get one, and the price if we show it.
+      id: "sample-hoodies",
+      title: "Youth hoodies are here",
+      body: "Ask at the cafe after youth.",
       pinned: false,
       publishAt: at(-6),
       expiresAt: at(21),

@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUpRight, HandHeart, HandHelping, Pin } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Coffee, HandHelping, Pin } from "lucide-react";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -7,7 +7,8 @@ import { Tag } from "@/components/tag";
 import { home } from "@/content/home";
 import { leaders } from "@/content/leaders";
 import { site } from "@/content/site";
-import type { Announcement, WeeklyGathering } from "@/lib/content/types";
+import { standingNotes } from "@/content/standing-notes";
+import type { StandingNote, WeeklyGathering } from "@/lib/content/types";
 import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
 import { daysBetween, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
 import { featuredItems, liveAnnouncements, relativeDay, whenLabels, type FeedItem } from "@/lib/feed";
@@ -23,13 +24,14 @@ const SPARES = 3;
 const firstLeft = "h-full [[data-item]:not([hidden])~&]:hidden";
 
 const { highlights } = home;
+const instagram = site.socials.find((social) => social.kind === "instagram");
 
 /**
  * The home highlights, sized by importance: the pinned announcement, a
- * countdown to the next featured event, then Leaders, Serve, Give, and
- * Follow. When an announcement or event ends, the feed script swaps in
- * the next one, or a fallback when there's none left. Needs the feed root
- * around it, and `RevealScript` after it.
+ * countdown to the next featured event, then the Cafe, Serve, Leaders,
+ * and Instagram. When an announcement or event ends, the feed script
+ * swaps in the next one, or a fallback when there's none left. Needs the
+ * feed root around it, and `RevealScript` after it.
  */
 export async function BentoGrid() {
   "use cache";
@@ -75,9 +77,11 @@ export async function BentoGrid() {
               <Spotlight post={post} />
             </div>
           ))}
-          <div data-empty hidden={posts.length > 0} suppressHydrationWarning className="h-full">
-            <QuietSpotlight />
-          </div>
+          {standingNotes[0] && (
+            <div data-empty hidden={posts.length > 0} suppressHydrationWarning className="h-full">
+              <Spotlight post={standingNotes[0]} />
+            </div>
+          )}
         </BentoTile>
 
         <BentoTile size="feature" data-scope className="lg:[--reveal-delay:80ms]">
@@ -101,6 +105,17 @@ export async function BentoGrid() {
         </BentoTile>
 
         <BentoTile size="small">
+          <Cafe />
+        </BentoTile>
+        <BentoTile size="small" className="[--reveal-delay:60ms] lg:[--reveal-delay:120ms]">
+          <SmallTile
+            href="/connect#serve"
+            title={highlights.serve.title}
+            body={highlights.serve.body}
+            art={<TileIcon icon={<HandHelping />} />}
+          />
+        </BentoTile>
+        <BentoTile size="small" className="lg:[--reveal-delay:180ms]">
           <SmallTile
             href="/leaders"
             title={highlights.leaders.title}
@@ -114,27 +129,26 @@ export async function BentoGrid() {
             }
           />
         </BentoTile>
-        <BentoTile size="small" className="[--reveal-delay:60ms] lg:[--reveal-delay:120ms]">
-          <SmallTile
-            href="/connect#serve"
-            title={highlights.serve.title}
-            body={highlights.serve.body}
-            art={<TileIcon icon={<HandHelping />} />}
-          />
-        </BentoTile>
-        <BentoTile size="small" className="lg:[--reveal-delay:180ms]">
-          <SmallTile href="/give" title={highlights.give.title} body={highlights.give.body} art={<TileIcon icon={<HandHeart />} />} />
-        </BentoTile>
-        <BentoTile size="small" className="[--reveal-delay:60ms] lg:[--reveal-delay:240ms]">
-          <Follow />
-        </BentoTile>
+        {instagram && (
+          <BentoTile size="small" className="[--reveal-delay:60ms] lg:[--reveal-delay:240ms]">
+            <SmallTile
+              href={instagram.href}
+              title={highlights.instagram.title}
+              body={highlights.instagram.body}
+              art={<TileIcon icon={<SocialIcon kind="instagram" />} />}
+            />
+          </BentoTile>
+        )}
       </div>
     </section>
   );
 }
 
-/** The pinned announcement, or the newest, as a poster. Its button is the link. */
-function Spotlight({ post }: { post: Announcement }) {
+/**
+ * The pinned announcement, or the newest, as a poster. Its button is the
+ * link. The first standing note takes its place when nothing is posted.
+ */
+function Spotlight({ post }: { post: StandingNote & { pinned?: boolean } }) {
   const cta = post.cta ?? { label: "More on This Week", href: "/this-week" };
   const external = /^https?:\/\//.test(cta.href);
 
@@ -167,24 +181,6 @@ function Spotlight({ post }: { post: Announcement }) {
             <ArrowRight aria-hidden className="size-4" />
           </Link>
         )
-      }
-    />
-  );
-}
-
-/** The big tile when there's nothing posted. */
-function QuietSpotlight() {
-  const { quiet } = highlights;
-  return (
-    <PosterCard
-      title={quiet.title}
-      body={quiet.body}
-      photo={<Photo photo={{ ...quiet.photo, alt: "" }} seed="quiet" sizes={spotlightSizes} className={posterPhoto} />}
-      action={
-        <Link href="/this-week" className={posterLink}>
-          {quiet.cta}
-          <ArrowRight aria-hidden className="size-4" />
-        </Link>
       }
     />
   );
@@ -318,24 +314,12 @@ function SmallText({ title, body }: { title: string; body: string }) {
   );
 }
 
-/** Our socials. Not one link, so the tile itself isn't either. */
-function Follow() {
+/** The cafe has no page of its own, so this tile isn't a link. */
+function Cafe() {
   return (
     <div className={tileClasses("surface", `justify-between gap-5 ${smallTile}`)}>
-      <ul className="flex gap-2">
-        {site.socials.map((social) => (
-          <li key={social.kind}>
-            <a
-              href={social.href}
-              className="pressable relative grid size-9 place-items-center rounded-full ring-1 ring-line-strong ring-inset after:absolute after:-inset-1 hover:bg-surface-2 sm:size-11"
-            >
-              <SocialIcon kind={social.kind} className="size-[1.125rem] sm:size-5" />
-              <span className="sr-only">{social.label}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-      <SmallText title={highlights.follow.title} body={highlights.follow.body} />
+      <TileIcon icon={<Coffee />} />
+      <SmallText title={highlights.cafe.title} body={highlights.cafe.body} />
     </div>
   );
 }
