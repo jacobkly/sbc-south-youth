@@ -120,7 +120,7 @@ export default async function VisitPage() {
       </section>
 
       <section id="faq" aria-labelledby="faq-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
-        <div className="grid gap-6 lg:grid-cols-[1fr_2fr] lg:gap-12 xl:grid-cols-12 xl:gap-x-(--grid-gap)">
+        <div className="grid gap-6 lg:grid-cols-[minmax(20rem,1fr)_2fr] lg:gap-12 xl:grid-cols-12 xl:gap-x-(--grid-gap)">
           <div className="lg:sticky lg:top-24 lg:self-start xl:col-span-4">
             <SectionHeader id="faq-title" title="Questions">
               Anything else?{" "}
@@ -135,9 +135,9 @@ export default async function VisitPage() {
       </section>
 
       <section id="coming" aria-labelledby="coming-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
-        {/* From xl up the form stops at 44rem, and the poster takes the rest. */}
+        {/* Below lg both cards stop at 42rem. From xl up the form stops at 44rem, and the poster takes the rest. */}
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-6 xl:grid-cols-[minmax(0,1fr)_44rem] xl:gap-(--grid-gap)">
-          <div className="relative isolate overflow-hidden rounded-card bg-accent p-6 text-on-accent sm:p-10 lg:sticky lg:top-24 lg:min-h-[28rem] xl:p-12">
+          <div className="relative isolate overflow-hidden max-w-2xl rounded-card bg-accent p-6 text-on-accent sm:p-10 lg:sticky lg:top-24 lg:min-h-[28rem] lg:max-w-none xl:p-12">
             <p
               aria-hidden
               className="absolute -right-4 -bottom-10 -z-10 font-display text-[11rem] leading-none font-extrabold tracking-[-0.05em] opacity-[0.08] select-none lg:text-[14rem] 2xl:text-[18rem]"
@@ -163,7 +163,7 @@ export default async function VisitPage() {
               </div>
             )}
           </div>
-          <div className="rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8">
+          <div className="max-w-2xl rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8 lg:max-w-none">
             <VisitForm />
           </div>
         </div>

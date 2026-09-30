@@ -15,8 +15,9 @@ export const metadata: Metadata = pageMetadata(pages.connect);
 
 /**
  * A section with its header on the left and a form card on the right from
- * `lg`. The card stops at 48rem, so the fields never run past about 44rem,
- * and from xl up the header takes the rest of the row.
+ * `lg`. The card stops at 42rem below `lg` and 48rem from xl, so the fields
+ * never run past about 44rem, and from xl up the header takes the rest of
+ * the row.
  */
 function FormSection({
   id,
@@ -40,7 +41,7 @@ function FormSection({
           </SectionHeader>
           {aside}
         </div>
-        <div className="max-w-3xl rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8 lg:max-w-none">{children}</div>
+        <div className="max-w-2xl rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8 lg:max-w-none">{children}</div>
       </div>
     </section>
   );

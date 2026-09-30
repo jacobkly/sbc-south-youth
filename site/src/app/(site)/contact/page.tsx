@@ -21,11 +21,11 @@ export default function ContactPage() {
         Questions about youth nights, events, or anything else? Send us a message and a leader will write back.
       </PageIntro>
 
-      {/* The form stops at 48rem, so its fields never run past about 44rem. */}
+      {/* The form stops at 42rem below lg and 48rem from xl, so its fields never run past about 44rem. */}
       <div className="page-x grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-8 xl:grid-cols-[min(48rem,60%)_minmax(0,1fr)] xl:gap-16">
         <section
           aria-labelledby="message-title"
-          className="max-w-3xl scroll-mt-24 rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8 lg:max-w-none"
+          className="max-w-2xl scroll-mt-24 rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8 lg:max-w-none"
         >
           <h2 id="message-title" className="sr-only">
             Send a message
@@ -33,7 +33,7 @@ export default function ContactPage() {
           <ContactForm />
         </section>
 
-        <aside aria-label="Other ways to reach us" className="grid max-w-3xl gap-4 lg:sticky lg:top-24 lg:max-w-none xl:gap-0">
+        <aside aria-label="Other ways to reach us" className="grid max-w-2xl gap-4 lg:sticky lg:top-24 lg:max-w-none xl:gap-0">
           <div className={cardClasses}>
             <p className="text-eyebrow text-accent-ink uppercase">Rather email?</p>
             <a

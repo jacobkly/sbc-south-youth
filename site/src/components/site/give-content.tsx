@@ -96,7 +96,7 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
           </section>
 
           <section aria-labelledby="give-faq-title" className="page-x mt-16 lg:mt-24">
-            <div className="grid gap-6 lg:grid-cols-[1fr_2fr] lg:gap-12 xl:grid-cols-12 xl:gap-x-(--grid-gap)">
+            <div className="grid gap-6 lg:grid-cols-[minmax(20rem,1fr)_2fr] lg:gap-12 xl:grid-cols-12 xl:gap-x-(--grid-gap)">
               <div className="lg:sticky lg:top-24 lg:self-start xl:col-span-4">
                 <SectionHeader id="give-faq-title" title="Questions">
                   Anything else?{" "}

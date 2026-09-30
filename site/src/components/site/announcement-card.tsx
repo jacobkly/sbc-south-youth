@@ -15,8 +15,9 @@ const noteSizes = photoSizes({ lg: 1 / 3, md: 1 / 2, phone: 0.85 });
 export function AnnouncementCard({ post, eager = false }: { post: StandingNote & { pinned?: boolean }; eager?: boolean }) {
   const external = post.cta && /^https?:\/\//.test(post.cta.href);
   const Arrow = external ? ArrowUpRight : ArrowRight;
-  const linkClasses =
-    "mt-auto inline-flex items-center gap-1.5 pt-4 font-semibold text-accent-ink after:absolute after:inset-0 after:rounded-card";
+  // Without a photo, everything sits at the bottom under a bigger title, so a
+  // card stretched to its row's height reads like a poster, not an empty box.
+  const linkClasses = `${post.photo ? "mt-auto " : ""}inline-flex items-center gap-1.5 pt-4 font-semibold text-accent-ink after:absolute after:inset-0 after:rounded-card`;
 
   return (
     <article className="relative flex h-full flex-col overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset has-[a:hover]:bg-surface-2">
@@ -25,7 +26,7 @@ export function AnnouncementCard({ post, eager = false }: { post: StandingNote &
           <Photo photo={post.photo} seed={post.id} sizes={noteSizes} eager={eager} />
         </div>
       )}
-      <div className="flex flex-1 flex-col p-5">
+      <div className={`flex flex-1 flex-col p-5 ${post.photo ? "" : "justify-end"}`}>
         {post.pinned && (
           <div className="mb-3 flex flex-wrap gap-1.5">
             {post.pinned && (
@@ -36,7 +37,7 @@ export function AnnouncementCard({ post, eager = false }: { post: StandingNote &
             )}
           </div>
         )}
-        <h3 className="font-display text-h3 font-bold text-balance">{post.title}</h3>
+        <h3 className={`font-display font-bold text-balance ${post.photo ? "text-h3" : "text-h2"}`}>{post.title}</h3>
         <p className="mt-1.5 text-small whitespace-pre-line text-pretty text-muted">{post.body}</p>
         {post.cta &&
           (external ? (

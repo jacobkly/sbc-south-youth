@@ -178,7 +178,7 @@ export default function PrivacyPage() {
 /** A heading and its text: side by side from `lg`, then stacked again in the columns from `xl`. */
 function Topic({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="grid gap-3 border-t border-line py-6 lg:grid-cols-[1fr_2fr] lg:gap-12 lg:py-8 xl:grid-cols-1 xl:content-start xl:gap-3">
+    <div className="grid gap-3 border-t border-line py-6 lg:grid-cols-[minmax(20rem,1fr)_2fr] lg:gap-12 lg:py-8 xl:grid-cols-1 xl:content-start xl:gap-3">
       <h2 className="text-h3">{title}</h2>
       <div className="max-w-[30em] space-y-3 text-pretty text-muted">{children}</div>
     </div>
