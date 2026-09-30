@@ -17,7 +17,7 @@ export const visitFaq: FaqItem[] = [
   },
   {
     question: "Is there food?",
-    answer: "Yes, after service. Usually pizza and drinks, and often enough for a full meal. The cafe is open too.",
+    answer: "Yes, after service. Snacks and drinks, and often enough for a full meal. The cafe is open too.",
   },
   {
     question: "What about allergies?",

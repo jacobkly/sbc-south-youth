@@ -45,6 +45,13 @@ describe("site copy", () => {
     expect(files.filter(({ text }) => wrong.test(text)).map(({ path }) => path)).toEqual([]);
   });
 
+  it("says food or snacks, never pizza, since the food changes", () => {
+    // Photo names and alt text describe the placeholder photos themselves, so they can.
+    const pizza = /(?<!photos\.)\bpizza\b/i;
+    const copy = files.filter(({ path }) => !path.endsWith(join("content", "photos.ts")));
+    expect(copy.filter(({ text }) => pizza.test(text)).map(({ path }) => path)).toEqual([]);
+  });
+
   it("puts the real Friday start time in the home headline", () => {
     const friday = gatherings.find((gathering) => gathering.weekday === 5);
     const [hours, minutes] = (friday?.startTime ?? "").split(":").map(Number);

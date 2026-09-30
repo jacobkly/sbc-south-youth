@@ -52,7 +52,7 @@ export const pages = {
     path: "/give",
     title: "Give",
     description: "Give to SBC South Youth, and see what your gift pays for: Friday night food, birthdays, and events.",
-    heading: "Pizza, birthdays, and volleyball",
+    heading: "Food, birthdays, and volleyball",
   },
   contact: {
     path: "/contact",

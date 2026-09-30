@@ -15,7 +15,7 @@ export const leaders: Leader[] = [
     name: "Alex Example",
     role: "Youth Pastor",
     bio: "Placeholder bio. Two sentences about who they are and why they love leading youth.",
-    funFact: "Placeholder fun fact, like a strong opinion about pizza toppings.",
+    funFact: "Placeholder fun fact, like a strong opinion about the best cafe drink.",
     email: "pastor@example.org",
   },
   {

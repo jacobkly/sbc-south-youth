@@ -26,7 +26,7 @@ export const give = {
     {
       dollars: 200,
       title: "Friday night food",
-      body: "Roughly what pizza and drinks for everyone cost each Friday.",
+      body: "Roughly what food and drinks for everyone cost each Friday.",
       photo: photos.pizza,
     },
     {

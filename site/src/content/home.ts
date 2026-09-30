@@ -5,7 +5,7 @@ export const home = {
   hero: {
     // Matches the weekly schedule, which a test checks.
     title: "Fridays at 7:30",
-    lede: "Worship and a message, then pizza and hanging out until 9:30 or 10. High school and college age, all together.",
+    lede: "Worship and a message, then food and hanging out until 9:30 or 10. High school and college age, all together.",
     photo: photos.handsRaised,
     // Where to keep the crop on a phone, which shows the middle of a wide photo.
     focus: "62% 50%",
@@ -26,7 +26,7 @@ export const home = {
     stops: [
       { time: "7:30 PM", title: "Worship", body: "Worshiping Jesus together, with a live band." },
       { time: "Then", title: "A message", body: "One message about Jesus, for everyone together." },
-      { time: "About 9", title: "Food and the cafe", body: "Pizza and drinks, often a full meal, and a few games." },
+      { time: "About 9", title: "Food and the cafe", body: "Snacks and drinks, often a full meal, and a few games." },
       { time: "Until 9:30–10", title: "Hanging out", body: "Leaders stay until everyone's been picked up." },
     ],
   },

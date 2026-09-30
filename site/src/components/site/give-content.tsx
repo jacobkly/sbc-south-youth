@@ -60,7 +60,7 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
         </section>
       </div>
 
-      {/* From xl up the list drops its photos, so one band carries the pizza. */}
+      {/* From xl up the list drops its photos, so one band carries the food photo. */}
       <div aria-hidden className="page-x mt-24 hidden xl:block">
         {/* A set width keeps the height cap from narrowing the band through its aspect ratio. */}
         <div className="relative aspect-[3/1] max-h-[60vh] w-full overflow-hidden rounded-card">

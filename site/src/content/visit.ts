@@ -23,7 +23,7 @@ export const visit = {
     { title: "One message", body: "Everyone together, for a message about Jesus." },
     {
       title: "Food and hanging out",
-      body: "Pizza and drinks, often a full meal. The cafe opens, there are a few games, and people hang out until 9:30 or 10.",
+      body: "Snacks and drinks, often a full meal. The cafe opens, there are a few games, and people hang out until 9:30 or 10.",
     },
   ],
 
