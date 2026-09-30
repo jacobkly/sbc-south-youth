@@ -18,6 +18,7 @@ import { formatAddress, site } from "@/content/site";
 import { visit } from "@/content/visit";
 import { getSchedule } from "@/lib/content/loaders";
 import { pageMetadata } from "@/lib/metadata";
+import { photoSizes } from "@/lib/photo-sizes";
 import { formatClockRange, weekdayName } from "@/lib/schedule";
 
 export const metadata: Metadata = pageMetadata(pages.parents);
@@ -107,7 +108,7 @@ export default async function ParentsPage() {
         <SectionHeader id="drop-off-title" title="Drop-off and pick-up" />
         <div className="mt-6 grid overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset md:grid-cols-2">
           <div className="relative aspect-[4/3] md:aspect-auto md:min-h-80">
-            <Photo photo={dropOff.photo} seed="drop-off" sizes="(min-width: 1240px) 600px, (min-width: 768px) 50vw, 100vw" />
+            <Photo photo={dropOff.photo} seed="drop-off" sizes={photoSizes({ lg: 1 / 2, md: 1 / 2 })} />
           </div>
           <div className="flex flex-col p-5 sm:p-6 lg:p-8">
             <ul className="space-y-3">
@@ -150,7 +151,7 @@ export default async function ParentsPage() {
             </ButtonLink>
           </div>
           <div className="relative hidden md:block">
-            <Photo photo={photos.camera} seed="photos" sizes="(min-width: 1240px) 480px, 40vw" />
+            <Photo photo={photos.camera} seed="photos" sizes={photoSizes({ lg: 2 / 5, md: 2 / 5 })} />
           </div>
         </div>
       </section>

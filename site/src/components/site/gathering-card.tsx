@@ -1,5 +1,6 @@
 import { MapPin } from "lucide-react";
 import type { WeeklyGathering } from "@/lib/content/types";
+import { photoSizes } from "@/lib/photo-sizes";
 import { formatClockRange, weekdayName } from "@/lib/schedule";
 import { Photo } from "./photo";
 
@@ -22,7 +23,7 @@ export function GatheringCard({ gathering, wide = false }: { gathering: WeeklyGa
         <Photo
           photo={gathering.photo}
           seed={gathering.slug}
-          sizes={wide ? "(min-width: 1240px) 720px, (min-width: 768px) 60vw, 100vw" : "(min-width: 1240px) 600px, (min-width: 768px) 50vw, 100vw"}
+          sizes={wide ? photoSizes({ lg: 3 / 5, md: 3 / 5 }) : photoSizes({ lg: 1 / 2, md: 1 / 2 })}
           className="-z-10"
         />
         <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/85 via-black/35 to-black/5" />

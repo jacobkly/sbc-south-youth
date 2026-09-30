@@ -5,6 +5,7 @@ import { give } from "@/content/give";
 import { pages } from "@/content/pages";
 import { site } from "@/content/site";
 import { cashAppUrl } from "@/lib/cash-app";
+import { photoSizes } from "@/lib/photo-sizes";
 import { CopyButton } from "./copy-button";
 import { FaqAccordion } from "./faq-accordion";
 import { PageIntro } from "./page-intro";
@@ -44,7 +45,7 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
               <Photo
                 photo={{ ...item.photo, alt: "" }}
                 seed={item.title}
-                sizes="(min-width: 1240px) 400px, (min-width: 768px) 33vw, 100vw"
+                sizes={photoSizes({ lg: 1 / 3, md: 1 / 3 })}
                 className="-z-10"
               />
               <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/80 via-60% to-black/35" />

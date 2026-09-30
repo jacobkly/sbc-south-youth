@@ -2,7 +2,7 @@
 export function JumpNav({ sections }: { sections: { id: string; label: string }[] }) {
   return (
     <nav aria-label="On this page" className="page-x">
-      <ul className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:px-0">
+      <ul className="-mx-(--gutter) flex gap-2 overflow-x-auto px-(--gutter) pb-1 [scrollbar-width:none] lg:mx-0 lg:px-0">
         {sections.map((section) => (
           <li key={section.id} className="shrink-0">
             <a

@@ -1,11 +1,12 @@
 import { getImageProps } from "next/image";
 import type { CSSProperties } from "react";
 import type { Photo as PhotoData } from "@/lib/content/types";
+import { photoSizes } from "@/lib/photo-sizes";
 import { Photo } from "./photo";
 
-// Full width on phones, and the poster inside the page gutters on desktop.
+// Full width on phones, and the poster filling the frame on desktop.
 const WIDE = "(min-width: 64rem)";
-const sizes = `(min-width: 79rem) 1200px, ${WIDE} calc(100vw - 4rem), 100vw`;
+const sizes = photoSizes({ lg: 1 });
 
 /**
  * The home poster's photo, which is likely the largest paint, so it loads

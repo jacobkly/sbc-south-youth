@@ -34,8 +34,8 @@ export async function SiteFooter() {
 
   return (
     <footer className="relative mt-24 overflow-hidden border-t border-line lg:mt-32">
-      <div className="page-x grid grid-cols-2 gap-x-6 gap-y-10 pt-12 lg:grid-cols-[1.6fr_1fr_1fr_1.2fr] lg:gap-x-10 lg:pt-16">
-        <div className="col-span-2 lg:col-span-1">
+      <div className="page-x grid grid-cols-2 gap-x-6 gap-y-10 pt-12 lg:grid-cols-12 lg:gap-x-(--grid-gap) lg:pt-16">
+        <div className="col-span-2 lg:col-span-4">
           <Link href="/" className="pressable inline-flex min-h-11 items-center gap-3 font-display text-h3 font-extrabold">
             <LogoMark className="h-10" />
             {site.name}
@@ -56,7 +56,7 @@ export async function SiteFooter() {
           </ul>
         </div>
 
-        <Column title="When">
+        <Column title="When" className="lg:col-span-2">
           <dl className="space-y-3">
             {schedule.map((gathering) => (
               <div key={gathering.slug}>
@@ -69,7 +69,7 @@ export async function SiteFooter() {
           </dl>
         </Column>
 
-        <Column title="Find us">
+        <Column title="Find us" className="lg:col-span-3">
           <address className="text-muted not-italic">
             <span className="font-semibold text-fg">{site.campus}</span>
             <br />
@@ -85,8 +85,8 @@ export async function SiteFooter() {
           </Link>
         </Column>
 
-        <Column title="Explore" className="col-span-2 lg:col-span-1">
-          <ul className="grid grid-cols-2 gap-x-6 lg:grid-cols-1">
+        <Column title="Explore" className="col-span-2 lg:col-span-3">
+          <ul className="grid grid-cols-2 gap-x-6 lg:grid-cols-1 2xl:grid-cols-2">
             {exploreLinks.map((link) => (
               <li key={link.href}>
                 <Link href={link.href} className={`${linkClasses} w-full`}>
@@ -111,14 +111,14 @@ export async function SiteFooter() {
         </Link>
       </div>
 
-      {/* A poster-sized sign-off that spans the page. On desktop it sinks below
-          the bottom edge; on phones the tab bar sits there, so it stays whole. */}
-      <p
-        aria-hidden
-        className="page-x mt-4 mb-4 text-center lg:-mb-[0.18em] font-display text-[clamp(2.5rem,14.5vw,12rem)] leading-[0.8] font-extrabold tracking-[-0.04em] whitespace-nowrap text-fg/[0.07] select-none"
-      >
-        SOUTH YOUTH
-      </p>
+      {/* A poster-sized sign-off, sized to fill the frame at any width. On
+          desktop it sinks below the bottom edge; on phones the tab bar sits
+          there, so it stays whole. */}
+      <div aria-hidden className="page-x @container select-none">
+        <p className="mt-4 mb-4 text-center font-display text-[length:16cqi] leading-[0.8] font-extrabold tracking-[-0.04em] whitespace-nowrap text-fg/[0.07] lg:-mb-[0.18em]">
+          SOUTH YOUTH
+        </p>
+      </div>
     </footer>
   );
 }

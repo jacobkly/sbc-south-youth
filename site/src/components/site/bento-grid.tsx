@@ -12,6 +12,7 @@ import type { StandingNote, WeeklyGathering } from "@/lib/content/types";
 import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
 import { daysBetween, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
 import { featuredItems, liveAnnouncements, relativeDay, whenLabels, type FeedItem } from "@/lib/feed";
+import { photoSizes } from "@/lib/photo-sizes";
 import { formatClock, weekdayName } from "@/lib/schedule";
 import { Avatar } from "./avatar";
 import { BentoTile, tileClasses } from "./bento-tile";
@@ -183,7 +184,8 @@ function Spotlight({ post }: { post: StandingNote & { pinned?: boolean } }) {
   );
 }
 
-const spotlightSizes = "(min-width: 79rem) 900px, (min-width: 64rem) 75vw, 100vw";
+// Three of the four columns from lg up.
+const spotlightSizes = photoSizes({ lg: 3 / 4 });
 const posterPhoto =
   "-z-10 transition-transform duration-700 ease-out-soft group-has-[a:hover]/poster:scale-[1.03] motion-reduce:transition-none";
 // The whole card is the link, and the button's label names it.

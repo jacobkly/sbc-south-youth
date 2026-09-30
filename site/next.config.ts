@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     // Placeholder photos until the media team's photos arrive. Only this
     // exact query is allowed, so nobody can resize other Unsplash URLs here.
     remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com", pathname: "/photo-*", search: "?w=1600&q=80&auto=format" },
+      { protocol: "https", hostname: "images.unsplash.com", pathname: "/photo-*", search: "?w=2400&q=80&auto=format" },
     ],
   },
   cacheComponents: true,

@@ -8,7 +8,7 @@ import type { Photo } from "@/lib/content/types";
 
 // Matches the one query next.config.ts allows for Unsplash images.
 function unsplash(id: string, alt: string): Photo {
-  return { src: `https://images.unsplash.com/${id}?w=1600&q=80&auto=format`, alt, placeholder: true };
+  return { src: `https://images.unsplash.com/${id}?w=2400&q=80&auto=format`, alt, placeholder: true };
 }
 
 export const photos = {

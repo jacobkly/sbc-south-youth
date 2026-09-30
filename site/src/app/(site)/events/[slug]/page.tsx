@@ -17,6 +17,7 @@ import { eventView, type EventView } from "@/lib/event-view";
 import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
 import { jsonLdScript } from "@/lib/json-ld";
 import { pageMetadata } from "@/lib/metadata";
+import { photoSizes } from "@/lib/photo-sizes";
 
 export async function generateStaticParams() {
   return (await getEventSlugs()).map((slug) => ({ slug }));
@@ -76,7 +77,7 @@ function Hero({ view }: { view: EventView }) {
         <Photo
           photo={view.photo}
           seed={view.slug}
-          sizes="(min-width: 1264px) 1200px, (min-width: 1024px) calc(100vw - 64px), 100vw"
+          sizes={photoSizes({ lg: 1 })}
           eager
           className="-z-10"
         />

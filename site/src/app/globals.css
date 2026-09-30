@@ -111,6 +111,9 @@
   --text-eyebrow--letter-spacing: 0.08em;
   --text-eyebrow--font-weight: 600;
 
+  /* Full HD and wider. The rest are Tailwind's. */
+  --breakpoint-3xl: 120rem;
+
   --radius-card: 24px;
   --radius-tile: 20px;
   --radius-input: 14px;
@@ -165,22 +168,43 @@
 /* While the keyboard is up: a text field has focus. */
 @custom-variant typing (body:has(:is(textarea, input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"])):focus) &);
 
-/* The floating tab bar's gap from the bottom: 12 px, or just above the home indicator. */
 :root {
+  /* The floating tab bar's gap from the bottom: 12 px, or just above the home indicator. */
   --tab-bar-gap: max(0.75rem, calc(env(safe-area-inset-bottom) - 0.5rem));
+
+  /*
+   * The page frame fills any 16:9 screen and caps on ultrawides. Twice the
+   * window's height is about 16:9 once the browser's bars take their share,
+   * and 1920 px is the floor, so a normal monitor always fills.
+   */
+  --frame: max(120rem, 200vh);
+  /* 20 px on phones, growing to 64 px on wide screens. */
+  --gutter: clamp(1.25rem, 3.5vw, 4rem);
+  /* The one gap between columns in wide layouts, so pages line up. */
+  --grid-gap: clamp(1rem, 2vw, 3rem);
 }
 
-/* Page width: 1200 px max, with 20 px gutters on phones and 32 px on desktop. */
+/* Headings keep growing on wide screens. Phones and tablets don't change. */
+@media (width >= 64rem) {
+  :root {
+    --text-display: clamp(5.5rem, 2rem + 4.5vw, 9rem);
+    --text-h1: clamp(3.75rem, 1.5rem + 3vw, 6rem);
+    --text-h2: clamp(2.5rem, 1rem + 2vw, 4rem);
+  }
+}
+
+@media (width >= 96rem) {
+  :root {
+    --text-body: 1.125rem;
+  }
+}
+
+/* The page frame, inside its gutters. */
 @utility page-x {
   margin-inline: auto;
   width: 100%;
-  max-width: calc(1200px + 2 * 20px);
-  padding-inline: 20px;
-
-  @media (width >= 64rem) {
-    max-width: calc(1200px + 2 * 32px);
-    padding-inline: 32px;
-  }
+  max-width: var(--frame);
+  padding-inline: var(--gutter);
 }
 
 /* Press feedback for buttons and cards. Plain CSS, so it works without JS. */

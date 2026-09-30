@@ -81,7 +81,7 @@ function HeadsUp({ posts, notes }: { posts: Announcement[]; notes: StandingNote[
       <ul
         tabIndex={0}
         aria-labelledby="heads-up-title"
-        className="-mx-5 mt-4 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] sm:gap-4 lg:mx-0 lg:snap-none lg:flex-col lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden"
+        className="-mx-(--gutter) mt-4 flex snap-x snap-mandatory scroll-px-(--gutter) gap-3 overflow-x-auto px-(--gutter) pb-1 [scrollbar-width:none] sm:gap-4 lg:mx-0 lg:snap-none lg:flex-col lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden"
       >
         {posts.map((post, index) => (
           <li key={post.id} data-item data-until={Date.parse(post.expiresAt)} suppressHydrationWarning className={card}>

@@ -21,7 +21,7 @@ describe("shareAlt", () => {
 
 describe("sharePhotoUrl", () => {
   it("crops Unsplash photos to the preview size as a JPEG", () => {
-    const url = new URL(sharePhotoUrl("https://images.unsplash.com/photo-123?w=1600&q=80&auto=format"));
+    const url = new URL(sharePhotoUrl("https://images.unsplash.com/photo-123?w=2400&q=80&auto=format"));
     expect(url.pathname).toBe("/photo-123");
     expect(Object.fromEntries(url.searchParams)).toEqual({ w: "1200", h: "630", fit: "crop", fm: "jpg", q: "75" });
   });

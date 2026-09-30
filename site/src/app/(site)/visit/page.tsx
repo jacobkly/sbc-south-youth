@@ -19,6 +19,7 @@ import { visit } from "@/content/visit";
 import { getSchedule } from "@/lib/content/loaders";
 import { readServerEnv } from "@/lib/env";
 import { pageMetadata } from "@/lib/metadata";
+import { photoSizes } from "@/lib/photo-sizes";
 
 export const metadata: Metadata = pageMetadata(pages.visit);
 
@@ -85,7 +86,7 @@ export default async function VisitPage() {
                 src={parking.entrancePhoto.src}
                 alt={parking.entrancePhoto.alt}
                 fill
-                sizes="(min-width: 1240px) 600px, (min-width: 768px) 50vw, 100vw"
+                sizes={photoSizes({ lg: 1 / 2, md: 1 / 2 })}
                 className="object-cover"
               />
             </div>

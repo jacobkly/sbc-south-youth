@@ -2,6 +2,7 @@ import { MapPin, Repeat, Star, Ticket } from "lucide-react";
 import Link from "next/link";
 import { Tag } from "@/components/tag";
 import { itemTimeLabel, type FeedItem } from "@/lib/feed";
+import { photoSizes } from "@/lib/photo-sizes";
 import { Photo } from "./photo";
 
 /**
@@ -69,6 +70,9 @@ function RowCard({ item }: { item: FeedItem }) {
   );
 }
 
+// The agenda column, beside Heads up from lg up.
+const agendaSizes = photoSizes({ lg: 3 / 4 });
+
 function FeaturedCard({ item }: { item: FeedItem }) {
   return (
     <Link
@@ -79,7 +83,7 @@ function FeaturedCard({ item }: { item: FeedItem }) {
       <Photo
         photo={item.photo && { ...item.photo, alt: "" }}
         seed={item.slug}
-        sizes="(min-width: 1024px) 760px, 100vw"
+        sizes={agendaSizes}
         className="-z-10 transition-transform duration-700 ease-out-soft group-hover/card:scale-[1.03] motion-reduce:transition-none"
       />
       <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/75 via-50% to-black/20" />

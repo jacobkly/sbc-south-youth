@@ -13,7 +13,7 @@ const retreat: FeedItem = {
   allDay: false,
   locationName: "Camp Example",
   locationAddress: "1 Camp Road, Anytown, CA 00000",
-  photo: { src: "https://images.unsplash.com/photo-1?w=1600&q=80&auto=format", alt: "A cabin", placeholder: true },
+  photo: { src: "https://images.unsplash.com/photo-1?w=2400&q=80&auto=format", alt: "A cabin", placeholder: true },
   featured: true,
 };
 
