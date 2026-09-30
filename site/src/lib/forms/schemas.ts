@@ -1,7 +1,6 @@
 import * as z from "zod/mini";
 import { connect } from "@/content/connect";
 import { teamsFor } from "@/content/serve-teams";
-import type { AudienceFilter } from "@/lib/audience";
 
 /**
  * The message forms: Contact, Plan a visit, Join a group, and Serve. The
@@ -20,7 +19,10 @@ export type MessageKind = (typeof messageKinds)[number];
 export const contactRoles = ["hs", "college", "parent", "other"] as const;
 export type ContactRole = (typeof contactRoles)[number];
 
-const studentBands = ["hs", "college"] as const satisfies readonly AudienceFilter[];
+const studentBands = ["hs", "college"] as const;
+
+/** High school or college, on the forms that ask. */
+export type StudentBand = (typeof studentBands)[number];
 
 export const limits = { name: 80, email: 254, phone: 25, message: 2000, note: 500 } as const;
 
@@ -119,7 +121,7 @@ const schemas = {
   }),
 };
 
-function isStudentBand(value: string | undefined): value is AudienceFilter {
+function isStudentBand(value: string | undefined): value is StudentBand {
   return studentBands.some((band) => band === value);
 }
 

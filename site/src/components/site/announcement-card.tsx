@@ -1,6 +1,6 @@
 import { ArrowRight, ArrowUpRight, Pin } from "lucide-react";
 import Link from "next/link";
-import { AudienceTag, Tag } from "@/components/tag";
+import { Tag } from "@/components/tag";
 import type { Announcement } from "@/lib/content/types";
 import { Photo } from "./photo";
 
@@ -22,7 +22,7 @@ export function AnnouncementCard({ post, eager = false }: { post: Announcement; 
         </div>
       )}
       <div className="flex flex-1 flex-col p-5">
-        {(post.pinned || post.audience !== "all") && (
+        {post.pinned && (
           <div className="mb-3 flex flex-wrap gap-1.5">
             {post.pinned && (
               <Tag tone="accent">
@@ -30,7 +30,6 @@ export function AnnouncementCard({ post, eager = false }: { post: Announcement; 
                 Pinned
               </Tag>
             )}
-            {post.audience !== "all" && <AudienceTag audience={post.audience} />}
           </div>
         )}
         <h3 className="font-display text-h3 font-bold text-balance">{post.title}</h3>

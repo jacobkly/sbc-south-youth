@@ -2,7 +2,6 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SocialIcon } from "@/components/icons/social-icon";
-import { audienceLabels } from "@/components/tag";
 import { site } from "@/content/site";
 import { getSchedule } from "@/lib/content/loaders";
 import { formatClockRange, weekdayName } from "@/lib/schedule";
@@ -61,9 +60,8 @@ export async function SiteFooter() {
           <dl className="space-y-3">
             {schedule.map((gathering) => (
               <div key={gathering.slug}>
-                <dt className="font-semibold">{audienceLabels[gathering.audience]}</dt>
+                <dt className="font-semibold">{weekdayName(gathering.weekday, { plural: true })}</dt>
                 <dd className="text-muted">
-                  {weekdayName(gathering.weekday, { plural: true })},{" "}
                   <span className="whitespace-nowrap">{formatClockRange(gathering.startTime, gathering.endTime)}</span>
                 </dd>
               </div>

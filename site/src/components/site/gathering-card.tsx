@@ -1,5 +1,4 @@
 import { MapPin } from "lucide-react";
-import { AudienceTag } from "@/components/tag";
 import type { WeeklyGathering } from "@/lib/content/types";
 import { formatClockRange, weekdayName } from "@/lib/schedule";
 import { Photo } from "./photo";
@@ -14,11 +13,8 @@ export function GatheringCard({ gathering }: { gathering: WeeklyGathering }) {
       <div className="relative isolate aspect-[4/3] overflow-hidden sm:aspect-[16/10]">
         <Photo photo={gathering.photo} seed={gathering.slug} sizes="(min-width: 1240px) 600px, (min-width: 768px) 50vw, 100vw" className="-z-10" />
         <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/85 via-black/35 to-black/5" />
-        {/* Always dark over the photo, so tags and text keep their contrast in light mode. */}
-        <div data-theme="dark" className="flex h-full flex-col justify-between p-5 text-white">
-          <div>
-            <AudienceTag audience={gathering.audience} />
-          </div>
+        {/* Always dark over the photo, so the text keeps its contrast in light mode. */}
+        <div data-theme="dark" className="flex h-full flex-col justify-end p-5 text-white">
           <div>
             <p className="font-display text-h1">{day}</p>
             <p className="mt-1 font-display text-h3 font-bold text-accent">{time}</p>

@@ -3,11 +3,10 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SocialIcon } from "@/components/icons/social-icon";
-import { AudienceTag, Tag } from "@/components/tag";
+import { Tag } from "@/components/tag";
 import { home } from "@/content/home";
 import { leaders } from "@/content/leaders";
 import { site } from "@/content/site";
-import { showKeys } from "@/lib/audience";
 import type { Announcement, WeeklyGathering } from "@/lib/content/types";
 import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
 import { daysBetween, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
@@ -69,7 +68,6 @@ export async function BentoGrid() {
             <div
               key={post.id}
               data-item
-              data-show={showKeys(post.audience)}
               data-until={Date.parse(post.expiresAt)}
               suppressHydrationWarning
               className={firstLeft}
@@ -77,7 +75,7 @@ export async function BentoGrid() {
               <Spotlight post={post} />
             </div>
           ))}
-          <div data-empty="all" data-show={posts.length > 0 ? "" : "all"} suppressHydrationWarning className="h-full">
+          <div data-empty hidden={posts.length > 0} suppressHydrationWarning className="h-full">
             <QuietSpotlight />
           </div>
         </BentoTile>
@@ -87,7 +85,6 @@ export async function BentoGrid() {
             <div
               key={item.key}
               data-item
-              data-show={showKeys(item.audience)}
               data-until={Date.parse(item.endsAt)}
               data-date={item.date}
               data-start={Date.parse(item.startsAt)}
@@ -98,7 +95,7 @@ export async function BentoGrid() {
               <Countdown item={item} today={today} />
             </div>
           ))}
-          <div data-empty="all" data-show={featured.length > 0 ? "" : "all"} suppressHydrationWarning className="h-full">
+          <div data-empty hidden={featured.length > 0} suppressHydrationWarning className="h-full">
             <EveryWeek gatherings={gatherings} />
           </div>
         </BentoTile>
@@ -147,7 +144,7 @@ function Spotlight({ post }: { post: Announcement }) {
       body={post.body}
       photo={<Photo photo={post.photo} seed={post.id} sizes={spotlightSizes} className={posterPhoto} />}
       tags={
-        (post.pinned || post.audience !== "all") && (
+        post.pinned && (
           <div className="flex flex-wrap gap-1.5">
             {post.pinned && (
               <Tag tone="accent">
@@ -155,7 +152,6 @@ function Spotlight({ post }: { post: Announcement }) {
                 Pinned
               </Tag>
             )}
-            {post.audience !== "all" && <AudienceTag audience={post.audience} />}
           </div>
         )
       }

@@ -7,7 +7,6 @@ const retreat: FeedItem = {
   key: "e1",
   slug: "fall-retreat",
   title: "Fall Retreat",
-  audience: "all",
   startsAt: "2026-10-09T23:00:00.000Z",
   endsAt: "2026-10-11T19:00:00.000Z",
   date: "2026-10-09",

@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, CalendarDays, CalendarPlus, Clock, History, MapPin, Repeat, Star, Ticket, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, CalendarPlus, Clock, History, MapPin, Repeat, Star, Ticket } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,9 +10,8 @@ import { DirectionsButton } from "@/components/site/directions-button";
 import { FeedGuard } from "@/components/site/feed-guard";
 import { Photo } from "@/components/site/photo";
 import { ShareButton } from "@/components/site/share-button";
-import { AudienceTag, Tag } from "@/components/tag";
+import { Tag } from "@/components/tag";
 import { getEventSlugs } from "@/lib/content/loaders";
-import type { Audience } from "@/lib/content/types";
 import { addDays } from "@/lib/dates";
 import { eventView, type EventView } from "@/lib/event-view";
 import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
@@ -48,7 +47,7 @@ export default async function EventPage({ params }: PageProps<"/events/[slug]">)
   if (!view) notFound();
 
   return (
-    <div id={FEED_ID} data-for="all" suppressHydrationWarning className="pb-16 lg:pb-24">
+    <div id={FEED_ID} className="pb-16 lg:pb-24">
       {view.jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(view.jsonLd) }} />}
       <Hero view={view} />
 
@@ -101,7 +100,6 @@ function Hero({ view }: { view: EventView }) {
                   Weekly
                 </Tag>
               )}
-              {view.audience !== "all" && <AudienceTag audience={view.audience} />}
             </div>
             <h1 className="mt-4 max-w-4xl font-display text-display text-balance">{view.title}</h1>
             <p className="mt-4 font-display text-h3 font-bold text-accent">{view.date}</p>
@@ -123,12 +121,6 @@ function Hero({ view }: { view: EventView }) {
     </div>
   );
 }
-
-const who: Record<Audience, string> = {
-  all: "Everyone",
-  hs: "High school students",
-  college: "College students",
-};
 
 /**
  * The facts and the calendar buttons. On phones it comes right after the
@@ -163,14 +155,10 @@ function DetailsCard({ view }: { view: EventView }) {
               <p className="font-semibold">{view.costNote}</p>
             </Detail>
           )}
-          <Detail icon={<Users />} term="Who">
-            <p className="font-semibold">{who[view.audience]}</p>
-          </Detail>
         </dl>
 
         <div
           data-item
-          data-show="all"
           data-until={view.endsAt ?? undefined}
           hidden={view.ended || undefined}
           suppressHydrationWarning
@@ -187,8 +175,8 @@ function DetailsCard({ view }: { view: EventView }) {
         </div>
 
         <div
-          data-empty="all"
-          data-show={view.ended ? "all" : ""}
+          data-empty
+          hidden={!view.ended}
           suppressHydrationWarning
           className="mt-6 border-t border-line pt-6"
         >
@@ -259,7 +247,6 @@ function NextNights({ view }: { view: EventView }) {
           <li
             key={night.key}
             data-item
-            data-show="all"
             data-until={Date.parse(night.endsAt)}
             data-date={night.date}
             data-rel={night.date === view.today ? "today" : night.date === tomorrow ? "tomorrow" : ""}
@@ -272,8 +259,8 @@ function NextNights({ view }: { view: EventView }) {
         ))}
       </ol>
       <div
-        data-empty="all"
-        data-show={view.nights.length > 0 ? "" : "all"}
+        data-empty
+        hidden={view.nights.length > 0}
         suppressHydrationWarning
         className="mt-4 text-small text-muted"
       >

@@ -9,9 +9,6 @@
  * in Los Angeles time.
  */
 
-/** Who something is for. `all` shows under every audience filter. */
-export type Audience = "all" | "hs" | "college";
-
 export type Photo = {
   src: string;
   alt: string;
@@ -19,12 +16,11 @@ export type Photo = {
   placeholder: boolean;
 };
 
-/** A night that repeats every week, like High School Youth Night. */
+/** A night that repeats every week, like Friday youth night. */
 export type WeeklyGathering = {
   /** Starts with `weekly-`, which event slugs can't. */
   slug: string;
   title: string;
-  audience: Audience;
   /** 0 is Sunday. */
   weekday: number;
   startTime: string;
@@ -54,7 +50,6 @@ export type SiteEvent = {
   /** Left out for rooms at the church, which use the church's address. */
   locationAddress?: string;
   photo?: Photo;
-  audience: Audience;
   /** Up to 60 characters, like "$40, due Nov 1". */
   costNote?: string;
   featured: boolean;
@@ -67,7 +62,6 @@ export type Announcement = {
   /** Up to 400 characters. */
   body: string;
   photo?: Photo;
-  audience: Audience;
   pinned: boolean;
   publishAt: string;
   expiresAt: string;

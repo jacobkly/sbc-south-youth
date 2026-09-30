@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { teamsFor } from "@/content/serve-teams";
-import type { AudienceFilter } from "@/lib/audience";
-import { type FieldErrors, limits } from "@/lib/forms/schemas";
+import { type FieldErrors, limits, type StudentBand } from "@/lib/forms/schemas";
 import { ChoiceCards, ChoiceTiles, FieldError, PrivacyNote, ReachFields, studentBands, TextArea, TextField } from "./fields";
 import { MessageForm } from "./message-form";
 
 function ServeFields({ errors }: { errors: FieldErrors }) {
-  const [band, setBand] = useState<AudienceFilter>();
+  const [band, setBand] = useState<StudentBand>();
   const [teams, setTeams] = useState<string[]>([]);
   const offered = band ? teamsFor(band) : [];
 

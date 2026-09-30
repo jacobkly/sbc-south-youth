@@ -1,7 +1,7 @@
 import { cacheLife } from "next/cache";
 import { formatAddress } from "@/content/site";
 import { getBySlug } from "./content/loaders";
-import type { Audience, Photo } from "./content/types";
+import type { Photo } from "./content/types";
 import { todayInLA, type IsoDate } from "./dates";
 import { eventItem, itemAddress, itemDateLabel, itemTimeLabel, upcomingItems, type FeedItem } from "./feed";
 import { eventEntry, gatheringEntry, googleCalendarUrl } from "./ics";
@@ -20,7 +20,6 @@ export type EventView = {
   title: string;
   description?: string;
   photo?: Photo;
-  audience: Audience;
   featured: boolean;
   weekly: boolean;
   /** "Saturday, October 10", or "Every Wednesday". */
@@ -67,7 +66,6 @@ export async function eventView(slug: string): Promise<EventView | null> {
       title: gathering.title,
       description: gathering.description,
       photo: gathering.photo,
-      audience: gathering.audience,
       featured: false,
       weekly: true,
       date: `Every ${weekdayName(gathering.weekday)}`,
@@ -92,7 +90,6 @@ export async function eventView(slug: string): Promise<EventView | null> {
     title: event.title,
     description: event.description,
     photo: event.photo,
-    audience: event.audience,
     featured: event.featured,
     weekly: false,
     date: itemDateLabel(item, today),

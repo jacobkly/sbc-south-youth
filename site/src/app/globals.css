@@ -298,14 +298,3 @@
       translate 700ms var(--ease-out-soft) var(--reveal-delay, 0ms);
   }
 }
-
-/*
- * The audience filter on This Week. The feed's `data-for` picks a filter,
- * and anything whose `data-show` list leaves it out is hidden. Unlayered,
- * so it beats display utilities like `flex`.
- */
-[data-for="all"] [data-show]:not([data-show~="all"]),
-[data-for="hs"] [data-show]:not([data-show~="hs"]),
-[data-for="college"] [data-show]:not([data-show~="college"]) {
-  display: none;
-}

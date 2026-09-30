@@ -1,33 +1,24 @@
 /**
  * Keeps a cached feed honest in the browser. The server marks up the
- * feed with data attributes, and these functions update them:
+ * feed with data attributes, and `refreshFeed` updates them:
  *
- * - `data-for` on the feed root is the audience filter. CSS hides every
- *   `[data-show]` element whose list doesn't include it.
  * - `data-item` elements are announcements and agenda items. Once their
  *   `data-until` time (ms) passes, they're hidden.
- * - `data-box` elements (sections, days) show under the filters that
- *   still have a visible item inside them.
- * - `data-empty` elements show under their one filter when their
- *   `data-scope` has nothing left for it.
+ * - `data-box` elements (sections, days) hide once they have no item
+ *   left.
+ * - `data-empty` elements show only when their `data-scope` has no item
+ *   left.
  * - `data-date` elements get `data-rel` "today" or "tomorrow", or "now"
  *   once their `data-start` time (ms) passes, like `relativeDay`. A
  *   `data-days` element inside one shows how many days away it is.
  *
- * Each runs as an inline script before the first paint, so they can't
- * use imports or anything outside themselves.
+ * It runs as an inline script before the first paint, so it can't use
+ * imports or anything outside itself.
  */
 
 export const FEED_ID = "feed";
 
-/** Sets the filter from `?for=`, before the first paint. */
-export function applyUrlAudience(root: HTMLElement | null, filters: string[]): void {
-  if (!root) return;
-  const value = new URLSearchParams(window.location.search).get("for");
-  root.setAttribute("data-for", value && filters.indexOf(value) >= 0 ? value : "all");
-}
-
-/** Hides what's over and works out what each filter shows. */
+/** Hides what's over, and the boxes and empty states that depend on it. */
 export function refreshFeed(root: HTMLElement | null): void {
   if (!root) return;
   const now = Date.now();
@@ -36,21 +27,12 @@ export function refreshFeed(root: HTMLElement | null): void {
     if (Number(element.dataset.until) <= now) element.hidden = true;
   });
 
-  const keysIn = (container: Element): string[] => {
-    const keys: string[] = [];
-    container.querySelectorAll<HTMLElement>("[data-item]:not([hidden])").forEach((item) => {
-      (item.dataset.show ?? "").split(" ").forEach((key) => {
-        if (key && keys.indexOf(key) < 0) keys.push(key);
-      });
-    });
-    return keys;
-  };
+  const hasItem = (container: Element) => container.querySelector("[data-item]:not([hidden])") !== null;
   root.querySelectorAll<HTMLElement>("[data-box]").forEach((box) => {
-    box.dataset.show = keysIn(box).join(" ");
+    box.hidden = !hasItem(box);
   });
   root.querySelectorAll<HTMLElement>("[data-empty]").forEach((empty) => {
-    const key = empty.dataset.empty ?? "";
-    empty.dataset.show = keysIn(empty.closest("[data-scope]") ?? root).indexOf(key) < 0 ? key : "";
+    empty.hidden = hasItem(empty.closest("[data-scope]") ?? root);
   });
 
   const parts: Record<string, string> = {};
@@ -73,8 +55,7 @@ export function refreshFeed(root: HTMLElement | null): void {
   });
 }
 
-/** A call to one of these as inline script source, for the root by id. */
-export function inlineCall(fn: (root: HTMLElement | null, ...args: never[]) => void, ...args: unknown[]): string {
-  const rest = args.map((arg) => `,${JSON.stringify(arg)}`).join("");
-  return `(${fn.toString()})(document.getElementById(${JSON.stringify(FEED_ID)})${rest})`;
+/** A call to `refreshFeed` as inline script source, for the root by id. */
+export function inlineCall(fn: (root: HTMLElement | null) => void): string {
+  return `(${fn.toString()})(document.getElementById(${JSON.stringify(FEED_ID)}))`;
 }

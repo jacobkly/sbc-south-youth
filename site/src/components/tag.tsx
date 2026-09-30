@@ -1,11 +1,4 @@
 import type { ReactNode } from "react";
-import type { Audience } from "@/lib/content/types";
-
-export const audienceLabels: Record<Audience, string> = {
-  all: "Everyone",
-  hs: "High school",
-  college: "College",
-};
 
 const tones = {
   accent: "bg-accent text-on-accent",
@@ -29,9 +22,3 @@ export function Tag({ tone = "outline", children }: { tone?: TagTone; children: 
   );
 }
 
-const audienceTones: Record<Audience, TagTone> = { hs: "accent", college: "solid", all: "outline" };
-
-/** Who an event or announcement is for. */
-export function AudienceTag({ audience }: { audience: Audience }) {
-  return <Tag tone={audienceTones[audience]}>{audienceLabels[audience]}</Tag>;
-}

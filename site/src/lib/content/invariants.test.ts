@@ -18,7 +18,6 @@ const photo = { src: "https://images.unsplash.com/photo-1", alt: "A campfire at 
 const gathering: WeeklyGathering = {
   slug: "weekly-hs",
   title: "High School Youth Night",
-  audience: "hs",
   weekday: 3,
   startTime: "19:00",
   endTime: "21:00",
@@ -33,7 +32,6 @@ const event: SiteEvent = {
   startsAt: "2026-10-16T17:00:00-07:00",
   endsAt: "2026-10-18T12:00:00-07:00",
   allDay: false,
-  audience: "all",
   featured: true,
   photo,
 };
@@ -42,7 +40,6 @@ const announcement: Announcement = {
   id: "a1",
   title: "No youth night on the 31st",
   body: "We're at the fall festival instead.",
-  audience: "all",
   pinned: true,
   publishAt: "2026-10-20T09:00:00-07:00",
   expiresAt: "2026-11-01T00:00:00-07:00",

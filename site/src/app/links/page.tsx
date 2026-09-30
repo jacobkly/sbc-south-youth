@@ -4,7 +4,6 @@ import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { SocialIcon } from "@/components/icons/social-icon";
 import { LogoMark } from "@/components/site/logo";
-import { audienceLabels } from "@/components/tag";
 import { pages } from "@/content/pages";
 import { site } from "@/content/site";
 import { getSchedule } from "@/lib/content/loaders";
@@ -56,7 +55,7 @@ export default async function LinksPage() {
         <ul className="mt-5 flex animate-rise flex-wrap justify-center gap-2 [animation-delay:200ms] motion-reduce:animate-none">
           {schedule.map((gathering) => (
             <li key={gathering.slug} className="rounded-full bg-surface px-3 py-1.5 text-small font-medium ring-1 ring-line ring-inset">
-              {audienceLabels[gathering.audience]} · {weekdayName(gathering.weekday, { plural: true })} {formatClock(gathering.startTime)}
+              {weekdayName(gathering.weekday, { plural: true })} · {formatClock(gathering.startTime)}
             </li>
           ))}
         </ul>

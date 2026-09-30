@@ -12,7 +12,6 @@ export const gatherings: WeeklyGathering[] = [
   {
     slug: "weekly-hs",
     title: "High School Youth Night",
-    audience: "hs",
     weekday: 3,
     startTime: "19:00",
     endTime: "21:00",
@@ -23,7 +22,6 @@ export const gatherings: WeeklyGathering[] = [
   {
     slug: "weekly-college",
     title: "College Night",
-    audience: "college",
     weekday: 4,
     startTime: "19:30",
     endTime: "21:30",

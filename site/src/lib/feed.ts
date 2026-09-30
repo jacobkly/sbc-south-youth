@@ -1,4 +1,4 @@
-import type { Announcement, Audience, Photo, SiteEvent, WeeklyGathering } from "./content/types";
+import type { Announcement, Photo, SiteEvent, WeeklyGathering } from "./content/types";
 import {
   addDays,
   daysBetween,
@@ -31,7 +31,6 @@ export type FeedItem = {
   /** The `/events/[slug]` page. */
   slug: string;
   title: string;
-  audience: Audience;
   /** UTC instants. */
   startsAt: string;
   endsAt: string;
@@ -56,7 +55,6 @@ function gatheringNights(gathering: WeeklyGathering, from: IsoDate, through: Iso
       key: `${gathering.slug}@${date}`,
       slug: gathering.slug,
       title: gathering.title,
-      audience: gathering.audience,
       // From the wall clock each night, so 7 PM stays 7 PM across DST.
       startsAt: laInstant(date, gathering.startTime).toISOString(),
       endsAt: laInstant(date, gathering.endTime).toISOString(),
@@ -77,7 +75,6 @@ export function eventItem(event: SiteEvent): FeedItem {
     key: event.id,
     slug: event.slug,
     title: event.title,
-    audience: event.audience,
     startsAt: new Date(event.startsAt).toISOString(),
     endsAt: new Date(event.endsAt).toISOString(),
     date: laDateOf(event.startsAt),

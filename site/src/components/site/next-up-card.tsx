@@ -2,9 +2,7 @@ import { CalendarPlus } from "lucide-react";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { ButtonLink, buttonClasses } from "@/components/button";
-import { AudienceTag } from "@/components/tag";
 import { formatAddress } from "@/content/site";
-import { showKeys } from "@/lib/audience";
 import { getEvents, getSchedule } from "@/lib/content/loaders";
 import { todayInLA, type IsoDate } from "@/lib/dates";
 import { itemAddress, itemTimeLabel, relativeDay, upcomingItems, whenLabels, type FeedItem } from "@/lib/feed";
@@ -45,7 +43,7 @@ export async function NextUpCard() {
           <NextUpItem key={item.key} item={item} now={now} today={today} churchAddress={churchAddress} />
         ))}
       </ul>
-      <div data-empty="all" data-show={items.length > 0 ? "" : "all"} suppressHydrationWarning className="mt-3">
+      <div data-empty hidden={items.length > 0} suppressHydrationWarning className="mt-3">
         <p className="font-display text-h3 font-bold">Nothing on the calendar yet.</p>
         <p className="mt-1 text-small text-muted">New nights and events show up on This Week first.</p>
         <ButtonLink href="/this-week" variant="secondary" size="sm" className="mt-4">
@@ -73,7 +71,6 @@ function NextUpItem({
   return (
     <li
       data-item
-      data-show={showKeys(item.audience)}
       data-until={Date.parse(item.endsAt)}
       data-date={item.date}
       data-start={Date.parse(item.startsAt)}
@@ -95,7 +92,6 @@ function NextUpItem({
             {when.later}
           </span>
         </p>
-        {item.audience !== "all" && <AudienceTag audience={item.audience} />}
       </div>
 
       <h3 className="mt-3 font-display text-[1.75rem] leading-[1.05] font-bold tracking-tight text-balance">

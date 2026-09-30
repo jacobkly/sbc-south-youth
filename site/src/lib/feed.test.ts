@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { Announcement, SiteEvent, WeeklyGathering } from "./content/types";
-import { forAudience, parseAudience, showKeys } from "./audience";
 import {
   eventItem,
   featuredItems,
@@ -18,7 +17,6 @@ import {
 const wednesdayNight: WeeklyGathering = {
   slug: "weekly-hs",
   title: "High School Youth Night",
-  audience: "hs",
   weekday: 3,
   startTime: "19:00",
   endTime: "21:00",
@@ -30,7 +28,6 @@ const sundayMorning: WeeklyGathering = {
   ...wednesdayNight,
   slug: "weekly-sunday",
   title: "Sunday Class",
-  audience: "all",
   weekday: 0,
   startTime: "09:00",
   endTime: "10:30",
@@ -42,7 +39,6 @@ function event(overrides: Partial<SiteEvent> & Pick<SiteEvent, "startsAt" | "end
     slug: "test-event",
     title: "Test Event",
     allDay: false,
-    audience: "all",
     featured: false,
     ...overrides,
   };
@@ -52,7 +48,6 @@ function announcement(overrides: Partial<Announcement> & Pick<Announcement, "id"
   return {
     title: `Announcement ${overrides.id}`,
     body: "Body.",
-    audience: "all",
     pinned: false,
     publishAt: "2026-10-01T09:00:00-07:00",
     expiresAt: "2026-10-31T00:00:00-07:00",
@@ -323,30 +318,6 @@ describe("liveAnnouncements", () => {
   });
 });
 
-describe("the audience filter", () => {
-  const items = [
-    { id: "everyone", audience: "all" as const },
-    { id: "hs", audience: "hs" as const },
-    { id: "college", audience: "college" as const },
-  ];
-
-  it("keeps that audience's items plus everyone's", () => {
-    expect(forAudience(items, "hs").map((item) => item.id)).toEqual(["everyone", "hs"]);
-    expect(forAudience(items, "college").map((item) => item.id)).toEqual(["everyone", "college"]);
-  });
-
-  it("keeps everything without a filter", () => {
-    expect(forAudience(items, null)).toEqual(items);
-  });
-
-  it("reads the filter from the query string", () => {
-    expect(parseAudience("hs")).toBe("hs");
-    expect(parseAudience("college")).toBe("college");
-    expect(parseAudience(["college", "hs"])).toBe("college");
-    for (const value of [undefined, "", "all", "HS", "adults"]) expect(parseAudience(value)).toBeNull();
-  });
-});
-
 describe("itemTimeLabel", () => {
   const item = (startsAt: string, endsAt: string, allDay = false) =>
     upcomingItems({ gatherings: [], events: [event({ startsAt, endsAt, allDay })], now: at("2026-10-01T00:00:00-07:00") })[0];
@@ -386,16 +357,5 @@ describe("itemDateLabel", () => {
     expect(itemDateLabel(item("2026-10-16T00:00:00-07:00", "2026-10-19T00:00:00-07:00", true), today)).toBe(
       "Fri, Oct 16 – Sun, Oct 18",
     );
-  });
-});
-
-describe("showKeys", () => {
-  it("lists the filters an item shows under", () => {
-    expect(showKeys("all")).toBe("all hs college");
-    expect(showKeys("hs")).toBe("all hs");
-    expect(showKeys("college")).toBe("all college");
-    expect(showKeys(["hs", "college"])).toBe("all hs college");
-    expect(showKeys(["hs", "hs"])).toBe("all hs");
-    expect(showKeys([])).toBe("");
   });
 });

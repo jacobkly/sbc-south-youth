@@ -1,4 +1,4 @@
-import type { AudienceFilter } from "@/lib/audience";
+import type { StudentBand } from "@/lib/forms/schemas";
 
 /**
  * The teams on the Serve form. High school students see student teams and
@@ -11,7 +11,7 @@ export type ServeTeam = {
   id: string;
   title: string;
   body: string;
-  for: AudienceFilter[];
+  for: StudentBand[];
 };
 
 export const serveTeams: ServeTeam[] = [
@@ -24,6 +24,6 @@ export const serveTeams: ServeTeam[] = [
 ];
 
 /** The teams someone in that grade band can pick. */
-export function teamsFor(band: AudienceFilter): ServeTeam[] {
+export function teamsFor(band: StudentBand): ServeTeam[] {
   return serveTeams.filter((team) => team.for.includes(band));
 }

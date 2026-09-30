@@ -19,7 +19,7 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 export default function HomePage() {
   return (
     // The feed root, so Next Up and the highlights drop what's over and keep "Tonight" current.
-    <div id={FEED_ID} data-for="all" className="pb-16 lg:pb-24">
+    <div id={FEED_ID} className="pb-16 lg:pb-24">
       <Hero />
       <QuickActions />
       <div className="mt-14 lg:mt-20">

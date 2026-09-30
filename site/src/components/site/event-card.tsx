@@ -1,6 +1,6 @@
 import { MapPin, Repeat, Star, Ticket } from "lucide-react";
 import Link from "next/link";
-import { AudienceTag, Tag } from "@/components/tag";
+import { Tag } from "@/components/tag";
 import { itemTimeLabel, type FeedItem } from "@/lib/feed";
 import { Photo } from "./photo";
 
@@ -64,11 +64,6 @@ function RowCard({ item }: { item: FeedItem }) {
       </div>
       <div className="col-span-2 flex flex-col gap-0.5 pt-1.5 pb-1 empty:hidden sm:col-span-1">
         <Details item={item} />
-        {item.audience !== "all" && (
-          <div className="mt-2">
-            <AudienceTag audience={item.audience} />
-          </div>
-        )}
       </div>
     </Link>
   );
@@ -93,7 +88,6 @@ function FeaturedCard({ item }: { item: FeedItem }) {
           <Star aria-hidden className="mr-1 size-3 fill-current" />
           Featured
         </Tag>
-        {item.audience !== "all" && <AudienceTag audience={item.audience} />}
       </div>
       <h3 className="mt-3 font-display text-h2 text-balance">{item.title}</h3>
       <When item={item} className="mt-1 text-base text-accent" />

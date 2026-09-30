@@ -1,12 +1,11 @@
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
-import { Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ButtonLink, buttonClasses } from "@/components/button";
 import { SocialIcon } from "@/components/icons/social-icon";
 import { InlineScript } from "@/components/inline-script";
 import { AnnouncementCard } from "@/components/site/announcement-card";
-import { AudienceChips, AudienceChipsFallback } from "@/components/site/audience-chips";
 import { DateBlock } from "@/components/site/date-block";
 import { EventCard } from "@/components/site/event-card";
 import { FeedGuard } from "@/components/site/feed-guard";
@@ -14,17 +13,14 @@ import { PageIntro } from "@/components/site/page-intro";
 import { SubscribeCard } from "@/components/site/subscribe-card";
 import { pages } from "@/content/pages";
 import { site } from "@/content/site";
-import { audienceFilters, showKeys } from "@/lib/audience";
 import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
 import type { Announcement } from "@/lib/content/types";
 import { addDays, formatDateRange, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
 import { groupAgenda, liveAnnouncements, upcomingItems, type AgendaGroup } from "@/lib/feed";
-import { FEED_ID, applyUrlAudience, inlineCall, refreshFeed } from "@/lib/feed-dom";
+import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata(pages.thisWeek);
-
-const PATH = pages.thisWeek.path;
 
 export default function ThisWeekPage() {
   return (
@@ -39,8 +35,8 @@ export default function ThisWeekPage() {
 
 /**
  * The whole feed, rendered ahead of time and refreshed every few
- * minutes. The browser hides anything that ends between refreshes and
- * applies the audience filter, so the page never waits on the server.
+ * minutes. The browser hides anything that ends between refreshes, so the
+ * page never waits on the server.
  */
 async function Feed() {
   "use cache";
@@ -53,18 +49,7 @@ async function Feed() {
   const today = todayInLA(now);
 
   return (
-    <div id={FEED_ID} data-for="all" suppressHydrationWarning className="group/feed pb-16 lg:pb-24">
-      {/* Before the chips paint, so a shared `?for=` link never flashes. */}
-      <InlineScript html={inlineCall(applyUrlAudience, audienceFilters)} />
-
-      <div className="sticky top-[env(safe-area-inset-top)] z-20 border-y border-line bg-bg/85 backdrop-blur-xl backdrop-saturate-150 lg:top-[4.5rem]">
-        <div className="page-x py-2.5">
-          <Suspense fallback={<AudienceChipsFallback path={PATH} />}>
-            <AudienceChips path={PATH} />
-          </Suspense>
-        </div>
-      </div>
-
+    <div id={FEED_ID} className="pb-16 lg:pb-24">
       <div
         className={`page-x mt-8 grid gap-14 lg:mt-12 ${posts.length > 0 ? "lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-12 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-x-16" : "max-w-4xl"}`}
       >
@@ -83,7 +68,6 @@ function HeadsUp({ posts }: { posts: Announcement[] }) {
     <section
       aria-labelledby="heads-up-title"
       data-box
-      data-show={showKeys(posts.map((post) => post.audience))}
       suppressHydrationWarning
       className="min-w-0 lg:col-start-2 lg:row-start-1"
     >
@@ -100,7 +84,6 @@ function HeadsUp({ posts }: { posts: Announcement[] }) {
           <li
             key={post.id}
             data-item
-            data-show={showKeys(post.audience)}
             data-until={Date.parse(post.expiresAt)}
             suppressHydrationWarning
             className="w-[85%] max-w-[22rem] shrink-0 snap-start lg:w-auto lg:max-w-none"
@@ -122,24 +105,16 @@ const groupCaption: Record<AgendaGroup["id"], (group: AgendaGroup, today: IsoDat
 
 function Agenda({ groups, today }: { groups: AgendaGroup[]; today: IsoDate }) {
   const tomorrow = addDays(today, 1);
-  const shown = new Set(
-    showKeys(groups.flatMap((group) => group.days.flatMap((day) => day.items.map((item) => item.audience)))).split(" "),
-  );
 
   return (
     <div
       data-scope
-      // The top of each day's date sticks below the chips as its cards scroll by.
-      className="flex min-w-0 flex-col gap-14 [--stick:calc(4.75rem_+_env(safe-area-inset-top))] lg:col-start-1 lg:row-start-1 lg:gap-16 lg:[--stick:9.5rem]"
+      // The top of each day's date sticks as its cards scroll by, below the
+      // top bar on desktop.
+      className="flex min-w-0 flex-col gap-14 [--stick:calc(1rem_+_env(safe-area-inset-top))] lg:col-start-1 lg:row-start-1 lg:gap-16 lg:[--stick:5.75rem]"
     >
       {groups.map((group) => (
-        <section
-          key={group.id}
-          aria-labelledby={`${group.id}-title`}
-          data-box
-          data-show={showKeys(group.days.flatMap((day) => day.items.map((item) => item.audience)))}
-          suppressHydrationWarning
-        >
+        <section key={group.id} aria-labelledby={`${group.id}-title`} data-box suppressHydrationWarning>
           <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h2 id={`${group.id}-title`} className="font-display text-h2">
               {group.title}
@@ -151,7 +126,6 @@ function Agenda({ groups, today }: { groups: AgendaGroup[]; today: IsoDate }) {
               <li
                 key={day.date}
                 data-box
-                data-show={showKeys(day.items.map((item) => item.audience))}
                 data-date={day.date}
                 data-rel={day.date === today ? "today" : day.date === tomorrow ? "tomorrow" : ""}
                 suppressHydrationWarning
@@ -162,13 +136,7 @@ function Agenda({ groups, today }: { groups: AgendaGroup[]; today: IsoDate }) {
                 </div>
                 <ul className="flex min-w-0 flex-col gap-3">
                   {day.items.map((item) => (
-                    <li
-                      key={item.key}
-                      data-item
-                      data-show={showKeys(item.audience)}
-                      data-until={Date.parse(item.endsAt)}
-                      suppressHydrationWarning
-                    >
+                    <li key={item.key} data-item data-until={Date.parse(item.endsAt)} suppressHydrationWarning>
                       <EventCard item={item} />
                     </li>
                   ))}
@@ -179,23 +147,11 @@ function Agenda({ groups, today }: { groups: AgendaGroup[]; today: IsoDate }) {
         </section>
       ))}
 
-      <EmptyState filter="all" shown={shown}>
-        <EmptyCopy title="Nothing on the calendar right now.">
-          New events show up here first. We post everything on Instagram too.
+      <EmptyState hidden={groups.length > 0}>
+        <EmptyCopy title="Nothing extra this week">
+          See you Friday. New events show up here first, and on Instagram too.
         </EmptyCopy>
         <InstagramButton />
-      </EmptyState>
-      <EmptyState filter="hs" shown={shown}>
-        <EmptyCopy title="Nothing for high school in the next few weeks.">
-          Check back soon, or see what&apos;s coming up for everyone else.
-        </EmptyCopy>
-        <ShowEverything />
-      </EmptyState>
-      <EmptyState filter="college" shown={shown}>
-        <EmptyCopy title="Nothing for college in the next few weeks.">
-          Check back soon, or see what&apos;s coming up for everyone else.
-        </EmptyCopy>
-        <ShowEverything />
       </EmptyState>
 
       <aside className="flex flex-col items-start gap-4 rounded-card bg-surface p-6 ring-1 ring-line ring-inset sm:flex-row sm:items-center sm:justify-between sm:p-8">
@@ -214,12 +170,12 @@ function Agenda({ groups, today }: { groups: AgendaGroup[]; today: IsoDate }) {
   );
 }
 
-/** Shows under its one filter when nothing else in the agenda does. */
-function EmptyState({ filter, shown, children }: { filter: string; shown: Set<string>; children: ReactNode }) {
+/** Shows only when nothing is left in the agenda. */
+function EmptyState({ hidden, children }: { hidden: boolean; children: ReactNode }) {
   return (
     <div
-      data-empty={filter}
-      data-show={shown.has(filter) ? "" : filter}
+      data-empty
+      hidden={hidden}
       suppressHydrationWarning
       className="flex flex-col items-center gap-5 rounded-card border border-dashed border-line-strong px-6 py-12 text-center"
     >
@@ -244,15 +200,6 @@ function InstagramButton() {
     <a href={instagram.href} className={buttonClasses({ variant: "secondary" })}>
       <SocialIcon kind="instagram" />
       Follow on Instagram
-    </a>
-  );
-}
-
-function ShowEverything() {
-  // A plain link, so the chips and the page both reset.
-  return (
-    <a href={PATH} className={buttonClasses({ variant: "secondary" })}>
-      Show everything
     </a>
   );
 }

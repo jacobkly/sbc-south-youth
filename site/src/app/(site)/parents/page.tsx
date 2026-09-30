@@ -11,7 +11,6 @@ import { Photo } from "@/components/site/photo";
 import { PendingTag, PolicyCard } from "@/components/site/policy-card";
 import { SectionHeader } from "@/components/site/section-header";
 import { Steps } from "@/components/site/steps";
-import { AudienceTag } from "@/components/tag";
 import { leaders, parentContactSlug } from "@/content/leaders";
 import { pages } from "@/content/pages";
 import { photos } from "@/content/photos";
@@ -100,8 +99,8 @@ export default async function ParentsPage() {
         <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:gap-6">
           {schedule.map((gathering) => (
             <li key={gathering.slug} className="rounded-tile bg-surface p-4 ring-1 ring-line ring-inset sm:p-5">
-              <AudienceTag audience={gathering.audience} />
-              <p className="mt-3 font-display text-h3 font-bold">
+              <p className="font-semibold">{gathering.title}</p>
+              <p className="mt-1 font-display text-h3 font-bold">
                 {weekdayName(gathering.weekday, { plural: true })}, {formatClockRange(gathering.startTime, gathering.endTime)}
               </p>
               <p className="mt-0.5 text-small text-muted">{gathering.locationName}</p>

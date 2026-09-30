@@ -35,7 +35,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       allDay: false,
       locationName: "Youth Room",
       photo: photos.crowdSilhouette,
-      audience: "all",
       featured: false,
     },
     {
@@ -50,7 +49,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       locationName: "Example Community Park",
       locationAddress: "400 Example Avenue, Anytown, CA 00000",
       photo: photos.friendsOutside,
-      audience: "all",
       featured: false,
     },
     {
@@ -64,7 +62,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       allDay: false,
       locationName: "Fellowship Hall",
       photo: photos.pizzaTable,
-      audience: "all",
       costNote: "Free",
       featured: false,
     },
@@ -80,7 +77,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       locationName: "Example Pines Camp",
       locationAddress: "1 Example Pines Road, Mountainville, CA 00000",
       photo: photos.cabin,
-      audience: "all",
       costNote: "$40 per student",
       featured: true,
     },
@@ -94,7 +90,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       allDay: false,
       locationName: "Main Sanctuary",
       photo: photos.stageLights,
-      audience: "all",
       featured: true,
     },
     {
@@ -107,7 +102,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       locationName: "Example State Beach",
       locationAddress: "900 Example Coast Highway, Beachtown, CA 00000",
       photo: photos.friendsLaughing,
-      audience: "hs",
       costNote: "$10 for gas and snacks",
       featured: false,
     },
@@ -121,7 +115,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       allDay: false,
       locationName: "The Loft",
       photo: photos.pizza,
-      audience: "college",
       featured: false,
     },
     {
@@ -134,7 +127,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       endsAt: at(27, "13:30"),
       allDay: false,
       locationName: "Youth Room",
-      audience: "all",
       featured: false,
     },
     {
@@ -148,7 +140,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       allDay: false,
       locationName: "Gym",
       photo: photos.gym,
-      audience: "hs",
       costNote: "$15, includes breakfast",
       featured: false,
     },
@@ -161,7 +152,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       endsAt: at(40, "14:00"),
       allDay: false,
       locationName: "Church parking lot",
-      audience: "all",
       costNote: "By donation",
       featured: false,
     },
@@ -174,7 +164,6 @@ export function sampleEvents(now: Date): SiteEvent[] {
       locationName: "Example Lake Campground",
       locationAddress: "2 Example Lake Road, Laketown, CA 00000",
       photo: photos.campfireChairs,
-      audience: "all",
       featured: false,
     },
   ];

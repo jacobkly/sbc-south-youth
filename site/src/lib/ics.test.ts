@@ -208,14 +208,12 @@ describe("content entries", () => {
     allDay: false,
     locationName: "Example Pines Camp",
     locationAddress: "1 Example Pines Road, Mountainville, CA 00000",
-    audience: "all",
     featured: true,
   };
 
   const gathering: WeeklyGathering = {
     slug: "weekly-hs",
     title: "High School Youth Night",
-    audience: "hs",
     weekday: 3,
     startTime: "19:00",
     endTime: "21:00",
