@@ -14,6 +14,8 @@ import type { PolicyPoint } from "./safety";
 export type ImpactExample = {
   /** Whole dollars, for display only. Leave it out rather than guess. */
   dollars?: number;
+  /** One word that stands in for the amount on wide screens when there isn't one. */
+  word: string;
   title: string;
   body: string;
   photo: Photo;
@@ -25,16 +27,19 @@ export const give = {
   impact: [
     {
       dollars: 200,
+      word: "Pizza",
       title: "Friday night food",
       body: "Roughly what pizza and drinks for everyone cost after youth.",
       photo: photos.pizza,
     },
     {
+      word: "Cupcakes",
       title: "Birthdays",
       body: "Cupcakes and treats, so nobody's birthday goes by without a celebration.",
       photo: photos.cupcakes,
     },
     {
+      word: "Gear",
       title: "Volleyball and events",
       body: "Drinks, balls, nets, and whatever else the day needs.",
       photo: photos.volleyball,
@@ -71,7 +76,8 @@ export const give = {
     },
     {
       question: "Can I give by check?",
-      answer: "Placeholder answer. It will say who to make the check out to, what to write on the memo line, and where to drop it off.",
+      answer:
+        "Placeholder answer. It will say who to make the check out to, what to write on the memo line, and where to drop it off.",
     },
   ] satisfies FaqItem[],
 };

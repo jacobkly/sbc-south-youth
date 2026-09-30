@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { give } from "./give";
 import { home } from "./home";
 import { pages } from "./pages";
 import { gatherings } from "./schedule";
@@ -18,7 +19,12 @@ const files = sourceFiles(join(process.cwd(), "src")).map((path) => ({ path, tex
 
 describe("site copy", () => {
   it("never ends a heading in a period", () => {
-    const headings = [...Object.values(pages).map((page) => page.heading), home.hero.title, home.highlights.title];
+    const headings = [
+      ...Object.values(pages).map((page) => page.heading),
+      home.hero.title,
+      home.highlights.title,
+      home.friday.title,
+    ];
     expect(headings.filter((heading) => heading.endsWith("."))).toEqual([]);
 
     // Plain text written straight into a heading tag, like <h1>Wrong room.</h1>.
@@ -37,5 +43,17 @@ describe("site copy", () => {
     const friday = gatherings.find((gathering) => gathering.weekday === 5);
     const [hours, minutes] = (friday?.startTime ?? "").split(":").map(Number);
     expect(home.hero.title).toBe(`Fridays at ${hours % 12 || 12}:${String(minutes).padStart(2, "0")}`);
+  });
+
+  it("starts the home Friday timeline at the real start time", () => {
+    const friday = gatherings.find((gathering) => gathering.weekday === 5);
+    const [hours, minutes] = (friday?.startTime ?? "").split(":").map(Number);
+    expect(home.friday.stops[0].time).toBe(`${hours % 12 || 12}:${String(minutes).padStart(2, "0")} PM`);
+  });
+
+  it("gives every Give example one short word for when there's no amount", () => {
+    // The word stands in the big-number column on wide screens, so it has to fit there.
+    const words = give.impact.map((item) => item.word);
+    expect(words.filter((word) => typeof word !== "string" || !/^\S{1,10}$/.test(word))).toEqual([]);
   });
 });

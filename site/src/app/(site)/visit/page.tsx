@@ -41,11 +41,12 @@ export default async function VisitPage() {
 
   return (
     <>
-      <PageIntro title={pages.visit.heading}>
+      <PageIntro title={pages.visit.heading} aside={<JumpNav sections={sections} layout="end" />}>
         When and where we meet, where to park, and what to expect when you walk in. No sign-up needed. Just show up.
       </PageIntro>
 
-      <JumpNav sections={sections} />
+      {/* From xl up, the page's header has these links instead. */}
+      <JumpNav sections={sections} className="xl:hidden" />
 
       <section id="when" aria-labelledby="when-title" className="page-x mt-12 scroll-mt-24 lg:mt-16">
         <SectionHeader id="when-title" title="Every Friday">
@@ -64,12 +65,17 @@ export default async function VisitPage() {
 
       <section id="where" aria-labelledby="where-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
         <SectionHeader id="where-title" title="Where to find us" />
-        <div className="mt-6 grid gap-4 md:grid-cols-2 lg:gap-6">
-          <div className="overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset">
-            <div className="relative aspect-[4/3] sm:aspect-[16/10]">
+        {/*
+         * Two cards on tablets. From xl up the cards open into one row: the
+         * map (5 columns), the address over the parking notes (4), and the
+         * front door (3).
+         */}
+        <div className="mt-6 grid gap-4 md:grid-cols-2 lg:gap-6 xl:grid-cols-12 xl:gap-x-(--grid-gap) xl:gap-y-0">
+          <div className="overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset xl:contents">
+            <div className="relative aspect-[4/3] sm:aspect-[16/10] xl:col-span-5 xl:row-span-2 xl:aspect-auto xl:min-h-[26rem] xl:overflow-hidden xl:rounded-card xl:ring-1 xl:ring-line xl:ring-inset">
               <MapArt label={site.campus} />
             </div>
-            <div className="p-5">
+            <div className="p-5 xl:col-span-4 xl:col-start-6 xl:row-start-1 xl:self-start xl:px-0 xl:pt-0 xl:pb-8">
               <h3 className="text-h3">{site.campus}</h3>
               <address className="mt-1 text-muted not-italic">
                 {site.address.street}
@@ -80,17 +86,17 @@ export default async function VisitPage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset">
-            <div className="relative aspect-[4/3] sm:aspect-[16/10]">
+          <div className="overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset xl:contents">
+            <div className="relative aspect-[4/3] sm:aspect-[16/10] xl:col-span-3 xl:col-start-10 xl:row-span-2 xl:row-start-1 xl:aspect-auto xl:overflow-hidden xl:rounded-card">
               <Image
                 src={parking.entrancePhoto.src}
                 alt={parking.entrancePhoto.alt}
                 fill
-                sizes={photoSizes({ lg: 1 / 2, md: 1 / 2 })}
+                sizes={photoSizes({ xl: 1 / 4, lg: 1 / 2, md: 1 / 2 })}
                 className="object-cover"
               />
             </div>
-            <div className="p-5">
+            <div className="p-5 xl:col-span-4 xl:col-start-6 xl:row-start-2 xl:border-t xl:border-line xl:px-0 xl:pt-8 xl:pb-0">
               <h3 className="text-h3">Parking and the way in</h3>
               <ul className="mt-3 space-y-2.5">
                 {parking.notes.map((note) => (
@@ -114,8 +120,8 @@ export default async function VisitPage() {
       </section>
 
       <section id="faq" aria-labelledby="faq-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
-        <div className="grid gap-6 lg:grid-cols-[1fr_2fr] lg:gap-12">
-          <div className="lg:sticky lg:top-24 lg:self-start">
+        <div className="grid gap-6 lg:grid-cols-[1fr_2fr] lg:gap-12 xl:grid-cols-12 xl:gap-x-(--grid-gap)">
+          <div className="lg:sticky lg:top-24 lg:self-start xl:col-span-4">
             <SectionHeader id="faq-title" title="Questions">
               Anything else?{" "}
               <Link href="/contact" className="font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-accent-ink">
@@ -124,16 +130,17 @@ export default async function VisitPage() {
               .
             </SectionHeader>
           </div>
-          <FaqAccordion items={visitFaq} name="visit-faq" />
+          <FaqAccordion items={visitFaq} name="visit-faq" className="xl:col-span-8" />
         </div>
       </section>
 
       <section id="coming" aria-labelledby="coming-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-6">
-          <div className="relative isolate overflow-hidden rounded-card bg-accent p-6 text-on-accent sm:p-10 lg:sticky lg:top-24 lg:min-h-[28rem]">
+        {/* From xl up the form stops at 44rem, and the poster takes the rest. */}
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-6 xl:grid-cols-[minmax(0,1fr)_44rem] xl:gap-(--grid-gap)">
+          <div className="relative isolate overflow-hidden rounded-card bg-accent p-6 text-on-accent sm:p-10 lg:sticky lg:top-24 lg:min-h-[28rem] xl:p-12">
             <p
               aria-hidden
-              className="absolute -right-4 -bottom-10 -z-10 font-display text-[11rem] leading-none font-extrabold tracking-[-0.05em] opacity-[0.08] select-none lg:text-[14rem]"
+              className="absolute -right-4 -bottom-10 -z-10 font-display text-[11rem] leading-none font-extrabold tracking-[-0.05em] opacity-[0.08] select-none lg:text-[14rem] 2xl:text-[18rem]"
             >
               Hi!
             </p>

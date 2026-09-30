@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Announcement, SiteEvent, WeeklyGathering } from "./content/types";
 import {
+  countdownItems,
   eventItem,
   featuredItems,
   groupAgenda,
@@ -162,6 +163,37 @@ describe("featuredItems", () => {
   it("looks as far ahead as the agenda", () => {
     const tooFar = event({ slug: "too-far", featured: true, startsAt: "2026-12-03T19:00:00-08:00", endsAt: "2026-12-03T21:00:00-08:00" });
     expect(featuredItems([tooFar, retreat], now).map((item) => item.slug)).toEqual(["retreat"]);
+  });
+});
+
+describe("countdownItems", () => {
+  const now = at("2026-10-07T18:00:00-07:00");
+  const retreat = event({
+    slug: "retreat",
+    featured: true,
+    startsAt: "2026-10-16T17:00:00-07:00",
+    endsAt: "2026-10-18T12:00:00-07:00",
+  });
+
+  it("counts down to the next weekly night when nothing is featured", () => {
+    const plain = event({ slug: "plain", startsAt: "2026-10-08T19:00:00-07:00", endsAt: "2026-10-08T21:00:00-07:00" });
+    const items = countdownItems({ events: [plain], gatherings: [wednesdayNight], now, spares: 2 });
+    expect(items.map((item) => `${item.slug} ${item.date}`)).toEqual(["weekly-night 2026-10-07", "weekly-night 2026-10-14"]);
+  });
+
+  it("puts featured events before the weekly nights, even later ones", () => {
+    const items = countdownItems({ events: [retreat], gatherings: [wednesdayNight], now, spares: 2 });
+    expect(items.map((item) => `${item.slug} ${item.date}`)).toEqual([
+      "retreat 2026-10-16",
+      "weekly-night 2026-10-07",
+      "weekly-night 2026-10-14",
+    ]);
+  });
+
+  it("sends only a few of each", () => {
+    const worship = event({ slug: "worship", featured: true, startsAt: "2026-10-09T19:00:00-07:00", endsAt: "2026-10-09T21:00:00-07:00" });
+    const items = countdownItems({ events: [retreat, worship], gatherings: [wednesdayNight], now, spares: 1 });
+    expect(items.map((item) => item.slug)).toEqual(["worship", "weekly-night"]);
   });
 });
 

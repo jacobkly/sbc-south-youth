@@ -2,7 +2,11 @@ import { ArrowRight, ArrowUpRight, Pin } from "lucide-react";
 import Link from "next/link";
 import { Tag } from "@/components/tag";
 import type { StandingNote } from "@/lib/content/types";
+import { photoSizes } from "@/lib/photo-sizes";
 import { Photo } from "./photo";
+
+// A row of cards on phones and wide screens, and a 20rem column on desktop.
+const noteSizes = photoSizes({ lg: 1 / 3, md: 1 / 2, phone: 0.85 });
 
 /**
  * A post or standing note in Heads up. With a button, the whole card is
@@ -18,7 +22,7 @@ export function AnnouncementCard({ post, eager = false }: { post: StandingNote &
     <article className="relative flex h-full flex-col overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset has-[a:hover]:bg-surface-2">
       {post.photo && (
         <div className="relative aspect-[2/1] shrink-0">
-          <Photo photo={post.photo} seed={post.id} sizes="(min-width: 1024px) 384px, 85vw" eager={eager} />
+          <Photo photo={post.photo} seed={post.id} sizes={noteSizes} eager={eager} />
         </div>
       )}
       <div className="flex flex-1 flex-col p-5">

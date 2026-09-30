@@ -10,7 +10,9 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata(pages.contact);
 
-const cardClasses = "rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-6";
+// Cards until xl, then rows between hairlines beside the form.
+const cardClasses =
+  "rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-6 xl:rounded-none xl:bg-transparent xl:px-0 xl:py-8 xl:ring-0 xl:first:pt-0 xl:not-last:border-b xl:not-last:border-line";
 
 export default function ContactPage() {
   return (
@@ -19,15 +21,19 @@ export default function ContactPage() {
         Questions about youth nights, events, or anything else? Send us a message and a leader will write back.
       </PageIntro>
 
-      <div className="page-x grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-8">
-        <section aria-labelledby="message-title" className="scroll-mt-24 rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8">
+      {/* The form stops at 48rem, so its fields never run past about 44rem. */}
+      <div className="page-x grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-8 xl:grid-cols-[min(48rem,60%)_minmax(0,1fr)] xl:gap-16">
+        <section
+          aria-labelledby="message-title"
+          className="max-w-3xl scroll-mt-24 rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8 lg:max-w-none"
+        >
           <h2 id="message-title" className="sr-only">
             Send a message
           </h2>
           <ContactForm />
         </section>
 
-        <aside aria-label="Other ways to reach us" className="grid gap-4 lg:sticky lg:top-24">
+        <aside aria-label="Other ways to reach us" className="grid max-w-3xl gap-4 lg:sticky lg:top-24 lg:max-w-none xl:gap-0">
           <div className={cardClasses}>
             <p className="text-eyebrow text-accent-ink uppercase">Rather email?</p>
             <a

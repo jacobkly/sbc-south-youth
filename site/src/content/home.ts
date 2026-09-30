@@ -18,6 +18,20 @@ export const home = {
   ],
 
   /**
+   * A Friday from start to finish, for wide screens. Only the start is a
+   * set time, so the rest stay rough.
+   */
+  friday: {
+    title: "A Friday night",
+    stops: [
+      { time: "7:30 PM", title: "Worship", body: "Led by the band that plays on Sundays." },
+      { time: "Then", title: "A message", body: "Everyone together, high school and college." },
+      { time: "About 9", title: "Food and the cafe", body: "Pizza and drinks, often a full meal, and a few games." },
+      { time: "Until about 10", title: "Hanging out", body: "Leaders stay until everyone's been picked up." },
+    ],
+  },
+
+  /**
    * The grid under it. The big tile and the countdown fill themselves from
    * announcements and events, and the big tile shows the first standing
    * note when nothing is posted.

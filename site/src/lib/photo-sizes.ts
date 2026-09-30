@@ -7,6 +7,10 @@
 const FRAME_VW = 93;
 
 type Shares = {
+  /** The share of the frame from `2xl` (1536 px) up. Leave it out to use the `xl` share. */
+  wide?: number;
+  /** The share of the frame from `xl` (1280 px) up. Leave it out to use the `lg` share. */
+  xl?: number;
   /** The share of the frame the photo spans from `lg` (1024 px) up. */
   lg: number;
   /** The share of the frame from `md` (768 px) to `lg`. Leave it out to use the phone share. */
@@ -24,8 +28,11 @@ function vw(share: number, of: number): string {
  * An image `sizes` for a photo that spans a share of the page frame, so
  * the browser picks the right file and the frame's width lives in one place.
  */
-export function photoSizes({ lg, md, phone = 1 }: Shares): string {
-  const steps: [string, string][] = [["(min-width: 64rem)", vw(lg, FRAME_VW)]];
+export function photoSizes({ wide, xl, lg, md, phone = 1 }: Shares): string {
+  const steps: [string, string][] = [];
+  if (wide !== undefined) steps.push(["(min-width: 96rem)", vw(wide, FRAME_VW)]);
+  if (xl !== undefined) steps.push(["(min-width: 80rem)", vw(xl, FRAME_VW)]);
+  steps.push(["(min-width: 64rem)", vw(lg, FRAME_VW)]);
   if (md !== undefined) steps.push(["(min-width: 48rem)", vw(md, FRAME_VW)]);
   // A step that matches the one below it is said once, at the lower width.
   const said = steps.filter(([, size], index) => size !== steps[index + 1]?.[1]);

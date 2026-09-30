@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ButtonLink, buttonClasses } from "@/components/button";
 import { give } from "@/content/give";
 import { pages } from "@/content/pages";
+import { photos } from "@/content/photos";
 import { site } from "@/content/site";
 import { cashAppUrl } from "@/lib/cash-app";
 import { photoSizes } from "@/lib/photo-sizes";
@@ -26,46 +27,60 @@ const receiptHref = `mailto:${site.email}?subject=${encodeURIComponent("Receipt 
 export function GiveContent({ cashtag }: { cashtag: string | null }) {
   return (
     <>
-      <PageIntro title={pages.give.heading}>
-        {give.why}
-      </PageIntro>
+      <PageIntro title={pages.give.heading}>{give.why}</PageIntro>
 
-      {cashtag ? <GiveCard cashtag={cashtag} /> : <ComingSoonCard />}
+      {/* From xl up the ask takes 5 columns and where the money goes takes the other 7. */}
+      <div className="page-x xl:grid xl:grid-cols-12 xl:gap-x-(--grid-gap)">
+        {cashtag ? <GiveCard cashtag={cashtag} /> : <ComingSoonCard />}
 
-      <section aria-labelledby="impact-title" className="page-x mt-16 lg:mt-24">
-        <SectionHeader id="impact-title" title="Where your gift goes" />
-        <ul className="mt-6 grid gap-4 md:grid-cols-3 lg:gap-6">
-          {give.impact.map((item) => (
-            <li
-              key={item.title}
-              data-theme="dark"
-              className="relative isolate flex aspect-[4/3] flex-col justify-end overflow-hidden rounded-card p-5 text-white sm:aspect-[16/9] md:aspect-[4/5] lg:p-6"
-            >
-              {/* The text says what the photo shows, so it's decorative here. */}
-              <Photo
-                photo={{ ...item.photo, alt: "" }}
-                seed={item.title}
-                sizes={photoSizes({ lg: 1 / 3, md: 1 / 3 })}
-                className="-z-10"
-              />
-              <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/80 via-60% to-black/35" />
-              {"dollars" in item && (
-                <p className="mb-3 font-display text-[4.5rem] leading-[0.85] font-extrabold tracking-[-0.05em] text-accent lg:text-[5.5rem]">
-                  ${item.dollars}
+        <section aria-labelledby="impact-title" className="mt-16 lg:mt-24 xl:col-span-7 xl:mt-0">
+          <SectionHeader id="impact-title" title="Where your gift goes" />
+          {/* Photo cards, then from xl up a list with a big number, or a word where there's no amount. */}
+          <ul className="mt-6 grid gap-4 md:grid-cols-3 lg:gap-6 xl:grid-cols-1 xl:gap-0 xl:divide-y xl:divide-line xl:border-y xl:border-line">
+            {give.impact.map((item) => (
+              <li
+                key={item.title}
+                className="relative isolate flex aspect-[4/3] flex-col justify-end overflow-hidden rounded-card p-5 text-white sm:aspect-[16/9] md:aspect-[4/5] lg:p-6 xl:grid xl:aspect-auto xl:grid-cols-[2fr_3fr] xl:items-baseline xl:gap-x-(--grid-gap) xl:rounded-none xl:px-0 xl:py-8 xl:text-fg"
+              >
+                <div data-theme="dark" className="absolute inset-0 -z-10 xl:hidden">
+                  {/* The text says what the photo shows, so it's decorative here. */}
+                  <Photo photo={{ ...item.photo, alt: "" }} seed={item.title} sizes={photoSizes({ lg: 1 / 3, md: 1 / 3 })} />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/80 via-60% to-black/35" />
+                </div>
+                <p
+                  className={`mb-3 font-display text-[4.5rem] leading-[0.85] font-extrabold tracking-[-0.05em] text-accent lg:text-[5.5rem] xl:mb-0 xl:text-[clamp(3rem,4vw,5rem)] xl:text-accent-ink ${item.dollars === undefined ? "hidden xl:block" : ""}`}
+                >
+                  {item.dollars === undefined ? item.word : `$${item.dollars}`}
                 </p>
-              )}
-              <h3 className="text-h3">{item.title}</h3>
-              <p className="mt-1 text-pretty text-white/75">{item.body}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+                <div>
+                  <h3 className="text-h3">{item.title}</h3>
+                  <p className="mt-1 text-pretty text-white/75 xl:text-muted">{item.body}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      {/* From xl up the list drops its photos, so one band carries the pizza. */}
+      <div aria-hidden className="page-x mt-24 hidden xl:block">
+        {/* A set width keeps the height cap from narrowing the band through its aspect ratio. */}
+        <div className="relative aspect-[3/1] max-h-[60vh] w-full overflow-hidden rounded-card">
+          <Photo photo={{ ...photos.pizzaTable, alt: "" }} seed="give-band" sizes={photoSizes({ lg: 1 })} />
+        </div>
+      </div>
 
       {cashtag && (
         <>
-          <section aria-labelledby="records-title" className="page-x mt-16 lg:mt-24">
-            <SectionHeader id="records-title" title="Receipts and taxes" />
-            <ul className="mt-6 grid gap-4 md:grid-cols-2 lg:gap-6">
+          <section
+            aria-labelledby="records-title"
+            className="page-x mt-16 lg:mt-24 xl:grid xl:grid-cols-12 xl:gap-x-(--grid-gap)"
+          >
+            <div className="xl:col-span-4">
+              <SectionHeader id="records-title" title="Receipts and taxes" />
+            </div>
+            {/* From xl up the cards open into rows beside the heading. */}
+            <ul className="mt-6 grid gap-4 md:grid-cols-2 lg:gap-6 xl:col-span-8 xl:mt-0 xl:grid-cols-1 xl:gap-0 xl:divide-y xl:divide-line xl:border-y xl:border-line">
               <li>
                 <PolicyCard point={give.receipt} icon={<ReceiptText />}>
                   <a href={receiptHref} className={buttonClasses({ variant: "secondary", className: "w-full sm:w-auto" })}>
@@ -81,8 +96,8 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
           </section>
 
           <section aria-labelledby="give-faq-title" className="page-x mt-16 lg:mt-24">
-            <div className="grid gap-6 lg:grid-cols-[1fr_2fr] lg:gap-12">
-              <div className="lg:sticky lg:top-24 lg:self-start">
+            <div className="grid gap-6 lg:grid-cols-[1fr_2fr] lg:gap-12 xl:grid-cols-12 xl:gap-x-(--grid-gap)">
+              <div className="lg:sticky lg:top-24 lg:self-start xl:col-span-4">
                 <SectionHeader id="give-faq-title" title="Questions">
                   Anything else?{" "}
                   <Link href="/contact" className={linkClasses}>
@@ -91,7 +106,7 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
                   .
                 </SectionHeader>
               </div>
-              <FaqAccordion items={give.faq} name="give-faq" />
+              <FaqAccordion items={give.faq} name="give-faq" className="xl:col-span-8" />
             </div>
           </section>
         </>
@@ -107,8 +122,8 @@ function GiveCard({ cashtag }: { cashtag: string }) {
   const fit = `min(5.5rem, ${(100 / (cashtag.length * 0.6)).toFixed(2)}cqw)`;
 
   return (
-    <section aria-labelledby="give-title" className="page-x">
-      <div className="relative isolate grid overflow-hidden rounded-card bg-accent text-on-accent md:grid-cols-[1fr_auto]">
+    <section aria-labelledby="give-title" className="xl:col-span-5">
+      <div className="relative isolate grid overflow-hidden rounded-card bg-accent text-on-accent md:grid-cols-[1fr_auto] xl:grid-cols-1">
         <p
           aria-hidden
           className="absolute -bottom-20 -left-6 -z-10 font-display text-[16rem] leading-none font-extrabold opacity-[0.07] select-none lg:-bottom-28 lg:text-[22rem]"
@@ -135,13 +150,14 @@ function GiveCard({ cashtag }: { cashtag: string }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-5 border-t border-on-accent/15 p-6 sm:px-10 md:flex-col md:justify-center md:gap-4 md:border-t-0 md:border-l md:px-10 lg:px-14">
+        {/* Beside the cashtag from md, then under it again in the narrower column from xl. */}
+        <div className="flex items-center gap-5 border-t border-on-accent/15 p-6 sm:px-10 md:flex-col md:justify-center md:gap-4 md:border-t-0 md:border-l md:px-10 lg:px-14 xl:flex-row xl:justify-start xl:gap-6 xl:border-t xl:border-l-0 xl:py-8">
           <QrCode
             value={url}
             label={`QR code that opens Cash App to ${cashtag}`}
-            className="w-28 shrink-0 rounded-tile shadow-[0_12px_32px_-12px_rgb(0_0_0/0.45)] md:w-44 lg:w-52"
+            className="w-28 shrink-0 rounded-tile shadow-[0_12px_32px_-12px_rgb(0_0_0/0.45)] md:w-44 lg:w-52 xl:w-36"
           />
-          <p className="max-w-44 text-small text-pretty md:text-center">
+          <p className="max-w-44 text-small text-pretty md:text-center xl:text-left">
             Giving from a laptop? Scan this with your phone&apos;s camera.
           </p>
         </div>
@@ -153,7 +169,7 @@ function GiveCard({ cashtag }: { cashtag: string }) {
 /** Stands in for the give card until the cashtag is set. */
 function ComingSoonCard() {
   return (
-    <section aria-labelledby="soon-title" className="page-x">
+    <section aria-labelledby="soon-title" className="xl:col-span-5">
       <div className="relative isolate overflow-hidden rounded-card bg-surface p-6 ring-1 ring-line ring-inset sm:p-10 lg:p-14">
         <p
           aria-hidden

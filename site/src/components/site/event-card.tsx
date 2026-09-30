@@ -8,6 +8,8 @@ import { Photo } from "./photo";
 /**
  * One thing on the agenda. The whole card is the link to its page.
  * Featured events get a big photo card so they stand out in the list.
+ * It sizes itself to its column, so the list it sits in must be an
+ * `@container`.
  */
 export function EventCard({ item }: { item: FeedItem }) {
   return item.featured ? <FeaturedCard item={item} /> : <RowCard item={item} />;
@@ -47,38 +49,40 @@ function When({ item, className }: { item: FeedItem; className: string }) {
   );
 }
 
-// On phones the details run full width under the thumbnail, so places
-// and prices don't get cut short. Wider, they sit beside it.
+// In a narrow column (phones, and the agenda's columns on wide screens)
+// the details run full width under the thumbnail, so places and prices
+// don't get cut short. Wider, they sit beside it.
 function RowCard({ item }: { item: FeedItem }) {
   return (
     <Link
       href={`/events/${item.slug}`}
-      className="pressable grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 rounded-card bg-surface p-3 pl-4 ring-1 ring-line ring-inset hover:bg-surface-2 sm:gap-x-4 sm:pl-5"
+      className="pressable grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 rounded-card bg-surface p-3 pl-4 ring-1 ring-line ring-inset hover:bg-surface-2 @sm:gap-x-4 @sm:pl-5"
     >
       <div className="flex flex-col gap-1 pt-1">
         <When item={item} className="text-accent-ink" />
         <h3 className="font-display text-lg leading-tight font-bold text-balance">{item.title}</h3>
       </div>
       {/* The title says what it is, so the thumbnail is decorative. */}
-      <div className="relative size-16 overflow-hidden rounded-[14px] sm:row-span-2 sm:size-24">
+      <div className="relative size-16 overflow-hidden rounded-[14px] @sm:row-span-2 @sm:size-24">
         <Photo photo={item.photo && { ...item.photo, alt: "" }} seed={item.slug} sizes="96px" />
       </div>
-      <div className="col-span-2 flex flex-col gap-0.5 pt-1.5 pb-1 empty:hidden sm:col-span-1">
+      <div className="col-span-2 flex flex-col gap-0.5 pt-1.5 pb-1 empty:hidden @sm:col-span-1">
         <Details item={item} />
       </div>
     </Link>
   );
 }
 
-// The agenda column, beside Heads up from lg up.
-const agendaSizes = photoSizes({ lg: 3 / 4 });
+// The agenda column beside Heads up on desktop, then one of two or three
+// columns from xl up.
+const agendaSizes = photoSizes({ xl: 0.42, lg: 0.62 });
 
 function FeaturedCard({ item }: { item: FeedItem }) {
   return (
     <Link
       href={`/events/${item.slug}`}
       data-theme="dark"
-      className="pressable group/card relative isolate flex aspect-[4/3] flex-col justify-end overflow-hidden rounded-card p-5 text-white sm:aspect-[2/1] sm:p-6"
+      className="pressable group/card relative isolate flex aspect-[4/3] flex-col justify-end overflow-hidden rounded-card p-5 text-white @md:aspect-[2/1] @md:p-6"
     >
       <Photo
         photo={item.photo && { ...item.photo, alt: "" }}
@@ -93,7 +97,8 @@ function FeaturedCard({ item }: { item: FeedItem }) {
           Featured
         </Tag>
       </div>
-      <h3 className="mt-3 font-display text-h2 text-balance">{item.title}</h3>
+      {/* Scales with the column from xl up, where columns can be narrow. */}
+      <h3 className="mt-3 font-display text-h2 text-balance xl:text-[clamp(1.5rem,8cqi,2.5rem)]">{item.title}</h3>
       <When item={item} className="mt-1 text-base text-accent" />
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5">
         <Details item={item} onPhoto />

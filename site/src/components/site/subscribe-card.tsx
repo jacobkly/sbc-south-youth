@@ -9,11 +9,11 @@ const webcalUrl = feedUrl.replace(/^https:/, "webcal:");
 const googleUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`;
 
 /** Subscribes to the whole calendar, so new events show up on their own. */
-export function SubscribeCard() {
+export function SubscribeCard({ className = "" }: { className?: string }) {
   return (
     <aside
       aria-labelledby="subscribe-title"
-      className="relative isolate overflow-hidden rounded-card bg-accent p-6 text-on-accent sm:p-8"
+      className={`relative isolate overflow-hidden rounded-card bg-accent p-6 text-on-accent sm:p-8 ${className}`}
     >
       <CalendarSync
         aria-hidden
@@ -37,5 +37,24 @@ export function SubscribeCard() {
         <CopyButton text={feedUrl} label="Copy link" variant="inverse-outline" />
       </div>
     </aside>
+  );
+}
+
+/** The same links as a quiet row, for beside a page's heading. */
+export function SubscribeBar() {
+  return (
+    <div className="flex flex-col items-end gap-3 text-right">
+      <p className="text-small text-muted">Get it all on your calendar. New events show up on their own.</p>
+      <div className="flex flex-wrap justify-end gap-2">
+        <a href={webcalUrl} className={buttonClasses()}>
+          <CalendarSync aria-hidden />
+          Subscribe
+        </a>
+        <a href={googleUrl} className={buttonClasses({ variant: "secondary" })}>
+          Google Calendar
+        </a>
+        <CopyButton text={feedUrl} label="Copy link" />
+      </div>
+    </div>
   );
 }

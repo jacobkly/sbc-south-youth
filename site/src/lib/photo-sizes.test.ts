@@ -14,6 +14,17 @@ describe("photoSizes", () => {
     expect(photoSizes({ lg: 1 / 2, md: 1 / 2 })).toBe("(min-width: 48rem) 47vw, 100vw");
   });
 
+  it("takes a smaller share on wide screens when the layout adds columns", () => {
+    expect(photoSizes({ wide: 2 / 5, lg: 3 / 4 })).toBe("(min-width: 96rem) 38vw, (min-width: 64rem) 70vw, 100vw");
+  });
+
+  it("takes its own share from xl up, below the wide share", () => {
+    expect(photoSizes({ xl: 0.4, lg: 0.62 })).toBe("(min-width: 80rem) 38vw, (min-width: 64rem) 58vw, 100vw");
+    expect(photoSizes({ wide: 1 / 4, xl: 1 / 3, lg: 1 })).toBe(
+      "(min-width: 96rem) 24vw, (min-width: 80rem) 31vw, (min-width: 64rem) 93vw, 100vw",
+    );
+  });
+
   it("uses the phone share on tablets when there's no tablet share", () => {
     expect(photoSizes({ lg: 0.4, phone: 0.4 })).toBe("(min-width: 64rem) 38vw, 40vw");
   });

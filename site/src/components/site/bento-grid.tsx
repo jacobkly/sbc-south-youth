@@ -11,7 +11,7 @@ import { standingNotes } from "@/content/standing-notes";
 import type { StandingNote, WeeklyGathering } from "@/lib/content/types";
 import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
 import { daysBetween, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
-import { featuredItems, liveAnnouncements, relativeDay, whenLabels, type FeedItem } from "@/lib/feed";
+import { countdownItems, liveAnnouncements, relativeDay, whenLabels, type FeedItem } from "@/lib/feed";
 import { photoSizes } from "@/lib/photo-sizes";
 import { formatClock, weekdayName } from "@/lib/schedule";
 import { Avatar } from "./avatar";
@@ -29,10 +29,10 @@ const instagram = site.socials.find((social) => social.kind === "instagram");
 
 /**
  * The home highlights, sized by importance: the pinned announcement, a
- * countdown to the next featured event, then the Cafe, Serve, Leaders,
- * and Instagram. When an announcement or event ends, the feed script
- * swaps in the next one, or a fallback when there's none left. Needs the
- * feed root around it, and `RevealScript` after it.
+ * countdown to the next featured event (or the next youth night), then
+ * the Cafe, Serve, Leaders, and Instagram. When an announcement or event
+ * ends, the feed script swaps in the next one, or a fallback when there's
+ * none left. Needs the feed root around it, and `RevealScript` after it.
  */
 export async function BentoGrid() {
   "use cache";
@@ -41,7 +41,7 @@ export async function BentoGrid() {
   const now = new Date();
   const [announcements, events, gatherings] = await Promise.all([getAnnouncements(), getEvents(), getSchedule()]);
   const posts = liveAnnouncements(announcements, now).slice(0, SPARES);
-  const featured = featuredItems(events, now).slice(0, SPARES);
+  const countdown = countdownItems({ events, gatherings, now, spares: SPARES });
   const today = todayInLA(now);
 
   return (
@@ -62,7 +62,8 @@ export async function BentoGrid() {
         </Link>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 md:gap-4 lg:mt-8 lg:grid-cols-4 lg:grid-rows-[repeat(2,minmax(15rem,auto))_auto]">
+      {/* Rows grow with the width, so tiles keep their shape instead of stretching into strips. */}
+      <div className="mt-6 grid grid-cols-2 gap-3 md:gap-4 lg:mt-8 lg:grid-cols-4 lg:grid-rows-[repeat(2,minmax(clamp(15rem,16vw,24rem),auto))_auto] 2xl:grid-cols-5 2xl:grid-rows-[repeat(2,minmax(clamp(15rem,16vw,24rem),auto))]">
         <BentoTile size="spotlight" data-scope>
           {posts.map((post) => (
             <div
@@ -83,7 +84,7 @@ export async function BentoGrid() {
         </BentoTile>
 
         <BentoTile size="feature" data-scope className="lg:[--reveal-delay:80ms]">
-          {featured.map((item) => (
+          {countdown.map((item) => (
             <div
               key={item.key}
               data-item
@@ -97,7 +98,7 @@ export async function BentoGrid() {
               <Countdown item={item} today={today} />
             </div>
           ))}
-          <div data-empty hidden={featured.length > 0} suppressHydrationWarning className="h-full">
+          <div data-empty hidden={countdown.length > 0} suppressHydrationWarning className="h-full">
             <EveryWeek gatherings={gatherings} />
           </div>
         </BentoTile>
@@ -184,8 +185,8 @@ function Spotlight({ post }: { post: StandingNote & { pinned?: boolean } }) {
   );
 }
 
-// Three of the four columns from lg up.
-const spotlightSizes = photoSizes({ lg: 3 / 4 });
+// Three of four columns from lg up, then two of five.
+const spotlightSizes = photoSizes({ wide: 2 / 5, lg: 3 / 4 });
 const posterPhoto =
   "-z-10 transition-transform duration-700 ease-out-soft group-has-[a:hover]/poster:scale-[1.03] motion-reduce:transition-none";
 // The whole card is the link, and the button's label names it.
@@ -323,7 +324,7 @@ function Cafe() {
   );
 }
 
-const smallTile = "min-h-44 p-3.5 sm:p-5 lg:min-h-48 lg:p-6";
+const smallTile = "min-h-44 p-3.5 sm:p-5 md:min-h-52 lg:min-h-48 lg:p-6";
 
 const linkTones = {
   accent: "hover:brightness-105",

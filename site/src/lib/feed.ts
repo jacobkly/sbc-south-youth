@@ -119,6 +119,28 @@ export function featuredItems(events: SiteEvent[], now: Date): FeedItem[] {
 }
 
 /**
+ * What the home countdown can show, in order: the next few featured
+ * events, then the next few weekly nights, so it counts down to the next
+ * youth night when nothing is featured.
+ */
+export function countdownItems({
+  events,
+  gatherings,
+  now,
+  spares,
+}: {
+  events: SiteEvent[];
+  gatherings: WeeklyGathering[];
+  now: Date;
+  spares: number;
+}): FeedItem[] {
+  return [
+    ...featuredItems(events, now).slice(0, spares),
+    ...upcomingItems({ gatherings, events: [], now }).slice(0, spares),
+  ];
+}
+
+/**
  * How soon something is: underway, today, tomorrow, or later (""). The
  * feed script works this out again in the browser, since cached pages
  * outlive the day they were made.

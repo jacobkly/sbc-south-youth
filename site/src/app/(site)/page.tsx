@@ -4,6 +4,7 @@ import { ButtonLink } from "@/components/button";
 import { InlineScript } from "@/components/inline-script";
 import { BentoGrid } from "@/components/site/bento-grid";
 import { FeedGuard } from "@/components/site/feed-guard";
+import { FridayTimeline } from "@/components/site/friday-timeline";
 import { HeroMedia } from "@/components/site/hero-media";
 import { NextUpCard } from "@/components/site/next-up-card";
 import { QuickActions } from "@/components/site/quick-actions";
@@ -22,7 +23,8 @@ export default function HomePage() {
     <div id={FEED_ID} className="pb-16 lg:pb-24">
       <Hero />
       <QuickActions />
-      <div className="mt-14 lg:mt-20">
+      <FridayTimeline />
+      <div className="mt-14 lg:mt-16 xl:mt-20">
         <BentoGrid />
       </div>
       <RevealScript />
@@ -42,7 +44,7 @@ function Hero() {
 
   return (
     <section data-theme="dark" aria-labelledby="home-title" className="lg:page-x lg:pt-4">
-      <div className="relative isolate overflow-hidden bg-bg text-fg lg:flex lg:min-h-[min(44rem,calc(100svh-7rem))] lg:items-end lg:rounded-card">
+      <div className="relative isolate overflow-hidden bg-bg text-fg lg:flex lg:min-h-[min(80svh,calc(100svh-7rem))] lg:items-end lg:rounded-card">
         <HeroMedia
           photo={home.hero.photo}
           focus={home.hero.focus}
@@ -68,13 +70,13 @@ function Hero() {
           className="grain pointer-events-none absolute inset-0 -z-10 opacity-[0.05] mask-b-from-40% mask-b-to-90% lg:mask-none"
         />
 
-        <div className="grid w-full gap-10 px-5 pt-[min(15rem,34svh)] pb-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end lg:gap-12 lg:p-12 xl:grid-cols-[minmax(0,1fr)_24rem] xl:p-14">
+        <div className="grid w-full gap-10 px-5 pt-[min(15rem,34svh)] pb-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end lg:gap-12 lg:p-12 xl:grid-cols-[minmax(0,1fr)_24rem] xl:p-14 2xl:grid-cols-[minmax(0,1fr)_26rem] 2xl:p-16 3xl:p-20">
           <div className="animate-rise motion-reduce:animate-none">
             <p className="text-eyebrow text-accent-ink uppercase">{site.campus}</p>
             <h1 id="home-title" className="mt-3 max-w-[11ch] font-display text-display text-balance">
               {home.hero.title}
             </h1>
-            <p className="mt-5 max-w-md text-pretty text-fg/85 lg:text-lg">{home.hero.lede}</p>
+            <p className="mt-5 max-w-md text-pretty text-fg/85 lg:max-w-lg lg:text-lg 2xl:max-w-xl 2xl:text-xl">{home.hero.lede}</p>
             <div className="mt-7 flex flex-wrap gap-3">
               <ButtonLink href="/visit" size="lg">
                 Plan a visit <ArrowRight aria-hidden />

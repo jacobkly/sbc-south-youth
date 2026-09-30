@@ -8,6 +8,7 @@ import { InlineScript } from "@/components/inline-script";
 import { DateBlock } from "@/components/site/date-block";
 import { DirectionsButton } from "@/components/site/directions-button";
 import { FeedGuard } from "@/components/site/feed-guard";
+import { FirstTimeBand } from "@/components/site/first-time-band";
 import { Photo } from "@/components/site/photo";
 import { ShareButton } from "@/components/site/share-button";
 import { Tag } from "@/components/tag";
@@ -52,13 +53,17 @@ export default async function EventPage({ params }: PageProps<"/events/[slug]">)
       {view.jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(view.jsonLd) }} />}
       <Hero view={view} />
 
-      <div className="page-x mt-8 grid gap-12 lg:mt-12 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      {/* The story beside the details on desktop, 7 columns to 5 from xl up. */}
+      <div className="page-x mt-8 grid gap-12 lg:mt-12 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-16 xl:grid-cols-12 xl:gap-x-(--grid-gap)">
         <DetailsCard view={view} />
-        <div className="flex min-w-0 flex-col gap-12 lg:col-start-1 lg:row-start-1 lg:gap-16">
+        <div className="flex min-w-0 flex-col gap-12 lg:col-start-1 lg:row-start-1 lg:gap-16 xl:col-span-7">
           {view.description && <About text={view.description} />}
           {view.weekly && <NextNights view={view} />}
-          <FirstTime />
         </div>
+      </div>
+
+      <div className="page-x mt-12 lg:mt-16">
+        <FirstTimeBand />
       </div>
 
       <InlineScript html={inlineCall(refreshFeed)} />
@@ -82,7 +87,8 @@ function Hero({ view }: { view: EventView }) {
           className="-z-10"
         />
         <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/95 via-black/55 to-black/25" />
-        <div className="flex min-h-[max(26rem,min(34rem,72svh))] flex-col px-5 pt-4 pb-8 lg:min-h-[32rem] lg:px-12 lg:pt-8 lg:pb-12">
+        {/* On desktop, up to 70% of the screen, and never wider than 16:9. */}
+        <div className="flex min-h-[max(26rem,min(34rem,72svh))] flex-col px-5 pt-4 pb-8 lg:min-h-[max(32rem,min(70svh,50vw))] lg:px-12 lg:pt-8 lg:pb-12">
           <ButtonLink href="/this-week" variant="light" size="sm" className="self-start">
             <ArrowLeft aria-hidden />
             This week
@@ -125,17 +131,18 @@ function Hero({ view }: { view: EventView }) {
 
 /**
  * The facts and the calendar buttons. On phones it comes right after the
- * poster; on desktop it rides along beside the description.
+ * poster; on desktop it rides along beside the description. When the
+ * column is wide, the facts pair up and the buttons share a row.
  */
 function DetailsCard({ view }: { view: EventView }) {
   return (
     <aside
       aria-label="Details"
       data-scope
-      className="min-w-0 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 lg:self-start"
+      className="@container min-w-0 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 lg:self-start xl:col-span-5 xl:col-start-8"
     >
       <div className="rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-6">
-        <dl className="flex flex-col gap-5">
+        <dl className="flex flex-col gap-5 @lg:grid @lg:grid-cols-2 @lg:gap-x-6 @4xl:grid-cols-3">
           <Detail icon={<CalendarDays />} term="When">
             <p className="font-semibold">{view.date}</p>
             <p className="text-muted">{view.time}</p>
@@ -163,7 +170,7 @@ function DetailsCard({ view }: { view: EventView }) {
           data-until={view.endsAt ?? undefined}
           hidden={view.ended || undefined}
           suppressHydrationWarning
-          className="mt-6 flex flex-col gap-2 border-t border-line pt-6"
+          className="mt-6 flex flex-col gap-2 border-t border-line pt-6 @xl:grid @xl:grid-cols-3"
         >
           <a href={`/events/${view.slug}/calendar.ics`} className={buttonClasses({ className: "w-full" })}>
             <CalendarPlus aria-hidden />
@@ -220,7 +227,8 @@ function About({ text }: { text: string }) {
       <h2 id="about-title" className="text-eyebrow text-accent-ink uppercase">
         About
       </h2>
-      <div className="mt-4 flex max-w-2xl flex-col gap-4 text-lg leading-relaxed text-pretty sm:text-xl sm:leading-relaxed">
+      {/* 30em is about 65 characters. The font's wide digits make ch run long. */}
+      <div className="mt-4 flex max-w-[30em] flex-col gap-4 text-lg leading-relaxed text-pretty sm:text-xl sm:leading-relaxed 2xl:text-2xl 2xl:leading-relaxed">
         {text.split(/\n{2,}/).map((paragraph, index) => (
           <p key={index} className="whitespace-pre-line">
             {paragraph}
@@ -278,20 +286,5 @@ function NextNights({ view }: { view: EventView }) {
         before you come.
       </p>
     </section>
-  );
-}
-
-function FirstTime() {
-  return (
-    <aside className="flex flex-col items-start gap-4 rounded-card bg-surface p-6 ring-1 ring-line ring-inset sm:flex-row sm:items-center sm:justify-between sm:p-8">
-      <div>
-        <p className="font-display text-h3 font-bold">First time coming?</p>
-        <p className="mt-1 text-small text-muted">Where to park, what to expect, and who to look for.</p>
-      </div>
-      <ButtonLink href="/visit" variant="secondary">
-        Plan a visit
-        <ArrowRight aria-hidden />
-      </ButtonLink>
-    </aside>
   );
 }

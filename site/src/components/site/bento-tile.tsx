@@ -3,17 +3,17 @@ import { Reveal } from "./reveal";
 
 /**
  * How much of the grid a tile takes, by how much it matters. The grid is
- * 2 columns on phones and tablets and 4 on desktop.
+ * 2 columns on phones and tablets, 4 on desktop, and 5 on wide screens.
  *
  * - `spotlight`: the widest and tallest. Full width on phones and
- *   tablets, 3 columns by 2 rows on desktop.
+ *   tablets, 3 columns by 2 rows on desktop, and 2 by 2 on wide screens.
  * - `feature`: full width on phones, then 1 column by 2 rows.
  * - `small`: 1 cell, so two share a row on phones.
  */
 export type TileSize = "spotlight" | "feature" | "small";
 
 const sizes: Record<TileSize, string> = {
-  spotlight: "col-span-2 lg:col-span-3 lg:row-span-2",
+  spotlight: "col-span-2 lg:col-span-3 lg:row-span-2 2xl:col-span-2",
   feature: "col-span-2 md:col-span-1 md:row-span-2",
   small: "col-span-1",
 };

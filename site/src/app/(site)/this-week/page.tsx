@@ -1,16 +1,16 @@
-import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import type { ReactNode } from "react";
-import { ButtonLink, buttonClasses } from "@/components/button";
+import { buttonClasses } from "@/components/button";
 import { SocialIcon } from "@/components/icons/social-icon";
 import { InlineScript } from "@/components/inline-script";
 import { AnnouncementCard } from "@/components/site/announcement-card";
 import { DateBlock } from "@/components/site/date-block";
 import { EventCard } from "@/components/site/event-card";
 import { FeedGuard } from "@/components/site/feed-guard";
+import { FirstTimeBand } from "@/components/site/first-time-band";
 import { PageIntro } from "@/components/site/page-intro";
-import { SubscribeCard } from "@/components/site/subscribe-card";
+import { SubscribeBar, SubscribeCard } from "@/components/site/subscribe-card";
 import { pages } from "@/content/pages";
 import { site } from "@/content/site";
 import { standingNotes } from "@/content/standing-notes";
@@ -26,7 +26,7 @@ export const metadata: Metadata = pageMetadata(pages.thisWeek);
 export default function ThisWeekPage() {
   return (
     <>
-      <PageIntro title={pages.thisWeek.heading}>
+      <PageIntro title={pages.thisWeek.heading} aside={<SubscribeBar />}>
         Youth nights, events, and announcements for the next few weeks.
       </PageIntro>
       <Feed />
@@ -50,10 +50,12 @@ async function Feed() {
   const today = todayInLA(now);
   const headsUp = posts.length + standingNotes.length > 0;
 
+  // Heads up sits beside the agenda on desktop, then runs across above it
+  // from xl up, where the agenda's groups become columns.
   return (
     <div id={FEED_ID} className="pb-16 lg:pb-24">
       <div
-        className={`page-x mt-8 grid gap-14 lg:mt-12 ${headsUp ? "lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-12 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-x-16" : "max-w-4xl"}`}
+        className={`page-x mt-8 grid gap-14 lg:mt-12 xl:gap-16 ${headsUp ? "lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-12 xl:grid-cols-1" : "max-w-4xl xl:max-w-(--frame)"}`}
       >
         {headsUp && <HeadsUp posts={posts} notes={standingNotes} />}
         <Agenda groups={groups} today={today} />
@@ -73,15 +75,19 @@ function HeadsUp({ posts, notes }: { posts: Announcement[]; notes: StandingNote[
   const card = "w-[85%] max-w-[22rem] shrink-0 snap-start lg:w-auto lg:max-w-none";
 
   return (
-    <section aria-labelledby="heads-up-title" className="min-w-0 lg:col-start-2 lg:row-start-1">
+    <section aria-labelledby="heads-up-title" className="min-w-0 lg:col-start-2 lg:row-start-1 xl:col-start-1">
       <h2 id="heads-up-title" className="text-eyebrow text-accent-ink uppercase">
         Heads up
       </h2>
-      {/* A swipeable row on phones, with the next card peeking in. A column on desktop. */}
+      {/*
+       * A swipeable row on phones, with the next card peeking in. A column
+       * on desktop. From xl up, one row across that scrolls only when the
+       * notes can't fit.
+       */}
       <ul
         tabIndex={0}
         aria-labelledby="heads-up-title"
-        className="-mx-(--gutter) mt-4 flex snap-x snap-mandatory scroll-px-(--gutter) gap-3 overflow-x-auto px-(--gutter) pb-1 [scrollbar-width:none] sm:gap-4 lg:mx-0 lg:snap-none lg:flex-col lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden"
+        className="-mx-(--gutter) mt-4 flex snap-x snap-mandatory scroll-px-(--gutter) gap-3 overflow-x-auto px-(--gutter) pb-1 [scrollbar-width:none] sm:gap-4 lg:mx-0 lg:snap-none lg:flex-col lg:overflow-visible lg:px-0 xl:-mx-(--gutter) xl:grid xl:auto-cols-[minmax(15rem,1fr)] xl:grid-flow-col xl:gap-(--grid-gap) xl:overflow-x-auto xl:px-(--gutter) xl:pb-3 xl:[scrollbar-width:thin] [&::-webkit-scrollbar]:hidden"
       >
         {posts.map((post, index) => (
           <li key={post.id} data-item data-until={Date.parse(post.expiresAt)} suppressHydrationWarning className={card}>
@@ -113,41 +119,54 @@ function Agenda({ groups, today }: { groups: AgendaGroup[]; today: IsoDate }) {
       data-scope
       // The top of each day's date sticks as its cards scroll by, below the
       // top bar on desktop.
-      className="flex min-w-0 flex-col gap-14 [--stick:calc(1rem_+_env(safe-area-inset-top))] lg:col-start-1 lg:row-start-1 lg:gap-16 lg:[--stick:5.75rem]"
+      className="flex min-w-0 flex-col gap-14 [--stick:calc(1rem_+_env(safe-area-inset-top))] lg:col-start-1 lg:row-start-1 lg:gap-16 lg:[--stick:5.75rem] xl:row-start-2"
     >
-      {groups.map((group) => (
-        <section key={group.id} aria-labelledby={`${group.id}-title`} data-box suppressHydrationWarning>
-          <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <h2 id={`${group.id}-title`} className="font-display text-h2">
-              {group.title}
-            </h2>
-            <p className="text-small font-medium text-muted">{groupCaption[group.id](group, today)}</p>
-          </header>
-          <ol className="mt-6 flex flex-col gap-8 lg:mt-8 lg:gap-10">
-            {group.days.map((day) => (
-              <li
-                key={day.date}
-                data-box
-                data-date={day.date}
-                data-rel={day.date === today ? "today" : day.date === tomorrow ? "tomorrow" : ""}
-                suppressHydrationWarning
-                className="group/day grid grid-cols-[3.5rem_minmax(0,1fr)] gap-3.5 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-6"
-              >
-                <div className="sticky top-(--stick) self-start">
-                  <DateBlock date={day.date} />
-                </div>
-                <ul className="flex min-w-0 flex-col gap-3">
-                  {day.items.map((item) => (
-                    <li key={item.key} data-item data-until={Date.parse(item.endsAt)} suppressHydrationWarning>
-                      <EventCard item={item} />
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ol>
-        </section>
-      ))}
+      {/*
+       * From xl up the groups sit side by side, This week to Coming up.
+       * When one runs out (or there are only two), the rest share the row.
+       */}
+      <div className="contents xl:grid xl:grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] xl:gap-(--grid-gap)">
+        {groups.map((group) => (
+          <section
+            key={group.id}
+            aria-labelledby={`${group.id}-title`}
+            data-box
+            suppressHydrationWarning
+            // Two wide columns would stretch the cards, so a group stops at 48rem.
+            className="min-w-0 xl:max-w-3xl"
+          >
+            <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 id={`${group.id}-title`} className="font-display text-h2">
+                {group.title}
+              </h2>
+              <p className="text-small font-medium text-muted">{groupCaption[group.id](group, today)}</p>
+            </header>
+            <ol className="mt-6 flex flex-col gap-8 lg:mt-8 lg:gap-10">
+              {group.days.map((day) => (
+                <li
+                  key={day.date}
+                  data-box
+                  data-date={day.date}
+                  data-rel={day.date === today ? "today" : day.date === tomorrow ? "tomorrow" : ""}
+                  suppressHydrationWarning
+                  className="group/day grid grid-cols-[3.5rem_minmax(0,1fr)] gap-3.5 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-6 xl:grid-cols-[3.5rem_minmax(0,1fr)] xl:gap-4"
+                >
+                  <div className="sticky top-(--stick) self-start">
+                    <DateBlock date={day.date} />
+                  </div>
+                  <ul className="@container flex min-w-0 flex-col gap-3">
+                    {day.items.map((item) => (
+                      <li key={item.key} data-item data-until={Date.parse(item.endsAt)} suppressHydrationWarning>
+                        <EventCard item={item} />
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ))}
+      </div>
 
       <EmptyState hidden={groups.length > 0}>
         <EmptyCopy title="Nothing extra this week">
@@ -156,18 +175,10 @@ function Agenda({ groups, today }: { groups: AgendaGroup[]; today: IsoDate }) {
         <InstagramButton />
       </EmptyState>
 
-      <aside className="flex flex-col items-start gap-4 rounded-card bg-surface p-6 ring-1 ring-line ring-inset sm:flex-row sm:items-center sm:justify-between sm:p-8">
-        <div>
-          <p className="font-display text-h3 font-bold">First time coming?</p>
-          <p className="mt-1 text-small text-muted">Where to park, what to expect, and who to look for.</p>
-        </div>
-        <ButtonLink href="/visit" variant="secondary">
-          Plan a visit
-          <ArrowRight aria-hidden />
-        </ButtonLink>
-      </aside>
+      <FirstTimeBand />
 
-      <SubscribeCard />
+      {/* From xl up, the page's header has these links instead. */}
+      <SubscribeCard className="xl:hidden" />
     </div>
   );
 }
