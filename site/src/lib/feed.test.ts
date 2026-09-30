@@ -15,13 +15,13 @@ import {
 } from "./feed";
 
 const wednesdayNight: WeeklyGathering = {
-  slug: "weekly-hs",
-  title: "High School Youth Night",
+  slug: "weekly-night",
+  title: "Youth Night",
   weekday: 3,
   startTime: "19:00",
   endTime: "21:00",
   locationName: "Youth Room",
-  description: "Games, worship, and small groups.",
+  description: "Worship and a message, then food and hanging out.",
 };
 
 const sundayMorning: WeeklyGathering = {
@@ -90,8 +90,8 @@ describe("upcomingItems: weekly gatherings", () => {
 
   it("gives each night its own key and links to the gathering", () => {
     const [first, second] = upcomingItems({ gatherings: [wednesdayNight], events: [], now: at("2026-09-28T12:00:00-07:00"), days: 14 });
-    expect(first).toMatchObject({ kind: "gathering", key: "weekly-hs@2026-09-30", slug: "weekly-hs", featured: false });
-    expect(second.key).toBe("weekly-hs@2026-10-07");
+    expect(first).toMatchObject({ kind: "gathering", key: "weekly-night@2026-09-30", slug: "weekly-night", featured: false });
+    expect(second.key).toBe("weekly-night@2026-10-07");
   });
 
   it("keeps tonight's night until it ends", () => {
@@ -128,7 +128,7 @@ describe("upcomingItems: events", () => {
     const dinner = event({ slug: "dinner", title: "Dinner", startsAt: "2026-10-07T19:00:00-07:00", endsAt: "2026-10-07T20:00:00-07:00" });
     const early = event({ slug: "early", title: "Early", startsAt: "2026-10-07T18:30:00-07:00", endsAt: "2026-10-07T19:00:00-07:00" });
     const items = upcomingItems({ gatherings: [wednesdayNight], events: [dinner, early], now, days: 0 });
-    expect(items.map((item) => item.title)).toEqual(["Early", "Dinner", "High School Youth Night"]);
+    expect(items.map((item) => item.title)).toEqual(["Early", "Dinner", "Youth Night"]);
     expect(items[0]).toMatchObject({ kind: "event", key: "early", date: "2026-10-07" });
   });
 
@@ -231,6 +231,12 @@ describe("itemAddress", () => {
     expect(itemAddress(night, church)).toBe(church);
   });
 
+  it("uses the church's address for a weekly night without a room", () => {
+    const noRoom = { ...wednesdayNight, locationName: undefined };
+    const night = upcomingItems({ gatherings: [noRoom], events: [], now: at("2026-09-28T12:00:00-07:00") })[0];
+    expect(itemAddress(night, church)).toBe(church);
+  });
+
   it("has nothing to give when there's no place", () => {
     expect(itemAddress(eventItem(event(base)), church)).toBeUndefined();
   });
@@ -254,13 +260,13 @@ describe("groupAgenda", () => {
   it("ends the week at Sunday midnight", () => {
     expect(agenda(at("2026-10-04T23:30:00-07:00"))).toEqual({
       "this-week": ["sunday-late"],
-      "next-week": ["weekly-hs@2026-10-07", "next-sunday"],
+      "next-week": ["weekly-night@2026-10-07", "next-sunday"],
       // Weekly nights would repeat all the way down, so Coming up skips them.
       "coming-up": ["monday-after"],
     });
     expect(agenda(at("2026-10-05T00:00:00-07:00"))).toEqual({
-      "this-week": ["weekly-hs@2026-10-07", "next-sunday"],
-      "next-week": ["monday-after", "weekly-hs@2026-10-14"],
+      "this-week": ["weekly-night@2026-10-07", "next-sunday"],
+      "next-week": ["monday-after", "weekly-night@2026-10-14"],
     });
   });
 
@@ -280,7 +286,7 @@ describe("groupAgenda", () => {
     const [thisWeek] = groupAgenda(upcomingItems({ gatherings: [wednesdayNight], events: [dinner], now, days: 6 }), now);
     expect(thisWeek.days).toHaveLength(1);
     expect(thisWeek.days[0].date).toBe("2026-10-07");
-    expect(thisWeek.days[0].items.map((item) => item.slug)).toEqual(["dinner", "weekly-hs"]);
+    expect(thisWeek.days[0].items.map((item) => item.slug)).toEqual(["dinner", "weekly-night"]);
   });
 
   it("puts an event that's already underway under today", () => {

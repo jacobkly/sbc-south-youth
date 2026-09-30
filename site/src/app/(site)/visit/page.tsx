@@ -36,11 +36,10 @@ export default async function VisitPage() {
   const schedule = await getSchedule();
   const { textNumber } = readServerEnv();
   const address = formatAddress();
-  const { parking, firstNight } = visit;
+  const { parking, firstNight, meetALeader } = visit;
 
   return (
     <>
-      {/* TODO(leadership): confirm "no sign-up needed" and that someone greets visitors at the door. */}
       <PageIntro eyebrow={pages.visit.eyebrow} title={pages.visit.heading}>
         When and where we meet, where to park, and what to expect when you walk in. No sign-up needed. Just show up.
       </PageIntro>
@@ -55,9 +54,9 @@ export default async function VisitPage() {
           </Link>{" "}
           before you come.
         </SectionHeader>
-        <div className="mt-6 grid gap-4 md:grid-cols-2 lg:gap-6">
+        <div className={`mt-6 grid gap-4 lg:gap-6 ${schedule.length > 1 ? "md:grid-cols-2" : ""}`}>
           {schedule.map((gathering) => (
-            <GatheringCard key={gathering.slug} gathering={gathering} />
+            <GatheringCard key={gathering.slug} gathering={gathering} wide={schedule.length === 1} />
           ))}
         </div>
       </section>
@@ -67,10 +66,10 @@ export default async function VisitPage() {
         <div className="mt-6 grid gap-4 md:grid-cols-2 lg:gap-6">
           <div className="overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset">
             <div className="relative aspect-[4/3] sm:aspect-[16/10]">
-              <MapArt label={site.church.name} />
+              <MapArt label={site.campus} />
             </div>
             <div className="p-5">
-              <h3 className="text-h3">{site.church.name}</h3>
+              <h3 className="text-h3">{site.campus}</h3>
               <address className="mt-1 text-muted not-italic">
                 {site.address.street}
                 <br />
@@ -110,6 +109,7 @@ export default async function VisitPage() {
         <div className="mt-8">
           <Steps steps={firstNight} />
         </div>
+        <p className="mt-10 max-w-2xl border-l-2 border-accent-ink pl-4 text-lg text-pretty">{meetALeader}</p>
       </section>
 
       <section id="faq" aria-labelledby="faq-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
@@ -140,7 +140,7 @@ export default async function VisitPage() {
               Coming this week?
             </h2>
             <p className="mt-3 max-w-md text-pretty">
-              Let us know and we&apos;ll look out for you at the door. Totally optional. You can always just show up.
+              Let us know and we&apos;ll keep an eye out for you. Totally optional. You can always just show up.
             </p>
             {textNumber && (
               <div className="mt-6">

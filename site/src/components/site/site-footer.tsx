@@ -71,6 +71,8 @@ export async function SiteFooter() {
 
         <Column title="Find us">
           <address className="text-muted not-italic">
+            <span className="font-semibold text-fg">{site.campus}</span>
+            <br />
             {address.street}
             <br />
             {address.city},{" "}

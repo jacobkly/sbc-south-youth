@@ -38,14 +38,6 @@ export function sampleAnnouncements(now: Date): Announcement[] {
       cta: { label: "Plan a visit", href: "/visit" },
     },
     {
-      id: "sample-study-night",
-      title: "Study night at The Loft",
-      body: "Exams coming up? The Loft stays open after College Night for quiet study, with coffee and snacks.",
-      pinned: false,
-      publishAt: at(-1),
-      expiresAt: at(10),
-    },
-    {
       id: "sample-shirts",
       title: "New youth shirts are here",
       body: "Find them at the welcome table before and after youth night, in every size.",

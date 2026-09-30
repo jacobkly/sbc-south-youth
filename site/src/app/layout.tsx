@@ -15,7 +15,8 @@ const bricolage = Bricolage_Grotesque({
   axes: ["opsz"],
 });
 
-const description = "Youth nights, events, and a place to belong for high school and college students at SBC South.";
+const description =
+  "Youth night every Friday at 7:30 PM for high school and college students at Seattle Bethany Church South in Maple Valley, WA.";
 
 export const metadata: Metadata = {
   // Makes the link preview image URL absolute. Vercel previews use their own URL instead.

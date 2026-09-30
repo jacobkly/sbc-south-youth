@@ -26,7 +26,7 @@ export const AGENDA_DAYS = 56;
 /** One night of a weekly gathering, or an event. */
 export type FeedItem = {
   kind: "gathering" | "event";
-  /** Unique in a feed, like `weekly-hs@2026-09-30` or an event id. */
+  /** Unique in a feed, like `weekly-youth-night@2026-10-02` or an event id. */
   key: string;
   /** The `/events/[slug]` page. */
   slug: string;
@@ -132,7 +132,7 @@ export function relativeDay(item: FeedItem, now: Date): RelativeDay {
   return item.date === addDays(today, 1) ? "tomorrow" : "";
 }
 
-/** What to call each `RelativeDay`, like "Tonight" or "Wednesday". */
+/** What to call each `RelativeDay`, like "Tonight" or "Friday". */
 export type WhenLabels = { now: string; today: string; tomorrow: string; later: string };
 
 /** "Tonight" for plans that start at 5 PM or later. A week or more out, the date. */
@@ -147,9 +147,13 @@ export function whenLabels(item: FeedItem, today: IsoDate): WhenLabels {
   };
 }
 
-/** Where to get directions to: its own address, or the church's for a room there. */
+/**
+ * Where to get directions to: its own address, or the church's for a
+ * room there. Weekly nights are always at the church.
+ */
 export function itemAddress(item: FeedItem, churchAddress: string): string | undefined {
-  return item.locationAddress ?? (item.locationName ? churchAddress : undefined);
+  if (item.locationAddress) return item.locationAddress;
+  return item.locationName || item.kind === "gathering" ? churchAddress : undefined;
 }
 
 export type AgendaDay = { date: IsoDate; items: FeedItem[] };

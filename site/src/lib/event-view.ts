@@ -22,7 +22,7 @@ export type EventView = {
   photo?: Photo;
   featured: boolean;
   weekly: boolean;
-  /** "Saturday, October 10", or "Every Wednesday". */
+  /** "Saturday, October 10", or "Every Friday". */
   date: string;
   /** "9 AM–12 PM". */
   time: string;

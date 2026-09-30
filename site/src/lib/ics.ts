@@ -216,7 +216,7 @@ export function gatheringEntry(gathering: WeeklyGathering, churchAddress: string
     id: gathering.slug,
     title: gathering.title,
     description: gathering.description,
-    location: placeOf(gathering.locationName, undefined, churchAddress),
+    location: placeOf(gathering.locationName, churchAddress, churchAddress),
     url: eventUrl(gathering.slug),
     when: {
       kind: "weekly",

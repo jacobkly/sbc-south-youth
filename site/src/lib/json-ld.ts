@@ -43,7 +43,7 @@ export function eventJsonLd(item: FeedItem, { description, address }: { descript
     endDate,
     eventStatus: "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    ...(address && { location: { "@type": "Place", name: item.locationName ?? site.church.name, address } }),
+    ...(address && { location: { "@type": "Place", name: item.locationName ?? site.campus, address } }),
     ...(item.photo && { image: [item.photo.src] }),
     organizer: { "@type": "Organization", name: site.name, url: site.url },
     url: `${site.url}/events/${item.slug}`,

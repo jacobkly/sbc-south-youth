@@ -16,7 +16,7 @@ import { pages } from "@/content/pages";
 import { photos } from "@/content/photos";
 import { safety } from "@/content/safety";
 import type { PolicyPoint } from "@/content/safety";
-import { formatAddress } from "@/content/site";
+import { formatAddress, site } from "@/content/site";
 import { visit } from "@/content/visit";
 import { getSchedule } from "@/lib/content/loaders";
 import { pageMetadata } from "@/lib/metadata";
@@ -96,14 +96,14 @@ export default async function ParentsPage() {
             </Link>
           }
         />
-        <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:gap-6">
+        <ul className={`mt-6 grid gap-3 lg:gap-6 ${schedule.length > 1 ? "sm:grid-cols-2" : ""}`}>
           {schedule.map((gathering) => (
             <li key={gathering.slug} className="rounded-tile bg-surface p-4 ring-1 ring-line ring-inset sm:p-5">
               <p className="font-semibold">{gathering.title}</p>
               <p className="mt-1 font-display text-h3 font-bold">
                 {weekdayName(gathering.weekday, { plural: true })}, {formatClockRange(gathering.startTime, gathering.endTime)}
               </p>
-              <p className="mt-0.5 text-small text-muted">{gathering.locationName}</p>
+              <p className="mt-0.5 text-small text-muted">{gathering.locationName ?? site.campus}</p>
             </li>
           ))}
         </ul>

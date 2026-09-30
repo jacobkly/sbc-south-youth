@@ -22,7 +22,6 @@ type LinkItem = { href: string; label: string; note?: string; icon: ReactNode; e
 export default async function LinksPage() {
   const schedule = await getSchedule();
   const { giveCashtag } = readServerEnv();
-  const social = (kind: "instagram" | "youtube") => site.socials.find((link) => link.kind === kind);
 
   const items: LinkItem[] = [
     { href: "/this-week", label: "This Week", note: "Events and news this week", icon: <CalendarDays /> },
@@ -31,9 +30,8 @@ export default async function LinksPage() {
     { href: "/connect#join", label: "Join the chat", note: "Stay in the loop all week", icon: <MessageCircle /> },
   ];
   if (giveCashtag) items.push({ href: "/give", label: "Give", note: "Help fund camps and trips", icon: <HandHeart /> });
-  for (const kind of ["instagram", "youtube"] as const) {
-    const link = social(kind);
-    if (link) items.push({ href: link.href, label: link.label, icon: <SocialIcon kind={kind} />, external: true });
+  for (const link of site.socials) {
+    items.push({ href: link.href, label: link.label, icon: <SocialIcon kind={link.kind} />, external: true });
   }
 
   return (

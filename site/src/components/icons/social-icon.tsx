@@ -11,18 +11,6 @@ const paths: Record<SocialKind, ReactNode> = {
       <path d="M17.5 6.5h.01" />
     </>
   ),
-  tiktok: (
-    <>
-      <path d="M14 3v11.5a4.5 4.5 0 1 1-4.5-4.5" />
-      <path d="M14 3a5 5 0 0 0 5 5" />
-    </>
-  ),
-  youtube: (
-    <>
-      <path d="M2.5 17a24 24 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.6 49.6 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24 24 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.6 49.6 0 0 1-16.2 0A2 2 0 0 1 2.5 17" />
-      <path d="m10 15 5-3-5-3z" />
-    </>
-  ),
 };
 
 export function SocialIcon({ kind, className = "size-5" }: { kind: SocialKind; className?: string }) {

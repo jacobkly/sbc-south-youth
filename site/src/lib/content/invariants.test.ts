@@ -10,19 +10,19 @@ import { gatherings } from "@/content/schedule";
 import { site } from "@/content/site";
 import { visit } from "@/content/visit";
 import { addDays, laInstant } from "@/lib/dates";
+import { upcomingItems } from "@/lib/feed";
 import { contentProblems } from "./invariants";
 import type { Announcement, Leader, SiteEvent, WeeklyGathering } from "./types";
 
 const photo = { src: "https://images.unsplash.com/photo-1", alt: "A campfire at night", placeholder: true };
 
 const gathering: WeeklyGathering = {
-  slug: "weekly-hs",
-  title: "High School Youth Night",
-  weekday: 3,
-  startTime: "19:00",
+  slug: "weekly-youth-night",
+  title: "Youth Night",
+  weekday: 5,
+  startTime: "19:30",
   endTime: "21:00",
-  locationName: "Youth Room",
-  description: "Games, worship, and small groups.",
+  description: "Worship and a message, then food and hanging out.",
 };
 
 const event: SiteEvent = {
@@ -69,6 +69,16 @@ describe("contentProblems", () => {
     }
   });
 
+  it("keeps the sample events off youth night", () => {
+    const now = laInstant("2026-09-28", "12:00");
+    // Every weekly night from before the first sample event to past the last.
+    const nights = upcomingItems({ gatherings, events: [], now: laInstant("2026-09-14", "00:00"), days: 120 });
+    const overlaps = (a: { startsAt: string; endsAt: string }, b: { startsAt: string; endsAt: string }) =>
+      Date.parse(a.startsAt) < Date.parse(b.endsAt) && Date.parse(b.startsAt) < Date.parse(a.endsAt);
+    const clashes = sampleEvents(now).filter((event) => nights.some((night) => overlaps(event, night)));
+    expect(clashes.map((event) => event.slug)).toEqual([]);
+  });
+
   it("passes a good fixture", () => {
     expect(
       contentProblems({ gatherings: [gathering], events: [event], announcements: [announcement], leaders: [leader] }),
@@ -78,7 +88,7 @@ describe("contentProblems", () => {
   it("catches a duplicate slug, even across events and gatherings", () => {
     const twin = { ...event, id: "e2" };
     expect(contentProblems({ events: [event, twin] })).toContainEqual(expect.stringMatching(/fall-retreat.*used twice/));
-    const clash = { ...gathering, slug: "weekly-hs" };
+    const clash = { ...gathering, slug: "weekly-youth-night" };
     expect(contentProblems({ gatherings: [gathering, clash] })).toContainEqual(expect.stringMatching(/used twice/));
   });
 

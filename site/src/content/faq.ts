@@ -1,11 +1,6 @@
 import type { FaqItem } from "@/lib/content/types";
 
-/**
- * First-visit questions on the Plan a Visit page.
- *
- * TODO(leadership): every answer is a placeholder until leadership
- * confirms it, especially pick-up times.
- */
+/** First-visit questions on the Plan a Visit page. */
 export const visitFaq: FaqItem[] = [
   {
     question: "What should I wear?",
@@ -14,7 +9,7 @@ export const visitFaq: FaqItem[] = [
   {
     question: "Do I need to know anyone?",
     answer:
-      "Nope. Lots of people come the first time on their own. Someone at the door will say hi, show you around, and introduce you to people in your grade.",
+      "Nope. Lots of people come the first time on their own. Leaders try to meet everyone new, but if we miss you, ask anyone to point you to a leader.",
   },
   {
     question: "Do I have to sing or pray out loud?",
@@ -22,19 +17,19 @@ export const visitFaq: FaqItem[] = [
   },
   {
     question: "Is there food?",
-    answer: "Yes, usually snacks, and sometimes a full dinner. If you have an allergy, tell a leader when you arrive.",
+    answer: "Yes, after service. Usually pizza and drinks, and often enough for a full meal. The cafe is open too.",
+  },
+  {
+    question: "What about allergies?",
+    answer: "Leaders don't keep track of allergies, so check before you eat or bring your own.",
   },
   {
     question: "Can I bring a friend?",
     answer: "Please do. Coming with a friend is the easiest way to try it out.",
   },
   {
-    question: "What happens after?",
-    answer: "Most people hang out for a bit. There's no pressure to sign up for anything or come back.",
-  },
-  {
     question: "When do parents pick up?",
     answer:
-      "Youth night ends at 9 PM. Pick-up is at the front entrance, and a leader stays until every student has a ride.",
+      "There's no set time. Service ends around 9, and most people hang out until about 10. Students sort out their own rides, and leaders stay until everyone's been picked up.",
   },
 ];

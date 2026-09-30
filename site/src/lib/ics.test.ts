@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { gatherings } from "@/content/schedule";
 import type { SiteEvent, WeeklyGathering } from "./content/types";
 import { addDays, laInstant, weekdayOf } from "./dates";
 import {
@@ -27,8 +28,8 @@ const allDay: CalendarEntry = {
 
 // Starts in October on daylight time and keeps going into standard time.
 const weekly: CalendarEntry = {
-  id: "weekly-hs",
-  title: "High School Youth Night",
+  id: "weekly-youth-night",
+  title: "Youth Night",
   when: { kind: "weekly", date: "2026-10-28", startTime: "19:00", endTime: "21:00" },
 };
 
@@ -212,13 +213,12 @@ describe("content entries", () => {
   };
 
   const gathering: WeeklyGathering = {
-    slug: "weekly-hs",
-    title: "High School Youth Night",
-    weekday: 3,
-    startTime: "19:00",
+    slug: "weekly-youth-night",
+    title: "Youth Night",
+    weekday: 5,
+    startTime: "19:30",
     endTime: "21:00",
-    locationName: "Youth Room",
-    description: "Games, worship, and small groups.",
+    description: "Worship and a message, then food and hanging out.",
   };
 
   it("links an event to its page and gives the place with its address", () => {
@@ -245,15 +245,27 @@ describe("content entries", () => {
   });
 
   it("starts a weekly night on its next date", () => {
-    const wednesday = gatheringEntry(gathering, church, laInstant("2026-09-30", "20:00"));
-    expect(wednesday.when).toEqual({ kind: "weekly", date: "2026-09-30", startTime: "19:00", endTime: "21:00" });
-    const thursday = gatheringEntry(gathering, church, laInstant("2026-10-01", "12:00"));
-    expect(thursday.when).toMatchObject({ date: "2026-10-07" });
-    expect(thursday).toMatchObject({
-      id: "weekly-hs",
-      url: "https://sbcsouthyouth.com/events/weekly-hs",
-      location: `Youth Room, ${church}`,
-      description: "Games, worship, and small groups.",
+    const friday = gatheringEntry(gathering, church, laInstant("2026-10-02", "20:00"));
+    expect(friday.when).toEqual({ kind: "weekly", date: "2026-10-02", startTime: "19:30", endTime: "21:00" });
+    const saturday = gatheringEntry(gathering, church, laInstant("2026-10-03", "12:00"));
+    expect(saturday.when).toMatchObject({ date: "2026-10-09" });
+    expect(saturday).toMatchObject({
+      id: "weekly-youth-night",
+      url: "https://sbcsouthyouth.com/events/weekly-youth-night",
+      description: "Worship and a message, then food and hanging out.",
     });
+  });
+
+  it("puts a weekly night without a room at the church's address", () => {
+    expect(gatheringEntry(gathering, church, stamp).location).toBe(church);
+    expect(gatheringEntry({ ...gathering, locationName: "Gym" }, church, stamp).location).toBe(`Gym, ${church}`);
+  });
+
+  it("subscribes people to youth night every Friday at 7:30 PM", () => {
+    // A Tuesday, so the first night is that Friday.
+    const now = laInstant("2026-09-29", "12:00");
+    const lines = unfold(calendarFile(gatherings.map((night) => gatheringEntry(night, church, now)), { stamp }));
+    expect(lines.filter((line) => line === "RRULE:FREQ=WEEKLY")).toHaveLength(1);
+    expect(lines).toContain("DTSTART;TZID=America/Los_Angeles:20261002T193000");
   });
 });

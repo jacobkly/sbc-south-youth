@@ -25,7 +25,8 @@ export type WeeklyGathering = {
   weekday: number;
   startTime: string;
   endTime: string;
-  locationName: string;
+  /** A room or area at the church. Left out when it's just "the church". */
+  locationName?: string;
   /** One or two sentences for the schedule and calendar files. */
   description: string;
   photo?: Photo;
