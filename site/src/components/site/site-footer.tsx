@@ -113,8 +113,9 @@ export async function SiteFooter() {
 
       {/* A poster-sized sign-off, sized to fill the frame at any width. On
           desktop it sinks below the bottom edge; on phones the tab bar sits
-          there, so it stays whole. */}
-      <div aria-hidden className="page-x @container select-none">
+          there, so it stays whole. Its tight leading lets the glyphs reach
+          up over the row above, so it ignores the pointer. */}
+      <div aria-hidden className="page-x pointer-events-none @container select-none">
         <p className="mt-4 mb-4 text-center font-display text-[length:16cqi] leading-[0.8] font-extrabold tracking-[-0.04em] whitespace-nowrap text-fg/[0.07] lg:-mb-[0.18em]">
           SOUTH YOUTH
         </p>
