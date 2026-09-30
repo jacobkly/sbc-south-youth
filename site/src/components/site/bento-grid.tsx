@@ -46,12 +46,9 @@ export async function BentoGrid() {
   return (
     <section aria-labelledby="highlights-title" className="page-x">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div>
-          <p className="text-eyebrow text-accent-ink uppercase">{highlights.eyebrow}</p>
-          <h2 id="highlights-title" className="mt-2 font-display text-h2 text-balance">
-            {highlights.title}
-          </h2>
-        </div>
+        <h2 id="highlights-title" className="font-display text-h2 text-balance">
+          {highlights.title}
+        </h2>
         <Link
           href="/this-week"
           className="group inline-flex items-center gap-1.5 font-semibold text-accent-ink underline-offset-4 hover:underline"

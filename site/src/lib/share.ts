@@ -8,7 +8,7 @@ import { site } from "@/content/site";
 /** The size every link preview uses. */
 export const SHARE_SIZE = { width: 1200, height: 630 };
 
-/** A page's preview image description, like "Plan a Visit at SBC South Youth: Your first night, sorted." */
+/** A page's preview image description, like "Plan a Visit at SBC South Youth: Your first Friday". */
 export function shareAlt({ title, heading }: { title: string; heading: string }): string {
   return `${title} at ${site.name}: ${heading}`;
 }

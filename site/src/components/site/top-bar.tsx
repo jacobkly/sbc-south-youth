@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ButtonLink } from "@/components/button";
+import { site } from "@/content/site";
 import { readServerEnv } from "@/lib/env";
 import { DesktopNav, TopBarAction } from "./desktop-nav";
 import { LogoMark } from "./logo";
@@ -18,10 +19,9 @@ export function TopBar() {
           href="/"
           className="pressable -mx-1 flex h-11 shrink-0 items-center gap-2.5 rounded-full px-1 font-display text-[1.0625rem] leading-none font-extrabold tracking-tight"
         >
-          <LogoMark className="h-8" />
-          <span>
-            SBC South <span className="text-accent-ink">Youth</span>
-          </span>
+          {/* One run of text in one color, so the three words read as one size. */}
+          <LogoMark className="h-8 text-accent-ink" />
+          <span>{site.name}</span>
           <span className="sr-only">, home</span>
         </Link>
 

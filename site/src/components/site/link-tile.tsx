@@ -5,13 +5,11 @@ import type { ReactNode } from "react";
 /** A big tappable card that leads to another page. The accent tone is for the one tile that matters most. */
 export function LinkTile({
   href,
-  eyebrow,
   title,
   children,
   tone = "surface",
 }: {
   href: string;
-  eyebrow: string;
   title: string;
   children?: ReactNode;
   tone?: "surface" | "accent";
@@ -27,8 +25,7 @@ export function LinkTile({
       className={`group pressable flex min-h-44 flex-col justify-between gap-6 rounded-card p-5 sm:p-6 ${tones[tone]}`}
     >
       <div>
-        <p className={`text-eyebrow uppercase ${tone === "accent" ? "" : "text-accent-ink"}`}>{eyebrow}</p>
-        <p className="mt-2 max-w-sm font-display text-h2 text-balance">{title}</p>
+        <p className="max-w-sm font-display text-h2 text-balance">{title}</p>
         {children && <p className={`mt-2 max-w-sm text-pretty ${tone === "accent" ? "" : "text-muted"}`}>{children}</p>}
       </div>
       <span

@@ -25,14 +25,14 @@ const receiptHref = `mailto:${site.email}?subject=${encodeURIComponent("Receipt 
 export function GiveContent({ cashtag }: { cashtag: string | null }) {
   return (
     <>
-      <PageIntro eyebrow={pages.give.eyebrow} title={pages.give.heading}>
+      <PageIntro title={pages.give.heading}>
         {give.why}
       </PageIntro>
 
       {cashtag ? <GiveCard cashtag={cashtag} /> : <ComingSoonCard />}
 
       <section aria-labelledby="impact-title" className="page-x mt-16 lg:mt-24">
-        <SectionHeader id="impact-title" eyebrow="Where it goes" title="What your gift does" />
+        <SectionHeader id="impact-title" title="Where your gift goes" />
         <ul className="mt-6 grid gap-4 md:grid-cols-3 lg:gap-6">
           {give.impact.map((item) => (
             <li
@@ -63,7 +63,7 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
       {cashtag && (
         <>
           <section aria-labelledby="records-title" className="page-x mt-16 lg:mt-24">
-            <SectionHeader id="records-title" eyebrow="For your records" title="Receipts and taxes" />
+            <SectionHeader id="records-title" title="Receipts and taxes" />
             <ul className="mt-6 grid gap-4 md:grid-cols-2 lg:gap-6">
               <li>
                 <PolicyCard point={give.receipt} icon={<ReceiptText />}>
@@ -82,7 +82,7 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
           <section aria-labelledby="give-faq-title" className="page-x mt-16 lg:mt-24">
             <div className="grid gap-6 lg:grid-cols-[1fr_2fr] lg:gap-12">
               <div className="lg:sticky lg:top-24 lg:self-start">
-                <SectionHeader id="give-faq-title" eyebrow="Questions" title="Good to know">
+                <SectionHeader id="give-faq-title" title="Questions">
                   Anything else?{" "}
                   <Link href="/contact" className={linkClasses}>
                     Ask us
@@ -168,7 +168,7 @@ function ComingSoonCard() {
           Coming soon
         </p>
         <h2 id="soon-title" className="mt-5 max-w-xl font-display text-h1 text-balance">
-          Online giving is almost here.
+          Online giving is almost here
         </h2>
         <p className="mt-3 max-w-md text-pretty text-muted">
           We&apos;re still setting it up. Until then, send us a message and we&apos;ll tell you how to give.

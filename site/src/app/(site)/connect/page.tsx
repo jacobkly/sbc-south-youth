@@ -16,14 +16,12 @@ export const metadata: Metadata = pageMetadata(pages.connect);
 /** A section with its header on the left and a form card on the right from `lg`. */
 function FormSection({
   id,
-  eyebrow,
   title,
   lede,
   aside,
   children,
 }: {
   id: string;
-  eyebrow: string;
   title: string;
   lede: string;
   aside?: ReactNode;
@@ -33,7 +31,7 @@ function FormSection({
     <section id={id} aria-labelledby={`${id}-title`} className="page-x mt-16 scroll-mt-24 lg:mt-24">
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-12">
         <div className="lg:sticky lg:top-24">
-          <SectionHeader id={`${id}-title`} eyebrow={eyebrow} title={title}>
+          <SectionHeader id={`${id}-title`} title={title}>
             {lede}
           </SectionHeader>
           {aside}
@@ -49,7 +47,7 @@ export default function ConnectPage() {
 
   return (
     <>
-      <PageIntro eyebrow={pages.connect.eyebrow} title={pages.connect.heading}>
+      <PageIntro title={pages.connect.heading}>
         Keep coming, get in the group chat, and find a place to serve.
       </PageIntro>
 
@@ -95,7 +93,6 @@ export default function ConnectPage() {
 
       <FormSection
         id="join"
-        eyebrow="Connect"
         title={join.title}
         lede={join.body}
         aside={
@@ -110,7 +107,6 @@ export default function ConnectPage() {
 
       <FormSection
         id="serve"
-        eyebrow="Serve"
         title={serve.title}
         lede={serve.body}
         aside={

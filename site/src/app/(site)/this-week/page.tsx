@@ -26,7 +26,7 @@ export const metadata: Metadata = pageMetadata(pages.thisWeek);
 export default function ThisWeekPage() {
   return (
     <>
-      <PageIntro eyebrow={pages.thisWeek.eyebrow} title={pages.thisWeek.heading}>
+      <PageIntro title={pages.thisWeek.heading}>
         Youth nights, events, and announcements for the next few weeks.
       </PageIntro>
       <Feed />

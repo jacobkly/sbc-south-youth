@@ -39,7 +39,7 @@ export default async function ParentsPage() {
 
   return (
     <>
-      <PageIntro eyebrow={pages.parents.eyebrow} title={pages.parents.heading}>
+      <PageIntro title={pages.parents.heading}>
         How we look after students, what a typical night looks like, and how to reach us. If anything here leaves you with a
         question, ask. We&apos;d love to hear from you.
       </PageIntro>
@@ -47,7 +47,7 @@ export default async function ParentsPage() {
       <JumpNav sections={sections} />
 
       <section id="commitment" aria-labelledby="commitment-title" className="page-x mt-12 scroll-mt-24 lg:mt-16">
-        <SectionHeader id="commitment-title" eyebrow="Our leaders" title="Who looks after students" />
+        <SectionHeader id="commitment-title" title="Who looks after students" />
         <ul className="mt-6 grid gap-4 md:grid-cols-3 lg:gap-6">
           <li>
             <PolicyCard point={commitment.leaders} icon={<Church />} />
@@ -80,8 +80,7 @@ export default async function ParentsPage() {
       <section id="typical-night" aria-labelledby="typical-night-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
         <SectionHeader
           id="typical-night-title"
-          eyebrow="A typical night"
-          title="What your student's night looks like"
+          title="A typical Friday"
           action={
             <Link href="/visit" className={`inline-flex items-center gap-1.5 ${linkClasses}`}>
               Plan a visit <ArrowRight aria-hidden className="size-4" />
@@ -105,7 +104,7 @@ export default async function ParentsPage() {
       </section>
 
       <section id="drop-off" aria-labelledby="drop-off-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
-        <SectionHeader id="drop-off-title" eyebrow="Drop-off and pick-up" title="Getting there and home" />
+        <SectionHeader id="drop-off-title" title="Drop-off and pick-up" />
         <div className="mt-6 grid overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset md:grid-cols-2">
           <div className="relative aspect-[4/3] md:aspect-auto md:min-h-80">
             <Photo photo={dropOff.photo} seed="drop-off" sizes="(min-width: 1240px) 600px, (min-width: 768px) 50vw, 100vw" />
@@ -127,7 +126,7 @@ export default async function ParentsPage() {
       </section>
 
       <section id="staying-in-touch" aria-labelledby="staying-in-touch-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
-        <SectionHeader id="staying-in-touch-title" eyebrow="Staying in touch" title="How leaders communicate" />
+        <SectionHeader id="staying-in-touch-title" title="Staying in touch" />
         <ul className="mt-6 divide-y divide-line rounded-card bg-surface ring-1 ring-line ring-inset">
           <PolicyRow point={communication.chat} icon={<MessagesSquare />} />
           <PolicyRow point={communication.trips} icon={<Bus />} />
@@ -138,8 +137,7 @@ export default async function ParentsPage() {
       <section id="photos" aria-labelledby="photos-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
         <div className="grid overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset md:grid-cols-[3fr_2fr]">
           <div className="p-5 sm:p-6 lg:p-10">
-            <p className="text-eyebrow text-accent-ink uppercase">Photos</p>
-            <h2 id="photos-title" className="mt-2 font-display text-h2 text-balance">
+            <h2 id="photos-title" className="font-display text-h2 text-balance">
               Photos and your student
             </h2>
             <p className="mt-3 max-w-lg text-pretty text-muted">{safety.photos.body}</p>
@@ -159,9 +157,8 @@ export default async function ParentsPage() {
 
       <section id="contact" aria-labelledby="contact-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
         <div className="relative isolate overflow-hidden rounded-card bg-accent p-6 text-on-accent sm:p-10 lg:p-14">
-          <p className="text-eyebrow uppercase">Questions?</p>
-          <h2 id="contact-title" className="mt-2 font-display text-h1 text-balance">
-            Ask any of us
+          <h2 id="contact-title" className="font-display text-h1 text-balance">
+            Questions?
           </h2>
           <p className="mt-2 max-w-md text-pretty">
             Ask any youth leader at church, or send a message. It could be about a trip, the schedule, or how your student is doing.

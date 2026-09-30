@@ -70,11 +70,11 @@ function Hero() {
 
         <div className="grid w-full gap-10 px-5 pt-[min(15rem,34svh)] pb-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end lg:gap-12 lg:p-12 xl:grid-cols-[minmax(0,1fr)_24rem] xl:p-14">
           <div className="animate-rise motion-reduce:animate-none">
-            <p className="text-eyebrow text-accent-ink uppercase">{site.name}</p>
+            <p className="text-eyebrow text-accent-ink uppercase">{site.campus}</p>
             <h1 id="home-title" className="mt-3 max-w-[11ch] font-display text-display text-balance">
               {home.hero.title}
             </h1>
-            <p className="mt-5 max-w-md text-pretty text-fg/85 lg:text-lg">{site.tagline}</p>
+            <p className="mt-5 max-w-md text-pretty text-fg/85 lg:text-lg">{home.hero.lede}</p>
             <div className="mt-7 flex flex-wrap gap-3">
               <ButtonLink href="/visit" size="lg">
                 Plan a visit <ArrowRight aria-hidden />

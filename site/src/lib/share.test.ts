@@ -13,8 +13,8 @@ describe("titleSize", () => {
 
 describe("shareAlt", () => {
   it("names the page and its headline", () => {
-    expect(shareAlt({ title: "Plan a Visit", heading: "Your first night, sorted." })).toBe(
-      "Plan a Visit at SBC South Youth: Your first night, sorted.",
+    expect(shareAlt({ title: "Plan a Visit", heading: "Your first Friday" })).toBe(
+      "Plan a Visit at SBC South Youth: Your first Friday",
     );
   });
 });

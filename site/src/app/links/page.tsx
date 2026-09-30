@@ -25,7 +25,7 @@ export default async function LinksPage() {
 
   const items: LinkItem[] = [
     { href: "/this-week", label: "This Week", note: "Events and news this week", icon: <CalendarDays /> },
-    { href: "/visit", label: "Plan a Visit", note: "Your first night, sorted", icon: <MapPin /> },
+    { href: "/visit", label: "Plan a Visit", note: "Fridays at 7:30, and where to park", icon: <MapPin /> },
     // Never a chat invite link: the Connect page handles who gets added.
     { href: "/connect#join", label: "Join the chat", note: "Stay in the loop all week", icon: <MessageCircle /> },
   ];
@@ -43,9 +43,9 @@ export default async function LinksPage() {
       />
 
       <div className="mx-auto flex max-w-md flex-col items-center text-center">
-        <LogoMark className="h-16 animate-rise motion-reduce:animate-none" />
+        <LogoMark className="h-16 animate-rise text-accent-ink motion-reduce:animate-none" />
         <h1 className="mt-5 animate-rise font-display text-h2 [animation-delay:80ms] motion-reduce:animate-none">
-          SBC South <span className="text-accent-ink">Youth</span>
+          {site.name}
         </h1>
         <p className="mt-2 max-w-xs animate-rise text-pretty text-muted [animation-delay:140ms] motion-reduce:animate-none">
           {site.tagline}

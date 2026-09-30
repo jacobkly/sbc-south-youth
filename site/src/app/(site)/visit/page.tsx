@@ -40,14 +40,14 @@ export default async function VisitPage() {
 
   return (
     <>
-      <PageIntro eyebrow={pages.visit.eyebrow} title={pages.visit.heading}>
+      <PageIntro title={pages.visit.heading}>
         When and where we meet, where to park, and what to expect when you walk in. No sign-up needed. Just show up.
       </PageIntro>
 
       <JumpNav sections={sections} />
 
       <section id="when" aria-labelledby="when-title" className="page-x mt-12 scroll-mt-24 lg:mt-16">
-        <SectionHeader id="when-title" eyebrow="When" title="Every week">
+        <SectionHeader id="when-title" title="Every Friday">
           Holidays and special nights can change things, so check{" "}
           <Link href="/this-week" className="font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-accent-ink">
             This Week
@@ -62,7 +62,7 @@ export default async function VisitPage() {
       </section>
 
       <section id="where" aria-labelledby="where-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
-        <SectionHeader id="where-title" eyebrow="Where" title="Finding us" />
+        <SectionHeader id="where-title" title="Where to find us" />
         <div className="mt-6 grid gap-4 md:grid-cols-2 lg:gap-6">
           <div className="overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset">
             <div className="relative aspect-[4/3] sm:aspect-[16/10]">
@@ -105,7 +105,7 @@ export default async function VisitPage() {
       </section>
 
       <section id="first-night" aria-labelledby="first-night-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
-        <SectionHeader id="first-night-title" eyebrow="Your first night" title="What happens when you walk in" />
+        <SectionHeader id="first-night-title" title="What happens when you walk in" />
         <div className="mt-8">
           <Steps steps={firstNight} />
         </div>
@@ -115,7 +115,7 @@ export default async function VisitPage() {
       <section id="faq" aria-labelledby="faq-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
         <div className="grid gap-6 lg:grid-cols-[1fr_2fr] lg:gap-12">
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <SectionHeader id="faq-title" eyebrow="Questions" title="Good to know">
+            <SectionHeader id="faq-title" title="Questions">
               Anything else?{" "}
               <Link href="/contact" className="font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-accent-ink">
                 Ask us

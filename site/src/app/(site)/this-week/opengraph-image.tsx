@@ -9,5 +9,5 @@ export const size = SHARE_SIZE;
 export const contentType = "image/png";
 
 export default function Image() {
-  return sharePoster({ eyebrow: page.eyebrow, title: page.heading });
+  return sharePoster({ eyebrow: page.title, title: page.heading });
 }

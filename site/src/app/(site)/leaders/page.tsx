@@ -11,7 +11,7 @@ export const metadata: Metadata = pageMetadata(pages.leaders);
 export default function LeadersPage() {
   return (
     <>
-      <PageIntro eyebrow={pages.leaders.eyebrow} title={pages.leaders.heading}>
+      <PageIntro title={pages.leaders.heading}>
         The people who lead youth nights and would love to meet you. Come say hi, or send them an email.
       </PageIntro>
 
@@ -30,10 +30,10 @@ export default function LeadersPage() {
           Keep exploring
         </h2>
         <div className="grid max-w-5xl gap-4 md:grid-cols-2 lg:gap-6">
-          <LinkTile href="/parents" eyebrow="For parents" title="How we look after students">
+          <LinkTile href="/parents" title="How we look after students">
             Who leads, drop-off, and how we stay in touch.
           </LinkTile>
-          <LinkTile href="/connect#serve" eyebrow="Want to help?" title="Find a place to serve" tone="accent">
+          <LinkTile href="/connect#serve" title="Find a place to serve" tone="accent">
             Worship, the cafe, and more, for regulars.
           </LinkTile>
         </div>

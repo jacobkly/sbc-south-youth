@@ -31,7 +31,7 @@ export default function PrivacyPage() {
 
   return (
     <>
-      <PageIntro eyebrow={pages.privacy.eyebrow} title={pages.privacy.heading}>
+      <PageIntro title={pages.privacy.heading}>
         What our forms collect, why we ask, and how long we keep it. No accounts, no fine print.
       </PageIntro>
 
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
       </section>
 
       <section aria-labelledby="forms-title" className="page-x mt-16 lg:mt-24">
-        <SectionHeader id="forms-title" eyebrow="Form by form" title="What each form collects" />
+        <SectionHeader id="forms-title" title="What each form collects" />
         <ul className="mt-6 grid gap-4 md:grid-cols-2 lg:gap-6">
           {privacy.forms.map((form) => (
             <li key={form.name} className="flex flex-col rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-6">

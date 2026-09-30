@@ -15,7 +15,7 @@ const cardClasses = "rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:
 export default function ContactPage() {
   return (
     <>
-      <PageIntro eyebrow={pages.contact.eyebrow} title={pages.contact.heading}>
+      <PageIntro title={pages.contact.heading}>
         Questions about youth nights, events, or anything else? Send us a message and a leader will write back.
       </PageIntro>
 

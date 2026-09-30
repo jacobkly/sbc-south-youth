@@ -3,7 +3,9 @@ import { photos } from "./photos";
 /** The top of the home page: the poster and the three ways in. */
 export const home = {
   hero: {
-    title: "Show up as you are.",
+    // Matches the weekly schedule, which a test checks.
+    title: "Fridays at 7:30",
+    lede: "Worship and a message, then pizza and hanging out until about 10. High school and college students, all together.",
     photo: photos.handsRaised,
     // Where to keep the crop on a phone, which shows the middle of a wide photo.
     focus: "62% 50%",
@@ -21,8 +23,7 @@ export const home = {
    * note when nothing is posted.
    */
   highlights: {
-    eyebrow: "Highlights",
-    title: "Don't miss a thing.",
+    title: "Coming up",
     cafe: { title: "Youth Cafe", body: "Open Sundays and after youth on Fridays." },
     serve: { title: "Find a place to serve", body: "Worship, the cafe, and more, for regulars." },
     leaders: { title: "Meet the team", body: "Who you'll see on a youth night." },
