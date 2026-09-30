@@ -20,7 +20,7 @@ export default function ContactPage() {
       </PageIntro>
 
       <div className="page-x grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-8">
-        <section aria-labelledby="message-title" className="rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8">
+        <section aria-labelledby="message-title" className="scroll-mt-24 rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8">
           <h2 id="message-title" className="sr-only">
             Send a message
           </h2>

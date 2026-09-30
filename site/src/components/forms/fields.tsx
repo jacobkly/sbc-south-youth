@@ -27,11 +27,15 @@ function Optional() {
   return <span className="font-normal text-muted"> (optional)</span>;
 }
 
-/** A field's problem, in words and not just color. */
+/**
+ * A field's problem, in words and not just color. On phones the first one
+ * takes the focus after a failed send, instead of its field, so a screen
+ * reader reads it and the keyboard stays down.
+ */
 export function FieldError({ id, children }: { id: string; children?: string }) {
   if (!children) return null;
   return (
-    <p id={id} className="mt-2 flex gap-1.5 text-small font-medium text-danger">
+    <p id={id} tabIndex={-1} data-field-error className="mt-2 flex gap-1.5 text-small font-medium text-danger outline-hidden">
       <CircleAlert aria-hidden className="mt-px size-4 shrink-0" />
       {children}
     </p>

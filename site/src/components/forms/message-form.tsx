@@ -16,6 +16,7 @@ import { site } from "@/content/site";
 import { submitMessage } from "@/lib/forms/actions";
 import { ELAPSED_FIELD } from "@/lib/forms/guard";
 import { checkMessage, type FieldErrors, type MessageKind, readMessageInput } from "@/lib/forms/schemas";
+import { isDesktop } from "@/lib/media";
 import { Honeypot } from "./fields";
 import { FormSent, type SentProps } from "./form-sent";
 
@@ -74,21 +75,30 @@ export function MessageForm({ kind, submitLabel, finePrint, sent, children }: Pr
 
   useEffect(() => {
     startedAt.current = Date.now();
-    // After "send another", start them at the top instead of losing the focus.
+    // After "send another", start them at the form's heading. Not in a field,
+    // which would pop the keyboard up before they ask for it. Every form sits
+    // in a section labelled by its heading.
     if (round === 0) return;
-    const first = formRef.current?.querySelector<HTMLElement>("input:not([tabindex='-1']), textarea");
-    first?.focus({ preventScroll: true });
-    first?.scrollIntoView({ block: "center", behavior: "instant" });
+    const section = formRef.current?.closest<HTMLElement>("section[aria-labelledby]");
+    const heading = document.getElementById(section?.getAttribute("aria-labelledby") ?? "");
+    if (!section || !heading) return;
+    heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+    section.scrollIntoView({ block: "start", behavior: "instant" });
   }, [round]);
 
   useEffect(() => {
     if (!focusFirstProblem.current) return;
     focusFirstProblem.current = false;
-    const field = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid]');
-    if (!field) return;
-    field.focus({ preventScroll: true });
+    const form = formRef.current;
+    const field = form?.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid]');
+    if (!form || !field) return;
     // Centered, so neither the top bar nor the tab bar covers it.
     field.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "instant" : "smooth" });
+    // A PC goes straight into the field. A phone focuses the problem's message,
+    // the first in the form, so the keyboard stays down until they tap the field.
+    const target = isDesktop() ? field : form.querySelector<HTMLElement>("[data-field-error]");
+    target?.focus({ preventScroll: true });
   }, [errors]);
 
   function showProblems(next: FieldErrors) {

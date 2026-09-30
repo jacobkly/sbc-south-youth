@@ -5,7 +5,9 @@ import { TopBar } from "./top-bar";
 
 /**
  * The chrome around every public page: skip link, top bar, footer, and the
- * phone tab bar. The bottom padding keeps the footer clear of the tab bar.
+ * phone tab bar. The bottom padding is the floating tab bar's height (66 px),
+ * its gap above the home indicator, and 12 px to spare, so the end of every
+ * page scrolls clear of it.
  */
 export function SiteShell({ children }: { children: ReactNode }) {
   return (
@@ -16,7 +18,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
       >
         Skip to content
       </a>
-      <div className="flex min-h-dvh flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <div className="flex min-h-dvh flex-col pb-[calc(4.875rem+var(--tab-bar-gap))] lg:pb-0">
         <TopBar />
         <main id="main" tabIndex={-1} className="flex-1 outline-none">
           {children}

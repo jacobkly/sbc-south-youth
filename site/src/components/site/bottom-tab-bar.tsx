@@ -9,26 +9,27 @@ import { isActive } from "@/lib/nav";
 import { MoreSheet } from "./more-sheet";
 import { moreItems, tabs } from "./nav-items";
 
-const tabClasses = "group flex h-full w-full flex-col items-center justify-center gap-1 text-[0.6875rem] leading-none";
+const tabClasses =
+  "pressable flex h-14 w-full flex-col items-center justify-center gap-0.5 rounded-full text-[0.6875rem] leading-none";
 
-/** The icon in a pill, filled with the accent on the active tab. */
+/** The active tab gets a soft fill and a blue icon, so the accent stays the only color. */
+function tabClass(active: boolean) {
+  return `${tabClasses} ${active ? "bg-fg/[0.07] font-semibold text-fg" : "font-medium text-muted"}`;
+}
+
 function TabFace({ icon: Icon, label, active }: { icon: LucideIcon; label: string; active: boolean }) {
   return (
     <>
-      <span
-        className={`flex h-8 w-14 items-center justify-center rounded-full transition-[scale,background-color] duration-150 ease-out-soft group-active:scale-90 motion-reduce:transition-none motion-reduce:group-active:scale-100 ${
-          active ? "bg-accent text-on-accent" : "text-muted"
-        }`}
-      >
-        <Icon aria-hidden className="size-[22px]" strokeWidth={active ? 2.25 : 1.75} />
+      <span className="flex size-7 items-center justify-center">
+        <Icon aria-hidden className={`size-[22px] ${active ? "text-accent-ink" : ""}`} strokeWidth={active ? 2.25 : 1.75} />
       </span>
-      <span className={active ? "font-semibold text-fg" : "font-medium text-muted"}>{label}</span>
+      <span className="max-w-full truncate px-0.5">{label}</span>
     </>
   );
 }
 
 /**
- * Phone navigation: four tabs and More, fixed above the home indicator.
+ * Phone navigation: four tabs and More in a floating frosted bar, like iOS.
  * Hidden from 1024 px up, and while someone types, so it doesn't ride up
  * on the keyboard and cover the field.
  */
@@ -43,26 +44,26 @@ export function BottomTabBar() {
     <>
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl backdrop-saturate-150 typing:hidden lg:hidden"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-2 pb-(--tab-bar-gap) min-[22.5rem]:px-3 typing:hidden lg:hidden"
       >
-        <ul className="mx-auto grid h-16 max-w-lg grid-cols-5">
+        <ul className="glass pointer-events-auto mx-auto flex max-w-md rounded-full p-1">
           {tabs.map((tab) => {
             const active = !sheetOpen && isActive(pathname, tab);
             return (
-              <li key={tab.href}>
-                <Link href={tab.href} aria-current={active ? "page" : undefined} className={tabClasses}>
+              <li key={tab.href} className="min-w-0 flex-1">
+                <Link href={tab.href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
                   <TabFace icon={tab.icon} label={tab.label} active={active} />
                 </Link>
               </li>
             );
           })}
-          <li>
+          <li className="min-w-0 flex-1">
             <button
               type="button"
               aria-haspopup="dialog"
               aria-expanded={sheetOpen}
               onClick={() => setSheetPath(pathname)}
-              className={tabClasses}
+              className={tabClass(sheetOpen || onMorePage)}
             >
               <TabFace icon={Ellipsis} label="More" active={sheetOpen || onMorePage} />
             </button>

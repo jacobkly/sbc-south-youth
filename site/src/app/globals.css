@@ -30,6 +30,10 @@
 
   /* Form errors. */
   --danger: #ff6b6b;
+
+  /* The floating tab bar's top edge and shadow (see `glass`). */
+  --glass-edge: rgb(255 255 255 / 0.08);
+  --glass-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.6);
 }
 
 @media (prefers-color-scheme: light) {
@@ -44,6 +48,8 @@
     --border-strong: rgb(0 0 0 / 0.16);
     --accent-ink: #1a6aa0;
     --danger: #b42318;
+    --glass-edge: rgb(255 255 255 / 0.6);
+    --glass-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.22), 0 2px 8px rgb(0 0 0 / 0.06);
   }
 }
 
@@ -58,6 +64,8 @@
   --border-strong: rgb(0 0 0 / 0.16);
   --accent-ink: #1a6aa0;
   --danger: #b42318;
+  --glass-edge: rgb(255 255 255 / 0.6);
+  --glass-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.22), 0 2px 8px rgb(0 0 0 / 0.06);
 }
 
 @theme inline {
@@ -157,6 +165,11 @@
 /* While the keyboard is up: a text field has focus. */
 @custom-variant typing (body:has(:is(textarea, input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"])):focus) &);
 
+/* The floating tab bar's gap from the bottom: 12 px, or just above the home indicator. */
+:root {
+  --tab-bar-gap: max(0.75rem, calc(env(safe-area-inset-bottom) - 0.5rem));
+}
+
 /* Page width: 1200 px max, with 20 px gutters on phones and 32 px on desktop. */
 @utility page-x {
   margin-inline: auto;
@@ -186,6 +199,32 @@
     &:active {
       scale: none;
     }
+  }
+}
+
+/*
+ * Frosted glass for the floating tab bar, like iOS: blurred, with a light
+ * top edge. Thicker than finances' glass, so the tab labels stay AA over a
+ * white or a black photo. Nearly solid where blur isn't supported, and solid
+ * for people who ask for less transparency.
+ */
+@utility glass {
+  border: 1px solid color-mix(in oklab, var(--text) 8%, transparent);
+  background-color: color-mix(in oklab, var(--bg) 96%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge),
+    var(--glass-shadow);
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    background-color: color-mix(in oklab, var(--bg) 85%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 
