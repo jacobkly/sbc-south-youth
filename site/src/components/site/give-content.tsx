@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUpRight, Info, Landmark, Mail, ReceiptText } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Landmark, Mail, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { ButtonLink, buttonClasses } from "@/components/button";
 import { give } from "@/content/give";
@@ -48,10 +48,12 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
                 className="-z-10"
               />
               <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/80 via-60% to-black/35" />
-              <p className="font-display text-[4.5rem] leading-[0.85] font-extrabold tracking-[-0.05em] text-accent lg:text-[5.5rem]">
-                <span className="sr-only">Gift of </span>${item.dollars}
-              </p>
-              <h3 className="mt-3 text-h3">{item.title}</h3>
+              {"dollars" in item && (
+                <p className="mb-3 font-display text-[4.5rem] leading-[0.85] font-extrabold tracking-[-0.05em] text-accent lg:text-[5.5rem]">
+                  ${item.dollars}
+                </p>
+              )}
+              <h3 className="text-h3">{item.title}</h3>
               <p className="mt-1 text-pretty text-white/75">{item.body}</p>
             </li>
           ))}
@@ -75,26 +77,6 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
                 <PolicyCard point={give.tax} icon={<Landmark />} />
               </li>
             </ul>
-          </section>
-
-          <section id="camp" aria-labelledby="camp-title" className="page-x mt-16 scroll-mt-24 lg:mt-24">
-            <div className="grid items-center gap-10 overflow-hidden rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-8 md:grid-cols-2 lg:gap-16 lg:p-14">
-              <div>
-                <p className="text-eyebrow text-accent-ink uppercase">Events</p>
-                <h2 id="camp-title" className="mt-2 font-display text-h2 text-balance">
-                  Paying for an event?
-                </h2>
-                <p className="mt-3 max-w-md text-pretty text-muted">{give.eventPayments.body}</p>
-                <p className="mt-4 flex max-w-md gap-3 rounded-tile bg-surface-2 p-4 text-small text-pretty">
-                  <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-accent-ink" />
-                  {give.eventPayments.notDonation}
-                </p>
-                <Link href="/this-week" className={`mt-6 inline-flex min-h-11 items-center gap-1.5 ${linkClasses}`}>
-                  See upcoming events <ArrowRight aria-hidden className="size-4" />
-                </Link>
-              </div>
-              <PaymentNoteExample cashtag={cashtag} />
-            </div>
           </section>
 
           <section aria-labelledby="give-faq-title" className="page-x mt-16 lg:mt-24">
@@ -164,36 +146,6 @@ function GiveCard({ cashtag }: { cashtag: string }) {
         </div>
       </div>
     </section>
-  );
-}
-
-/** What a payment for an event should look like, with the note that matters picked out. */
-function PaymentNoteExample({ cashtag }: { cashtag: string }) {
-  const rows = [
-    { label: "To", value: cashtag },
-    { label: "Amount", value: "$40" },
-  ];
-
-  return (
-    <figure className="mx-auto w-full max-w-sm">
-      <div className="rotate-[-2deg] rounded-card bg-bg p-5 shadow-[0_24px_48px_-24px_rgb(0_0_0/0.5)] ring-1 ring-line-strong ring-inset sm:p-6">
-        <dl className="divide-y divide-line">
-          {rows.map((row) => (
-            <div key={row.label} className="flex items-baseline justify-between gap-4 py-3 first:pt-0">
-              <dt className="text-small text-muted">{row.label}</dt>
-              <dd className="truncate font-semibold">{row.value}</dd>
-            </div>
-          ))}
-          <div className="pt-3">
-            <dt className="text-small text-muted">For</dt>
-            <dd className="mt-2 rounded-tile bg-accent px-4 py-3 font-display text-lg leading-snug font-bold text-balance text-on-accent">
-              Your name · Event name
-            </dd>
-          </div>
-        </dl>
-      </div>
-      <figcaption className="mt-5 text-center text-small text-muted">An example. Copy the exact note from your confirmation.</figcaption>
-    </figure>
   );
 }
 

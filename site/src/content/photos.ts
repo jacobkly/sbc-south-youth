@@ -33,6 +33,7 @@ export const photos = {
   guitar: unsplash("photo-1510915361894-db8b60106cb1", "Someone playing an acoustic guitar"),
   volleyball: unsplash("photo-1612872087720-bb876e2e67d1", "Silhouettes playing beach volleyball at sunset"),
   latte: unsplash("photo-1514066558159-fc8c737ef259", "Steamed milk being poured into a latte"),
+  cupcakes: unsplash("photo-1530800919758-f1f7b1e67cd8", "Cupcakes with lit candles and a sparkler"),
 } satisfies Record<string, Photo>;
 
 export type PhotoName = keyof typeof photos;

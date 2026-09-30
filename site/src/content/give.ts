@@ -7,39 +7,37 @@ import type { PolicyPoint } from "./safety";
  * `GIVE_CASHTAG` environment variable, and the page shows a "coming soon"
  * state until it's set.
  *
- * TODO(leadership): the why, the impact examples and amounts, and every
- * answer. The receipt and tax wording also need the treasurer's approval.
+ * TODO(leadership): the why, the impact examples, and every answer. The
+ * receipt and tax wording also need the treasurer's approval.
  */
 
 export type ImpactExample = {
-  /** Whole dollars, for display only. */
-  dollars: number;
+  /** Whole dollars, for display only. Leave it out rather than guess. */
+  dollars?: number;
   title: string;
   body: string;
   photo: Photo;
 };
 
 export const give = {
-  why: "Your gift gets students to camp, fills the snack table, and keeps youth nights running every week.",
+  why: "Your gift feeds everyone on Friday nights, celebrates birthdays, and covers the extras for events like volleyball.",
 
   impact: [
     {
-      dollars: 15,
-      title: "Pizza night",
-      body: "Feeds a small group after a youth night.",
+      dollars: 200,
+      title: "Friday night food",
+      body: "Roughly what pizza and drinks for everyone cost after youth.",
       photo: photos.pizza,
     },
     {
-      dollars: 50,
-      title: "Camp scholarship",
-      body: "Covers part of a student's camp fee, so cost isn't the reason they stay home.",
-      photo: photos.campfire,
+      title: "Birthdays",
+      body: "Cupcakes and treats, so nobody's birthday goes by without a celebration.",
+      photo: photos.cupcakes,
     },
     {
-      dollars: 100,
-      title: "Worship night gear",
-      body: "Strings, cables, and batteries for the band.",
-      photo: photos.guitar,
+      title: "Volleyball and events",
+      body: "Drinks, balls, nets, and whatever else the day needs.",
+      photo: photos.volleyball,
     },
   ] satisfies ImpactExample[],
 
@@ -55,12 +53,6 @@ export const give = {
     confirmed: false,
   } satisfies PolicyPoint,
 
-  /** The `#camp` section, for people paying for an event. */
-  eventPayments: {
-    body: "Event payments go to the same Cash App. Put the note from your signup confirmation in the \"For\" line, so we can match the payment to your spot.",
-    notDonation: "Event payments pay for the event itself, so they aren't donations and don't get a tax receipt.",
-  },
-
   faq: [
     {
       question: "Is my gift tax-deductible?",
@@ -75,7 +67,7 @@ export const give = {
     {
       question: "Where does my gift go?",
       answer:
-        "Placeholder answer. It will say who manages youth funds, and that gifts pay for camps, trips, and youth nights.",
+        "Placeholder answer. It will say who manages youth funds, and that gifts pay for Friday night food, birthdays, and events.",
     },
     {
       question: "Can I give by check?",

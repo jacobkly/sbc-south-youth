@@ -18,7 +18,7 @@ export const tabs: NavItem[] = [
 export const moreItems: MoreItem[] = [
   { href: "/leaders", label: "Leaders", icon: Users, description: "Meet the people who lead youth" },
   { href: "/parents", label: "Parents & Safety", icon: ShieldCheck, description: "How we look after students" },
-  { href: "/give", label: "Give", icon: HandHeart, description: "Help fund camps, trips, and youth nights" },
+  { href: "/give", label: "Give", icon: HandHeart, description: "Friday food, birthdays, and events" },
   { href: "/contact", label: "Contact", icon: Mail, description: "Questions? Send us a message" },
   { href: "/privacy", label: "Privacy", icon: Lock, description: "What our forms collect and why" },
 ];

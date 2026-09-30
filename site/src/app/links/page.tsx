@@ -29,7 +29,7 @@ export default async function LinksPage() {
     // Never a chat invite link: the Connect page handles who gets added.
     { href: "/connect#join", label: "Join the chat", note: "Stay in the loop all week", icon: <MessageCircle /> },
   ];
-  if (giveCashtag) items.push({ href: "/give", label: "Give", note: "Help fund camps and trips", icon: <HandHeart /> });
+  if (giveCashtag) items.push({ href: "/give", label: "Give", note: "Friday food, birthdays, and events", icon: <HandHeart /> });
   for (const link of site.socials) {
     items.push({ href: link.href, label: link.label, icon: <SocialIcon kind={link.kind} />, external: true });
   }

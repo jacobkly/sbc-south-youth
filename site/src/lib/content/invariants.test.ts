@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { sampleAnnouncements } from "@/content/announcements";
 import { sampleEvents } from "@/content/events";
+import { moreItems } from "@/components/site/nav-items";
 import { visitFaq } from "@/content/faq";
+import { give } from "@/content/give";
 import { leaders } from "@/content/leaders";
 import { photos } from "@/content/photos";
 import { privacy } from "@/content/privacy";
@@ -118,6 +120,14 @@ describe("contentProblems", () => {
     expect(text).not.toMatch(/screen|background check|trained|training|side entrance|meeting up|rides and/i);
     const points = [...Object.values(safety.commitment), ...Object.values(safety.communication)];
     expect(points.filter((point) => !point.confirmed).map((point) => point.title)).toEqual([]);
+  });
+
+  it("keeps giving to what the money really pays for", () => {
+    const text = JSON.stringify([give, moreItems]);
+    expect(text).not.toMatch(/\bcamps?\b|scholarship|\btrips?\b/i);
+    expect(give.impact.map((item) => item.title).join(" ")).toMatch(/friday/i);
+    expect(give.impact.map((item) => item.title).join(" ")).toMatch(/birthday/i);
+    expect(give.impact.map((item) => item.title).join(" ")).toMatch(/volleyball/i);
   });
 
   it("passes a good fixture", () => {
