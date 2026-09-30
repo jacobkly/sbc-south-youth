@@ -19,7 +19,7 @@ export const standingNotes: StandingNote[] = [
   {
     id: "youth-cafe",
     title: "The Youth Cafe",
-    body: "Open on Sundays and after youth on Fridays. Youth members run it for the whole church.",
+    body: "Open on Sundays and after youth on Fridays. Youth members run it for the whole church, and what it makes goes back into youth.",
     photo: photos.latte,
     cta: { label: "Serve at the cafe", href: "/connect#serve" },
   },

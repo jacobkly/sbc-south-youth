@@ -18,11 +18,11 @@ export type MessageKind = (typeof messageKinds)[number];
 export const contactRoles = ["student", "parent", "other"] as const;
 export type ContactRole = (typeof contactRoles)[number];
 
-const studentBands = ["hs", "college"] as const;
+const studentBands = ["hs", "college", "not-in-school"] as const;
 
 /**
- * High school or college, on the Join form, so a leader knows when
- * they're adding a minor to the chat. It's optional.
+ * High school, college, or not in school, on the Join form, so a leader
+ * knows when they're adding a minor to the chat. It's optional.
  */
 export type StudentBand = (typeof studentBands)[number];
 
@@ -103,7 +103,7 @@ const schemas = {
     name,
     email: z.optional(email()),
     phone: z.optional(phone),
-    band: z.optional(z.enum(studentBands, "Pick high school or college.")),
+    band: z.optional(z.enum(studentBands, "Pick one.")),
   }),
   serve: z.object({
     name,

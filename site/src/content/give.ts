@@ -12,36 +12,33 @@ import type { PolicyPoint } from "./safety";
  */
 
 export type ImpactExample = {
-  /** Whole dollars, for display only. Leave it out rather than guess. */
-  dollars?: number;
-  /** One word that stands in for the amount on wide screens when there isn't one. */
-  word: string;
+  /** Rough whole dollars, for display only. */
+  dollars: number;
   title: string;
   body: string;
   photo: Photo;
 };
 
 export const give = {
-  why: "Your gift feeds everyone on Friday nights, celebrates birthdays, and covers the extras for events like volleyball.",
+  why: "Your gift feeds everyone on Friday nights, celebrates birthdays, and covers the extras for events like volleyball. Buying a drink at the Youth Cafe helps too.",
 
   impact: [
     {
       dollars: 200,
-      word: "Pizza",
       title: "Friday night food",
-      body: "Roughly what pizza and drinks for everyone cost after youth.",
+      body: "Roughly what pizza and drinks for everyone cost each Friday.",
       photo: photos.pizza,
     },
     {
-      word: "Cupcakes",
-      title: "Birthdays",
-      body: "Cupcakes and treats, so nobody's birthday goes by without a celebration.",
+      dollars: 5,
+      title: "Birthday treats",
+      body: "Per person. We celebrate everyone's birthday together at the end of each month.",
       photo: photos.cupcakes,
     },
     {
-      word: "Gear",
-      title: "Volleyball and events",
-      body: "Drinks, balls, nets, and whatever else the day needs.",
+      dollars: 50,
+      title: "Volleyball days",
+      body: "Drinks and gear when we play, which is a lot in the spring and summer.",
       photo: photos.volleyball,
     },
   ] satisfies ImpactExample[],

@@ -8,12 +8,13 @@ import type { WeeklyGathering } from "@/lib/content/types";
  */
 export const gatherings: WeeklyGathering[] = [
   {
-    slug: "weekly-youth-night",
-    title: "Youth Night",
+    slug: "weekly-youth",
+    // It has no name. Everyone just calls it "youth".
+    title: "Youth",
     weekday: 5,
     startTime: "19:30",
     endTime: "21:00",
-    description: "Worship and a message, then food, the cafe, and hanging out until about 10.",
+    description: "Worship and a message, then food, the cafe, and hanging out until 9:30 or 10.",
     photo: photos.worshipCrowd,
   },
 ];

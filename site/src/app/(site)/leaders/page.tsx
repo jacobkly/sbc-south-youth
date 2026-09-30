@@ -12,7 +12,7 @@ export default function LeadersPage() {
   return (
     <>
       <PageIntro title={pages.leaders.heading}>
-        The people who lead youth nights and would love to meet you. Come say hi, or send them an email.
+        The people who lead youth on Fridays and would love to meet you. Come say hi, or send them an email.
       </PageIntro>
 
       {/*

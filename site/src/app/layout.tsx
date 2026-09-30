@@ -16,7 +16,7 @@ const bricolage = Bricolage_Grotesque({
 });
 
 const description =
-  "Youth night every Friday at 7:30 PM for high school and college students at Seattle Bethany Church South in Maple Valley, WA.";
+  "Friday nights at 7:30 PM for high school and college age, at Seattle Bethany Church South in Maple Valley, WA.";
 
 export const metadata: Metadata = {
   // Makes the link preview image URL absolute. Vercel previews use their own URL instead.

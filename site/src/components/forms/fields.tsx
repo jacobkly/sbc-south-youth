@@ -377,8 +377,9 @@ export function PrivacyNote({ children }: { children: ReactNode }) {
   );
 }
 
-/** High school or college, the Join form's optional question. */
+/** In school or not, the Join form's optional question. */
 export const studentBands = [
-  { value: "hs", label: "High school" },
-  { value: "college", label: "College" },
+  { value: "hs", label: "In high school" },
+  { value: "college", label: "In college" },
+  { value: "not-in-school", label: "Not in school" },
 ] as const;

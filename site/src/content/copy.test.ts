@@ -39,6 +39,12 @@ describe("site copy", () => {
     expect(files.filter(({ text }) => filler.test(text)).map(({ path }) => path)).toEqual([]);
   });
 
+  it("calls Fridays just youth, and never assumes anyone is in college", () => {
+    // Nobody says "youth night", and plenty of people who come aren't in school.
+    const wrong = /youth night|college students/i;
+    expect(files.filter(({ text }) => wrong.test(text)).map(({ path }) => path)).toEqual([]);
+  });
+
   it("puts the real Friday start time in the home headline", () => {
     const friday = gatherings.find((gathering) => gathering.weekday === 5);
     const [hours, minutes] = (friday?.startTime ?? "").split(":").map(Number);
@@ -51,9 +57,8 @@ describe("site copy", () => {
     expect(home.friday.stops[0].time).toBe(`${hours % 12 || 12}:${String(minutes).padStart(2, "0")} PM`);
   });
 
-  it("gives every Give example one short word for when there's no amount", () => {
-    // The word stands in the big-number column on wide screens, so it has to fit there.
-    const words = give.impact.map((item) => item.word);
-    expect(words.filter((word) => typeof word !== "string" || !/^\S{1,10}$/.test(word))).toEqual([]);
+  it("gives every Give example a whole-dollar amount", () => {
+    const amounts = give.impact.map((item) => item.dollars);
+    expect(amounts.filter((dollars) => !Number.isInteger(dollars) || dollars <= 0)).toEqual([]);
   });
 });

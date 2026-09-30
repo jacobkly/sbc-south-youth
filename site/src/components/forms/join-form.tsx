@@ -16,7 +16,7 @@ export function JoinForm() {
       {(errors) => (
         <>
           <TextField label="Your name" name="name" autoComplete="name" maxLength={limits.name} error={errors.name} />
-          <ChoiceTiles legend="I'm in…" optional name="band" choices={studentBands} error={errors.band} />
+          <ChoiceTiles legend="Right now I'm…" optional name="band" choices={studentBands} error={errors.band} />
           <ReachFields errors={errors} legend="How can a leader add you?" />
         </>
       )}

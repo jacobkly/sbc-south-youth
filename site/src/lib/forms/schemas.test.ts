@@ -132,15 +132,17 @@ describe("checkMessage: join", () => {
     expect(checkMessage("join", maya)).toEqual({ ok: true, message: { kind: "join", ...maya } });
   });
 
-  it("keeps high school or college when someone says", () => {
-    const result = checkMessage("join", { ...maya, band: "hs" });
-    expect(result.ok && result.message.band).toBe("hs");
+  it("keeps high school, college, or not in school when someone says", () => {
+    for (const band of ["hs", "college", "not-in-school"]) {
+      const result = checkMessage("join", { ...maya, band });
+      expect(result.ok && result.message.band).toBe(band);
+    }
   });
 
-  it("only takes high school or college", () => {
+  it("only takes the choices on the form", () => {
     expect(checkMessage("join", { ...maya, band: "parent" })).toEqual({
       ok: false,
-      errors: { band: "Pick high school or college." },
+      errors: { band: "Pick one." },
     });
   });
 });

@@ -22,7 +22,7 @@ export function DesktopNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={`pressable relative inline-flex h-10 items-center rounded-full px-3.5 text-[0.9375rem] font-medium after:absolute after:inset-x-0 after:-inset-y-0.5 ${
-                  active ? "bg-surface-2 text-fg" : "text-muted hover:text-fg"
+                  active ? "bg-accent-ink/12 text-fg" : "text-muted hover:text-fg"
                 }`}
               >
                 {item.label}

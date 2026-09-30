@@ -18,7 +18,7 @@ export default function ContactPage() {
   return (
     <>
       <PageIntro title={pages.contact.heading}>
-        Questions about youth nights, events, or anything else? Send us a message and a leader will write back.
+        Questions about Fridays, events, or anything else? Send us a message and a leader will write back.
       </PageIntro>
 
       {/* The form stops at 42rem below lg and 48rem from xl, so its fields never run past about 44rem. */}

@@ -33,7 +33,7 @@ export const privacy = {
     {
       name: "Join the group chat",
       href: "/connect#join",
-      collects: ["Name", "Email or phone", "High school or college (optional)"],
+      collects: ["Name", "Email or phone", "High school, college, or not in school (optional)"],
       why: "So a leader can add you to the chat.",
     },
     {

@@ -16,7 +16,7 @@ export type Photo = {
   placeholder: boolean;
 };
 
-/** A night that repeats every week, like Friday youth night. */
+/** A night that repeats every week, like Friday youth. */
 export type WeeklyGathering = {
   /** Starts with `weekly-`, which event slugs can't. */
   slug: string;

@@ -10,9 +10,9 @@ export type SocialLink = { kind: SocialKind; label: string; href: string };
 export const site = {
   name: "SBC South Youth",
   url: "https://sbcsouthyouth.com",
-  tagline: "High school and college students, together every Friday night at Seattle Bethany Church South.",
+  tagline: "High school and college age, together every Friday night at Seattle Bethany Church South.",
 
-  /** The building youth night is in. */
+  /** The building Friday youth is in. */
   campus: "Seattle Bethany Church South",
   address: {
     street: "23855 SE 216th St",

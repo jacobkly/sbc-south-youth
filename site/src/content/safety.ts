@@ -19,7 +19,7 @@ export const safety = {
   commitment: {
     leaders: {
       title: "Who leads",
-      body: "Every leader is a member of the main church, chosen by the youth leader and the pastor.",
+      body: "Every leader is a member of the main church, chosen by the youth leader and the pastor. Leaders bring decisions to the pastors, who have the final say.",
       confirmed: true,
     },
     learning: {
@@ -37,7 +37,7 @@ export const safety = {
   dropOff: {
     notes: [
       "Drop off and pick up at the front doors, right by the parking lot.",
-      "Service ends around 9, and most people hang out until about 10. There's no set pick-up time.",
+      "Service ends around 9, and most people hang out until 9:30 or 10. There's no set pick-up time.",
       "Students sort out their own rides, and leaders stay until everyone's been picked up.",
     ],
     photo: photos.entrance,
@@ -62,7 +62,7 @@ export const safety = {
   } satisfies Record<string, PolicyPoint>,
 
   photos: {
-    body: "We sometimes take photos at youth nights and events for this site and Instagram.",
+    body: "We sometimes take photos on Fridays and at events for this site and Instagram.",
     removal: "We don't use a photo release. Ask and we'll take any photo down.",
   },
 

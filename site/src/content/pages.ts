@@ -57,7 +57,7 @@ export const pages = {
   contact: {
     path: "/contact",
     title: "Contact",
-    description: "Questions about youth nights, events, or anything else? Send us a message.",
+    description: "Questions about Fridays, events, or anything else? Send us a message.",
     heading: "Send us a message",
   },
   privacy: {

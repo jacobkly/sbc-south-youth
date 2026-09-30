@@ -4,7 +4,7 @@ import type { FaqItem } from "@/lib/content/types";
 export const visitFaq: FaqItem[] = [
   {
     question: "What should I wear?",
-    answer: "Whatever you'd wear to school or to hang out with friends. Nobody dresses up.",
+    answer: "Whatever you'd wear to school, to work, or to hang out with friends. Nobody dresses up.",
   },
   {
     question: "Do I need to know anyone?",
@@ -28,8 +28,14 @@ export const visitFaq: FaqItem[] = [
     answer: "Please do. Coming with a friend is the easiest way to try it out.",
   },
   {
+    // TODO(leadership): how often the girls' and the guys' Bible studies meet.
+    question: "Is there anything besides Fridays?",
+    answer:
+      "The girls have a Bible study about once a month, and the guys have their own Bible studies and hangouts. Ask a leader when the next one is. We're at church together a lot too, not just on Fridays.",
+  },
+  {
     question: "When do parents pick up?",
     answer:
-      "There's no set time. Service ends around 9, and most people hang out until about 10. Students sort out their own rides, and leaders stay until everyone's been picked up.",
+      "There's no set time. Service ends around 9, and most people hang out until 9:30 or 10. Students sort out their own rides, and leaders stay until everyone's been picked up.",
   },
 ];

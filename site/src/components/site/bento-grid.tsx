@@ -29,7 +29,7 @@ const instagram = site.socials.find((social) => social.kind === "instagram");
 
 /**
  * The home highlights, sized by importance: the pinned announcement, a
- * countdown to the next featured event (or the next youth night), then
+ * countdown to the next featured event (or the next Friday), then
  * the Cafe, Serve, Leaders, and Instagram. When an announcement or event
  * ends, the feed script swaps in the next one, or a fallback when there's
  * none left. Needs the feed root around it, and `RevealScript` after it.

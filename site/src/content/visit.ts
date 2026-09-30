@@ -8,19 +8,22 @@ export const visit = {
   parking: {
     notes: [
       "Park in the church's lot. It's right at the front door.",
-      "Come in through the front doors.",
+      "Come in through the front doors. We meet in the main sanctuary, right ahead of you.",
       "Drop-off and pick-up are at the front doors too.",
     ],
     entrancePhoto: photos.entrance,
   },
 
   firstNight: [
-    { title: "Come on in", body: "The lot is right out front, so walk straight in the front doors." },
-    { title: "Worship", body: "Music is a big deal here. The band is usually the same team that leads on Sunday." },
-    { title: "One message", body: "Everyone together, high school and college, for a message about Jesus." },
+    {
+      title: "Come on in",
+      body: "The lot is right out front. Walk in the front doors, and the main sanctuary is right ahead.",
+    },
+    { title: "Worship", body: "We worship Jesus together, and music is a big deal here." },
+    { title: "One message", body: "Everyone together, for a message about Jesus." },
     {
       title: "Food and hanging out",
-      body: "Pizza and drinks, often a full meal. The cafe opens, there are a few games, and people hang out until about 10.",
+      body: "Pizza and drinks, often a full meal. The cafe opens, there are a few games, and people hang out until 9:30 or 10.",
     },
   ],
 

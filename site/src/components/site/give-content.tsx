@@ -35,7 +35,7 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
 
         <section aria-labelledby="impact-title" className="mt-16 lg:mt-24 xl:col-span-7 xl:mt-0">
           <SectionHeader id="impact-title" title="Where your gift goes" />
-          {/* Photo cards, then from xl up a list with a big number, or a word where there's no amount. */}
+          {/* Photo cards, then from xl up a list with a big number. */}
           <ul className="mt-6 grid gap-4 md:grid-cols-3 lg:gap-6 xl:grid-cols-1 xl:gap-0 xl:divide-y xl:divide-line xl:border-y xl:border-line">
             {give.impact.map((item) => (
               <li
@@ -47,10 +47,8 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
                   <Photo photo={{ ...item.photo, alt: "" }} seed={item.title} sizes={photoSizes({ lg: 1 / 3, md: 1 / 3 })} />
                   <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/80 via-60% to-black/35" />
                 </div>
-                <p
-                  className={`mb-3 font-display text-[4.5rem] leading-[0.85] font-extrabold tracking-[-0.05em] text-accent lg:text-[5.5rem] xl:mb-0 xl:text-[clamp(3rem,4vw,5rem)] xl:text-accent-ink ${item.dollars === undefined ? "hidden xl:block" : ""}`}
-                >
-                  {item.dollars === undefined ? item.word : `$${item.dollars}`}
+                <p className="mb-3 font-display text-[4.5rem] leading-[0.85] font-extrabold tracking-[-0.05em] text-accent lg:text-[5.5rem] xl:mb-0 xl:text-[clamp(3rem,4vw,5rem)] xl:text-accent-ink">
+                  ${item.dollars}
                 </p>
                 <div>
                   <h3 className="text-h3">{item.title}</h3>

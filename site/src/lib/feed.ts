@@ -26,7 +26,7 @@ export const AGENDA_DAYS = 56;
 /** One night of a weekly gathering, or an event. */
 export type FeedItem = {
   kind: "gathering" | "event";
-  /** Unique in a feed, like `weekly-youth-night@2026-10-02` or an event id. */
+  /** Unique in a feed, like `weekly-youth@2026-10-02` or an event id. */
   key: string;
   /** The `/events/[slug]` page. */
   slug: string;
@@ -121,7 +121,7 @@ export function featuredItems(events: SiteEvent[], now: Date): FeedItem[] {
 /**
  * What the home countdown can show, in order: the next few featured
  * events, then the next few weekly nights, so it counts down to the next
- * youth night when nothing is featured.
+ * Friday when nothing is featured.
  */
 export function countdownItems({
   events,

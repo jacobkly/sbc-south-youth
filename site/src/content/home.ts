@@ -5,7 +5,7 @@ export const home = {
   hero: {
     // Matches the weekly schedule, which a test checks.
     title: "Fridays at 7:30",
-    lede: "Worship and a message, then pizza and hanging out until about 10. High school and college students, all together.",
+    lede: "Worship and a message, then pizza and hanging out until 9:30 or 10. High school and college age, all together.",
     photo: photos.handsRaised,
     // Where to keep the crop on a phone, which shows the middle of a wide photo.
     focus: "62% 50%",
@@ -24,10 +24,10 @@ export const home = {
   friday: {
     title: "A Friday night",
     stops: [
-      { time: "7:30 PM", title: "Worship", body: "Led by the band that plays on Sundays." },
-      { time: "Then", title: "A message", body: "Everyone together, high school and college." },
+      { time: "7:30 PM", title: "Worship", body: "Worshiping Jesus together, with a live band." },
+      { time: "Then", title: "A message", body: "One message about Jesus, for everyone together." },
       { time: "About 9", title: "Food and the cafe", body: "Pizza and drinks, often a full meal, and a few games." },
-      { time: "Until about 10", title: "Hanging out", body: "Leaders stay until everyone's been picked up." },
+      { time: "Until 9:30–10", title: "Hanging out", body: "Leaders stay until everyone's been picked up." },
     ],
   },
 
@@ -38,9 +38,9 @@ export const home = {
    */
   highlights: {
     title: "Coming up",
-    cafe: { title: "Youth Cafe", body: "Open Sundays and after youth on Fridays." },
+    cafe: { title: "Youth Cafe", body: "Open Sundays and after youth on Fridays. What it makes goes back into youth." },
     serve: { title: "Find a place to serve", body: "Worship, the cafe, and more, for regulars." },
-    leaders: { title: "Meet the team", body: "Who you'll see on a youth night." },
+    leaders: { title: "Meet the team", body: "Who you'll see on Fridays." },
     instagram: { title: "Instagram", body: "Big events and reminders." },
   },
 } as const;

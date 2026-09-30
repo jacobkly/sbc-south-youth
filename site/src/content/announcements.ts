@@ -29,10 +29,9 @@ export function sampleAnnouncements(now: Date): Announcement[] {
       cta: { label: "See the retreat", href: "/events/weekend-retreat" },
     },
     {
-      // TODO(leadership): where to get one, and the price if we show it.
       id: "sample-hoodies",
       title: "Youth hoodies are here",
-      body: "Ask at the cafe after youth.",
+      body: "Get one at the cafe when it's open.",
       pinned: false,
       publishAt: at(-6),
       expiresAt: at(21),

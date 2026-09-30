@@ -27,7 +27,7 @@ export default function ThisWeekPage() {
   return (
     <>
       <PageIntro title={pages.thisWeek.heading} aside={<SubscribeBar />}>
-        Youth nights, events, and announcements for the next few weeks.
+        Fridays, events, and announcements for the next few weeks.
       </PageIntro>
       <Feed />
     </>
