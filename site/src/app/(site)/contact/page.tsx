@@ -1,13 +1,9 @@
-import { Mail } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { buttonClasses } from "@/components/button";
 import { ContactForm } from "@/components/forms/contact-form";
 import { SocialIcon } from "@/components/icons/social-icon";
-import { Avatar } from "@/components/site/avatar";
 import { CopyButton } from "@/components/site/copy-button";
 import { PageIntro } from "@/components/site/page-intro";
-import { leaders, parentContactSlug } from "@/content/leaders";
 import { pages } from "@/content/pages";
 import { site } from "@/content/site";
 import { pageMetadata } from "@/lib/metadata";
@@ -17,9 +13,6 @@ export const metadata: Metadata = pageMetadata(pages.contact);
 const cardClasses = "rounded-card bg-surface p-5 ring-1 ring-line ring-inset sm:p-6";
 
 export default function ContactPage() {
-  const pastor = leaders.find((leader) => leader.slug === parentContactSlug);
-  const pastorFirstName = pastor?.name.trim().split(/\s+/)[0];
-
   return (
     <>
       <PageIntro eyebrow={pages.contact.eyebrow} title={pages.contact.heading}>
@@ -46,30 +39,18 @@ export default function ContactPage() {
             <CopyButton text={site.email} label="Copy email" size="sm" className="mt-4" />
           </div>
 
-          {pastor && (
-            <div className={cardClasses}>
-              <div className="flex items-center gap-4">
-                <Avatar leader={pastor} className="size-14" />
-                <div className="min-w-0">
-                  <p className="text-eyebrow text-accent-ink uppercase">For parents</p>
-                  <p className="mt-1 font-semibold">{pastor.name}</p>
-                  <p className="text-small text-muted">{pastor.role}</p>
-                </div>
-              </div>
-              <p className="mt-4 text-pretty text-muted">
-                Questions about safety, a trip, or your student? You can write to {pastorFirstName} directly.
-              </p>
-              {pastor.email && (
-                <a
-                  href={`mailto:${pastor.email}`}
-                  className={buttonClasses({ variant: "secondary", className: "mt-4 w-full sm:w-auto" })}
-                >
-                  <Mail aria-hidden />
-                  Email {pastorFirstName}
-                </a>
-              )}
-            </div>
-          )}
+          <div className={cardClasses}>
+            <p className="text-eyebrow text-accent-ink uppercase">For parents</p>
+            <p className="mt-2 text-pretty text-muted">
+              Ask any youth leader at church, or use this form and pick &ldquo;Parent or guardian.&rdquo;
+            </p>
+            <Link
+              href="/parents"
+              className="mt-4 inline-block font-medium underline decoration-line-strong underline-offset-4 hover:decoration-accent-ink"
+            >
+              How we look after students
+            </Link>
+          </div>
 
           <div className={`${cardClasses} flex items-center justify-between gap-4`}>
             <p className="text-small text-muted">

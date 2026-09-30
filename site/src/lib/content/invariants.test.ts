@@ -79,6 +79,13 @@ describe("contentProblems", () => {
     expect(clashes.map((event) => event.slug)).toEqual([]);
   });
 
+  it("keeps the safety page to what the church actually does", () => {
+    const text = JSON.stringify(safety);
+    expect(text).not.toMatch(/screen|background check|trained|training|side entrance|meeting up|rides and/i);
+    const points = [...Object.values(safety.commitment), ...Object.values(safety.communication)];
+    expect(points.filter((point) => !point.confirmed).map((point) => point.title)).toEqual([]);
+  });
+
   it("passes a good fixture", () => {
     expect(
       contentProblems({ gatherings: [gathering], events: [event], announcements: [announcement], leaders: [leader] }),

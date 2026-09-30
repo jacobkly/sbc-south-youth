@@ -11,6 +11,10 @@ export const sent = {
 };
 
 export const contactTopics: Record<string, { label: string; message: string }> = {
+  parent: {
+    label: "A parent's question",
+    message: "I'm a parent, and I have a question about ",
+  },
   "photo-removal": {
     label: "Photo removal",
     message: "Please take down a photo.\n\nWhere it is (a link or the page): \nWho's in it: ",

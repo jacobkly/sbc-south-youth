@@ -41,7 +41,7 @@ export const pages = {
     path: "/parents",
     title: "Parents & Safety",
     description:
-      "How we look after students, what a typical night looks like, drop-off and pick-up, and how to reach the youth pastor.",
+      "How we look after students, what a typical night looks like, drop-off and pick-up, and how to reach a leader.",
     eyebrow: "Parents & Safety",
     heading: "For parents.",
   },

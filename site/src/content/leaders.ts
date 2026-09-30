@@ -27,6 +27,3 @@ export const leaders: Leader[] = [
     email: "leader@example.org",
   },
 ];
-
-/** The leader parents are pointed to on the Parents & Safety page. */
-export const parentContactSlug = "youth-pastor";
