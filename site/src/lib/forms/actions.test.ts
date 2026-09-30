@@ -12,7 +12,7 @@ function form(fields: Record<string, string>): FormData {
 const person = {
   name: "Maya  Example",
   email: "maya@example.com",
-  gradeBand: "parent",
+  role: "parent",
   message: "When is pickup?",
   [ELAPSED_FIELD]: String(MIN_FILL_MS + 5000),
 };

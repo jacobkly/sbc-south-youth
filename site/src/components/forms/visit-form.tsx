@@ -1,7 +1,7 @@
 "use client";
 
 import { limits } from "@/lib/forms/schemas";
-import { ChoiceTiles, PrivacyNote, ReachFields, studentBands, TextArea, TextField } from "./fields";
+import { PrivacyNote, ReachFields, TextArea, TextField } from "./fields";
 import { MessageForm } from "./message-form";
 
 /** "I'm coming this week", so a leader can look out for them. Optional: anyone can just show up. */
@@ -16,7 +16,6 @@ export function VisitForm() {
       {(errors) => (
         <>
           <TextField label="Your name" name="name" autoComplete="name" maxLength={limits.name} error={errors.name} />
-          <ChoiceTiles legend="I'm in…" name="gradeBand" choices={studentBands} error={errors.gradeBand} />
           <ReachFields errors={errors} />
           <TextArea
             label="Anything we should know?"

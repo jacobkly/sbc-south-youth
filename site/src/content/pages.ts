@@ -33,7 +33,7 @@ export const pages = {
   connect: {
     path: "/connect",
     title: "Connect & Serve",
-    description: "Come to a youth night, join the group chat or a small group, and find a team to serve on.",
+    description: "Come on a Friday, join the group chat once you're a regular, and find a place to serve.",
     eyebrow: "Connect & Serve",
     heading: "Come. Connect. Serve.",
   },

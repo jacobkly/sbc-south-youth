@@ -151,6 +151,7 @@ type ChoiceGroupProps = {
   choices: readonly Choice[];
   error?: string;
   hint?: ReactNode;
+  optional?: boolean;
   className?: string;
 };
 
@@ -162,12 +163,16 @@ function GroupShell({
   legend,
   hint,
   error,
+  optional,
   className,
   children,
 }: Omit<ChoiceGroupProps, "name" | "choices"> & { id: string; children: ReactNode }) {
   return (
     <fieldset className={className}>
-      <legend className={labelClasses}>{legend}</legend>
+      <legend className={labelClasses}>
+        {legend}
+        {optional && <Optional />}
+      </legend>
       {hint && (
         <p id={`${id}-hint`} className="mt-1 text-small text-muted">
           {hint}
@@ -190,6 +195,7 @@ export function ChoiceTiles({
   choices,
   error,
   hint,
+  optional,
   className,
   onValueChange,
 }: ChoiceGroupProps & { onValueChange?: (value: string) => void }) {
@@ -197,7 +203,7 @@ export function ChoiceTiles({
   const columns = choices.length >= 4 ? "sm:grid-cols-4" : choices.length === 3 ? "sm:grid-cols-3" : "sm:max-w-md";
 
   return (
-    <GroupShell id={id} legend={legend} hint={hint} error={error} className={className}>
+    <GroupShell id={id} legend={legend} hint={hint} error={error} optional={optional} className={className}>
       <div className={`mt-2.5 grid grid-cols-2 gap-2 ${columns}`}>
         {choices.map((choice) => (
           <label
@@ -367,7 +373,7 @@ export function PrivacyNote({ children }: { children: ReactNode }) {
   );
 }
 
-/** High school or college, for the forms only students fill in. */
+/** High school or college, the Join form's optional question. */
 export const studentBands = [
   { value: "hs", label: "High school" },
   { value: "college", label: "College" },

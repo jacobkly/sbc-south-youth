@@ -11,7 +11,7 @@ export const home = {
 
   quickActions: [
     { href: "/visit", icon: "new", title: "I'm new", body: "What a first night looks like." },
-    { href: "/connect#join", icon: "chat", title: "Join the chat", body: "Ask to join the group chat." },
+    { href: "/connect#join", icon: "chat", title: "Join the chat", body: "For regulars. Ask and a leader adds you." },
     { href: "/parents", icon: "parents", title: "Parents", body: "Safety, leaders, and what to expect." },
   ],
 
@@ -27,7 +27,7 @@ export const home = {
       cta: "Open This Week",
     },
     leaders: { title: "Meet the team", body: "Who you'll see on a youth night." },
-    serve: { title: "Serve on a team", body: "Help make youth nights happen." },
+    serve: { title: "Find a place to serve", body: "Worship, the cafe, and more, for regulars." },
     give: { title: "Give", body: "Help students get to camp." },
     follow: { title: "Follow along", body: "Find us on social." },
   },

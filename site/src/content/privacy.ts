@@ -27,20 +27,20 @@ export const privacy = {
     {
       name: "Plan a visit",
       href: "/visit#coming",
-      collects: ["Name", "Email or phone", "High school or college", "A note (optional)"],
+      collects: ["Name", "Email or phone", "A note (optional)"],
       why: "So a leader can look out for you on your first night.",
     },
     {
-      name: "Join a group",
+      name: "Join the group chat",
       href: "/connect#join",
-      collects: ["Name", "Email or phone", "High school or college", "Which group", "Parent or guardian email (high school)"],
-      why: "So a leader can add you, with a parent or guardian in the loop for high school students.",
+      collects: ["Name", "Email or phone", "High school or college (optional)"],
+      why: "So a leader can add you to the chat.",
     },
     {
       name: "Serve",
       href: "/connect#serve",
-      collects: ["Name", "Email or phone", "High school or college", "Teams you're interested in", "A note (optional)"],
-      why: "So the right team leader can follow up.",
+      collects: ["Name", "Email or phone", "Areas you'd like to help in", "A note (optional)"],
+      why: "So a leader can follow up.",
     },
   ] satisfies FormPrivacy[],
 };

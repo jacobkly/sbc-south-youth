@@ -50,8 +50,8 @@ export default function LeadersPage() {
           <LinkTile href="/parents" eyebrow="For parents" title="How we look after students">
             Screening, drop-off, and how leaders stay in touch.
           </LinkTile>
-          <LinkTile href="/connect#serve" eyebrow="Want to help?" title="Serve on a team" tone="accent">
-            Find a spot on the team that fits you.
+          <LinkTile href="/connect#serve" eyebrow="Want to help?" title="Find a place to serve" tone="accent">
+            Worship, the cafe, and more, for regulars.
           </LinkTile>
         </div>
       </section>

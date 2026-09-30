@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checkMessage, isPhone, limits, readMessageInput, type MessageInput } from "./schemas";
+import { serveAreas } from "@/content/serve-areas";
+import { checkMessage, contactRoles, isPhone, limits, readMessageInput, type MessageInput } from "./schemas";
 
 function form(fields: Record<string, string | string[]>): FormData {
   const data = new FormData();
@@ -17,8 +18,8 @@ describe("readMessageInput", () => {
     });
   });
 
-  it("collects every checked team", () => {
-    expect(readMessageInput(form({ teams: ["tech", "welcome", ""] })).teams).toEqual(["tech", "welcome"]);
+  it("collects every checked area", () => {
+    expect(readMessageInput(form({ areas: ["media", "worship", ""] })).areas).toEqual(["media", "worship"]);
   });
 
   it("counts a line break as one character, however the browser sent it", () => {
@@ -26,7 +27,7 @@ describe("readMessageInput", () => {
   });
 
   it("ignores fields no form has", () => {
-    expect(readMessageInput(form({ name: "Maya", role: "admin" }))).toEqual({ name: "Maya" });
+    expect(readMessageInput(form({ name: "Maya", gradeBand: "hs", admin: "yes" }))).toEqual({ name: "Maya" });
   });
 });
 
@@ -41,7 +42,7 @@ describe("isPhone", () => {
 });
 
 describe("checkMessage: contact", () => {
-  const valid: MessageInput = { ...maya, gradeBand: "parent", message: "When is pickup?" };
+  const valid: MessageInput = { ...maya, role: "parent", message: "When is pickup?" };
 
   it("accepts a full message", () => {
     expect(checkMessage("contact", valid)).toEqual({ ok: true, message: { kind: "contact", ...valid } });
@@ -53,7 +54,7 @@ describe("checkMessage: contact", () => {
       errors: {
         name: "Add your name.",
         email: "Add your email so we can write back.",
-        gradeBand: "Pick one.",
+        role: "Pick one.",
         message: "Write a message.",
       },
     });
@@ -90,32 +91,32 @@ describe("checkMessage: contact", () => {
     });
   });
 
+  it("asks if you're a student, a parent, or someone else", () => {
+    expect(contactRoles).toEqual(["student", "parent", "other"]);
+    for (const role of contactRoles) expect(checkMessage("contact", { ...valid, role }).ok).toBe(true);
+  });
+
   it("only takes the choices on the form", () => {
-    expect(checkMessage("contact", { ...valid, gradeBand: "leader" })).toEqual({
-      ok: false,
-      errors: { gradeBand: "Pick one." },
-    });
+    for (const role of ["hs", "college", "leader"]) {
+      expect(checkMessage("contact", { ...valid, role })).toEqual({ ok: false, errors: { role: "Pick one." } });
+    }
   });
 });
 
 describe("checkMessage: visit", () => {
-  it("needs an email or a phone, not both", () => {
-    expect(checkMessage("visit", { name: "Maya", gradeBand: "hs" })).toEqual({
+  it("needs only a name and an email or a phone", () => {
+    expect(checkMessage("visit", { name: "Maya" })).toEqual({
       ok: false,
       errors: { reach: "Add an email or a phone number." },
     });
-    expect(checkMessage("visit", { name: "Maya", gradeBand: "hs", phone: "555-555-0123" }).ok).toBe(true);
-  });
-
-  it("only takes high school or college", () => {
-    expect(checkMessage("visit", { ...maya, gradeBand: "parent" })).toEqual({
-      ok: false,
-      errors: { gradeBand: "Pick high school or college." },
+    expect(checkMessage("visit", { name: "Maya", phone: "555-555-0123" })).toEqual({
+      ok: true,
+      message: { kind: "visit", name: "Maya", phone: "555-555-0123" },
     });
   });
 
   it("keeps the note short", () => {
-    expect(checkMessage("visit", { ...maya, gradeBand: "college", message: "x".repeat(limits.note + 1) })).toEqual({
+    expect(checkMessage("visit", { ...maya, message: "x".repeat(limits.note + 1) })).toEqual({
       ok: false,
       errors: { message: `Keep it under ${limits.note} characters.` },
     });
@@ -123,69 +124,51 @@ describe("checkMessage: visit", () => {
 });
 
 describe("checkMessage: join", () => {
-  const college: MessageInput = { ...maya, gradeBand: "college", group: "chat" };
-
-  it("needs a parent or guardian's email for high school", () => {
-    expect(checkMessage("join", { ...college, gradeBand: "hs" })).toEqual({
+  it("needs only a name and an email or a phone", () => {
+    expect(checkMessage("join", {})).toEqual({
       ok: false,
-      errors: { parentEmail: "Add a parent or guardian's email." },
+      errors: { name: "Add your name.", reach: "Add an email or a phone number." },
     });
-    const result = checkMessage("join", { ...college, gradeBand: "hs", parentEmail: "parent@example.com" });
-    expect(result.ok && result.message.parentEmail).toBe("parent@example.com");
+    expect(checkMessage("join", maya)).toEqual({ ok: true, message: { kind: "join", ...maya } });
   });
 
-  it("won't take the student's own email as the parent's", () => {
-    expect(checkMessage("join", { ...college, gradeBand: "hs", parentEmail: "MAYA@example.com" })).toEqual({
+  it("keeps high school or college when someone says", () => {
+    const result = checkMessage("join", { ...maya, band: "hs" });
+    expect(result.ok && result.message.band).toBe("hs");
+  });
+
+  it("only takes high school or college", () => {
+    expect(checkMessage("join", { ...maya, band: "parent" })).toEqual({
       ok: false,
-      errors: { parentEmail: "Use a parent's or guardian's email, not yours." },
-    });
-  });
-
-  it("doesn't keep a parent's email for college", () => {
-    const result = checkMessage("join", { ...college, parentEmail: "parent@example.com" });
-    expect(result).toEqual({ ok: true, message: { kind: "join", ...college } });
-  });
-
-  it("asks which group", () => {
-    expect(checkMessage("join", { ...college, group: undefined })).toEqual({
-      ok: false,
-      errors: { group: "Pick one." },
-    });
-  });
-
-  it("reports the reach and parent rules alongside field errors", () => {
-    expect(checkMessage("join", { gradeBand: "hs", group: "both" })).toEqual({
-      ok: false,
-      errors: {
-        name: "Add your name.",
-        reach: "Add an email or a phone number.",
-        parentEmail: "Add a parent or guardian's email.",
-      },
+      errors: { band: "Pick high school or college." },
     });
   });
 });
 
 describe("checkMessage: serve", () => {
-  it("needs at least one team", () => {
-    expect(checkMessage("serve", { ...maya, gradeBand: "hs" })).toEqual({
+  it("needs at least one area", () => {
+    expect(checkMessage("serve", maya)).toEqual({
       ok: false,
-      errors: { teams: "Pick at least one team." },
+      errors: { areas: "Pick at least one area." },
     });
   });
 
-  it("only takes teams offered to that grade band", () => {
-    expect(checkMessage("serve", { ...maya, gradeBand: "hs", teams: ["tech", "small-groups"] })).toEqual({
+  it("only takes areas on the list", () => {
+    expect(checkMessage("serve", { ...maya, areas: ["cafe", "nope"] })).toEqual({
       ok: false,
-      errors: { teams: "Pick teams from the list." },
-    });
-    expect(checkMessage("serve", { ...maya, gradeBand: "hs", teams: ["tech", "nope"] })).toEqual({
-      ok: false,
-      errors: { teams: "Pick teams from the list." },
+      errors: { areas: "Pick areas from the list." },
     });
   });
 
-  it("accepts teams for the grade band", () => {
-    const result = checkMessage("serve", { ...maya, gradeBand: "college", teams: ["small-groups", "tech"] });
-    expect(result.ok && result.message.teams).toEqual(["small-groups", "tech"]);
+  it("takes any areas on the list, for anyone", () => {
+    const every = serveAreas.map((area) => area.id);
+    const result = checkMessage("serve", { ...maya, areas: every });
+    expect(result.ok && result.message.areas).toEqual(every);
+  });
+});
+
+describe("serveAreas", () => {
+  it("lists the areas in a steady order, with Other last", () => {
+    expect(serveAreas.map((area) => area.title)).toEqual(["Worship", "Cafe", "Greeting", "Ushers", "Media", "Other"]);
   });
 });

@@ -5,11 +5,10 @@ import type { ReactNode } from "react";
 import { JoinForm } from "@/components/forms/join-form";
 import { ServeForm } from "@/components/forms/serve-form";
 import { PageIntro } from "@/components/site/page-intro";
-import { Photo } from "@/components/site/photo";
 import { SectionHeader } from "@/components/site/section-header";
 import { connect } from "@/content/connect";
 import { pages } from "@/content/pages";
-import { photos } from "@/content/photos";
+import { serveAreas } from "@/content/serve-areas";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata(pages.connect);
@@ -46,12 +45,12 @@ function FormSection({
 }
 
 export default function ConnectPage() {
-  const { steps, smallGroups, join, serve } = connect;
+  const { steps, join, serve } = connect;
 
   return (
     <>
       <PageIntro eyebrow={pages.connect.eyebrow} title={pages.connect.heading}>
-        Join a group chat, find your people, and help out on a team.
+        Keep coming, get in the group chat, and find a place to serve.
       </PageIntro>
 
       <nav aria-label="Three ways in" className="page-x">
@@ -94,27 +93,6 @@ export default function ConnectPage() {
         </ol>
       </nav>
 
-      <section aria-labelledby="small-groups-title" className="page-x mt-16 lg:mt-24">
-        <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-card bg-surface lg:aspect-[4/5]">
-            <Photo photo={photos.bibleStudy} seed="small-groups" sizes="(min-width: 1024px) 600px, 100vw" />
-          </div>
-          <div>
-            <SectionHeader id="small-groups-title" eyebrow="Small groups" title={smallGroups.title}>
-              {smallGroups.body}
-            </SectionHeader>
-            <ul className="mt-8 grid gap-6">
-              {smallGroups.points.map((point) => (
-                <li key={point.title} className="border-t border-line pt-5">
-                  <h3 className="text-h3">{point.title}</h3>
-                  <p className="mt-1 text-pretty text-muted">{point.body}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
-
       <FormSection
         id="join"
         eyebrow="Connect"
@@ -130,7 +108,22 @@ export default function ConnectPage() {
         <JoinForm />
       </FormSection>
 
-      <FormSection id="serve" eyebrow="Serve" title={serve.title} lede={serve.body}>
+      <FormSection
+        id="serve"
+        eyebrow="Serve"
+        title={serve.title}
+        lede={serve.body}
+        aside={
+          <ul className="mt-6 max-w-md divide-y divide-line border-y border-line">
+            {serveAreas.map((area) => (
+              <li key={area.id} className="py-3.5">
+                <h3 className="font-semibold">{area.title}</h3>
+                <p className="text-small text-pretty text-muted">{area.body}</p>
+              </li>
+            ))}
+          </ul>
+        }
+      >
         <ServeForm />
       </FormSection>
     </>

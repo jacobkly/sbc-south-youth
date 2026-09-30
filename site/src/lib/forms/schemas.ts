@@ -1,9 +1,8 @@
 import * as z from "zod/mini";
-import { connect } from "@/content/connect";
-import { teamsFor } from "@/content/serve-teams";
+import { serveAreas } from "@/content/serve-areas";
 
 /**
- * The message forms: Contact, Plan a visit, Join a group, and Serve. The
+ * The message forms: Contact, Plan a visit, Join the chat, and Serve. The
  * page and the server action check them with these same rules, so the
  * page never accepts a message the server would refuse. It's zod/mini
  * because it ships to the browser.
@@ -16,20 +15,23 @@ export const messageKinds = ["contact", "visit", "join", "serve"] as const;
 export type MessageKind = (typeof messageKinds)[number];
 
 /** Who's writing in on the Contact form. */
-export const contactRoles = ["hs", "college", "parent", "other"] as const;
+export const contactRoles = ["student", "parent", "other"] as const;
 export type ContactRole = (typeof contactRoles)[number];
 
 const studentBands = ["hs", "college"] as const;
 
-/** High school or college, on the forms that ask. */
+/**
+ * High school or college, on the Join form, so a leader knows when
+ * they're adding a minor to the chat. It's optional.
+ */
 export type StudentBand = (typeof studentBands)[number];
 
 export const limits = { name: 80, email: 254, phone: 25, message: 2000, note: 500 } as const;
 
-const textFields = ["name", "email", "phone", "gradeBand", "group", "parentEmail", "message"] as const;
+const textFields = ["name", "email", "phone", "role", "band", "message"] as const;
 
-/** A form's answers: trimmed text with blanks left out, and the checked teams. */
-export type MessageInput = Partial<Record<(typeof textFields)[number], string>> & { teams?: string[] };
+/** A form's answers: trimmed text with blanks left out, and the checked areas. */
+export type MessageInput = Partial<Record<(typeof textFields)[number], string>> & { areas?: string[] };
 
 /** A field's problem, by field name. `reach` is the email-or-phone pair. */
 export type FieldName = keyof MessageInput | "reach";
@@ -41,11 +43,10 @@ export type Message = {
   name: string;
   email?: string;
   phone?: string;
-  gradeBand: ContactRole;
-  group?: string;
-  teams?: string[];
+  role?: ContactRole;
+  band?: StudentBand;
+  areas?: string[];
   message?: string;
-  parentEmail?: string;
 };
 
 export type CheckResult = { ok: true; message: Message } | { ok: false; errors: FieldErrors };
@@ -60,8 +61,8 @@ export function readMessageInput(data: FormData): MessageInput {
     const text = value.replace(/\r\n?/g, "\n").trim();
     if (text) input[field] = text;
   }
-  const teams = data.getAll("teams").filter((value): value is string => typeof value === "string" && value !== "");
-  if (teams.length > 0) input.teams = teams;
+  const areas = data.getAll("areas").filter((value): value is string => typeof value === "string" && value !== "");
+  if (areas.length > 0) input.areas = areas;
   return input;
 }
 
@@ -82,7 +83,6 @@ function email(missing = badEmail) {
 
 const name = z.string({ error: "Add your name." }).check(z.maxLength(limits.name, tooLong(limits.name)));
 const phone = z.string().check(z.refine(isPhone, "Add the area code, like 555-555-0123."));
-const studentBand = z.enum(studentBands, "Pick high school or college.");
 const note = z.string().check(z.maxLength(limits.note, tooLong(limits.note)));
 
 const schemas = {
@@ -90,46 +90,36 @@ const schemas = {
     name,
     email: email("Add your email so we can write back."),
     phone: z.optional(phone),
-    gradeBand: z.enum(contactRoles, "Pick one."),
+    role: z.enum(contactRoles, "Pick one."),
     message: z.string({ error: "Write a message." }).check(z.maxLength(limits.message, tooLong(limits.message))),
   }),
   visit: z.object({
     name,
     email: z.optional(email()),
     phone: z.optional(phone),
-    gradeBand: studentBand,
     message: z.optional(note),
   }),
   join: z.object({
     name,
     email: z.optional(email()),
     phone: z.optional(phone),
-    gradeBand: studentBand,
-    group: z.enum(
-      connect.join.options.map((option) => option.id),
-      "Pick one.",
-    ),
-    parentEmail: z.optional(email()),
+    band: z.optional(z.enum(studentBands, "Pick high school or college.")),
   }),
   serve: z.object({
     name,
     email: z.optional(email()),
     phone: z.optional(phone),
-    gradeBand: studentBand,
-    teams: z.optional(z.array(z.string())),
+    areas: z.optional(z.array(z.string())),
     message: z.optional(note),
   }),
 };
 
-function isStudentBand(value: string | undefined): value is StudentBand {
-  return studentBands.some((band) => band === value);
-}
+const areaIds = serveAreas.map((area) => area.id);
 
 /**
  * Checks a form's answers. It reports every problem at once, each under
  * its field, including the rules that span fields: an email or a phone,
- * a parent or guardian's email for high school, and teams for the grade
- * band.
+ * and areas from the list.
  */
 export function checkMessage(kind: MessageKind, input: MessageInput): CheckResult {
   const parsed = schemas[kind].safeParse(input);
@@ -141,22 +131,11 @@ export function checkMessage(kind: MessageKind, input: MessageInput): CheckResul
   if (kind !== "contact" && !input.email && !input.phone) {
     errors.reach = "Add an email or a phone number.";
   }
-  if (kind === "join" && input.gradeBand === "hs") {
-    if (!input.parentEmail) errors.parentEmail = "Add a parent or guardian's email.";
-    else if (input.parentEmail.toLowerCase() === input.email?.toLowerCase()) {
-      errors.parentEmail ??= "Use a parent's or guardian's email, not yours.";
-    }
-  }
   if (kind === "serve") {
-    const offered = isStudentBand(input.gradeBand) ? teamsFor(input.gradeBand).map((team) => team.id) : null;
-    if (!input.teams) errors.teams = "Pick at least one team.";
-    else if (offered && input.teams.some((team) => !offered.includes(team))) errors.teams = "Pick teams from the list.";
+    if (!input.areas) errors.areas = "Pick at least one area.";
+    else if (input.areas.some((area) => !areaIds.includes(area))) errors.areas = "Pick areas from the list.";
   }
 
   if (!parsed.success || Object.keys(errors).length > 0) return { ok: false, errors };
-
-  const message: Message = { kind, ...parsed.data };
-  // Only high school students need a parent in the loop, so don't keep one otherwise.
-  if (message.gradeBand !== "hs") delete message.parentEmail;
-  return { ok: true, message };
+  return { ok: true, message: { kind, ...parsed.data } };
 }

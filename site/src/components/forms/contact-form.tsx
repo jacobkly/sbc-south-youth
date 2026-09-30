@@ -2,16 +2,15 @@
 
 import { useSyncExternalStore } from "react";
 import { contactTopics } from "@/content/forms";
-import { limits } from "@/lib/forms/schemas";
+import { type ContactRole, limits } from "@/lib/forms/schemas";
 import { ChoiceTiles, PrivacyNote, TextArea, TextField } from "./fields";
 import { MessageForm } from "./message-form";
 
 const roles = [
-  { value: "hs", label: "High school student" },
-  { value: "college", label: "College student" },
+  { value: "student", label: "Student" },
   { value: "parent", label: "Parent or guardian" },
   { value: "other", label: "Someone else" },
-] as const;
+] as const satisfies readonly { value: ContactRole; label: string }[];
 
 const noSubscribe = () => () => {};
 
@@ -69,7 +68,7 @@ export function ContactForm() {
               error={errors.phone}
             />
           </div>
-          <ChoiceTiles legend="I'm a…" name="gradeBand" choices={roles} error={errors.gradeBand} />
+          <ChoiceTiles legend="I'm a…" name="role" choices={roles} error={errors.role} />
           {/* Remounts once the topic is known, so a link can start the message. */}
           <TextArea
             key={topic?.label ?? "blank"}
