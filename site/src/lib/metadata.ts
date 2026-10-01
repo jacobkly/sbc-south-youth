@@ -9,8 +9,8 @@ export function fullTitle(title: string): string {
 /**
  * A page's tab title, search description, canonical URL, and link
  * preview. A page's `openGraph` replaces the layout's whole, so this
- * repeats every field. The preview image comes from the page's
- * `opengraph-image` file, or the site-wide one.
+ * repeats every field. The preview image comes from the nearest
+ * `opengraph-image` file.
  */
 export function pageMetadata({ title, description, path }: { title: string; description: string; path: string }): Metadata {
   return {

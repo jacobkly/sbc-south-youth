@@ -1,4 +1,6 @@
+import type { IncomingMessage } from "node:http";
 import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
+import { matchHas } from "next/dist/shared/lib/router/utils/prepare-destination";
 import { describe, expect, it } from "vitest";
 import { COMING_SOON_PATH, gateRewrites, isGated } from "./launch-gate";
 
@@ -29,6 +31,15 @@ describe("gateRewrites", () => {
   it("sends every page to the coming-soon page", () => {
     const rewrites = gateRewrites(true);
     expect(rewrites.every((rewrite) => rewrite.destination === COMING_SOON_PATH)).toBe(true);
+  });
+
+  it("leaves the portal host alone", () => {
+    const requestTo = (host: string) => ({ headers: { host } }) as unknown as IncomingMessage;
+    for (const rewrite of gateRewrites(true)) {
+      expect(matchHas(requestTo("portal.sbcsouthyouth.com"), {}, [], rewrite.missing)).toBe(false);
+      expect(matchHas(requestTo("portal.localhost:3001"), {}, [], rewrite.missing)).toBe(false);
+      expect(matchHas(requestTo("sbcsouthyouth.com"), {}, [], rewrite.missing)).not.toBe(false);
+    }
   });
 
   // Matches sources the way Next matches rewrites.

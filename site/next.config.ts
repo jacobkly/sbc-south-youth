@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { portalHeaders, portalRewrites } from "./src/lib/host";
 import { gateRewrites, isGated } from "./src/lib/launch-gate";
 import { securityHeaders } from "./src/lib/security-headers";
 
@@ -21,16 +22,20 @@ const nextConfig: NextConfig = {
     ],
   },
   cacheComponents: true,
+  experimental: {
+    // The public site and the portal each have a root layout, so unknown URLs need their own 404 page.
+    globalNotFound: true,
+  },
   cacheLife: {
     // Time-sensitive sections (Next Up, This Week) refresh every 5 minutes.
     feed: { stale: 300, revalidate: 300, expire: 3600 },
   },
   async rewrites() {
-    return { beforeFiles: gateRewrites(gated), afterFiles: [], fallback: [] };
+    return { beforeFiles: [...portalRewrites(), ...gateRewrites(gated)], afterFiles: [], fallback: [] };
   },
   async headers() {
     const mode = { dev: process.env.NODE_ENV === "development", https: process.env.VERCEL === "1" };
-    return [{ source: "/:path*", headers: securityHeaders(mode) }];
+    return [{ source: "/:path*", headers: securityHeaders(mode) }, ...portalHeaders()];
   },
 };
 

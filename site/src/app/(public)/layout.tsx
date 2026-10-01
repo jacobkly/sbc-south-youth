@@ -1,19 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Geist } from "next/font/google";
+import { SiteDocument, siteViewport } from "@/components/site/site-document";
 import { site } from "@/content/site";
-import "./globals.css";
-
-const geist = Geist({
-  variable: "--font-geist",
-  subsets: ["latin"],
-});
-
-// The optical size axis gives big headlines their tighter display cut.
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
-  subsets: ["latin"],
-  axes: ["opsz"],
-});
 
 const description =
   "Friday nights at 7:30 PM for high school and college age, at Seattle Bethany Church South in Maple Valley, WA.";
@@ -36,20 +23,9 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
-export const viewport: Viewport = {
-  // Lets the page run under the iPhone notch and home indicator; the page pads with safe-area insets.
-  viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0b0b0f" },
-    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
-  ],
-  colorScheme: "dark light",
-};
+export const viewport: Viewport = siteViewport;
 
+// The public site's root layout. The leader portal has its own in (portal).
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  return (
-    <html lang="en" className={`${geist.variable} ${bricolage.variable}`}>
-      <body className="bg-bg font-sans text-fg antialiased">{children}</body>
-    </html>
-  );
+  return <SiteDocument>{children}</SiteDocument>;
 }

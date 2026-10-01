@@ -8,6 +8,8 @@
  * `SITE_LIVE=true` on the site's Vercel project and redeploy.
  */
 
+import { ON_PORTAL_HOST, PAGE_PATH } from "./host";
+
 export const COMING_SOON_PATH = "/coming-soon";
 
 type BuildEnv = Partial<Record<"VERCEL" | "VERCEL_ENV" | "SITE_LIVE", string>> & Record<string, string | undefined>;
@@ -22,17 +24,16 @@ export function isGated(env: BuildEnv): boolean {
   return onVercel && env.VERCEL_ENV !== "preview" && env.SITE_LIVE !== "true";
 }
 
-/**
- * Every path except Next's own files, Vercel's scripts, and anything with
- * a file extension (icons, the share image, robots.txt, calendar files).
- */
-const PAGE_PATH = String.raw`/:path((?!_next/|_vercel/)(?!.*\.[^/]+$).*)`;
+type Rewrite = { source: string; destination: string; missing: typeof ON_PORTAL_HOST };
 
-/** `beforeFiles` rewrites that send every page to the coming-soon page. */
-export function gateRewrites(gated: boolean): { source: string; destination: string }[] {
+/**
+ * `beforeFiles` rewrites that send every page to the coming-soon page.
+ * The leader portal has its own host and stays open.
+ */
+export function gateRewrites(gated: boolean): Rewrite[] {
   if (!gated) return [];
   return [
-    { source: "/", destination: COMING_SOON_PATH },
-    { source: PAGE_PATH, destination: COMING_SOON_PATH },
+    { source: "/", missing: ON_PORTAL_HOST, destination: COMING_SOON_PATH },
+    { source: PAGE_PATH, missing: ON_PORTAL_HOST, destination: COMING_SOON_PATH },
   ];
 }
