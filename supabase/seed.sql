@@ -33,9 +33,9 @@ select
 from auth.users u
 where u.id in ('00000000-0000-4000-8000-5eed0000a001', '00000000-0000-4000-8000-5eed0000a002');
 
--- The signup trigger made both members.
-update public.users set role = 'admin' where id = '00000000-0000-4000-8000-5eed0000a001';
-update public.users set role = 'viewer' where id = '00000000-0000-4000-8000-5eed0000a002';
+-- The signup trigger gave both no roles.
+update public.users set roles = '{owner}' where id = '00000000-0000-4000-8000-5eed0000a001';
+update public.users set roles = '{finance_viewer}' where id = '00000000-0000-4000-8000-5eed0000a002';
 
 insert into public.payees (id, full_name, email, notes, is_active, user_id, linked_at, linked_by) values
   (

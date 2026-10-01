@@ -1,0 +1,50 @@
+# Runs the pgTAP tests against a fresh local Supabase stack built from the
+# migrations and seed, so a migration that breaks a rule fails before it's
+# pushed to the hosted project.
+#
+# The CLI version comes from the root package-lock.json. Services the tests
+# don't need are skipped to keep the run short.
+name: Database tests
+
+on:
+  push:
+    paths:
+      - "supabase/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/db.yml"
+  pull_request:
+    paths:
+      - "supabase/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/db.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pgtap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install the Supabase CLI
+        run: npm ci
+
+      - name: Start Supabase
+        run: npx supabase start -x realtime,studio,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit,postgres-meta
+
+      - name: Run the database tests
+        run: npx supabase test db
+
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup

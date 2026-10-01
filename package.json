@@ -2,7 +2,8 @@
   "name": "sbc-south-youth",
   "private": true,
   "scripts": {
-    "db:types": "supabase gen types typescript --linked > finances/src/lib/database.types.ts"
+    "db:types": "supabase gen types typescript --linked > finances/src/lib/database.types.ts",
+    "db:types:local": "supabase gen types typescript --local > finances/src/lib/database.types.ts"
   },
   "devDependencies": {
     "supabase": "^2.118.0"
