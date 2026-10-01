@@ -5,11 +5,11 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(21);
 
 select tables_are(
   'public',
-  array['users', 'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'receipts', 'request_lines'],
+  array['users', 'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'receipts', 'request_lines', 'activity_log'],
   'public has only the known tables (add new ones here once they have RLS and tests)'
 );
 
@@ -61,6 +61,7 @@ select set_eq(
     'current_app_role',
     'has_role',
     'set_roles',
+    'log_event',
     'current_payee_id',
     'set_member_role',
     'set_member_active',
@@ -160,6 +161,7 @@ select ok(
   and exists (select 1 from public.request_events where request_id = '00000000-0000-4000-8000-00000000c001')
   and exists (select 1 from public.request_lines where request_id = '00000000-0000-4000-8000-00000000c001')
   and exists (select 1 from public.receipts where id = '00000000-0000-4000-8000-00000000d001')
+  and exists (select 1 from public.activity_log where entity_id = '00000000-0000-4000-8000-00000000a001')
   and exists (select 1 from storage.objects where bucket_id = 'receipts'),
   'every table has a row for the deactivated admin to be refused'
 );
