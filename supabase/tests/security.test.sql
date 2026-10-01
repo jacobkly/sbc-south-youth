@@ -59,6 +59,8 @@ select set_eq(
      where p.pronamespace = 'public'::regnamespace and has_function_privilege('authenticated', p.oid, 'execute') $$,
   array[
     'current_app_role',
+    'has_role',
+    'set_roles',
     'current_payee_id',
     'set_member_role',
     'set_member_active',

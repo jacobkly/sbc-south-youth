@@ -415,37 +415,64 @@ export type Database = {
         Row: {
           avatar_path: string | null
           created_at: string
+          created_by: string | null
           email: string
           full_name: string
           id: string
           is_active: boolean
+          last_seen_at: string | null
           role: Database["public"]["Enums"]["user_role"]
+          roles: Database["public"]["Enums"]["app_role"][]
           theme: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           avatar_path?: string | null
           created_at?: string
+          created_by?: string | null
           email: string
           full_name: string
           id: string
           is_active?: boolean
+          last_seen_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          roles?: Database["public"]["Enums"]["app_role"][]
           theme?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           avatar_path?: string | null
           created_at?: string
+          created_by?: string | null
           email?: string
           full_name?: string
           id?: string
           is_active?: boolean
+          last_seen_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          roles?: Database["public"]["Enums"]["app_role"][]
           theme?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -569,6 +596,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       current_payee_id: { Args: never; Returns: string }
+      has_role: {
+        Args: { p_roles: Database["public"]["Enums"]["app_role"][] }
+        Returns: boolean
+      }
       import_paid_requests: {
         Args: {
           p_external_approver?: string
@@ -712,6 +743,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_roles: {
+        Args: {
+          p_roles: Database["public"]["Enums"]["app_role"][]
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       storage_usage: { Args: never; Returns: number }
       submit_request: { Args: { p_request_id: string }; Returns: undefined }
       unapprove_request: {
@@ -726,6 +764,12 @@ export type Database = {
       vendor_list: { Args: { p_vendors: string[] }; Returns: string }
     }
     Enums: {
+      app_role:
+        | "owner"
+        | "finance_viewer"
+        | "finance_requester"
+        | "site_editor"
+        | "site_messages"
       payment_method: "cash_app" | "bank_transfer" | "check" | "cash" | "other"
       reimbursement_type: "cafe" | "youth"
       request_status:
@@ -867,6 +911,13 @@ export const Constants = {
   },
   public: {
     Enums: {
+      app_role: [
+        "owner",
+        "finance_viewer",
+        "finance_requester",
+        "site_editor",
+        "site_messages",
+      ],
       payment_method: ["cash_app", "bank_transfer", "check", "cash", "other"],
       reimbursement_type: ["cafe", "youth"],
       request_status: [

@@ -2,8 +2,15 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { Tables } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/server";
+import { financeRoleFrom } from "./roles";
 
-export type AppUser = Pick<Tables<"users">, "id" | "full_name" | "email" | "role" | "is_active" | "avatar_path" | "theme">;
+export type AppUser = Pick<
+  Tables<"users">,
+  "id" | "full_name" | "email" | "roles" | "is_active" | "avatar_path" | "theme"
+> & {
+  /** The single role the app's screens check, worked out from roles. */
+  role: Tables<"users">["role"];
+};
 
 /**
  * The signed-in user's app account, loaded once per request. Redirects to
@@ -20,12 +27,12 @@ export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
 
   const { data: user, error } = await supabase
     .from("users")
-    .select("id, full_name, email, role, is_active, avatar_path, theme")
+    .select("id, full_name, email, roles, is_active, avatar_path, theme")
     .eq("id", userId)
     .maybeSingle();
 
   if (error) throw error;
-  return user;
+  return user && { ...user, role: financeRoleFrom(user.roles) };
 });
 
 /** Active admins and viewers can use the app. RLS enforces the same rule on the data. */
