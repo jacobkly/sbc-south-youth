@@ -1,7 +1,12 @@
 @import "tailwindcss";
 
 /* Dev-only pages aren't in git, and Tailwind skips ignored files unless told. */
-@source "./dev";
+@source "./(public)/dev";
+
+/* The portal has its own styles in (portal)/portal.css. */
+@source not "./(portal)";
+@source not "../components/portal";
+@source not "../lib/portal";
 
 /*
  * Design tokens. Dark is the main design; light follows the phone's
