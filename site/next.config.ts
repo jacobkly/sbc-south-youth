@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
-import { portalHeaders, portalRewrites } from "./src/lib/host";
+import { portalRewrites, siteHeaders } from "./src/lib/host";
 import { gateRewrites, isGated } from "./src/lib/launch-gate";
-import { securityHeaders } from "./src/lib/security-headers";
 
 const gated = isGated(process.env);
 
@@ -35,7 +34,7 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     const mode = { dev: process.env.NODE_ENV === "development", https: process.env.VERCEL === "1" };
-    return [{ source: "/:path*", headers: securityHeaders(mode) }, ...portalHeaders()];
+    return siteHeaders(mode, process.env.NEXT_PUBLIC_SUPABASE_URL);
   },
 };
 

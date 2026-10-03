@@ -1,11 +1,14 @@
+import { securityHeaders, type HeaderMode } from "./security-headers";
+
 /**
  * The leader portal is part of this app but lives on its own host. Its
  * pages sit under a real `/portal` folder, and these rewrites serve that
  * folder at the root of the portal host and hide it everywhere else.
  *
  * It's all `next.config` rewrites and headers, decided at build time and
- * matched before any app code runs, so the public host never runs portal
- * code, touches Supabase, or sets a cookie.
+ * matched before any app code runs. The proxy, which keeps the portal's
+ * sign-in fresh, matches the portal host too, so the public host never
+ * runs portal code, touches Supabase, or sets a cookie.
  */
 
 /**
@@ -53,7 +56,26 @@ export function portalRewrites(): Rewrite[] {
   ];
 }
 
-/** Headers for every portal response, on top of the site's security headers. */
-export function portalHeaders(): { source: string; has: HostCondition[]; headers: { key: string; value: string }[] }[] {
-  return [{ source: "/:path*", has: ON_PORTAL_HOST, headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }];
+type HeaderRule = {
+  source: string;
+  has?: HostCondition[];
+  missing?: HostCondition[];
+  headers: { key: string; value: string }[];
+};
+
+/**
+ * Headers for every response. Each host gets its own security policy,
+ * since a browser enforces every policy it's sent: the portal's lets its
+ * pages call Supabase, and the public site's never does.
+ */
+export function siteHeaders(mode: HeaderMode, supabaseUrl: string | undefined): HeaderRule[] {
+  const connect = supabaseUrl ? [new URL(supabaseUrl).origin] : [];
+  return [
+    { source: "/:path*", missing: ON_PORTAL_HOST, headers: securityHeaders(mode) },
+    {
+      source: "/:path*",
+      has: ON_PORTAL_HOST,
+      headers: [...securityHeaders({ ...mode, connect }), { key: "X-Robots-Tag", value: "noindex, nofollow" }],
+    },
+  ];
 }

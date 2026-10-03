@@ -8,14 +8,16 @@
  * tags still stops the common attacks.
  */
 
-type HeaderMode = {
+export type HeaderMode = {
   /** The dev server, which needs eval for React's error overlay and a socket for reloads. */
   dev: boolean;
   /** Served over HTTPS on Vercel. A local `next start` is plain HTTP. */
   https: boolean;
+  /** Other origins the page's scripts may call. Only the portal has one: Supabase. */
+  connect?: string[];
 };
 
-export function contentSecurityPolicy({ dev, https }: HeaderMode): string {
+export function contentSecurityPolicy({ dev, https, connect = [] }: HeaderMode): string {
   return [
     "default-src 'self'",
     // TODO(wire-up): Turnstile needs https://challenges.cloudflare.com in script-src and frame-src.
@@ -23,7 +25,7 @@ export function contentSecurityPolicy({ dev, https }: HeaderMode): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    `connect-src 'self'${dev ? " ws:" : ""}`,
+    ["connect-src 'self'", ...connect, ...(dev ? ["ws:"] : [])].join(" "),
     "frame-src 'none'",
     "object-src 'none'",
     "base-uri 'self'",

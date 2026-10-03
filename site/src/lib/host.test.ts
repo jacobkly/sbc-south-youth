@@ -1,9 +1,13 @@
 import type { IncomingMessage } from "node:http";
+import * as pageStaticInfo from "next/dist/build/analysis/get-page-static-info";
+import type { ProxyMatcher } from "next/dist/build/analysis/get-page-static-info";
+import { getMiddlewareRouteMatcher } from "next/dist/shared/lib/router/utils/middleware-route-matcher";
 import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
 import { modifyRouteRegex } from "next/dist/lib/redirect-status";
 import { matchHas, prepareDestination } from "next/dist/shared/lib/router/utils/prepare-destination";
 import { describe, expect, it } from "vitest";
-import { NO_PAGE_PATH, ON_PORTAL_HOST, portalHeaders, portalRewrites } from "./host";
+import { config as proxyConfig } from "@/proxy";
+import { NO_PAGE_PATH, ON_PORTAL_HOST, portalRewrites, siteHeaders } from "./host";
 import { COMING_SOON_PATH, gateRewrites } from "./launch-gate";
 
 type Condition = { type: "host"; value: string };
@@ -138,11 +142,16 @@ describe("NO_PAGE_PATH", () => {
   });
 });
 
-describe("portalHeaders", () => {
-  const headersFor = (host: string, pathname: string) =>
-    portalHeaders()
+describe("siteHeaders", () => {
+  const mode = { dev: false, https: true };
+  const SUPABASE = "https://example-ref.supabase.co";
+  const headersFor = (host: string, pathname: string, supabaseUrl: string | null = SUPABASE) =>
+    siteHeaders(mode, supabaseUrl ?? undefined)
       .filter((rule) => matches(rule, host, pathname) !== false)
       .flatMap((rule) => rule.headers);
+  const policies = (headers: { key: string; value: string }[]) =>
+    headers.filter((header) => header.key === "Content-Security-Policy").map((header) => header.value);
+  const connectSrc = (policy: string) => policy.split("; ").find((directive) => directive.startsWith("connect-src "));
 
   it("keeps search engines off every portal response", () => {
     for (const pathname of ["/", "/people", "/robots.txt", "/_next/static/chunks/main.js"]) {
@@ -150,8 +159,69 @@ describe("portalHeaders", () => {
     }
   });
 
-  it("adds nothing on the public host", () => {
-    expect(headersFor(PUBLIC, "/")).toEqual([]);
-    expect(headersFor("localhost:3001", "/visit")).toEqual([]);
+  it("adds nothing portal-only on the public host", () => {
+    for (const host of [PUBLIC, "localhost:3001"]) {
+      expect(headersFor(host, "/visit").map((header) => header.key)).not.toContain("X-Robots-Tag");
+    }
+  });
+
+  it("sends each response exactly one policy, since browsers enforce every one they get", () => {
+    for (const host of [PORTAL, "portal.localhost:3001", PUBLIC, "localhost:3001"]) {
+      expect(policies(headersFor(host, "/"))).toHaveLength(1);
+    }
+  });
+
+  it("lets only the portal's pages talk to Supabase", () => {
+    expect(connectSrc(policies(headersFor(PORTAL, "/people"))[0])).toBe(`connect-src 'self' ${SUPABASE}`);
+    expect(connectSrc(policies(headersFor(PUBLIC, "/"))[0])).toBe("connect-src 'self'");
+    expect(connectSrc(policies(headersFor("portal.localhost:3001", "/", "http://127.0.0.1:54321/"))[0])).toBe(
+      "connect-src 'self' http://127.0.0.1:54321",
+    );
+  });
+
+  it("leaves Supabase out when its URL isn't set", () => {
+    expect(connectSrc(policies(headersFor(PORTAL, "/", null))[0])).toBe("connect-src 'self'");
+  });
+});
+
+describe("the proxy", () => {
+  // Next turns the matcher into this check when it builds the proxy. It
+  // doesn't publish a type for the first step.
+  const { getMiddlewareMatchers } = pageStaticInfo as unknown as {
+    getMiddlewareMatchers: (matcher: unknown, nextConfig: unknown) => ProxyMatcher[];
+  };
+  const runs = getMiddlewareRouteMatcher(getMiddlewareMatchers(proxyConfig.matcher, {}));
+  const runsOn = (host: string, pathname: string) =>
+    runs(pathname, { headers: { host } } as unknown as Parameters<typeof runs>[1], {});
+
+  it("runs on every portal page, to keep the session fresh", () => {
+    for (const pathname of ["/", "/people", "/people/some-id", "/login", "/auth/callback"]) {
+      expect(runsOn(PORTAL, pathname)).toBe(true);
+      expect(runsOn("portal.localhost:3001", pathname)).toBe(true);
+    }
+  });
+
+  it("never runs on another host, so the public site never touches Supabase or sets a cookie", () => {
+    for (const host of [PUBLIC, "localhost:3001", "staging.sbcsouthyouth.com", "finances.sbcsouthyouth.com"]) {
+      for (const pathname of ["/", "/visit", "/login", "/portal", "/portal/login"]) {
+        expect(runsOn(host, pathname)).toBe(false);
+      }
+    }
+  });
+
+  it.each([
+    "/_next/static/chunks/main.js",
+    "/_next/image",
+    "/_vercel/insights/script.js",
+    "/favicon.ico",
+    "/icon.png",
+    "/robots.txt",
+    "/manifest.webmanifest",
+  ])("skips the file %s", (pathname) => {
+    expect(runsOn(PORTAL, pathname)).toBe(false);
+  });
+
+  it("uses the same portal host rule as the rewrites", () => {
+    expect(proxyConfig.matcher.every((rule) => JSON.stringify(rule.has) === JSON.stringify(ON_PORTAL_HOST))).toBe(true);
   });
 });

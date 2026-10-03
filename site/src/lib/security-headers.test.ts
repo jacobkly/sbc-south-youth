@@ -33,6 +33,12 @@ describe("contentSecurityPolicy", () => {
     expect(directives(contentSecurityPolicy({ dev: false, https: false }))).not.toHaveProperty("upgrade-insecure-requests");
   });
 
+  it("lets the page reach the hosts it's given", () => {
+    const portal = directives(contentSecurityPolicy({ dev: false, https: true, connect: ["https://example-ref.supabase.co"] }));
+    expect(portal["connect-src"]).toEqual(["'self'", "https://example-ref.supabase.co"]);
+    expect(portal["script-src"]).toEqual(production["script-src"]);
+  });
+
   it("lets the dev server eval and open its reload socket", () => {
     const dev = directives(contentSecurityPolicy({ dev: true, https: false }));
     expect(dev["script-src"]).toContain("'unsafe-eval'");
