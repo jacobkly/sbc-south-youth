@@ -196,6 +196,66 @@ export type Database = {
           },
         ]
       }
+      invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          invited_by: string | null
+          last_sent_at: string
+          roles: Database["public"]["Enums"]["app_role"][]
+          sent_count: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          invited_by?: string | null
+          last_sent_at?: string
+          roles: Database["public"]["Enums"]["app_role"][]
+          sent_count?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          invited_by?: string | null
+          last_sent_at?: string
+          roles?: Database["public"]["Enums"]["app_role"][]
+          sent_count?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payees: {
         Row: {
           created_at: string
@@ -718,6 +778,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_invite: { Args: never; Returns: boolean }
       approve_request: {
         Args: { p_external_approver?: string; p_request_id: string }
         Returns: undefined
@@ -893,6 +954,14 @@ export type Database = {
           error: true
         } & "the function public.missing_receipt with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
+      people_directory: {
+        Args: never
+        Returns: {
+          avatar_path: string
+          full_name: string
+          id: string
+        }[]
+      }
       record_as_paid: {
         Args: {
           p_external_approver?: string
@@ -903,10 +972,35 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_invite: {
+        Args: { p_user_id: string }
+        Returns: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          invited_by: string | null
+          last_sent_at: string
+          roles: Database["public"]["Enums"]["app_role"][]
+          sent_count: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reinstate: { Args: { p_user_id: string }; Returns: undefined }
       reject_request: {
         Args: { p_note: string; p_request_id: string }
         Returns: undefined
       }
+      remove_access: { Args: { p_user_id: string }; Returns: undefined }
       request_info: {
         Args: { p_note: string; p_request_id: string }
         Returns: undefined
@@ -980,6 +1074,7 @@ export type Database = {
       }
       storage_usage: { Args: never; Returns: number }
       submit_request: { Args: { p_request_id: string }; Returns: undefined }
+      touch_last_seen: { Args: never; Returns: boolean }
       unapprove_request: {
         Args: { p_note: string; p_request_id: string }
         Returns: undefined

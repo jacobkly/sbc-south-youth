@@ -5,12 +5,12 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(23);
+select plan(24);
 
 select tables_are(
   'public',
   array['users', 'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'receipts', 'request_lines', 'activity_log',
-        'email_log', 'email_suppressions'],
+        'email_log', 'email_suppressions', 'invites'],
   'public has only the known tables (add new ones here once they have RLS and tests)'
 );
 
@@ -62,6 +62,12 @@ select set_eq(
     'current_app_role',
     'has_role',
     'set_roles',
+    'record_invite',
+    'accept_invite',
+    'remove_access',
+    'reinstate',
+    'touch_last_seen',
+    'people_directory',
     'log_event',
     'email_unsuppress',
     'current_payee_id',
@@ -106,7 +112,7 @@ select policies_are(
     'Receipt files are readable with their request',
     'Admins upload receipt files to open requests',
     'Admins delete receipt files from open requests',
-    'Avatars are readable by their owner, admins, and viewers',
+    'Avatars are readable by their owner and portal roles',
     'Active users upload their own avatar',
     'Active users delete their own avatars'
   ],
@@ -162,6 +168,9 @@ values ('00000000-0000-4000-8000-00000000e001', 'invite', 2, 'platform', 'invite
 insert into public.email_suppressions (address, reason, email_log_id)
 values ('invitee@example.test', 'bounced', '00000000-0000-4000-8000-00000000e001');
 
+insert into public.invites (user_id, email, full_name, roles)
+values ('00000000-0000-4000-8000-00000000a001', 'former@example.test', 'Former Admin', '{owner}');
+
 select ok(
   exists (select 1 from public.app_settings)
   and exists (select 1 from public.payees where id = '00000000-0000-4000-8000-00000000b001')
@@ -172,6 +181,7 @@ select ok(
   and exists (select 1 from public.activity_log where entity_id = '00000000-0000-4000-8000-00000000a001')
   and exists (select 1 from public.email_log where id = '00000000-0000-4000-8000-00000000e001')
   and exists (select 1 from public.email_suppressions where address = 'invitee@example.test')
+  and exists (select 1 from public.invites where user_id = '00000000-0000-4000-8000-00000000a001')
   and exists (select 1 from storage.objects where bucket_id = 'receipts'),
   'every table has a row for the deactivated admin to be refused'
 );
