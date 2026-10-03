@@ -104,6 +104,98 @@ export type Database = {
         }
         Relationships: []
       }
+      email_log: {
+        Row: {
+          attempts: number
+          counts_toward_quota: boolean
+          created_at: string
+          env: string
+          error: string | null
+          id: string
+          priority: number
+          related_id: string | null
+          related_type: string | null
+          resend_id: string | null
+          scope: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["email_status"]
+          subject: string | null
+          template: string
+          to_address: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          counts_toward_quota?: never
+          created_at?: string
+          env?: string
+          error?: string | null
+          id?: string
+          priority: number
+          related_id?: string | null
+          related_type?: string | null
+          resend_id?: string | null
+          scope: string
+          sent_at?: string | null
+          status: Database["public"]["Enums"]["email_status"]
+          subject?: string | null
+          template: string
+          to_address?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          counts_toward_quota?: never
+          created_at?: string
+          env?: string
+          error?: string | null
+          id?: string
+          priority?: number
+          related_id?: string | null
+          related_type?: string | null
+          resend_id?: string | null
+          scope?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["email_status"]
+          subject?: string | null
+          template?: string
+          to_address?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_suppressions: {
+        Row: {
+          address: string
+          created_at: string
+          email_log_id: string | null
+          id: string
+          reason: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          email_log_id?: string | null
+          id?: string
+          reason: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          email_log_id?: string | null
+          id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_suppressions_email_log_id_fkey"
+            columns: ["email_log_id"]
+            isOneToOne: false
+            referencedRelation: "email_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payees: {
         Row: {
           created_at: string
@@ -640,6 +732,93 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       current_payee_id: { Args: never; Returns: string }
+      email_claim: {
+        Args: { p_env: string; p_limit?: number }
+        Returns: {
+            attempts: number
+            counts_toward_quota: boolean
+            created_at: string
+            env: string
+            error: string | null
+            id: string
+            priority: number
+            related_id: string | null
+            related_type: string | null
+            resend_id: string | null
+            scope: string
+            sent_at: string | null
+            status: Database["public"]["Enums"]["email_status"]
+            subject: string | null
+            template: string
+            to_address: string | null
+            updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "email_log"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      email_mark: {
+        Args: {
+          p_error?: string
+          p_id: string
+          p_resend_id?: string
+          p_status: Database["public"]["Enums"]["email_status"]
+        }
+        Returns: undefined
+      }
+      email_record_webhook: {
+        Args: {
+          p_at?: string
+          p_error?: string
+          p_log_id?: string
+          p_resend_id: string
+          p_status: Database["public"]["Enums"]["email_status"]
+          p_subject?: string
+          p_to?: string
+        }
+        Returns: undefined
+      }
+      email_reserve: {
+        Args: {
+          p_env?: string
+          p_priority: number
+          p_related_id?: string
+          p_related_type?: string
+          p_scope: string
+          p_subject: string
+          p_template: string
+          p_to: string
+        }
+        Returns: {
+            attempts: number
+            counts_toward_quota: boolean
+            created_at: string
+            env: string
+            error: string | null
+            id: string
+            priority: number
+            related_id: string | null
+            related_type: string | null
+            resend_id: string | null
+            scope: string
+            sent_at: string | null
+            status: Database["public"]["Enums"]["email_status"]
+            subject: string | null
+            template: string
+            to_address: string | null
+            updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "email_log"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      email_unsuppress: { Args: { p_id: string }; Returns: undefined }
       has_role: {
         Args: { p_roles: Database["public"]["Enums"]["app_role"][] }
         Returns: boolean
@@ -818,6 +997,16 @@ export type Database = {
         | "finance_requester"
         | "site_editor"
         | "site_messages"
+      email_status:
+        | "skipped_quota"
+        | "suppressed"
+        | "queued"
+        | "sending"
+        | "sent"
+        | "failed"
+        | "delivered"
+        | "bounced"
+        | "complained"
       payment_method: "cash_app" | "bank_transfer" | "check" | "cash" | "other"
       reimbursement_type: "cafe" | "youth"
       request_status:
@@ -965,6 +1154,17 @@ export const Constants = {
         "finance_requester",
         "site_editor",
         "site_messages",
+      ],
+      email_status: [
+        "skipped_quota",
+        "suppressed",
+        "queued",
+        "sending",
+        "sent",
+        "failed",
+        "delivered",
+        "bounced",
+        "complained",
       ],
       payment_method: ["cash_app", "bank_transfer", "check", "cash", "other"],
       reimbursement_type: ["cafe", "youth"],
