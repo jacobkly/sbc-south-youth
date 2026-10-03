@@ -31,6 +31,11 @@ describe("safeNextPath", () => {
     expect(safeNextPath("/forgot")).toBe("/admin");
     expect(safeNextPath("/setup?next=/admin")).toBe("/admin");
   });
+
+  it("never goes back to the code step", () => {
+    expect(safeNextPath("/mfa")).toBe("/admin");
+    expect(safeNextPath("/mfa?next=/account")).toBe("/admin");
+  });
 });
 
 describe("isSignInPath", () => {

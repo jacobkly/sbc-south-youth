@@ -27,7 +27,7 @@ export function safeNextPath(value: string | null | undefined, fallback = "/admi
   }
 
   // Signed in or not, sending someone back to a sign-in step would loop.
-  if (isSignInPath(url.pathname)) {
+  if (isSignInPath(url.pathname) || url.pathname === "/mfa") {
     return fallback;
   }
   return url.pathname + url.search + url.hash;

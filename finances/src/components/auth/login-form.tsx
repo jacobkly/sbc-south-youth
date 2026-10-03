@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { afterSignInPath } from "@/lib/auth/mfa";
 import { withNext } from "@/lib/auth/next-path";
 import { createClient } from "@/lib/supabase/client";
 
@@ -27,7 +28,8 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
   async function signIn() {
     setPending(true);
     setError(null);
-    const { error } = await createClient().auth.signInWithPassword({ email: email.trim(), password });
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
     if (error) {
       setPending(false);
@@ -41,7 +43,10 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
       return;
     }
 
-    router.replace(next);
+    // Someone with two-step sign-in enters a code next. This reads the new
+    // session in the browser, so it's instant.
+    const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    router.replace(afterSignInPath(next, level));
     router.refresh();
   }
 
