@@ -1074,6 +1074,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      storage_summary: { Args: never; Returns: Json }
       storage_usage: { Args: never; Returns: number }
       submit_request: { Args: { p_request_id: string }; Returns: undefined }
       touch_last_seen: { Args: never; Returns: boolean }

@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { ArrowRightIcon, ReceiptTextIcon } from "lucide-react";
+import { HomeStorage, StorageBarSkeleton } from "@/components/portal/home/storage-bar";
 import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Button } from "@/components/portal/ui/button";
 import { readPortalEnv } from "@/lib/env";
@@ -46,6 +48,20 @@ export default async function PortalHome() {
           </Button>
         </section>
       )}
+
+      <section aria-labelledby="storage-heading" className="space-y-3">
+        <div className="space-y-1">
+          <h2 id="storage-heading" className="text-lg font-semibold">
+            Storage
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            The free plan&apos;s space for files and data, shared by the site and finances.
+          </p>
+        </div>
+        <Suspense fallback={<StorageBarSkeleton />}>
+          <HomeStorage />
+        </Suspense>
+      </section>
 
       <section aria-labelledby="access-heading" className="space-y-3">
         <h2 id="access-heading" className="text-lg font-semibold">

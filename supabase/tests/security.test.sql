@@ -76,6 +76,7 @@ select set_eq(
     'link_payee',
     'unlink_payee',
     'storage_usage',
+    'storage_summary',
     'submit_request',
     'approve_request',
     'record_as_paid',
