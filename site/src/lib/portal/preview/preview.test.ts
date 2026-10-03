@@ -15,7 +15,12 @@ const post: PostValues = {
   endsAt: "2026-10-09T23:59",
 };
 
-const photo: Photo = { src: "https://images.example.com/retreat.jpg", alt: "Cabins by a lake", placeholder: true };
+const files = "https://example.supabase.co/storage/v1/object/public/site-photos/00000000-0000-4000-8000-0000000f0002";
+const photo: Photo = {
+  src: `${files}/lg.jpg`,
+  srcSet: `${files}/sm.jpg 480w, ${files}/lg.jpg 1200w`,
+  alt: "Cabins by a lake",
+};
 
 const retreat = {
   id: "00000000-0000-4000-8000-000000000001",

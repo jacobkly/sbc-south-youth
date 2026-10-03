@@ -1,5 +1,16 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { isPhotoSpot, PHOTO_SPOTS, spotsByPage } from "./photo-spots";
+
+/** Every `.ts` and `.tsx` file under `dir`, skipping tests. */
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return sourceFiles(path);
+    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [path] : [];
+  });
+}
 
 describe("PHOTO_SPOTS", () => {
   it("names each spot the way the database allows", () => {
@@ -12,6 +23,18 @@ describe("PHOTO_SPOTS", () => {
   it("never names two spots the same", () => {
     const spots = PHOTO_SPOTS.map(({ spot }) => spot);
     expect(new Set(spots).size).toBe(spots.length);
+  });
+
+  it("shows each spot on the public site, so a photo placed there is seen", () => {
+    const src = join(process.cwd(), "src");
+    const code = [join(src, "app", "(public)"), join(src, "components", "site"), join(src, "content")]
+      .flatMap(sourceFiles)
+      .map((path) => readFileSync(path, "utf8"))
+      .join("\n");
+    // A page reads `spots.entrance` or `spots["home-hero"]`, and content names its spot.
+    const shown = (spot: string) =>
+      [`spots.${spot}`, `spots["${spot}"]`, `spot: "${spot}"`].some((form) => code.includes(form));
+    expect(PHOTO_SPOTS.map(({ spot }) => spot).filter((spot) => !shown(spot))).toEqual([]);
   });
 
   it("labels each spot differently from the others on its page", () => {

@@ -1,4 +1,3 @@
-import { photos } from "./photos";
 
 /**
  * The Parents page. It only describes what leaders actually do today, so
@@ -40,7 +39,6 @@ export const safety = {
       "Service ends around 9, and most people hang out until 9:30 or 10. There's no set pick-up time.",
       "Students sort out their own rides, and leaders stay until everyone's been picked up.",
     ],
-    photo: photos.entrance,
   },
 
   communication: {

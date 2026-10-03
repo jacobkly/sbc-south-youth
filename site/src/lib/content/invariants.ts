@@ -13,7 +13,6 @@ export type ContentBundle = {
   announcements?: Announcement[];
   leaders?: Leader[];
   faq?: FaqItem[];
-  photos?: Photo[];
   /** Any other content, only scanned for chat invite links. */
   extra?: unknown;
 };
@@ -35,7 +34,7 @@ const CHAT_INVITES = [
 
 export function contentProblems(content: ContentBundle): string[] {
   const problems: string[] = [];
-  const { gatherings = [], events = [], announcements = [], leaders = [], faq = [], photos = [] } = content;
+  const { gatherings = [], events = [], announcements = [], leaders = [], faq = [] } = content;
 
   // Events and gatherings share the /events/[slug] URLs.
   const slugs = new Set<string>();
@@ -120,8 +119,6 @@ export function contentProblems(content: ContentBundle): string[] {
   for (const [index, item] of faq.entries()) {
     if (!item.question.trim() || !item.answer.trim()) problems.push(`FAQ item ${index + 1}: needs a question and an answer`);
   }
-
-  for (const [index, photo] of photos.entries()) checkPhoto(`photo ${index + 1}`, photo);
 
   for (const text of strings(content)) {
     if (CHAT_INVITES.some((pattern) => pattern.test(text))) {

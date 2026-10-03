@@ -4,8 +4,9 @@ import { cacheLife } from "next/cache";
 import { ImageResponse } from "next/og";
 import { home } from "@/content/home";
 import { site } from "@/content/site";
+import { getPhotos } from "@/lib/content/loaders";
 import { placeholderArt } from "./placeholder-art";
-import { SHARE_SIZE, fontFileUrl, sharePhotoUrl, titleSize } from "./share";
+import { SHARE_SIZE, fontFileUrl, titleSize } from "./share";
 
 /**
  * The link preview posters: what shows up when someone shares a page in
@@ -50,15 +51,17 @@ async function posterFonts() {
 const logo = readFileSync(join(process.cwd(), "src/assets/logo.png"), "base64");
 
 /**
- * A photo as a data URL, or null if it can't be fetched, so a slow photo
- * host never breaks the build. Cached, so rebuilding an event's poster
- * doesn't download its photo again.
+ * A photo as a data URL, or null if it can't be fetched, so slow Storage
+ * never breaks the build. The renderer reads JPEG and PNG but not WebP, so
+ * a photo shrunk to WebP gets the generated art instead, and a JPEG from
+ * an iPhone shows. Cached, so rebuilding an event's poster doesn't
+ * download its photo again.
  */
 export async function sharePhoto(src: string): Promise<string | null> {
   "use cache";
   cacheLife("days");
   try {
-    const response = await fetch(sharePhotoUrl(src), { signal: AbortSignal.timeout(10_000) });
+    const response = await fetch(src, { signal: AbortSignal.timeout(10_000) });
     const type = response.headers.get("content-type") ?? "";
     if (!response.ok || !/^image\/(jpeg|png)/.test(type)) return null;
     const data = Buffer.from(await response.arrayBuffer()).toString("base64");
@@ -140,7 +143,8 @@ export async function sharePoster({ eyebrow, title, detail, photo, seed }: Share
 export const homePosterAlt = `${site.name}: ${home.hero.title}`;
 
 export async function homePoster(): Promise<ImageResponse> {
-  const photo = await sharePhoto(home.hero.photo.src);
+  const hero = (await getPhotos()).spots["home-hero"];
+  const photo = hero ? await sharePhoto(hero.src) : null;
   return sharePoster({ title: home.hero.title, detail: site.tagline, photo, seed: "home" });
 }
 

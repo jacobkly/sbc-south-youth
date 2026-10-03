@@ -1,4 +1,4 @@
-import { isPhotoSpot, spotInfo } from "@/lib/photo-spots";
+import { isPhotoSpot, spotInfo, spotsByPage } from "@/lib/photo-spots";
 import { parsePlacement, placementValue } from "./schema";
 
 /**
@@ -9,6 +9,18 @@ import { parsePlacement, placementValue } from "./schema";
 type Placed = { id: string; spot: string | null; eventId: string | null };
 
 export type PlacedEvent = { id: string; title: string; status: "draft" | "published" | "cancelled" };
+
+/**
+ * The spots still waiting for a photo, as each page's labels, in the
+ * site's order. Pages show generated art there until one is placed.
+ */
+export function emptySpots(photos: readonly Placed[]): [page: string, labels: string[]][] {
+  const filled = new Set(photos.map(({ spot }) => spot));
+  return spotsByPage().flatMap(([page, spots]) => {
+    const labels = spots.filter(({ spot }) => !filled.has(spot)).map(({ label }) => label);
+    return labels.length > 0 ? [[page, labels] as [string, string[]]] : [];
+  });
+}
 
 /** A few words for the photo's badge in the library, or null when it's only in the library. */
 export function placementBadge(photo: Placed, events: ReadonlyMap<string, PlacedEvent>): string | null {

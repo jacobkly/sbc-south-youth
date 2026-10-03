@@ -6,9 +6,8 @@ import { SocialIcon } from "@/components/icons/social-icon";
 import { home } from "@/content/home";
 import { leaders } from "@/content/leaders";
 import { site } from "@/content/site";
-import { standingNotes } from "@/content/standing-notes";
 import type { WeeklyGathering } from "@/lib/content/types";
-import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
+import { getAnnouncements, getEvents, getSchedule, getStandingNotes } from "@/lib/content/loaders";
 import { daysBetween, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
 import { countdownItems, liveAnnouncements, relativeDay, whenLabels, type FeedItem } from "@/lib/feed";
 import { formatClock, weekdayName } from "@/lib/schedule";
@@ -37,7 +36,12 @@ export async function BentoGrid() {
   cacheLife("feed");
 
   const now = new Date();
-  const [announcements, events, gatherings] = await Promise.all([getAnnouncements(), getEvents(), getSchedule()]);
+  const [announcements, events, gatherings, standingNotes] = await Promise.all([
+    getAnnouncements(),
+    getEvents(),
+    getSchedule(),
+    getStandingNotes(),
+  ]);
   const posts = liveAnnouncements(announcements, now).slice(0, SPARES);
   const countdown = countdownItems({ events, gatherings, now, spares: SPARES });
   const today = todayInLA(now);

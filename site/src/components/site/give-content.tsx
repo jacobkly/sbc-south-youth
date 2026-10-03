@@ -3,9 +3,10 @@ import Link from "next/link";
 import { ButtonLink, buttonClasses } from "@/components/button";
 import { give } from "@/content/give";
 import { pages } from "@/content/pages";
-import { photos } from "@/content/photos";
 import { site } from "@/content/site";
 import { cashAppUrl } from "@/lib/cash-app";
+import { getPhotos } from "@/lib/content/loaders";
+import type { Photo as PhotoData } from "@/lib/content/types";
 import { photoSizes } from "@/lib/photo-sizes";
 import { CopyButton } from "./copy-button";
 import { FaqAccordion } from "./faq-accordion";
@@ -17,6 +18,11 @@ import { SectionHeader } from "./section-header";
 
 const linkClasses = "font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-accent-ink";
 
+/** A photo whose text beside it says what it shows, so screen readers skip it. */
+function decorative(photo: PhotoData | undefined): PhotoData | undefined {
+  return photo && { ...photo, alt: "" };
+}
+
 const receiptHref = `mailto:${site.email}?subject=${encodeURIComponent("Receipt for my gift")}`;
 
 /**
@@ -24,7 +30,9 @@ const receiptHref = `mailto:${site.email}?subject=${encodeURIComponent("Receipt 
  * copy, a QR code, and the fine print. Without one it's a "coming soon"
  * card, so the page never links to an account that isn't set up.
  */
-export function GiveContent({ cashtag }: { cashtag: string | null }) {
+export async function GiveContent({ cashtag }: { cashtag: string | null }) {
+  const { spots } = await getPhotos();
+
   return (
     <>
       <PageIntro title={pages.give.heading}>{give.why}</PageIntro>
@@ -44,7 +52,11 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
               >
                 <div data-theme="dark" className="absolute inset-0 -z-10 xl:hidden">
                   {/* The text says what the photo shows, so it's decorative here. */}
-                  <Photo photo={{ ...item.photo, alt: "" }} seed={item.title} sizes={photoSizes({ lg: 1 / 3, md: 1 / 3 })} />
+                  <Photo
+                    photo={decorative(spots[item.spot])}
+                    seed={item.title}
+                    sizes={photoSizes({ lg: 1 / 3, md: 1 / 3 })}
+                  />
                   <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/80 via-60% to-black/35" />
                 </div>
                 <p className="mb-3 font-display text-[4.5rem] leading-[0.85] font-extrabold tracking-[-0.05em] text-accent lg:text-[5.5rem] xl:mb-0 xl:text-[clamp(3rem,4vw,5rem)] xl:text-accent-ink">
@@ -64,7 +76,7 @@ export function GiveContent({ cashtag }: { cashtag: string | null }) {
       <div aria-hidden className="page-x mt-24 hidden xl:block">
         {/* A set width keeps the height cap from narrowing the band through its aspect ratio. */}
         <div className="relative aspect-[3/1] max-h-[60vh] w-full overflow-hidden rounded-card">
-          <Photo photo={{ ...photos.pizzaTable, alt: "" }} seed="give-band" sizes={photoSizes({ lg: 1 })} />
+          <Photo photo={decorative(spots["give-band"])} seed="give-band" sizes={photoSizes({ lg: 1 })} />
         </div>
       </div>
 

@@ -90,17 +90,23 @@ type HeaderRule = {
 
 /**
  * Headers for every response. Each host gets its own security policy,
- * since a browser enforces every policy it's sent: the portal's lets its
- * pages call Supabase, show its files and photos picked on the device, and
- * frame the draft preview, and the public site's does none of that. The public site's lets its pages load Cloudflare Turnstile
- * for the message forms. Every public page allows it, since a link opens a
- * form page without a reload, and the page keeps the policy it loaded with.
+ * since a browser enforces every policy it's sent. Both show the site's
+ * photos from Supabase Storage. The portal's also lets its pages call
+ * Supabase, show photos picked on the device, and frame the draft
+ * preview. The public site's lets its pages load Cloudflare Turnstile for
+ * the message forms instead. Every public page allows it, since a link
+ * opens a form page without a reload, and the page keeps the policy it
+ * loaded with.
  */
 export function siteHeaders(mode: HeaderMode, supabaseUrl: string | undefined): HeaderRule[] {
-  const connect = supabaseUrl ? [new URL(supabaseUrl).origin] : [];
-  const portal = { ...mode, connect, images: ["blob:", ...connect], framesSelf: true };
+  const supabase = supabaseUrl ? [new URL(supabaseUrl).origin] : [];
+  const portal = { ...mode, connect: supabase, images: ["blob:", ...supabase], framesSelf: true };
   return [
-    { source: "/:path*", missing: ON_PORTAL_HOST, headers: securityHeaders({ ...mode, turnstile: true }) },
+    {
+      source: "/:path*",
+      missing: ON_PORTAL_HOST,
+      headers: securityHeaders({ ...mode, images: supabase, turnstile: true }),
+    },
     {
       source: "/:path*",
       has: ON_PORTAL_HOST,

@@ -12,8 +12,7 @@ import { PageIntro } from "@/components/site/page-intro";
 import { SubscribeBar, SubscribeCard } from "@/components/site/subscribe-card";
 import { pages } from "@/content/pages";
 import { site } from "@/content/site";
-import { standingNotes } from "@/content/standing-notes";
-import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
+import { getAnnouncements, getEvents, getSchedule, getStandingNotes } from "@/lib/content/loaders";
 import type { Announcement, StandingNote } from "@/lib/content/types";
 import { formatDateRange, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
 import { groupAgenda, liveAnnouncements, upcomingItems, type AgendaGroup } from "@/lib/feed";
@@ -43,7 +42,12 @@ async function Feed() {
   cacheLife("feed");
 
   const now = new Date();
-  const [gatherings, events, announcements] = await Promise.all([getSchedule(), getEvents(), getAnnouncements()]);
+  const [gatherings, events, announcements, standingNotes] = await Promise.all([
+    getSchedule(),
+    getEvents(),
+    getAnnouncements(),
+    getStandingNotes(),
+  ]);
   const groups = groupAgenda(upcomingItems({ gatherings, events, now }), now);
   const posts = liveAnnouncements(announcements, now);
   const today = todayInLA(now);

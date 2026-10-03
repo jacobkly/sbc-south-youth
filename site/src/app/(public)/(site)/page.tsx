@@ -11,6 +11,7 @@ import { QuickActions } from "@/components/site/quick-actions";
 import { RevealScript } from "@/components/site/reveal";
 import { home } from "@/content/home";
 import { site } from "@/content/site";
+import { getPhotos } from "@/lib/content/loaders";
 import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
 
 // The title, description, and link preview come from the root layout.
@@ -39,15 +40,15 @@ export default function HomePage() {
  * photo up top fading into black, and a rounded card on desktop, with the
  * photo behind everything. The scrims keep white text at AA or better.
  */
-function Hero() {
+async function Hero() {
+  const { spots } = await getPhotos();
   const photoHeight = "h-[min(30rem,62svh)] lg:h-auto";
 
   return (
     <section data-theme="dark" aria-labelledby="home-title" className="lg:page-x lg:pt-4">
       <div className="relative isolate overflow-hidden bg-bg text-fg lg:flex lg:min-h-[min(80svh,calc(100svh-7rem))] lg:items-end lg:rounded-card">
         <HeroMedia
-          photo={home.hero.photo}
-          focus={home.hero.focus}
+          photo={spots["home-hero"]}
           className={`absolute inset-x-0 top-0 -z-10 lg:inset-0 ${photoHeight}`}
         />
         {/* Phones: clear at the top, then solid black where the text starts. */}

@@ -46,10 +46,7 @@ describe("site copy", () => {
   });
 
   it("says food or snacks, never pizza, since the food changes", () => {
-    // Photo names and alt text describe the placeholder photos themselves, so they can.
-    const pizza = /(?<!photos\.)\bpizza\b/i;
-    const copy = files.filter(({ path }) => !path.endsWith(join("content", "photos.ts")));
-    expect(copy.filter(({ text }) => pizza.test(text)).map(({ path }) => path)).toEqual([]);
+    expect(files.filter(({ text }) => /\bpizza\b/i.test(text)).map(({ path }) => path)).toEqual([]);
   });
 
   it("puts the real Friday start time in the home headline", () => {

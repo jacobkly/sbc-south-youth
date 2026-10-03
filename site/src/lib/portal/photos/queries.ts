@@ -1,7 +1,11 @@
 import "server-only";
+import { photoFromRow } from "@/lib/content/photos";
+import type { Photo } from "@/lib/content/types";
 import type { Enums } from "@/lib/database.types";
 import type { PhotoType } from "@/lib/photo-files";
+import { supabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { isId } from "./schema";
 
 /**
  * What the Photos screen reads, as the signed-in person. RLS lets only
@@ -44,6 +48,24 @@ export async function loadPhotos(): Promise<LibraryPhoto[]> {
     uploadedBy: photo.uploaded_by,
     createdAt: photo.created_at,
   }));
+}
+
+/**
+ * An event's cover the way its page shows it, for the editors' preview.
+ * The public read skips drafts, so this one reads as the editor.
+ */
+export async function loadEventCover(eventId: string): Promise<Photo | undefined> {
+  if (!isId(eventId)) return undefined;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .schema("site")
+    .from("photos")
+    .select("id, spot, event_id, alt, width, height, mime_type")
+    .eq("status", "published")
+    .eq("event_id", eventId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? photoFromRow(data, supabaseEnv().url) : undefined;
 }
 
 export type CoverEvent = { id: string; title: string; startsAt: string; status: Enums<{ schema: "site" }, "event_status"> };

@@ -1,14 +1,9 @@
-import { photos } from "./photos";
-
 /** The top of the home page: the poster and the three ways in. */
 export const home = {
   hero: {
     // Matches the weekly schedule, which a test checks.
     title: "Fridays at 7:30",
     lede: "Worship and a message, then food and hanging out until 9:30 or 10. High school and college age, all together.",
-    photo: photos.handsRaised,
-    // Where to keep the crop on a phone, which shows the middle of a wide photo.
-    focus: "62% 50%",
   },
 
   quickActions: [

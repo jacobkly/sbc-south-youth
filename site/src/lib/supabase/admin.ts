@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { PhotoRow } from "@/lib/content/photos";
 import type { EventRow, PostRow } from "@/lib/content/rows";
 import type { Database, Json } from "@/lib/database.types";
 import type { Message } from "@/lib/forms/schemas";
@@ -56,6 +57,13 @@ export async function publicEvents(): Promise<EventRow[]> {
 export async function publicPosts(): Promise<PostRow[]> {
   const { data, error } = await admin().schema("site").rpc("public_posts");
   if (error) throw failure("Couldn't read the heads-ups", error);
+  return data;
+}
+
+/** The photos placed on the site: each one in a spot, or the cover of a published or cancelled event. */
+export async function publicPhotos(): Promise<PhotoRow[]> {
+  const { data, error } = await admin().schema("site").rpc("public_photos");
+  if (error) throw failure("Couldn't read the photos", error);
   return data;
 }
 

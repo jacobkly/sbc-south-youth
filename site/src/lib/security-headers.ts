@@ -3,12 +3,12 @@
  *
  * Pages are prerendered, so the policy can't use a fresh nonce per
  * request. Next's inline scripts are allowed instead, but almost nothing
- * loads from another site: fonts are self-hosted and photos come through
- * `/_next/image`. The portal also shows files from Supabase Storage and
- * photos picked on the device. Blocking framing, other hosts, plugins, and
- * `<base>` tags still stops the common attacks. The frames are the portal's
- * draft preview, which only the portal itself may show, and Cloudflare
- * Turnstile on the public site, for the message forms.
+ * loads from another site: fonts are self-hosted, and photos come from
+ * Supabase Storage. The portal also shows photos picked on the device.
+ * Blocking framing, other hosts, plugins, and `<base>` tags still stops
+ * the common attacks. The frames are the portal's draft preview, which
+ * only the portal itself may show, and Cloudflare Turnstile on the public
+ * site, for the message forms.
  */
 
 /** Where Turnstile's script and its frame come from. */
@@ -21,7 +21,7 @@ export type HeaderMode = {
   https: boolean;
   /** Other origins the page's scripts may call. Only the portal has one: Supabase. */
   connect?: string[];
-  /** Other sources the page may show images from. Only the portal has them: Supabase Storage and local previews. */
+  /** Other sources the page may show images from: Supabase Storage, and on the portal, photos picked on the device. */
   images?: string[];
   /** The page may frame its own site. The portal's editors frame their draft preview. */
   framesSelf?: boolean;

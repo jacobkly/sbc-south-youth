@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { announcementFromRow, eventFromRow, type EventRow, type PostRow } from "./rows";
 import type { SiteEvent } from "./types";
 
-const photo = { src: "https://images.unsplash.com/photo-1?w=2400&q=80&auto=format", alt: "A cabin", placeholder: true };
+const files = "https://example.supabase.co/storage/v1/object/public/site-photos/00000000-0000-4000-8000-0000000f0002";
+const photo = { src: `${files}/lg.jpg`, srcSet: `${files}/sm.jpg 480w, ${files}/lg.jpg 1200w`, alt: "A cabin" };
 
 // The way PostgREST sends a row: every column present, empty ones null.
 const retreatRow: EventRow = {

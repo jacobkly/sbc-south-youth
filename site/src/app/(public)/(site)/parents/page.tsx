@@ -12,12 +12,11 @@ import { PendingTag, PolicyCard } from "@/components/site/policy-card";
 import { SectionHeader } from "@/components/site/section-header";
 import { Steps } from "@/components/site/steps";
 import { pages } from "@/content/pages";
-import { photos } from "@/content/photos";
 import { safety } from "@/content/safety";
 import type { PolicyPoint } from "@/content/safety";
 import { formatAddress, site } from "@/content/site";
 import { visit } from "@/content/visit";
-import { getSchedule } from "@/lib/content/loaders";
+import { getPhotos, getSchedule } from "@/lib/content/loaders";
 import { pageMetadata } from "@/lib/metadata";
 import { photoSizes } from "@/lib/photo-sizes";
 import { formatClockRange, weekdayName } from "@/lib/schedule";
@@ -42,7 +41,7 @@ const sideColumn = "hidden xl:col-span-3 xl:block xl:self-start";
 const linkClasses = "font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-accent-ink";
 
 export default async function ParentsPage() {
-  const schedule = await getSchedule();
+  const [schedule, { spots }] = await Promise.all([getSchedule(), getPhotos()]);
   const { commitment, communication, dropOff } = safety;
   const instagram = site.socials.find((social) => social.kind === "instagram");
 
@@ -160,7 +159,7 @@ export default async function ParentsPage() {
             {/* From xl up the card opens: the notes under the heading and the photo beside them. */}
             <div className="mt-6 grid overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset md:grid-cols-2 xl:contents">
               <div className="relative aspect-[4/3] md:aspect-auto md:min-h-80 xl:col-span-3 xl:col-start-7 xl:row-span-2 xl:row-start-1 xl:aspect-[4/5] xl:min-h-0 xl:self-start xl:overflow-hidden xl:rounded-card">
-                <Photo photo={dropOff.photo} seed="drop-off" sizes={photoSizes({ xl: 1 / 4, lg: 1 / 2, md: 1 / 2 })} />
+                <Photo photo={spots.entrance} seed="drop-off" sizes={photoSizes({ xl: 1 / 4, lg: 1 / 2, md: 1 / 2 })} />
               </div>
               <div className="flex flex-col p-5 sm:p-6 lg:p-8 xl:col-span-6 xl:col-start-1 xl:row-start-2 xl:mt-6 xl:self-start xl:p-0">
                 <ul className="max-w-[36em] space-y-3">
@@ -213,7 +212,11 @@ export default async function ParentsPage() {
                 </ButtonLink>
               </div>
               <div className="relative hidden md:block xl:col-span-3 xl:aspect-[4/5] xl:self-start xl:overflow-hidden xl:rounded-card">
-                <Photo photo={photos.camera} seed="photos" sizes={photoSizes({ xl: 1 / 4, lg: 2 / 5, md: 2 / 5 })} />
+                <Photo
+                  photo={spots["parents-photos"]}
+                  seed="photos"
+                  sizes={photoSizes({ xl: 1 / 4, lg: 2 / 5, md: 2 / 5 })}
+                />
               </div>
             </div>
           </section>

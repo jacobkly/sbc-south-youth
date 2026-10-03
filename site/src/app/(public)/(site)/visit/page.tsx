@@ -1,6 +1,5 @@
 import { MessageCircle } from "lucide-react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { buttonClasses } from "@/components/button";
 import { VisitForm } from "@/components/forms/visit-form";
@@ -10,13 +9,14 @@ import { GatheringCard } from "@/components/site/gathering-card";
 import { JumpNav } from "@/components/site/jump-nav";
 import { MapArt } from "@/components/site/map-art";
 import { PageIntro } from "@/components/site/page-intro";
+import { Photo } from "@/components/site/photo";
 import { SectionHeader } from "@/components/site/section-header";
 import { Steps } from "@/components/site/steps";
 import { visitFaq } from "@/content/faq";
 import { pages } from "@/content/pages";
 import { formatAddress, site } from "@/content/site";
 import { visit } from "@/content/visit";
-import { getSchedule } from "@/lib/content/loaders";
+import { getPhotos, getSchedule } from "@/lib/content/loaders";
 import { readServerEnv } from "@/lib/env";
 import { pageMetadata } from "@/lib/metadata";
 import { photoSizes } from "@/lib/photo-sizes";
@@ -34,7 +34,7 @@ const sections = [
 const TEXT_BODY = "Hi! I'm planning to come to youth this week.";
 
 export default async function VisitPage() {
-  const schedule = await getSchedule();
+  const [schedule, { spots }] = await Promise.all([getSchedule(), getPhotos()]);
   const { textNumber } = readServerEnv();
   const address = formatAddress();
   const { parking, firstNight, meetALeader } = visit;
@@ -88,12 +88,10 @@ export default async function VisitPage() {
 
           <div className="overflow-hidden rounded-card bg-surface ring-1 ring-line ring-inset xl:contents">
             <div className="relative aspect-[4/3] sm:aspect-[16/10] xl:col-span-3 xl:col-start-10 xl:row-span-2 xl:row-start-1 xl:aspect-auto xl:overflow-hidden xl:rounded-card">
-              <Image
-                src={parking.entrancePhoto.src}
-                alt={parking.entrancePhoto.alt}
-                fill
+              <Photo
+                photo={spots.entrance}
+                seed="entrance"
                 sizes={photoSizes({ xl: 1 / 4, lg: 1 / 2, md: 1 / 2 })}
-                className="object-cover"
               />
             </div>
             <div className="p-5 xl:col-span-4 xl:col-start-6 xl:row-start-2 xl:border-t xl:border-line xl:px-0 xl:pt-8 xl:pb-0">

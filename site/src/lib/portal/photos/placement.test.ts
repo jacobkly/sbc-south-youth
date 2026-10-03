@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { placementBadge, placementLabel, placementNote, type PlacedEvent } from "./placement";
+import { PHOTO_SPOTS } from "@/lib/photo-spots";
+import { emptySpots, placementBadge, placementLabel, placementNote, type PlacedEvent } from "./placement";
 import { LIBRARY } from "./schema";
 
 const RETREAT = "00000000-0000-4000-8000-5eed0000e003";
@@ -65,5 +66,29 @@ describe("placementNote", () => {
     expect(placementNote(`event:${GAME_NIGHT}`, loose, photos, events)).toBe(
       "It shows once the event is published.",
     );
+  });
+});
+
+describe("emptySpots", () => {
+  it("lists the spots without a photo by page, leaving out filled ones", () => {
+    const pages = emptySpots(photos);
+    expect(pages[0]).toEqual(["This Week", ["Bring a friend, also on Home", "The Youth Cafe"]]);
+    expect(pages.flatMap(([, labels]) => labels)).not.toContain("Top of the page");
+    expect(pages.flatMap(([, labels]) => labels)).toHaveLength(PHOTO_SPOTS.length - 1);
+  });
+
+  it("drops a page once every spot on it has a photo", () => {
+    const give = ["give-food", "give-birthdays", "give-volleyball", "give-band"].map((spot) => ({
+      id: spot,
+      spot,
+      eventId: null,
+    }));
+    const pages = emptySpots([hero, ...give]).map(([page]) => page);
+    expect(pages).toEqual(["This Week", "Plan a Visit", "Parents & Safety"]);
+  });
+
+  it("lists every spot when nothing is placed", () => {
+    expect(emptySpots([cover, loose]).flatMap(([, labels]) => labels)).toHaveLength(PHOTO_SPOTS.length);
+    expect(emptySpots([])[0][0]).toBe("Home");
   });
 });

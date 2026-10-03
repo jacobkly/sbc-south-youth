@@ -1,19 +1,23 @@
+import type { PhotoSpot } from "@/lib/photo-spots";
+
 /**
- * The content the site shows. Pages get events, announcements, and the
- * schedule through the loaders in this folder: events and announcements
- * (heads-ups) come from the database, mapped to these shapes in rows.ts,
- * and the rest lives in `src/content/`.
+ * The content the site shows. Pages get events, announcements, photos, and
+ * the schedule through the loaders in this folder: events, announcements
+ * (heads-ups), and photos come from the database, mapped to these shapes
+ * in rows.ts and photos.ts, and the rest lives in `src/content/`.
  *
  * Instants are ISO 8601 strings with an offset, like
  * "2026-10-09T18:00:00-07:00". Wall-clock times are "HH:MM", 24-hour,
  * in Los Angeles time.
  */
 
+/** A photo from the portal's library, already in two sizes. */
 export type Photo = {
+  /** The large file. */
   src: string;
+  /** Both sizes with their widths, for the browser to pick from. */
+  srcSet: string;
   alt: string;
-  /** True until the photo is replaced with one of our own. */
-  placeholder: boolean;
 };
 
 /** A night that repeats every week, like Friday youth. */
@@ -29,6 +33,8 @@ export type WeeklyGathering = {
   locationName?: string;
   /** One or two sentences for the schedule and calendar files. */
   description: string;
+  /** Where its photo comes from. `getSchedule()` fills in `photo`. */
+  spot?: PhotoSpot;
   photo?: Photo;
 };
 
@@ -93,6 +99,8 @@ export type StandingNote = {
   id: string;
   title: string;
   body: string;
+  /** Where its photo comes from. `getStandingNotes()` fills in `photo`. */
+  spot?: PhotoSpot;
   photo?: Photo;
   cta?: { label: string; href: string };
 };

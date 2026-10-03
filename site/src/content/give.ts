@@ -1,5 +1,5 @@
-import type { FaqItem, Photo } from "@/lib/content/types";
-import { photos } from "./photos";
+import type { FaqItem } from "@/lib/content/types";
+import type { PhotoSpot } from "@/lib/photo-spots";
 import type { PolicyPoint } from "./safety";
 
 /**
@@ -16,7 +16,8 @@ export type ImpactExample = {
   dollars: number;
   title: string;
   body: string;
-  photo: Photo;
+  /** Where its photo comes from. */
+  spot: PhotoSpot;
 };
 
 export const give = {
@@ -27,19 +28,19 @@ export const give = {
       dollars: 200,
       title: "Friday night food",
       body: "Roughly what food and drinks for everyone cost each Friday.",
-      photo: photos.pizza,
+      spot: "give-food",
     },
     {
       dollars: 5,
       title: "Birthday treats",
       body: "Per person. We celebrate everyone's birthday together at the end of each month.",
-      photo: photos.cupcakes,
+      spot: "give-birthdays",
     },
     {
       dollars: 50,
       title: "Volleyball days",
       body: "Drinks and gear when we play, which is a lot in the spring and summer.",
-      photo: photos.volleyball,
+      spot: "give-volleyball",
     },
   ] satisfies ImpactExample[],
 

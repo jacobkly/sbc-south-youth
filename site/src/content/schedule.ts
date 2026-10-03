@@ -1,4 +1,3 @@
-import { photos } from "./photos";
 import type { WeeklyGathering } from "@/lib/content/types";
 
 /**
@@ -15,6 +14,6 @@ export const gatherings: WeeklyGathering[] = [
     startTime: "19:30",
     endTime: "21:00",
     description: "Worship and a message, then food, the cafe, and hanging out until 9:30 or 10.",
-    photo: photos.worshipCrowd,
+    spot: "weekly-youth",
   },
 ];

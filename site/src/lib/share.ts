@@ -26,24 +26,6 @@ export function titleSize(title: string): number {
   return 64;
 }
 
-/**
- * A photo URL cropped to the preview's size. Unsplash crops on its side,
- * as a JPEG, since the image renderer can't read every format. Other
- * hosts get the original.
- */
-export function sharePhotoUrl(src: string): string {
-  const url = new URL(src);
-  if (url.hostname !== "images.unsplash.com") return src;
-  url.search = new URLSearchParams({
-    w: String(SHARE_SIZE.width),
-    h: String(SHARE_SIZE.height),
-    fit: "crop",
-    fm: "jpg",
-    q: "75",
-  }).toString();
-  return url.toString();
-}
-
 /** The font file in a Google Fonts stylesheet, if it's one the renderer reads (TTF or OTF, not WOFF2). */
 export function fontFileUrl(css: string): string | null {
   return css.match(/src: url\((.+?)\) format\('(?:opentype|truetype)'\)/)?.[1] ?? null;

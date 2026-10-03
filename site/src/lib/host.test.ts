@@ -223,12 +223,23 @@ describe("siteHeaders", () => {
     );
   });
 
-  it("lets only the portal's pages show Supabase Storage files and photos picked on the device", () => {
+  it("lets only the portal's pages show photos picked on the device", () => {
     expect(directive(PORTAL, "/photos", "img-src")).toBe(`img-src 'self' data: blob: ${SUPABASE}`);
     expect(directive(PORTAL, "/preview", "img-src")).toBe(`img-src 'self' data: blob: ${SUPABASE}`);
-    expect(directive(PUBLIC, "/", "img-src")).toBe("img-src 'self' data:");
     const local = policies(headersFor("portal.localhost:3001", "/account", null))[0];
     expect(local.split("; ").find((found) => found.startsWith("img-src "))).toBe("img-src 'self' data: blob:");
+  });
+
+  it("lets the public pages show the site's photos from Supabase Storage", () => {
+    for (const pathname of ["/", "/give", "/events/beach-day"]) {
+      expect(directive(PUBLIC, pathname, "img-src")).toBe(`img-src 'self' data: ${SUPABASE}`);
+    }
+    const local = policies(headersFor("localhost:3001", "/", "http://127.0.0.1:54321/"))[0];
+    expect(local.split("; ").find((found) => found.startsWith("img-src "))).toBe(
+      "img-src 'self' data: http://127.0.0.1:54321",
+    );
+    const unset = policies(headersFor("localhost:3001", "/", null))[0];
+    expect(unset.split("; ").find((found) => found.startsWith("img-src "))).toBe("img-src 'self' data:");
   });
 
   it("lets every public page load Turnstile, since a link opens a form page without a reload", () => {

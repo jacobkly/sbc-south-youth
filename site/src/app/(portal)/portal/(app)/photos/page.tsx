@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CircleCheckIcon, FlagIcon, ImagesIcon, TriangleAlertIcon } from "lucide-react";
 import { NarrowPage } from "@/components/portal/nav/app-shell";
+import { EmptySpots } from "@/components/portal/photos/empty-spots";
 import { PhotoGrid } from "@/components/portal/photos/photo-grid";
 import { PhotoUpload } from "@/components/portal/photos/photo-upload";
 import { TakenDown } from "@/components/portal/photos/taken-down";
@@ -91,6 +92,8 @@ export default async function PhotosPage({ searchParams }: PageProps<"/portal/ph
           </AlertDescription>
         </Alert>
       )}
+
+      <EmptySpots photos={photos} />
 
       {photos.length === 0 ? (
         <section aria-labelledby="empty-heading" className="space-y-3 rounded-xl border border-dashed p-6 text-center">

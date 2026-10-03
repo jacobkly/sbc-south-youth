@@ -35,7 +35,7 @@ npm run build
 - **Without the database,** a build still finishes, and pages show their empty states. Once the site is running, a failed read keeps serving the last good page until the database answers again.
 - **A cancelled event** keeps its page, with a banner and the reason, and drops off This Week and Home. Only a published event can be cancelled, and a trigger blocks cancelling a draft, which is deleted instead. Putting a cancelled event back on clears its reason.
 - **The calendar feed** (`/calendar.ics`) lists the weekly nights and every event that ended less than 30 days ago or hasn't ended yet. Each event's UID comes from its id (`event-<id>@sbcsouthyouth.com`), and its `SEQUENCE` goes up with every edit, so subscribed calendars update it in place. A cancelled event stays in the feed as `STATUS:CANCELLED`, with "Cancelled:" in its title. The feed is cached for 15 minutes, and an event change refreshes it through the `events` tag.
-- **Fake events and heads-ups** come from `supabase/seed.sql`. Until the portal handles photos, their placeholder photos are matched to the seed's event ids in `src/content/events.ts`.
+- **Fake events and heads-ups** come from `supabase/seed.sql`. The seed has no photos, so pages show generated art until you add some in the portal.
 
 ## Form messages
 
@@ -56,18 +56,19 @@ To try the forms locally, put Cloudflare's test keys from `.env.example` in `.en
 
 ## Photos
 
-Site photos live in Supabase, so site editors can change them from the portal without a deploy. They add, place, and take them down on the portal's Photos screen. Until public pages read them, pages still show the hotlinked placeholders in `src/content/photos.ts`.
+Site photos live in Supabase, so site editors can change them from the portal without a deploy. They add, place, and take them down on the portal's Photos screen, and public pages show the change on their next load.
 
 - **Files:** each photo has two files in the public `site-photos` bucket, `<photo id>/lg.webp` and `sm.webp`. Safari can't make WebP, so photos added from an iPhone are `lg.jpg` and `sm.jpg`, and the row's `mime_type` says which. The id is random, so a file name never says who's in a photo. The bucket takes only WebP and JPEG files up to 1 MB. Anyone can load a file by its URL, but only site editors list, add, or delete them. `src/lib/photo-files.ts` builds the paths and URLs for both the portal and the public pages.
 - **Records:** `site.photos` holds each photo's alt text, its size in pixels, and where it shows: one named spot on the site, like `home-hero`, or one event's cover. Putting a photo in a spot or on an event sends the one that was there back to the library.
-- **Spots:** `src/lib/photo-spots.ts` lists every spot by page, with the label the portal shows and the short name on its badge. The row keeps the spot's code name, so renaming a spot takes its photo off the site. A spot is added there and on the page that shows it, with no migration.
+- **Spots:** `src/lib/photo-spots.ts` lists every spot by page, with the label the portal shows and the short name on its badge. The row keeps the spot's code name, so renaming a spot takes its photo off the site. A spot is added there and on the page that shows it, with no migration, and a test fails if no public page shows it. The Photos screen lists every spot still waiting for a photo, by page.
 - **Placing:** tapping a photo in the library opens it to change its alt text and where it shows: not on the site, a spot, or the cover of a draft or upcoming event. Saving says which photo it replaces, and clears the `photos` cache tag with `updateTag`, so public pages show the change on their next load.
 - **Shrinking:** the portal shrinks each photo on the phone before it uploads: 1600 px on the long side for `lg`, aiming for about 300 KB, and 640 px for `sm`, about 60 KB. Only the quality steps down to fit, never the size. Drawing it on a canvas turns it upright and leaves its EXIF data, like GPS location, behind. A photo under 1000 px on its long side is turned away as too soft.
 - **Uploading:** the files go up first and the row after, which checks both files are there, of one type, and records their size and type. If adding the row fails, the portal deletes the files again. A photo's files can't be replaced once it's up, and uploads stop when storage reaches 95% of the free plan's 1 GB, so receipts always have room.
 - **Taking down:** `site.remove_photo()` takes a photo off the site and keeps a record of who took it down, when, and why, linked to the takedown request if there was one. The portal deletes its files right after, and the record goes 2 years later. If the files don't delete, `site.photos_with_files_left()` finds them, and the photo shows under Taken down with a button to delete them again.
 - **Takedown requests:** a takedown message from the Contact form has a Find the photo button for leaders who are also site editors. It opens the library with the request already picked, so taking the photo down links them. The message then shows the photos that came down for it, so the leader can reply and mark it handled.
-- **Reading:** `site.public_photos()` returns only photos in a spot or on a published or cancelled event's page, and only the server's secret key can call it.
-- **Security headers:** the portal's policy lets images load from the Supabase project, for photos and profile pictures, and from `blob:`, for previews of a picked photo. The public site's still allows only its own images. The headers come from `next.config.ts`, so restart `npm run dev` after changing them.
+- **Reading:** `site.public_photos()` returns only photos in a spot or on a published or cancelled event's page, and only the server's secret key can call it. `getPhotos()` in `src/lib/content/loaders.ts` caches them under the `photos` and `events` tags, since a cover shows only while its event does, and hands pages each spot's photo and each event's cover.
+- **Showing:** `src/components/site/photo.tsx` draws a plain `<img>` with both files in its `srcset`, so the browser picks the size it needs straight from Storage, and nothing goes through Next's image optimizer. A spot with no photo shows generated art instead, everywhere, launch included. Link previews draw an event's or Home's photo into the image, but they can only read JPEG, so a WebP photo falls back to the art there.
+- **Security headers:** the portal's policy lets images load from the Supabase project, for photos and profile pictures, and from `blob:`, for previews of a picked photo. The public site's allows its own images and the Supabase project, for placed photos. The headers come from `next.config.ts`, so restart `npm run dev` after changing them.
 
 ## Launch gate
 
@@ -117,19 +118,19 @@ Vercel previews of the `dev` branch are staging. Staging shares production's dat
 
 ## Environment variables
 
-The public site needs `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY` for heads-ups, events, and form messages, and the Turnstile keys and `FORM_IP_SALT` for the forms to save. Without them it still builds, with no heads-ups or events showing and forms that point people to the email instead. Pages show a placeholder when any other one is missing. `.env.example` explains each variable in more detail.
+The public site needs `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY` for heads-ups, events, and form messages, and the Turnstile keys and `FORM_IP_SALT` for the forms to save. Without them it still builds, with no heads-ups or events showing, generated art in place of photos, and forms that point people to the email instead. Pages show a placeholder when any other one is missing. `.env.example` explains each variable in more detail.
 
 | Variable | Used for |
 | --- | --- |
 | `SITE_LIVE` | `true` opens the launch gate (read at build time) |
 | `GIVE_CASHTAG` | The Cash App cashtag on the Give page, like `$ExampleYouth`. Without it, Give shows a "coming soon" card and the Give buttons stay hidden |
 | `CHURCH_TEXT_NUMBER` | A church-owned number that takes texts, for "let us know you're coming". Never a leader's personal cell |
-| `NEXT_PUBLIC_SUPABASE_URL` | The Supabase project's URL (heads-ups, events, and the portal) |
+| `NEXT_PUBLIC_SUPABASE_URL` | The Supabase project's URL (heads-ups, events, photos, and the portal) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The publishable key. Safe in the browser, since row-level security decides access |
 | `NEXT_PUBLIC_AUTH_COOKIE_NAME`, `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` | The sign-in cookie's name and domain. Leave both empty to keep it on the portal's own host |
 | `APP_ENV` | `production` or `staging`. Empty means production, except on Vercel previews, which are staging |
 | `FINANCES_URL`, `PORTAL_URL` | Where the portal links to finances and to itself. Default to the real addresses |
-| `SUPABASE_SECRET_KEY` | Server only. Reads the site's heads-ups and events, saves form messages, calls the email functions, and creates, bans, and unbans invited accounts. Never a `NEXT_PUBLIC_` variable |
+| `SUPABASE_SECRET_KEY` | Server only. Reads the site's heads-ups, events, and photos, saves form messages, calls the email functions, and creates, bans, and unbans invited accounts. Never a `NEXT_PUBLIC_` variable |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Sending email. Without both, email is off |
 | `OWNER_ALERT_EMAIL` | Owner alerts, and every email on staging, form alerts included |
 | `RESEND_WEBHOOK_SECRET` | Checks that webhook calls came from Resend |

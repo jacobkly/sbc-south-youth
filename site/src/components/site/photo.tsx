@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { Photo as PhotoData } from "@/lib/content/types";
 import { PlaceholderArt } from "./placeholder-art";
 
@@ -27,14 +26,18 @@ export function Photo({
   if (!photo) return <PlaceholderArt seed={seed} label={label} className={className} />;
 
   return (
-    <Image
+    // The portal already made a phone size and a large size, so the browser
+    // picks one from Storage and nothing goes through the image optimizer.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={photo.src}
-      alt={photo.alt}
-      fill
+      srcSet={photo.srcSet}
       sizes={sizes}
-      loading={eager ? "eager" : undefined}
+      alt={photo.alt}
+      loading={eager ? "eager" : "lazy"}
       fetchPriority={eager ? "high" : undefined}
-      className={`object-cover ${className}`}
+      decoding="async"
+      className={`absolute inset-0 size-full object-cover ${className}`}
     />
   );
 }

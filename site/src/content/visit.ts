@@ -1,5 +1,3 @@
-import { photos } from "./photos";
-
 /**
  * The rest of the Plan a Visit page: parking, the way in, and what a
  * first night looks like.
@@ -11,7 +9,6 @@ export const visit = {
       "Come in through the front doors. We meet in the main sanctuary, right ahead of you.",
       "Drop-off and pick-up are at the front doors too.",
     ],
-    entrancePhoto: photos.entrance,
   },
 
   firstNight: [

@@ -5,13 +5,13 @@ import { AgendaDay } from "@/components/site/agenda-day";
 import { AnnouncementCard } from "@/components/site/announcement-card";
 import { EventPageBody } from "@/components/site/event-page";
 import { Spotlight } from "@/components/site/spotlight";
-import { seedEventPhotos } from "@/content/events";
 import { formatAddress } from "@/content/site";
 import { getEvents } from "@/lib/content/loaders";
 import { todayInLA } from "@/lib/dates";
 import { oneOffEventView } from "@/lib/event-view";
 import { eventItem } from "@/lib/feed";
 import { getCurrentUser } from "@/lib/portal/auth/current-user";
+import { loadEventCover } from "@/lib/portal/photos/queries";
 import { previewEvent, previewPost, readPreviewRequest, type PreviewResult } from "@/lib/portal/preview/preview";
 import { hasRole } from "@/lib/portal/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -59,7 +59,7 @@ export async function renderPreview(raw: unknown): Promise<PreviewResult> {
   }
 
   const { id, slug, values } = request;
-  const photo = id && Object.hasOwn(seedEventPhotos, id) ? seedEventPhotos[id] : undefined;
+  const photo = id ? await loadEventCover(id) : undefined;
   const preview = previewEvent(values, { id, slug, photo });
   if (!preview.ok) return { problem: preview.problem };
 

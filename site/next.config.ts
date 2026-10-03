@@ -12,13 +12,11 @@ const nextConfig: NextConfig = {
   // The repo root has its own lockfile. This app only resolves files from
   // its own folder.
   turbopack: { root: __dirname },
+  // Only the site's own files go through next/image. Photos come straight
+  // from Supabase Storage in the two sizes the portal made, so no other
+  // host is allowed here.
   images: {
     formats: ["image/avif", "image/webp"],
-    // Placeholder photos until the media team's photos arrive. Only this
-    // exact query is allowed, so nobody can resize other Unsplash URLs here.
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com", pathname: "/photo-*", search: "?w=2400&q=80&auto=format" },
-    ],
   },
   cacheComponents: true,
   experimental: {

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { FeedItem } from "./feed";
 import { eventJsonLd, jsonLdScript } from "./json-ld";
 
+const FILES = "https://example.supabase.co/storage/v1/object/public/site-photos/00000000-0000-4000-8000-0000000f0002";
+
 const retreat: FeedItem = {
   kind: "event",
   key: "e1",
@@ -13,7 +15,11 @@ const retreat: FeedItem = {
   allDay: false,
   locationName: "Camp Example",
   locationAddress: "1 Camp Road, Anytown, CA 00000",
-  photo: { src: "https://images.unsplash.com/photo-1?w=2400&q=80&auto=format", alt: "A cabin", placeholder: true },
+  photo: {
+    src: `${FILES}/lg.jpg`,
+    srcSet: `${FILES}/sm.jpg 480w, ${FILES}/lg.jpg 1200w`,
+    alt: "A cabin",
+  },
   featured: true,
 };
 

@@ -3,7 +3,6 @@ import { moreItems } from "@/components/site/nav-items";
 import { visitFaq } from "@/content/faq";
 import { give } from "@/content/give";
 import { leaders } from "@/content/leaders";
-import { photos } from "@/content/photos";
 import { privacy } from "@/content/privacy";
 import { safety } from "@/content/safety";
 import { gatherings } from "@/content/schedule";
@@ -13,7 +12,8 @@ import { visit } from "@/content/visit";
 import { contentProblems } from "./invariants";
 import type { Announcement, Leader, SiteEvent, WeeklyGathering } from "./types";
 
-const photo = { src: "https://images.unsplash.com/photo-1", alt: "A campfire at night", placeholder: true };
+const files = "https://example.supabase.co/storage/v1/object/public/site-photos/00000000-0000-4000-8000-0000000f0001";
+const photo = { src: `${files}/lg.webp`, srcSet: `${files}/sm.webp 640w, ${files}/lg.webp 1600w`, alt: "A campfire" };
 
 const gathering: WeeklyGathering = {
   slug: "weekly-youth-night",
@@ -53,12 +53,6 @@ describe("contentProblems", () => {
         gatherings,
         leaders,
         faq: visitFaq,
-        photos: [
-          ...Object.values(photos),
-          visit.parking.entrancePhoto,
-          safety.dropOff.photo,
-          ...standingNotes.flatMap((note) => note.photo ?? []),
-        ],
         extra: [site, visit, safety, privacy, standingNotes],
       }),
     ).toEqual([]);
@@ -111,7 +105,9 @@ describe("contentProblems", () => {
     expect(contentProblems({ events: [{ ...event, photo: { ...photo, alt: "  " } }] })).toContainEqual(
       expect.stringMatching(/alt text/),
     );
-    expect(contentProblems({ photos: [{ ...photo, alt: "" }] })).toContainEqual(expect.stringMatching(/alt text/));
+    expect(contentProblems({ leaders: [{ ...leader, photo: { ...photo, alt: "" } }] })).toContainEqual(
+      expect.stringMatching(/alt text/),
+    );
   });
 
   it("catches an announcement that expires before it publishes", () => {
