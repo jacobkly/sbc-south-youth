@@ -11,7 +11,7 @@ Public website for SBC South Youth on `sbcsouthyouth.com`, for students, parents
 
 ```bash
 npm install
-cp .env.example .env.local   # without these, the public site runs with no heads-ups or events
+cp .env.example .env.local   # without these, the public site runs with no heads-ups or events, and forms don't save
 npm run dev
 ```
 
@@ -39,12 +39,18 @@ npm run build
 
 ## Form messages
 
-The Visit, Join, Serve, and Contact forms check their answers on the page and again in a server action, with the same rules from `src/lib/forms/schemas.ts`. They don't save yet (`TODO(wire-up)`), but the database side is ready:
+The Visit, Join, Serve, and Contact forms check their answers on the page and again in a server action, with the same rules from `src/lib/forms/schemas.ts`. The action (`src/lib/forms/actions.ts`) hands each send to `src/lib/forms/submit.ts`, which runs the steps below and is tested with fakes.
 
-- **Saving:** the site's server calls `site.submit_message()` with the secret key. It checks the fields again, keeps only the ones each form takes, and queues an alert email for the address it's given. A full outbox never stops a message saving.
-- **Rate limit:** the server sends a salted hash of the sender's IP address, never the address. A 6th message in an hour from the same hash is refused with HTTP 429, and the hashes are deleted after 24 hours.
+- **Bots:** a hidden honeypot field and a minimum fill time catch simple bots, which get the same "sent" a person does. Cloudflare Turnstile checks everyone else. Its widget (`src/components/forms/turnstile.tsx`) runs out of sight as soon as a form shows and only asks for a click when Cloudflare wants one, and the server checks the token with Cloudflare before saving. When the check fails or never loads, the form says it didn't send and offers the email instead.
+- **Saving:** the server calls `site.submit_message()` with the secret key. It checks the fields again, keeps only the ones each form takes, and queues the alert email. A full outbox never stops a message saving. The Contact form's "take down a photo" box, which `/contact?topic=photo-removal` checks, files the message as a takedown.
+- **Rate limit:** the server sends an HMAC of the sender's IP address keyed with `FORM_IP_SALT`, never the address. A 6th message in an hour from the same hash is refused with HTTP 429, the form says to try again in an hour, and the hashes are deleted after 24 hours.
+- **Alerts:** each message emails `YOUTH_INBOX_EMAIL` with the whole message and a link to it in the portal. Its Reply-To is the sender's email, so a leader can answer from the email, or the email says to call or text when the sender left only a phone number. The server sends it with Next's `after()` once the person has their answer, because the database's nudge only reaches production. With email off, no alert is queued.
+- **Staging:** messages from the staging site still save, marked as staging tests. Their alerts go to `OWNER_ALERT_EMAIL` with no Reply-To, so a test never reaches a real sender.
 - **Reading:** only leaders with the Messages role read messages, and they change a message's status, assignment, outcome, and note only through `site.triage_message()`. Activity logs those changes, never what the sender or a leader wrote.
 - **Keeping:** handled messages are deleted after 12 months and spam after 30 days. Open messages stay until someone handles them.
+- **Security headers:** every public page lets Turnstile's script and frame load from `https://challenges.cloudflare.com`, because a link can open a form page without a reload, and the first page's policy stays in force. The portal host never allows it.
+
+To try the forms locally, put Cloudflare's test keys from `.env.example` in `.env.local`, set `FORM_IP_SALT` and `YOUTH_INBOX_EMAIL`, and turn on local email (see below). Alerts then land in Mailpit.
 
 ## Launch gate
 
@@ -90,11 +96,11 @@ For local email, set `EMAIL_FROM` and `EMAIL_LOCAL_INBOX=http://127.0.0.1:54324`
 
 ### Staging
 
-Vercel previews of the `dev` branch are staging. Staging shares production's data, so the portal shows a banner, refuses every change, and sends each email to `OWNER_ALERT_EMAIL` instead of the real recipient.
+Vercel previews of the `dev` branch are staging. Staging shares production's data, so the portal shows a banner, refuses every change, and sends each email to `OWNER_ALERT_EMAIL` instead of the real recipient. The public forms still save, marked as staging tests.
 
 ## Environment variables
 
-The public site needs only `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY`, for heads-ups and events. Without them it still builds, with none showing, and pages show a placeholder when any other one is missing. `.env.example` explains each variable in more detail.
+The public site needs `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY` for heads-ups, events, and form messages, and the Turnstile keys and `FORM_IP_SALT` for the forms to save. Without them it still builds, with no heads-ups or events showing and forms that point people to the email instead. Pages show a placeholder when any other one is missing. `.env.example` explains each variable in more detail.
 
 | Variable | Used for |
 | --- | --- |
@@ -106,9 +112,12 @@ The public site needs only `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY`,
 | `NEXT_PUBLIC_AUTH_COOKIE_NAME`, `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` | The sign-in cookie's name and domain. Leave both empty to keep it on the portal's own host |
 | `APP_ENV` | `production` or `staging`. Empty means production, except on Vercel previews, which are staging |
 | `FINANCES_URL`, `PORTAL_URL` | Where the portal links to finances and to itself. Default to the real addresses |
-| `SUPABASE_SECRET_KEY` | Server only. Reads the site's heads-ups and events, calls the email functions, and creates, bans, and unbans invited accounts. Never a `NEXT_PUBLIC_` variable |
+| `SUPABASE_SECRET_KEY` | Server only. Reads the site's heads-ups and events, saves form messages, calls the email functions, and creates, bans, and unbans invited accounts. Never a `NEXT_PUBLIC_` variable |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Sending email. Without both, email is off |
-| `OWNER_ALERT_EMAIL` | Owner alerts, and every email on staging |
+| `OWNER_ALERT_EMAIL` | Owner alerts, and every email on staging, form alerts included |
 | `RESEND_WEBHOOK_SECRET` | Checks that webhook calls came from Resend |
 | `EMAIL_DRAIN_SECRET` | Checks that drain calls came from the database. Must match `email_drain_secret` in Supabase Vault |
 | `EMAIL_LOCAL_INBOX` | Local only: send email to Mailpit instead of Resend |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile on the forms. The secret is server only, and production refuses Cloudflare's test secret |
+| `FORM_IP_SALT` | Keys the hash of each sender's address for the forms' hourly limit. At least 32 random characters |
+| `YOUTH_INBOX_EMAIL` | Gets an email for each form message, with Reply-To set to the sender |

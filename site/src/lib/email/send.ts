@@ -31,6 +31,8 @@ export type OutgoingEmail = {
   from: string;
   to: string;
   subject: string;
+  /** Where a reply goes, like the sender of a form message. */
+  replyTo?: string;
   html: string;
   text: string;
   /** The log row's ID, so a retry can never send the same email twice. */

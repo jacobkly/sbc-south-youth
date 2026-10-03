@@ -299,6 +299,45 @@ export function ChoiceCards({
   );
 }
 
+/** One yes-or-no, as a card like ChoiceCards'. `defaultChecked` sets where it starts. */
+export function CheckboxCard({
+  name,
+  value,
+  label,
+  body,
+  defaultChecked,
+}: {
+  name: string;
+  value: string;
+  label: string;
+  body?: string;
+  defaultChecked?: boolean;
+}) {
+  return (
+    <label
+      className={`group pressable relative flex cursor-pointer items-start gap-3 rounded-tile bg-bg p-4 ring-1 ring-line-strong ring-inset select-none hover:ring-fg/30 has-checked:bg-accent/10 has-checked:ring-2 has-checked:ring-accent-ink ${hiddenInputFocus}`}
+    >
+      <input
+        type="checkbox"
+        name={name}
+        value={value}
+        defaultChecked={defaultChecked}
+        className="sr-only scroll-m-28"
+      />
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">{label}</span>
+        {body && <span className="mt-0.5 block text-small text-pretty text-muted">{body}</span>}
+      </span>
+      <span
+        aria-hidden
+        className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md text-on-accent ring-1 ring-line-strong ring-inset group-has-checked:bg-accent group-has-checked:ring-0"
+      >
+        <Check className="size-4 opacity-0 group-has-checked:opacity-100" strokeWidth={3} />
+      </span>
+    </label>
+  );
+}
+
 /**
  * A field people never see but form-filling bots do. It's moved off
  * screen rather than hidden, since some bots skip hidden fields.
@@ -376,10 +415,3 @@ export function PrivacyNote({ children }: { children: ReactNode }) {
     </>
   );
 }
-
-/** In school or not, the Join form's optional question. */
-export const studentBands = [
-  { value: "hs", label: "In high school" },
-  { value: "college", label: "In college" },
-  { value: "not-in-school", label: "Not in school" },
-] as const;

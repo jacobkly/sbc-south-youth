@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(15);
+select plan(20);
 
 -- Fake people: two owners and a requester with their own payee.
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -173,6 +173,57 @@ select is(
   'a request an owner sent for someone else says so'
 );
 
+-- Someone sends the Contact form, and a parent asks to take down a photo.
+set local role service_role;
+select site.submit_message(
+  'contact',
+  '{"name": "Maya  Example", "email": "maya@example.test", "phone": "555-555-0123", "role": "student",
+    "message": "Is there youth this Friday?"}',
+  repeat('a', 64),
+  'production',
+  'youth@example.test'
+);
+select site.submit_message(
+  'takedown',
+  '{"name": "Pat Example", "email": "pat@example.test", "role": "parent", "message": "Please take down a photo."}',
+  repeat('b', 64),
+  'staging',
+  'owner@example.test'
+);
+reset role;
+
+select is(
+  public.email_details((select id from public.email_log where template = 'form-alert' and env = 'production')),
+  null,
+  'a queued form alert has no details until the drain sends it'
+);
+
+select count(*) from public.email_claim('production', 50);
+select count(*) from public.email_claim('staging', 50);
+
+select is(
+  public.email_details((select id from public.email_log where template = 'form-alert' and env = 'production')),
+  '{"kind": "contact", "name": "Maya  Example", "email": "maya@example.test", "phone": "555-555-0123",
+    "message": "Is there youth this Friday?", "details": {"role": "student"}, "env": "production"}'::jsonb,
+  'a form alert shows the whole message, so a leader can answer it from the email'
+);
+
+select is(
+  public.email_details((select id from public.email_log where template = 'form-alert' and env = 'staging')),
+  '{"kind": "takedown", "name": "Pat Example", "email": "pat@example.test", "phone": null,
+    "message": "Please take down a photo.", "details": {"role": "parent"}, "env": "staging"}'::jsonb,
+  'a takedown request shows its kind, and a staging one says so'
+);
+
+-- A message deleted while its alert waits has nothing left to show.
+delete from site.messages where kind = 'contact';
+
+select is(
+  public.email_details((select id from public.email_log where template = 'form-alert' and env = 'production')),
+  null,
+  'a form alert whose message is gone has no details'
+);
+
 -- Emails the drain doesn't write get nothing, even while sending.
 insert into public.email_log (id, template, priority, to_address, subject, scope, related_type, related_id, status)
 values
@@ -181,13 +232,18 @@ values
   ('00000000-0000-4000-8000-00000000e002', 'request-paid', 3, 'someone@example.test', 'Paid', 'finances', 'user',
    '00000000-0000-4000-8000-00000000a001', 'sending'),
   ('00000000-0000-4000-8000-00000000e003', 'request-paid', 3, 'someone@example.test', 'Paid', 'finances', null,
-   null, 'sending');
+   null, 'sending'),
+  ('00000000-0000-4000-8000-00000000e004', 'request-paid', 3, 'someone@example.test', 'Paid', 'finances', 'message',
+   (select id from site.messages where kind = 'takedown'), 'sending');
 
 select is(public.email_details('00000000-0000-4000-8000-00000000e001'), null, 'an invite has no details');
 select is(
   public.email_details('00000000-0000-4000-8000-00000000e002'), null, 'a request template about a person has none'
 );
 select is(public.email_details('00000000-0000-4000-8000-00000000e003'), null, 'nor does an email about nothing');
+select is(
+  public.email_details('00000000-0000-4000-8000-00000000e004'), null, 'nor does another template about a message'
+);
 select is(public.email_details(gen_random_uuid()), null, 'nor does an email that doesn''t exist');
 
 select ok(

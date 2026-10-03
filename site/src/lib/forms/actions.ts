@@ -1,29 +1,40 @@
 "use server";
 
-import { looksAutomated } from "./guard";
-import { checkMessage, type FieldErrors, messageKinds, type MessageKind, readMessageInput } from "./schemas";
+import { headers } from "next/headers";
+import { after } from "next/server";
+import { drainEmails } from "@/lib/email/drain";
+import { readFormEnv } from "@/lib/env";
+import { saveMessage } from "@/lib/supabase/admin";
+import type { MessageKind } from "./schemas";
+import { handleMessage, type SubmitResult } from "./submit";
+import { verifyTurnstile } from "./turnstile";
 
-export type SubmitResult =
-  | { status: "invalid"; errors: FieldErrors }
-  | { status: "sent"; firstName: string }
-  | { status: "failed"; message: string };
+/** The sender's address. Vercel sets x-real-ip itself, so a sender can't pick their own. */
+async function senderAddress(): Promise<string | null> {
+  const sent = await headers();
+  const forwarded = sent.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return sent.get("x-real-ip")?.trim() || forwarded || null;
+}
 
 /**
- * Sends a message from one of the forms. Anyone can call this, so it
- * checks everything again instead of trusting the page. A bot gets the
- * same "sent" a person does, so it can't tell it was caught.
+ * Sends a message from one of the forms. The database pokes the email
+ * drain when it queues the alert, but that poke only reaches production,
+ * so the alert also goes from here once the person has their answer. Each
+ * email is claimed once, so the two never send it twice.
  */
 export async function submitMessage(kind: MessageKind, data: FormData): Promise<SubmitResult> {
-  if (!messageKinds.includes(kind)) return { status: "failed", message: "That form doesn't exist." };
-
-  const result = checkMessage(kind, readMessageInput(data));
-  if (!result.ok) return { status: "invalid", errors: result.errors };
-
-  const firstName = result.message.name.split(/\s+/)[0];
-  if (looksAutomated(data)) return { status: "sent", firstName };
-
-  // TODO(wire-up): check Turnstile, apply the rate limit, save the message
-  // in site.messages, and email the youth inbox. Until then nothing is
-  // kept or sent, so the forms must be wired up before SITE_LIVE is set.
-  return { status: "sent", firstName };
+  return handleMessage(kind, data, {
+    env: () => readFormEnv(),
+    ip: await senderAddress(),
+    verify: (token, ip, secret) => verifyTurnstile(token, { secret, ip }),
+    save: saveMessage,
+    sendAlerts: () =>
+      after(async () => {
+        try {
+          await drainEmails();
+        } catch (error) {
+          console.error("[forms] Couldn't send the alert", error);
+        }
+      }),
+  });
 }

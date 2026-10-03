@@ -101,6 +101,21 @@ describe("checkMessage: contact", () => {
       expect(checkMessage("contact", { ...valid, role })).toEqual({ ok: false, errors: { role: "Pick one." } });
     }
   });
+
+  it("keeps a request to take down a photo", () => {
+    expect(readMessageInput(form({ ...valid, reason: "takedown" })).reason).toBe("takedown");
+    const result = checkMessage("contact", { ...valid, reason: "takedown" });
+    expect(result.ok && result.message.reason).toBe("takedown");
+  });
+
+  it("takes no other reason, and none on the other forms", () => {
+    expect(checkMessage("contact", { ...valid, reason: "refund" })).toEqual({
+      ok: false,
+      errors: { reason: "Pick one." },
+    });
+    const visit = checkMessage("visit", { ...maya, reason: "takedown" });
+    expect(visit.ok && visit.message).not.toHaveProperty("reason");
+  });
 });
 
 describe("checkMessage: visit", () => {

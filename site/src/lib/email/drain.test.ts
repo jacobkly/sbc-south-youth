@@ -6,6 +6,7 @@ import type { OutgoingEmail } from "./send";
 
 const REQUEST_ID = "00000000-0000-4000-8000-0000000000c1";
 const USER_ID = "00000000-0000-4000-8000-0000000000a2";
+const MESSAGE_ID = "00000000-0000-4000-8000-0000000000d1";
 
 const PRODUCTION: EmailEnv = {
   appEnv: "production",
@@ -225,6 +226,121 @@ describe("drainEmails", () => {
     await drainEmails(deps);
 
     expect(sent[0].text).toContain("This change was made on Oct 2, 2026 at 3:14 PM, outside the portal.");
+  });
+
+  describe("form alerts", () => {
+    const alert = (subject: string) =>
+      queued("001", {
+        template: "form-alert",
+        to_address: "youth@example.test",
+        subject,
+        related_type: "message",
+        related_id: MESSAGE_ID,
+      });
+    const CONTACT = {
+      kind: "contact",
+      name: "Maya Example",
+      email: "maya@example.test",
+      phone: "555-555-0123",
+      message: "Is there youth this Friday?\nAnd what time?",
+      details: { role: "parent" },
+      env: "production",
+    };
+
+    it("shows the whole message, links to it in the portal, and replies to the sender", async () => {
+      const email = alert("Maya sent a message");
+      const { deps, sent } = fakes([email], { [email.id]: CONTACT });
+
+      await drainEmails(deps);
+
+      expect(sent[0]).toMatchObject({
+        to: "youth@example.test",
+        subject: "Maya sent a message",
+        replyTo: "maya@example.test",
+      });
+      for (const line of [
+        "Maya Example sent a message from the Contact page.",
+        "maya@example.test",
+        "555-555-0123",
+        "Parent or guardian",
+        "Is there youth this Friday?",
+        "And what time?",
+        "Oct 2, 2026 at 3:14 PM",
+        "Reply to this email to write back to Maya.",
+      ]) {
+        expect(sent[0].text).toContain(line);
+      }
+      expect(sent[0].html).toContain(`href="https://portal.example.test/messages/${MESSAGE_ID}"`);
+    });
+
+    it("says a takedown request is about a photo", async () => {
+      const email = alert("Pat asked to take down a photo");
+      const takedown = { ...CONTACT, kind: "takedown", name: "Pat Example", email: "pat@example.test" };
+      const { deps, sent } = fakes([email], { [email.id]: takedown });
+
+      await drainEmails(deps);
+
+      expect(sent[0].text).toContain("Pat Example asked us to take down a photo.");
+      expect(sent[0].replyTo).toBe("pat@example.test");
+    });
+
+    it("names the areas someone wants to serve in", async () => {
+      const email = alert("Sam wants to serve");
+      const serve = {
+        kind: "serve",
+        name: "Sam Example",
+        email: null,
+        phone: "555-555-0199",
+        message: null,
+        details: { areas: ["worship", "media"] },
+        env: "production",
+      };
+      const { deps, sent } = fakes([email], { [email.id]: serve });
+
+      await drainEmails(deps);
+
+      expect(sent[0].text).toContain("Sam Example wants to serve.");
+      expect(sent[0].text).toContain("Worship, Media");
+      expect(sent[0].text).toContain("Sam left a phone number, so call or text to write back.");
+      expect(sent[0]).not.toHaveProperty("replyTo");
+    });
+
+    it("says where someone joining the chat is in school", async () => {
+      const email = alert("Sam wants to join the chat");
+      const join = { ...CONTACT, kind: "join", name: "Sam Example", message: null, details: { band: "hs" } };
+      const { deps, sent } = fakes([email], { [email.id]: join });
+
+      await drainEmails(deps);
+
+      expect(sent[0].text).toContain("Sam Example wants to join the group chat.");
+      expect(sent[0].text).toContain("In high school");
+    });
+
+    it("marks a staging message as a test, with no Reply-To, so nobody else hears about it", async () => {
+      const email = alert("Maya sent a message");
+      const { deps, sent } = fakes(
+        [email],
+        { [email.id]: { ...CONTACT, env: "staging" } },
+        { env: { ...PRODUCTION, appEnv: "staging" } },
+      );
+
+      await drainEmails(deps);
+
+      expect(sent[0].text).toContain("A test from the staging site.");
+      expect(sent[0]).not.toHaveProperty("replyTo");
+    });
+
+    it("marks failed an alert whose message is gone", async () => {
+      const email = alert("Maya sent a message");
+      const { deps, sent, marked } = fakes([email], {});
+
+      await drainEmails(deps);
+
+      expect(sent).toEqual([]);
+      expect(marked).toEqual([
+        { id: email.id, status: "failed", error: "Couldn't build the email: its details are missing" },
+      ]);
+    });
   });
 
   it("marks failed, and never sends, an email it doesn't write, like an invite stuck sending", async () => {

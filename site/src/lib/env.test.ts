@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertWritable, readEmailEnv, readPortalEnv, readServerEnv, ReadOnlyError } from "./env";
+import { assertWritable, readEmailEnv, readFormEnv, readPortalEnv, readServerEnv, ReadOnlyError } from "./env";
 
 describe("readServerEnv", () => {
   it("allows every variable to be missing", () => {
@@ -175,5 +175,71 @@ describe("readEmailEnv", () => {
     ["EMAIL_DRAIN_SECRET", "too-short"],
   ])("rejects %s %j by name", (name, value) => {
     expect(() => readEmailEnv({ ...ready, [name]: value })).toThrow(new RegExp(name));
+  });
+});
+
+describe("readFormEnv", () => {
+  const ready = {
+    TURNSTILE_SECRET_KEY: "0x4AAAAAAAexample-secret",
+    FORM_IP_SALT: "an-example-salt-that-is-long-enough",
+    YOUTH_INBOX_EMAIL: " Youth@Example.test ",
+    OWNER_ALERT_EMAIL: "owner@example.test",
+    RESEND_API_KEY: "re_test_key",
+    EMAIL_FROM: "Example Youth <hello@mail.example.test>",
+  };
+  // Cloudflare's published test secret that passes every token.
+  const TEST_SECRET = "1x0000000000000000000000000000000AA";
+
+  it("reads the Turnstile secret, the salt, and the youth inbox for alerts", () => {
+    expect(readFormEnv(ready)).toEqual({
+      appEnv: "production",
+      turnstileSecret: "0x4AAAAAAAexample-secret",
+      ipSalt: "an-example-salt-that-is-long-enough",
+      alertTo: "youth@example.test",
+    });
+  });
+
+  it("sends staging's alerts to the owner instead, so a test never reaches the youth inbox", () => {
+    expect(readFormEnv({ ...ready, VERCEL_ENV: "preview" })).toMatchObject({
+      appEnv: "staging",
+      alertTo: "owner@example.test",
+    });
+    expect(readFormEnv({ ...ready, APP_ENV: "staging", OWNER_ALERT_EMAIL: "" }).alertTo).toBeNull();
+  });
+
+  it("queues no alert when email is off or there's no inbox to send to", () => {
+    expect(readFormEnv({ ...ready, RESEND_API_KEY: "" }).alertTo).toBeNull();
+    expect(readFormEnv({ ...ready, YOUTH_INBOX_EMAIL: "" }).alertTo).toBeNull();
+  });
+
+  it("leaves Turnstile and the salt unset when they're blank", () => {
+    expect(readFormEnv({ TURNSTILE_SECRET_KEY: " ", FORM_IP_SALT: "" })).toEqual({
+      appEnv: "production",
+      turnstileSecret: null,
+      ipSalt: null,
+      alertTo: null,
+    });
+  });
+
+  it("takes Cloudflare's test keys locally and on staging", () => {
+    expect(readFormEnv({ ...ready, TURNSTILE_SECRET_KEY: TEST_SECRET }).turnstileSecret).toBe(TEST_SECRET);
+    expect(readFormEnv({ ...ready, TURNSTILE_SECRET_KEY: TEST_SECRET, VERCEL_ENV: "preview" }).turnstileSecret).toBe(
+      TEST_SECRET,
+    );
+  });
+
+  it("refuses Cloudflare's test keys in production, where they'd let every bot through", () => {
+    for (const secret of [TEST_SECRET, "2x0000000000000000000000000000000AA"]) {
+      expect(() => readFormEnv({ ...ready, TURNSTILE_SECRET_KEY: secret, VERCEL_ENV: "production" })).toThrow(
+        /TURNSTILE_SECRET_KEY/,
+      );
+    }
+  });
+
+  it.each([
+    ["FORM_IP_SALT", "too-short"],
+    ["YOUTH_INBOX_EMAIL", "youth"],
+  ])("rejects %s %j by name", (name, value) => {
+    expect(() => readFormEnv({ ...ready, [name]: value })).toThrow(new RegExp(name));
   });
 });

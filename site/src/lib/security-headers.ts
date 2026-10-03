@@ -2,12 +2,16 @@
  * The security headers on every response.
  *
  * Pages are prerendered, so the policy can't use a fresh nonce per
- * request. Next's inline scripts are allowed instead, but nothing loads
- * from another site: fonts are self-hosted and photos come through
+ * request. Next's inline scripts are allowed instead, but almost nothing
+ * loads from another site: fonts are self-hosted and photos come through
  * `/_next/image`. Blocking framing, other hosts, plugins, and `<base>`
- * tags still stops the common attacks. The one frame is the portal's
- * draft preview, which only the portal itself may show.
+ * tags still stops the common attacks. The frames are the portal's draft
+ * preview, which only the portal itself may show, and Cloudflare
+ * Turnstile on the public site, for the message forms.
  */
+
+/** Where Turnstile's script and its frame come from. */
+const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 
 export type HeaderMode = {
   /** The dev server, which needs eval for React's error overlay and a socket for reloads. */
@@ -20,18 +24,22 @@ export type HeaderMode = {
   framesSelf?: boolean;
   /** Only its own site may frame the page. Just the portal's draft preview. */
   framedBySelf?: boolean;
+  /** The public site, whose message forms load and frame Cloudflare Turnstile. */
+  turnstile?: boolean;
 };
 
-export function contentSecurityPolicy({ dev, https, connect = [], framesSelf, framedBySelf }: HeaderMode): string {
+export function contentSecurityPolicy(mode: HeaderMode): string {
+  const { dev, https, connect = [], framesSelf, framedBySelf, turnstile } = mode;
+  const frames = [...(framesSelf ? ["'self'"] : []), ...(turnstile ? [TURNSTILE_ORIGIN] : [])];
+  const scripts = [...(dev ? ["'unsafe-eval'"] : []), ...(turnstile ? [TURNSTILE_ORIGIN] : [])];
   return [
     "default-src 'self'",
-    // TODO(wire-up): Turnstile needs https://challenges.cloudflare.com in script-src and frame-src.
-    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
+    ["script-src 'self' 'unsafe-inline'", ...scripts].join(" "),
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
     ["connect-src 'self'", ...connect, ...(dev ? ["ws:"] : [])].join(" "),
-    `frame-src ${framesSelf ? "'self'" : "'none'"}`,
+    `frame-src ${frames.length > 0 ? frames.join(" ") : "'none'"}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

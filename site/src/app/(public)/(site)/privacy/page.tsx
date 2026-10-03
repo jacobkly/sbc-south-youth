@@ -126,7 +126,6 @@ export default function PrivacyPage() {
           <section id="details" aria-label="More details" className="@container mt-16 scroll-mt-24 lg:mt-24">
             {/* From xl up the topics sit in columns: two, or four once there's room. */}
             <div className="border-b border-line xl:grid xl:grid-cols-2 xl:gap-x-(--grid-gap) @min-[100rem]:grid-cols-4">
-              {/* TODO(wire-up): true once the forms use Turnstile and the hashed IP rate limit. */}
               <Topic title="Spam protection">
                 <p>
                   Our forms use Cloudflare Turnstile to check that a person, not a bot, is sending them. It looks at information

@@ -30,9 +30,9 @@ The portal is where leaders run the youth site and its people from a phone. It's
 - **Events:** under Posts, site editors add one-off events with a day and time (or all day), a place, a cost, and details. Each one gets its own page, shows on This Week, and lands in calendars that subscribe. Editors can feature one, for a big card on This Week and a countdown on Home, cancel one with a reason, which keeps its page up with a banner, put it back on, or start a new one from a past one.
 - **Previews:** a Preview tab on each heads-up and event shows the draft the way the site will show it, in dark or light, before it goes up. A heads-up shows as its This Week card and as Home's lead, and an event shows as its This Week row and its own page.
 - **Activity:** one timeline of changes across the site, finances, and people, showing each person only the apps their roles cover. Owners can download it as a CSV.
-- **Email:** finance and owner notices go out through Resend, within the free plan's daily and monthly limits.
+- **Email:** finance and owner notices, and an email for each form message, go out through Resend, within the free plan's daily and monthly limits.
 
-The public site reads heads-ups and events from the database. The database is ready for form messages, with a rate limit and an alert for each one. The site's forms save to it next, then the portal's Messages inbox and photos.
+The public site reads heads-ups and events from the database. Its Visit, Join, Serve, and Contact forms save messages there, checked by Cloudflare Turnstile and limited to 5 an hour from one address, and each one emails the youth inbox so a leader can reply to the sender. The portal's Messages inbox and photos come next.
 
 ### Roles
 
@@ -115,8 +115,9 @@ alter role backup_job with login password '<a long random password>';
 Each app is its own Vercel project connected to this repo, with its **Root Directory** set to the app's folder and builds skipped when that folder hasn't changed.
 
 - `main` is production. The site project serves both `sbcsouthyouth.com` and `portal.sbcsouthyouth.com`.
-- `dev` deploys to `staging.sbcsouthyouth.com`, behind Vercel Authentication. Staging shares production's data, so its portal is read-only and sends email only to the owner alert address.
+- `dev` deploys to `staging.sbcsouthyouth.com`, behind Vercel Authentication. Staging shares production's data, so its portal is read-only and sends email only to the owner alert address. Its forms still save, marked as staging tests.
 - Site changes go to `dev` first. Finances changes go to `main`, and `dev` merges `main` afterward.
+- The site's forms need a Cloudflare Turnstile widget with `sbcsouthyouth.com` and `staging.sbcsouthyouth.com` as its hostnames. Its site key and secret go on the site's Vercel project, with `FORM_IP_SALT` and `YOUTH_INBOX_EMAIL`.
 
 ## License
 

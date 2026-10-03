@@ -10,6 +10,7 @@ type LocalEmail = {
   from: string;
   to: string;
   subject: string;
+  replyTo?: string;
   html: string;
   text: string;
   tags: { name: string; value: string }[];
@@ -34,6 +35,7 @@ export async function sendToLocalInbox(
     body: JSON.stringify({
       From: contact(email.from),
       To: [{ Email: email.to }],
+      ...(email.replyTo && { ReplyTo: [contact(email.replyTo)] }),
       Subject: email.subject,
       HTML: email.html,
       Text: email.text,

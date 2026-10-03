@@ -207,9 +207,9 @@ describe("siteHeaders", () => {
     expect(header(PORTAL, "/preview", "X-Robots-Tag")).toBe("noindex, nofollow");
   });
 
-  it("never lets the public site frame or be framed", () => {
+  it("never lets the public site frame anything but Turnstile, or be framed", () => {
     for (const pathname of ["/", "/preview", "/events/beach-day"]) {
-      expect(directive(PUBLIC, pathname, "frame-src")).toBe("frame-src 'none'");
+      expect(directive(PUBLIC, pathname, "frame-src")).toBe("frame-src https://challenges.cloudflare.com");
       expect(directive(PUBLIC, pathname, "frame-ancestors")).toBe("frame-ancestors 'none'");
       expect(header(PUBLIC, pathname, "X-Frame-Options")).toBe("DENY");
     }
@@ -221,6 +221,21 @@ describe("siteHeaders", () => {
     expect(connectSrc(policies(headersFor("portal.localhost:3001", "/", "http://127.0.0.1:54321/"))[0])).toBe(
       "connect-src 'self' http://127.0.0.1:54321",
     );
+  });
+
+  it("lets every public page load Turnstile, since a link opens a form page without a reload", () => {
+    const turnstile = "https://challenges.cloudflare.com";
+    for (const host of [PUBLIC, "localhost:3001"]) {
+      for (const pathname of ["/", "/visit", "/connect", "/contact", "/events/beach-day"]) {
+        expect(directive(host, pathname, "script-src")).toContain(turnstile);
+        expect(directive(host, pathname, "frame-src")).toBe(`frame-src ${turnstile}`);
+        expect(directive(host, pathname, "connect-src")).toBe("connect-src 'self'");
+      }
+    }
+    for (const pathname of ["/", "/visit", "/contact", "/preview"]) {
+      expect(directive(PORTAL, pathname, "script-src")).not.toContain(turnstile);
+      expect(directive(PORTAL, pathname, "frame-src")).not.toContain(turnstile);
+    }
   });
 
   it("leaves Supabase out when its URL isn't set", () => {

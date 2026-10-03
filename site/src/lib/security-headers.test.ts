@@ -48,6 +48,14 @@ describe("contentSecurityPolicy", () => {
     expect(preview["frame-src"]).toEqual(["'none'"]);
   });
 
+  it("lets a form page load and frame Cloudflare Turnstile, and nothing else from there", () => {
+    const form = directives(contentSecurityPolicy({ dev: false, https: true, turnstile: true }));
+    expect(form["script-src"]).toEqual(["'self'", "'unsafe-inline'", "https://challenges.cloudflare.com"]);
+    expect(form["frame-src"]).toEqual(["https://challenges.cloudflare.com"]);
+    expect(form["connect-src"]).toEqual(["'self'"]);
+    expect(form["frame-ancestors"]).toEqual(["'none'"]);
+  });
+
   it("lets the dev server eval and open its reload socket", () => {
     const dev = directives(contentSecurityPolicy({ dev: true, https: false }));
     expect(dev["script-src"]).toContain("'unsafe-eval'");

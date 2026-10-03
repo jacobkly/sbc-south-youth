@@ -42,6 +42,14 @@ describe("sendToLocalInbox", () => {
     });
   });
 
+  it("sets Reply-To when the email has one", async () => {
+    const { calls, fetcher } = fakeFetch(Response.json({ ID: "mailpit-3" }));
+
+    await sendToLocalInbox("http://127.0.0.1:54324", { ...email, replyTo: "maya@example.test" }, fetcher);
+
+    expect(JSON.parse(String(calls[0].init.body)).ReplyTo).toEqual([{ Email: "maya@example.test" }]);
+  });
+
   it("takes a bare sender address", async () => {
     const { calls, fetcher } = fakeFetch(Response.json({ ID: "mailpit-2" }));
 

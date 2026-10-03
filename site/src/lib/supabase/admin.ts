@@ -2,6 +2,7 @@ import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { EventRow, PostRow } from "@/lib/content/rows";
 import type { Database, Json } from "@/lib/database.types";
+import type { Message } from "@/lib/forms/schemas";
 
 /**
  * The Supabase secret key, for the site's server only. It may call only
@@ -56,6 +57,39 @@ export async function publicPosts(): Promise<PostRow[]> {
   const { data, error } = await admin().schema("site").rpc("public_posts");
   if (error) throw failure("Couldn't read the heads-ups", error);
   return data;
+}
+
+export type MessageSave = {
+  kind: Database["site"]["Enums"]["message_kind"];
+  /** The form's checked fields. The database checks them again and keeps only the ones each kind takes. */
+  payload: Omit<Message, "kind" | "reason">;
+  /** The sender's address, salted and hashed, for the hourly limit. */
+  ipHash: string;
+  env: "production" | "staging";
+  /** Where to queue the alert. Null queues none. */
+  alertTo: string | null;
+};
+
+export type MessageSaved = { status: "saved"; id: string } | { status: "limited"; message: string };
+
+/**
+ * Saves a message from a public form and queues its alert. The database
+ * checks the fields again and allows each sender 5 messages an hour, and
+ * the 6th comes back `limited` with a message to show them.
+ */
+export async function saveMessage(input: MessageSave): Promise<MessageSaved> {
+  const { data, error } = await admin()
+    .schema("site")
+    .rpc("submit_message", {
+      p_kind: input.kind,
+      p_payload: input.payload,
+      p_ip_hash: input.ipHash,
+      p_env: input.env,
+      p_alert_to: input.alertTo ?? undefined,
+    });
+  if (error?.code === "PT429") return { status: "limited", message: error.message };
+  if (error) throw failure("Couldn't save the message", error);
+  return { status: "saved", id: data };
 }
 
 export type EmailReserve = {

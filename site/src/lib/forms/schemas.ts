@@ -28,7 +28,10 @@ export type StudentBand = (typeof studentBands)[number];
 
 export const limits = { name: 80, email: 254, phone: 25, message: 2000, note: 500 } as const;
 
-const textFields = ["name", "email", "phone", "role", "band", "message"] as const;
+/** Why someone wrote in on the Contact form, when it isn't a plain message. */
+const contactReasons = ["takedown"] as const;
+
+const textFields = ["name", "email", "phone", "role", "band", "message", "reason"] as const;
 
 /** A form's answers: trimmed text with blanks left out, and the checked areas. */
 export type MessageInput = Partial<Record<(typeof textFields)[number], string>> & { areas?: string[] };
@@ -44,6 +47,8 @@ export type Message = {
   email?: string;
   phone?: string;
   role?: ContactRole;
+  /** A Contact message asking to take down a photo, which leaders handle first. */
+  reason?: (typeof contactReasons)[number];
   band?: StudentBand;
   areas?: string[];
   message?: string;
@@ -92,6 +97,7 @@ const schemas = {
     phone: z.optional(phone),
     role: z.enum(contactRoles, "Pick one."),
     message: z.string({ error: "Write a message." }).check(z.maxLength(limits.message, tooLong(limits.message))),
+    reason: z.optional(z.enum(contactReasons, "Pick one.")),
   }),
   visit: z.object({
     name,

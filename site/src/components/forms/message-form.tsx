@@ -12,13 +12,15 @@ import {
   useTransition,
 } from "react";
 import { Button } from "@/components/button";
+import { failures } from "@/content/forms";
 import { site } from "@/content/site";
 import { submitMessage } from "@/lib/forms/actions";
-import { ELAPSED_FIELD } from "@/lib/forms/guard";
+import { ELAPSED_FIELD, TURNSTILE_FIELD } from "@/lib/forms/guard";
 import { checkMessage, type FieldErrors, type MessageKind, readMessageInput } from "@/lib/forms/schemas";
 import { isDesktop } from "@/lib/media";
 import { Honeypot } from "./fields";
 import { FormSent, type SentProps } from "./form-sent";
+import { Turnstile, type TurnstileHandle } from "./turnstile";
 
 // The spinner shows at least this long, so a fast send doesn't just flicker.
 const MIN_PENDING_MS = 600;
@@ -59,13 +61,14 @@ type Props = {
  * first, with the same rules the server uses, and shows every problem at
  * once. After a first try, a problem clears as soon as it's fixed, but a
  * new one only shows when the person leaves the field or tries again.
- * Then it sends, and swaps the form for a thank-you.
+ * Then it sends, with Turnstile's token, and swaps the form for a thank-you.
  */
 export function MessageForm({ kind, submitLabel, finePrint, sent, children }: Props) {
   const hydrated = useHydrated();
   const startedAt = useRef(0);
   const focusFirstProblem = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const turnstile = useRef<TurnstileHandle>(null);
   const [round, setRound] = useState(0);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [tried, setTried] = useState(false);
@@ -152,16 +155,30 @@ export function MessageForm({ kind, submitLabel, finePrint, sent, children }: Pr
     data.set(ELAPSED_FIELD, String(Date.now() - startedAt.current));
 
     startTransition(async () => {
+      const minimum = new Promise((resolve) => window.setTimeout(resolve, MIN_PENDING_MS));
       try {
-        const [reply] = await Promise.all([
-          submitMessage(kind, data),
-          new Promise((resolve) => window.setTimeout(resolve, MIN_PENDING_MS)),
-        ]);
-        if (reply.status === "sent") setFirstName(reply.firstName);
-        else if (reply.status === "invalid") showProblems(reply.errors);
+        const human = (await turnstile.current?.token()) ?? { status: "off" };
+        if (human.status === "failed") {
+          await minimum;
+          // Starts the check over, so trying again gets a fresh one.
+          turnstile.current?.reset();
+          setFailure(failures.notLoaded);
+          return;
+        }
+        if (human.status === "ready") data.set(TURNSTILE_FIELD, human.token);
+
+        const [reply] = await Promise.all([submitMessage(kind, data), minimum]);
+        if (reply.status === "sent") {
+          setFirstName(reply.firstName);
+          return;
+        }
+        // The token is spent, or about to be, so the next try gets a new one.
+        turnstile.current?.reset();
+        if (reply.status === "invalid") showProblems(reply.errors);
         else setFailure(reply.message);
       } catch {
         // Offline, or a new deploy retired this page's action.
+        turnstile.current?.reset();
         setFailure(FAILED);
       }
     });
@@ -191,6 +208,7 @@ export function MessageForm({ kind, submitLabel, finePrint, sent, children }: Pr
       {children(errors)}
 
       <div className="mt-1 border-t border-line pt-6">
+        <Turnstile ref={turnstile} action={kind} />
         {failure && (
           <p role="alert" className="mb-4 flex gap-2.5 rounded-tile bg-danger/10 p-4 text-small font-medium text-danger">
             <TriangleAlert aria-hidden className="size-5 shrink-0" />

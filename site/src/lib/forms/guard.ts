@@ -9,6 +9,9 @@ export const HONEYPOT_FIELD = "website";
 /** How long the form was open before it was sent, in ms. The page's script adds it. */
 export const ELAPSED_FIELD = "elapsedMs";
 
+/** The Turnstile token, in the hidden field Cloudflare's widget adds to the form. */
+export const TURNSTILE_FIELD = "cf-turnstile-response";
+
 /** Faster than this, it wasn't a person typing. */
 export const MIN_FILL_MS = 3000;
 

@@ -1,16 +1,10 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { contactTopics } from "@/content/forms";
-import { type ContactRole, limits } from "@/lib/forms/schemas";
-import { ChoiceTiles, PrivacyNote, TextArea, TextField } from "./fields";
+import { contactTopics, roleChoices, takedown } from "@/content/forms";
+import { limits } from "@/lib/forms/schemas";
+import { CheckboxCard, ChoiceTiles, PrivacyNote, TextArea, TextField } from "./fields";
 import { MessageForm } from "./message-form";
-
-const roles = [
-  { value: "student", label: "Student" },
-  { value: "parent", label: "Parent or guardian" },
-  { value: "other", label: "Someone else" },
-] as const satisfies readonly { value: ContactRole; label: string }[];
 
 const noSubscribe = () => () => {};
 
@@ -68,7 +62,7 @@ export function ContactForm() {
               error={errors.phone}
             />
           </div>
-          <ChoiceTiles legend="I'm a…" name="role" choices={roles} error={errors.role} />
+          <ChoiceTiles legend="I'm a…" name="role" choices={roleChoices} error={errors.role} />
           {/* Remounts once the topic is known, so a link can start the message. */}
           <TextArea
             key={topic?.label ?? "blank"}
@@ -79,6 +73,15 @@ export function ContactForm() {
             defaultValue={topic?.message}
             hint={topic ? `About: ${topic.label}` : undefined}
             error={errors.message}
+          />
+          {/* A photo link checks it, and it remounts once the topic is known. */}
+          <CheckboxCard
+            key={`reason-${topic?.label ?? "blank"}`}
+            name="reason"
+            value="takedown"
+            label={takedown.label}
+            body={takedown.body}
+            defaultChecked={topic?.takedown}
           />
         </>
       )}

@@ -2,19 +2,22 @@ import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { ReactElement } from "react";
 import { z } from "zod";
+import { bandChoices, roleChoices } from "@/content/forms";
+import { serveAreas } from "@/content/serve-areas";
 import { Constants } from "@/lib/database.types";
 import { readEmailEnv, readPortalEnv, type AppEnv, type EmailEnv } from "@/lib/env";
 import { emailClaim, emailDetails, emailMark, type ClaimedEmail, type EmailMark } from "@/lib/supabase/admin";
 import { renderEmail, type RenderedEmail } from "./render";
 import { deliverEmail, type OutgoingEmail } from "./send";
+import { formAlertEmail } from "./templates/form-alert";
 import { ownerChangedEmail } from "./templates/owner-changed";
 import { requestPaidEmail } from "./templates/request-paid";
 import { requestReturnedEmail } from "./templates/request-returned";
 import { requestSubmittedEmail } from "./templates/request-submitted";
 
 /**
- * The outbox drain. The database queues finance and owner emails in
- * email_log and pokes the portal, which claims a few at a time, writes
+ * The outbox drain. The database queues finance, owner, and form emails
+ * in email_log and pokes the portal, which claims a few at a time, writes
  * them, sends them through Resend, and records what happened.
  */
 
@@ -61,15 +64,38 @@ const requestDetails = z.object({
 
 const ownerDetails = z.object({ name: z.string(), by: z.string().nullable() });
 
+/** What email_details() returns for a form alert: the whole message. */
+const messageDetails = z.object({
+  kind: z.enum(Constants.site.Enums.message_kind),
+  name: z.string(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  message: z.string().nullable(),
+  details: z.object({
+    role: z.string().optional(),
+    band: z.string().optional(),
+    areas: z.array(z.string()).optional(),
+  }),
+  env: z.enum(["production", "staging"]),
+});
+
+/** A choice as the form showed it, or as saved if the form no longer has it. */
+function labelOf(choices: readonly { value: string; label: string }[], value: string): string {
+  return choices.find((choice) => choice.value === value)?.label ?? value;
+}
+
 type Addressed = QueuedEmail & { subject: string; related_id: string };
 
+/** An email's body, and where a reply goes when it isn't the sender. */
+type Written = { body: ReactElement; replyTo?: string };
+
 /** Each template the drain writes. Null means the details didn't fit it. */
-const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: DrainLinks) => ReactElement | null> = {
+const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: DrainLinks) => Written | null> = {
   "request-submitted": (email, details, { financesUrl }) => {
     const parsed = requestDetails.safeParse(details);
     if (!parsed.success || !parsed.data.payee) return null;
     const { amount_cents, vendor, description, by, payee, by_payee } = parsed.data;
-    return requestSubmittedEmail({
+    const body = requestSubmittedEmail({
       subject: email.subject,
       amountCents: amount_cents,
       vendor,
@@ -79,12 +105,13 @@ const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: Drai
       payee,
       url: `${financesUrl}/admin/requests/${email.related_id}`,
     });
+    return { body };
   },
   "request-returned": (email, details, { financesUrl }) => {
     const parsed = requestDetails.safeParse(details);
     if (!parsed.success) return null;
     const { amount_cents, vendor, by, note } = parsed.data;
-    return requestReturnedEmail({
+    const body = requestReturnedEmail({
       subject: email.subject,
       amountCents: amount_cents,
       vendor,
@@ -92,12 +119,13 @@ const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: Drai
       note,
       url: `${financesUrl}/my/${email.related_id}`,
     });
+    return { body };
   },
   "request-paid": (email, details, { financesUrl }) => {
     const parsed = requestDetails.safeParse(details);
     if (!parsed.success) return null;
     const { amount_cents, vendor, payment_method, paid_at } = parsed.data;
-    return requestPaidEmail({
+    const body = requestPaidEmail({
       subject: email.subject,
       amountCents: amount_cents,
       vendor,
@@ -105,16 +133,45 @@ const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: Drai
       paidAt: paid_at,
       url: `${financesUrl}/my/${email.related_id}`,
     });
+    return { body };
   },
   "owner-changed": (email, details, { portalUrl }) => {
     const parsed = ownerDetails.safeParse(details);
     if (!parsed.success) return null;
-    return ownerChangedEmail({
+    const body = ownerChangedEmail({
       subject: email.subject,
       by: parsed.data.by,
       at: email.created_at,
       url: `${portalUrl}/people`,
     });
+    return { body };
+  },
+  "form-alert": (email, details, { portalUrl }) => {
+    const parsed = messageDetails.safeParse(details);
+    if (!parsed.success) return null;
+    const { kind, name, email: from, phone, message, details: answers, env } = parsed.data;
+    const staging = env === "staging";
+    const shown: [string, string][] = [];
+    if (answers.role) shown.push(["Who", labelOf(roleChoices, answers.role)]);
+    if (answers.band) shown.push(["School", labelOf(bandChoices, answers.band)]);
+    if (answers.areas) {
+      const titles = answers.areas.map((id) => serveAreas.find((area) => area.id === id)?.title ?? id);
+      shown.push(["Serve in", titles.join(", ")]);
+    }
+    const body = formAlertEmail({
+      subject: email.subject,
+      kind,
+      name,
+      email: from,
+      phone,
+      message,
+      answers: shown,
+      at: email.created_at,
+      staging,
+      url: `${portalUrl}/messages/${email.related_id}`,
+    });
+    // On staging nobody else may hear about a test, so a reply can't reach them.
+    return from && !staging ? { body, replyTo: from } : { body };
   },
 };
 
@@ -122,7 +179,7 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-type Built = { to: string; subject: string; body: ReactElement };
+type Built = Written & { to: string; subject: string };
 
 /** Writes one queued email, or says why it can't. */
 async function build(email: QueuedEmail, deps: DrainDeps): Promise<Built | { problem: string }> {
@@ -131,8 +188,9 @@ async function build(email: QueuedEmail, deps: DrainDeps): Promise<Built | { pro
   }
   const { to_address: to, subject, related_id } = email;
   if (!to || !subject || !related_id) return { problem: "its details are missing" };
-  const body = TEMPLATES[email.template]({ ...email, subject, related_id }, await deps.details(email.id), deps.links);
-  return body ? { to, subject, body } : { problem: "its details are missing" };
+  const details = await deps.details(email.id);
+  const written = TEMPLATES[email.template]({ ...email, subject, related_id }, details, deps.links);
+  return written ? { to, subject, ...written } : { problem: "its details are missing" };
 }
 
 /** Records a result. The row stays `sending` if this fails, and a later drain retries it under the same key. */
@@ -193,6 +251,7 @@ export async function drainEmails(deps: DrainDeps = defaultDrainDeps()): Promise
         from,
         to: built.to,
         subject: built.subject,
+        ...(built.replyTo && { replyTo: built.replyTo }),
         html: rendered.html,
         text: rendered.text,
         idempotencyKey: email.id,

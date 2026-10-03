@@ -174,6 +174,56 @@ export function readEmailEnv(source: Record<string, string | undefined> = proces
   };
 }
 
+export type FormEnv = {
+  appEnv: AppEnv;
+  /** Checks each form's Turnstile token. Unset means the forms can't save. */
+  turnstileSecret: string | null;
+  /** Keyed into each sender's address before it's stored, so the address itself never is. */
+  ipSalt: string | null;
+  /**
+   * Where a new message's alert goes: the youth inbox, or on staging the
+   * owner alert address. Null when email is off or there's nowhere to send
+   * it, and then the message waits for the daily digest.
+   */
+  alertTo: string | null;
+};
+
+// Cloudflare's published test secrets, like 1x0000000000000000000000000000000AA, which pass or fail every token.
+const turnstileTestSecret = /^\dx0+AA$/;
+
+const formSchema = z.object({
+  TURNSTILE_SECRET_KEY: blankAsMissing.pipe(z.string().optional()).optional(),
+  FORM_IP_SALT: blankAsMissing.pipe(z.string().min(32, "must be at least 32 characters").optional()).optional(),
+  YOUTH_INBOX_EMAIL: blankAsMissing.pipe(emailAddress.toLowerCase().optional()).optional(),
+  VERCEL_ENV: z.string().optional(),
+});
+
+/**
+ * The public forms' settings, naming any bad one in the error. A real
+ * production build refuses Cloudflare's test secrets, which would let
+ * every bot through.
+ */
+export function readFormEnv(source: Record<string, string | undefined> = process.env): FormEnv {
+  const result = formSchema.safeParse(source);
+  const problems = result.error?.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`) ?? [];
+  const secret = result.data?.TURNSTILE_SECRET_KEY;
+  if (secret && result.data?.VERCEL_ENV === "production" && turnstileTestSecret.test(secret)) {
+    problems.push("TURNSTILE_SECRET_KEY must be the real secret in production, not a test one");
+  }
+  if (!result.success || problems.length > 0) {
+    throw new Error(`Invalid environment variables: ${problems.join("; ")}`);
+  }
+  const { FORM_IP_SALT, YOUTH_INBOX_EMAIL } = result.data;
+  const email = readEmailEnv(source);
+  const inbox = email.appEnv === "staging" ? email.ownerAlertEmail : (YOUTH_INBOX_EMAIL ?? null);
+  return {
+    appEnv: email.appEnv,
+    turnstileSecret: secret ?? null,
+    ipSalt: FORM_IP_SALT ?? null,
+    alertTo: email.sending ? inbox : null,
+  };
+}
+
 /** Thrown by a write on staging. Its message is safe to show. */
 export class ReadOnlyError extends Error {
   constructor() {
