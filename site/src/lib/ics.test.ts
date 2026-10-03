@@ -6,6 +6,7 @@ import {
   calendarFile,
   escapeText,
   eventEntry,
+  feedEntries,
   foldLine,
   gatheringEntry,
   googleCalendarUrl,
@@ -162,6 +163,17 @@ describe("calendarFile", () => {
     }
   });
 
+  it("writes the sequence, so a calendar that has the event takes the newer one", () => {
+    expect(unfold(calendarFile([{ ...timed, sequence: 3 }], { stamp }))).toContain("SEQUENCE:3");
+    expect(unfold(calendarFile([{ ...timed, sequence: 0 }], { stamp }))).toContain("SEQUENCE:0");
+    expect(unfold(calendarFile([weekly], { stamp })).some((line) => line.startsWith("SEQUENCE"))).toBe(false);
+  });
+
+  it("marks a cancelled event cancelled, and nothing else", () => {
+    expect(unfold(calendarFile([{ ...timed, cancelled: true }], { stamp }))).toContain("STATUS:CANCELLED");
+    expect(unfold(calendarFile([timed, weekly], { stamp })).some((line) => line.startsWith("STATUS"))).toBe(false);
+  });
+
   it("names a feed and tells apps how often to check it", () => {
     const lines = unfold(calendarFile([timed], { stamp, name: "SBC South Youth" }));
     expect(lines).toContain("X-WR-CALNAME:SBC South Youth");
@@ -224,11 +236,39 @@ describe("content entries", () => {
   it("links an event to its page and gives the place with its address", () => {
     const entry = eventEntry(event, church);
     expect(entry).toMatchObject({
-      id: "e1",
+      title: "Fall Retreat",
+      description: "Two nights away.",
       url: "https://sbcsouthyouth.com/events/fall-retreat",
       location: "Example Pines Camp, 1 Example Pines Road, Mountainville, CA 00000",
       when: { kind: "timed", start: event.startsAt, end: event.endsAt },
     });
+    expect(entry).not.toHaveProperty("cancelled");
+  });
+
+  it("gives an event a UID from its id that no weekly night can share", () => {
+    expect(eventEntry(event, church).id).toBe("event-e1");
+    expect(unfold(calendarFile([eventEntry(event, church)], { stamp }))).toContain("UID:event-e1@sbcsouthyouth.com");
+    expect(gatheringEntry(gathering, church, stamp).id).toBe("weekly-youth-night");
+  });
+
+  it("carries an event's sequence", () => {
+    expect(eventEntry({ ...event, sequence: 4 }, church).sequence).toBe(4);
+    expect(eventEntry(event, church)).not.toHaveProperty("sequence");
+  });
+
+  it("says a cancelled event is cancelled in its title, and gives the reason first", () => {
+    const entry = eventEntry({ ...event, sequence: 5, cancelled: { reason: "Not enough signups." } }, church);
+    expect(entry).toMatchObject({
+      id: "event-e1",
+      title: "Cancelled: Fall Retreat",
+      description: "Not enough signups.\n\nTwo nights away.",
+      sequence: 5,
+      cancelled: true,
+    });
+    expect(eventEntry({ ...event, cancelled: {} }, church).description).toBe("Two nights away.");
+    const lines = unfold(calendarFile([entry], { stamp }));
+    expect(lines).toContain("STATUS:CANCELLED");
+    expect(lines).toContain("SUMMARY:Cancelled: Fall Retreat");
   });
 
   it("uses the church's address for a room at the church", () => {
@@ -267,5 +307,52 @@ describe("content entries", () => {
     const lines = unfold(calendarFile(gatherings.map((night) => gatheringEntry(night, church, now)), { stamp }));
     expect(lines.filter((line) => line === "RRULE:FREQ=WEEKLY")).toHaveLength(1);
     expect(lines).toContain("DTSTART;TZID=America/Los_Angeles:20261002T193000");
+  });
+});
+
+describe("feedEntries", () => {
+  const church = "123 Example Street, Anytown, CA 00000";
+  const now = laInstant("2026-10-03", "12:00");
+
+  const at = (id: string, startsAt: string, endsAt: string, extra: Partial<SiteEvent> = {}): SiteEvent => ({
+    id,
+    slug: id,
+    title: id,
+    startsAt,
+    endsAt,
+    allDay: false,
+    featured: false,
+    ...extra,
+  });
+
+  const nights: WeeklyGathering[] = [
+    { slug: "weekly-youth", title: "Youth", weekday: 5, startTime: "19:30", endTime: "21:00", description: "Fridays." },
+  ];
+
+  it("lists the weekly nights, then events soonest first", () => {
+    const events = [
+      at("later", "2026-11-07T17:00:00.000Z", "2026-11-07T20:00:00.000Z"),
+      at("sooner", "2026-10-10T16:00:00.000Z", "2026-10-10T19:00:00.000Z"),
+    ];
+    expect(feedEntries(nights, events, church, now).map((entry) => entry.id)).toEqual([
+      "weekly-youth",
+      "event-sooner",
+      "event-later",
+    ]);
+  });
+
+  it("keeps events that ended in the last 30 days and drops older ones", () => {
+    const events = [
+      at("last-month", "2026-09-04T01:00:00.000Z", "2026-09-04T03:00:00.000Z"),
+      at("long-ago", "2026-08-01T01:00:00.000Z", "2026-08-01T03:00:00.000Z"),
+    ];
+    expect(feedEntries([], events, church, now).map((entry) => entry.id)).toEqual(["event-last-month"]);
+  });
+
+  it("keeps a cancelled event, marked cancelled, so calendars that have it update it", () => {
+    const events = [at("called-off", "2026-10-18T01:00:00.000Z", "2026-10-18T03:00:00.000Z", { cancelled: {} })];
+    expect(feedEntries([], events, church, now)).toEqual([
+      expect.objectContaining({ id: "event-called-off", title: "Cancelled: called-off", cancelled: true }),
+    ]);
   });
 });

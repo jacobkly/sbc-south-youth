@@ -50,6 +50,7 @@ describe("eventFromRow", () => {
       locationAddress: "1 Camp Road, Anytown, WA 00000",
       costNote: "$40 per student",
       featured: true,
+      sequence: 2,
     });
   });
 

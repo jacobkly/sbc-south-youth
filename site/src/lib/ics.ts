@@ -10,7 +10,7 @@ import { APP_TIME_ZONE, addDays, laDateOf, todayInLA, weekdayOf, type IsoDate } 
  */
 
 export type CalendarEntry = {
-  /** Stable and unique, like an event id or a gathering slug. */
+  /** Stable and unique, like `event-<id>` or a gathering slug. */
   id: string;
   title: string;
   description?: string;
@@ -23,6 +23,10 @@ export type CalendarEntry = {
     | { kind: "all-day"; start: IsoDate; end: IsoDate }
     /** The first night, and "HH:MM" wall-clock times in LA. */
     | { kind: "weekly"; date: IsoDate; startTime: string; endTime: string };
+  /** How many times it's changed. A calendar that has it keeps the copy with the higher one. */
+  sequence?: number;
+  /** Called off, so a calendar that has it marks it cancelled instead of keeping it as planned. */
+  cancelled?: boolean;
 };
 
 const CRLF = "\r\n";
@@ -124,6 +128,8 @@ function eventLines(entry: CalendarEntry, stamp: Date): string[] {
     "BEGIN:VEVENT",
     `UID:${entry.id}@${UID_DOMAIN}`,
     `DTSTAMP:${utcStamp(stamp)}`,
+    ...(entry.sequence !== undefined ? [`SEQUENCE:${entry.sequence}`] : []),
+    ...(entry.cancelled ? ["STATUS:CANCELLED"] : []),
     ...timeLines(entry.when),
     `SUMMARY:${escapeText(entry.title)}`,
     ...(description ? [`DESCRIPTION:${escapeText(description)}`] : []),
@@ -196,16 +202,26 @@ function placeOf(locationName: string | undefined, address: string | undefined, 
   return `${locationName}, ${address ?? churchAddress}`;
 }
 
+/**
+ * A one-off event. Its UID comes from its id, so it stays the same when
+ * the title or slug changes. Not every calendar app shows a cancelled
+ * status, so a cancelled event says so in its title too, and gives the
+ * reason before the description.
+ */
 export function eventEntry(event: SiteEvent, churchAddress: string): CalendarEntry {
+  const { cancelled } = event;
+  const description = [cancelled?.reason, event.description].filter(Boolean).join("\n\n");
   return {
-    id: event.id,
-    title: event.title,
-    description: event.description,
+    id: `event-${event.id}`,
+    title: cancelled ? `Cancelled: ${event.title}` : event.title,
+    ...(description && { description }),
     location: placeOf(event.locationName, event.locationAddress, churchAddress),
     url: eventUrl(event.slug),
     when: event.allDay
       ? { kind: "all-day", start: laDateOf(event.startsAt), end: laDateOf(event.endsAt) }
       : { kind: "timed", start: event.startsAt, end: event.endsAt },
+    ...(event.sequence !== undefined && { sequence: event.sequence }),
+    ...(cancelled && { cancelled: true }),
   };
 }
 
@@ -225,6 +241,31 @@ export function gatheringEntry(gathering: WeeklyGathering, churchAddress: string
       endTime: gathering.endTime,
     },
   };
+}
+
+/** How long past events stay on subscribers' calendars, in days. */
+const KEEP_PAST_DAYS = 30;
+
+/**
+ * What the calendar feed lists: the weekly nights, then every event that
+ * hasn't ended or ended in the last month, soonest first. A cancelled
+ * event stays, marked cancelled, so calendars that already have it update
+ * it instead of keeping it as planned.
+ */
+export function feedEntries(
+  gatherings: WeeklyGathering[],
+  events: SiteEvent[],
+  churchAddress: string,
+  now: Date,
+): CalendarEntry[] {
+  const since = now.getTime() - KEEP_PAST_DAYS * 86_400_000;
+  return [
+    ...gatherings.map((gathering) => gatheringEntry(gathering, churchAddress, now)),
+    ...events
+      .filter((event) => Date.parse(event.endsAt) > since)
+      .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
+      .map((event) => eventEntry(event, churchAddress)),
+  ];
 }
 
 /**

@@ -55,6 +55,7 @@ export function eventFromRow(row: EventRow, photo?: Photo): SiteEvent {
     ...(costNote && { costNote }),
     featured: row.featured,
     ...(row.status === "cancelled" && { cancelled: reason ? { reason } : {} }),
+    sequence: row.sequence,
   };
 }
 

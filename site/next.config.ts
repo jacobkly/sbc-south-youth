@@ -28,6 +28,8 @@ const nextConfig: NextConfig = {
   cacheLife: {
     // Time-sensitive sections (Next Up, This Week) refresh every 5 minutes.
     feed: { stale: 300, revalidate: 300, expire: 3600 },
+    // The calendar feed, which calendar apps check twice a day.
+    calendar: { stale: 900, revalidate: 900, expire: 3600 },
   },
   async rewrites() {
     return { beforeFiles: [...portalRewrites(), ...gateRewrites(gated)], afterFiles: [], fallback: [] };

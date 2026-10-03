@@ -59,6 +59,11 @@ export type SiteEvent = {
    * leaves the agenda and Home.
    */
   cancelled?: { reason?: string };
+  /**
+   * Goes up with every edit, so a calendar that already has the event
+   * knows to take the newer one.
+   */
+  sequence?: number;
 };
 
 /** A heads-up. Its photo is the one of the event it links to, if any. */
