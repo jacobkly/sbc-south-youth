@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/portal/ui/radio-group";
 import { ResponsiveSheetContent } from "@/components/portal/ui/responsive-sheet";
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/portal/ui/sheet";
 import { invitePerson, type InviteResult } from "@/lib/portal/people/actions";
+import { emailProblem } from "@/lib/portal/people/invite";
 import { checkInvite, INVITE_ROLES, type InviteErrors } from "@/lib/portal/people/schema";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, type AppRole } from "@/lib/portal/roles";
 
@@ -523,7 +524,7 @@ function InviteDone({
     access: `${result.name} already has an account, so they got an email about the new access instead of an invite.`,
     unchanged: "Nothing changed, and no email went out.",
   }[result.kind];
-  const emailProblem = result.kind === "unchanged" ? null : describeSend(result.sent);
+  const notSent = emailProblem(result.sent, result.kind === "access" ? "access" : "invite");
 
   return (
     <div className="space-y-6">
@@ -535,11 +536,11 @@ function InviteDone({
         <p className="text-sm text-muted-foreground">{detail}</p>
       </div>
 
-      {emailProblem && (
+      {notSent && (
         <Alert>
           <TriangleAlertIcon />
           <AlertTitle>The email didn&apos;t go out</AlertTitle>
-          <AlertDescription>{emailProblem}</AlertDescription>
+          <AlertDescription>{notSent}</AlertDescription>
         </Alert>
       )}
 
@@ -561,20 +562,4 @@ function InviteDone({
       </div>
     </div>
   );
-}
-
-function describeSend(sent: Done["sent"]): string | null {
-  switch (sent) {
-    case "sent":
-    case null:
-      return null;
-    case "off":
-      return "Email isn't set up here. Send them to the setup page yourself, and they'll use this email address.";
-    case "skipped_quota":
-      return "Today's email limit is nearly used up, so it was held back. Invite them again tomorrow to send it.";
-    case "suppressed":
-      return "Email to this address bounced or was marked as spam before. Check the address with them.";
-    case "failed":
-      return "Something went wrong sending it. Invite them again to try once more.";
-  }
 }

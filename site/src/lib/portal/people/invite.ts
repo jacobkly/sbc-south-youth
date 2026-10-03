@@ -1,3 +1,4 @@
+import type { SendResult } from "@/lib/email/send";
 import { canUsePortal, hasRole, sortRoles, type AppRole } from "@/lib/portal/roles";
 import type { PayeeChoice } from "./schema";
 
@@ -131,4 +132,31 @@ const INTERNAL = /row-level security|duplicate key|violates|constraint|relation|
 export function friendlyError(error: { code?: string; message: string } | null, fallback: string): string {
   if (!error?.code || !SHOWN_CODES.has(error.code) || INTERNAL.test(error.message)) return fallback;
   return error.message;
+}
+
+/**
+ * Why an invite or new-access email didn't go out, or null when it did or
+ * none was needed. An invite can be sent again; new access can't.
+ */
+export function emailProblem(sent: SendResult["status"] | null, kind: "invite" | "access"): string | null {
+  const invite = kind === "invite";
+  switch (sent) {
+    case "sent":
+    case null:
+      return null;
+    case "off":
+      return invite
+        ? "Email isn't set up here. Send them to the setup page yourself, and they'll use this email address."
+        : "Email isn't set up here, so let them know yourself.";
+    case "skipped_quota":
+      return invite
+        ? "Today's email limit is nearly used up, so it was held back. Invite them again tomorrow to send it."
+        : "Today's email limit is nearly used up, so it was held back. Let them know yourself.";
+    case "suppressed":
+      return "Email to this address bounced or was marked as spam before. Check the address with them.";
+    case "failed":
+      return invite
+        ? "Something went wrong sending it. Invite them again to try once more."
+        : "Something went wrong sending it, so let them know yourself.";
+  }
 }

@@ -1,9 +1,8 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { EMAIL_PRIORITY, sendEmail, type SendResult } from "@/lib/email/send";
-import { assertWritable, readPortalEnv, ReadOnlyError } from "@/lib/env";
-import { getCurrentUser, getSessionAal } from "@/lib/portal/auth/current-user";
+import type { SendResult } from "@/lib/email/send";
+import { readPortalEnv } from "@/lib/env";
 import { createInvitedUser } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -15,8 +14,8 @@ import {
   type InviteStatus,
   type PayeeRow,
 } from "./invite";
-import { inviteEmail } from "./invite-email";
 import { checkInvite, type InviteErrors } from "./schema";
+import { emailInvite, linkPayee, requireOwner } from "./server";
 
 export type InviteValues = {
   fullName: string;
@@ -61,18 +60,9 @@ export async function invitePerson(values: InviteValues): Promise<InviteResult> 
   const { invite } = check;
 
   // The secret key below can't check who's asking, so this has to.
-  const me = await getCurrentUser();
-  if (!me?.is_active || !me.roles.includes("owner")) return failed("Only an owner can invite people.");
-  if ((await getSessionAal()) !== "aal2") {
-    return failed("Enter a code from your authenticator app first. Reload the page to get asked for one.");
-  }
-
-  try {
-    assertWritable();
-  } catch (error) {
-    if (error instanceof ReadOnlyError) return failed(error.message);
-    throw error;
-  }
+  const owner = await requireOwner("Only an owner can invite people.");
+  if ("refused" in owner) return failed(owner.refused);
+  const { me } = owner;
 
   const supabase = await createClient();
 
@@ -163,45 +153,14 @@ export async function invitePerson(values: InviteValues): Promise<InviteResult> 
   refresh();
   if (plan.kind === "unchanged") return done(null, warning);
 
-  const message = inviteEmail({
+  const sent = await emailInvite({
     kind: plan.kind === "access" ? "access" : "invite",
-    fullName: name,
+    name,
     email: invite.email,
     inviterName: me.full_name,
     roles: plan.kind === "access" ? plan.added : plan.roles,
     links,
-  });
-  const result = await sendEmail({
-    template: plan.kind === "access" ? "access" : "invite",
-    priority: EMAIL_PRIORITY.invite,
-    to: invite.email,
-    subject: message.subject,
-    scope: "platform",
     related: inviteId ? { type: "invite", id: inviteId } : { type: "user", id: userId },
-    body: message.body,
   });
-  return done(result.status, warning);
-}
-
-/** Makes or links the requester's payee. Returns a warning instead of failing the saved invite. */
-async function linkPayee(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  payee: { action: "create" } | { action: "link"; payeeId: string },
-  userId: string,
-  fullName: string,
-  email: string,
-): Promise<string | null> {
-  const fallback = "Couldn't link their payee. Link it from finances.";
-  let payeeId = payee.action === "link" ? payee.payeeId : null;
-  if (!payeeId) {
-    const { data, error } = await supabase
-      .from("payees")
-      .insert({ full_name: fullName, email })
-      .select("id")
-      .single();
-    if (error) return friendlyError(error, fallback);
-    payeeId = data.id;
-  }
-  const { error } = await supabase.rpc("link_payee", { p_payee_id: payeeId, p_user_id: userId });
-  return error ? friendlyError(error, fallback) : null;
+  return done(sent, warning);
 }

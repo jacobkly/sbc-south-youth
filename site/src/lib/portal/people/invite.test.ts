@@ -3,6 +3,7 @@ import {
   accountLinks,
   choosePayee,
   emailPattern,
+  emailProblem,
   friendlyError,
   planInvite,
   type ExistingPerson,
@@ -211,5 +212,32 @@ describe("friendlyError", () => {
     expect(friendlyError({ code: "23505", message: duplicate }, fallback)).toBe(fallback);
     expect(friendlyError({ code: "08006", message: "connection failure" }, fallback)).toBe(fallback);
     expect(friendlyError(null, fallback)).toBe(fallback);
+  });
+});
+
+describe("emailProblem", () => {
+  it("says nothing when the email went out, or none was needed", () => {
+    expect(emailProblem("sent", "invite")).toBeNull();
+    expect(emailProblem(null, "access")).toBeNull();
+  });
+
+  it("points an invite that didn't go out at sending it again", () => {
+    expect(emailProblem("failed", "invite")).toBe(
+      "Something went wrong sending it. Invite them again to try once more.",
+    );
+    expect(emailProblem("skipped_quota", "invite")).toBe(
+      "Today's email limit is nearly used up, so it was held back. Invite them again tomorrow to send it.",
+    );
+  });
+
+  it("asks the owner to pass on new access themselves, since there's nothing to resend", () => {
+    expect(emailProblem("failed", "access")).toBe("Something went wrong sending it, so let them know yourself.");
+    expect(emailProblem("off", "access")).toBe("Email isn't set up here, so let them know yourself.");
+  });
+
+  it("flags an address that bounced before either way", () => {
+    expect(emailProblem("suppressed", "access")).toBe(
+      "Email to this address bounced or was marked as spam before. Check the address with them.",
+    );
   });
 });

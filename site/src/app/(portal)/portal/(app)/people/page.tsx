@@ -3,22 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { UserPlusIcon } from "lucide-react";
 import { NarrowPage } from "@/components/portal/nav/app-shell";
-import { UserAvatar } from "@/components/portal/nav/user-avatar";
-import { Badge } from "@/components/portal/ui/badge";
+import { PeopleList } from "@/components/portal/people/people-list";
 import { Button } from "@/components/portal/ui/button";
 import { getCurrentUser } from "@/lib/portal/auth/current-user";
-import { listPeople, type PersonStatus } from "@/lib/portal/people/list";
-import { ROLE_LABELS } from "@/lib/portal/roles";
-import { createClient } from "@/lib/supabase/server";
+import { loadPeople } from "@/lib/portal/people/queries";
 
 export const metadata: Metadata = {
   title: "People",
-};
-
-const STATUS_BADGES: Record<Exclude<PersonStatus, "active">, { label: string; variant: "outline" | "destructive" }> = {
-  invited: { label: "Invited", variant: "outline" },
-  removed: { label: "Removed", variant: "destructive" },
-  no_access: { label: "No access", variant: "outline" },
 };
 
 export default async function PeoplePage() {
@@ -26,14 +17,7 @@ export default async function PeoplePage() {
   const me = await getCurrentUser();
   if (!me?.roles.includes("owner")) notFound();
 
-  const supabase = await createClient();
-  const [users, invites] = await Promise.all([
-    supabase.from("users").select("id, full_name, email, avatar_path, roles, is_active"),
-    supabase.from("invites").select("user_id, status"),
-  ]);
-  if (users.error) throw users.error;
-  if (invites.error) throw invites.error;
-  const people = listPeople(users.data, invites.data, me.id);
+  const people = await loadPeople(me.id, new Date());
   const onlyYou = people.every((person) => person.you);
 
   return (
@@ -48,35 +32,7 @@ export default async function PeoplePage() {
         </Button>
       </header>
 
-      <ul className="divide-y rounded-xl border bg-card" aria-label="People">
-        {people.map((person) => {
-          const status = person.status === "active" ? null : STATUS_BADGES[person.status];
-          return (
-            <li key={person.id} className="flex min-w-0 items-start gap-3 p-4">
-              <UserAvatar name={person.name} path={person.avatarPath} className="mt-0.5 size-10" />
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="min-w-0">
-                  <p className="flex min-w-0 items-baseline gap-1.5 font-medium">
-                    <span className="truncate">{person.name}</span>
-                    {person.you && <span className="shrink-0 text-sm font-normal text-muted-foreground">(you)</span>}
-                  </p>
-                  <p className="truncate text-sm text-muted-foreground">{person.email}</p>
-                </div>
-                {(status || person.roles.length > 0) && (
-                  <p className="flex flex-wrap gap-1.5">
-                    {status && <Badge variant={status.variant}>{status.label}</Badge>}
-                    {person.roles.map((role) => (
-                      <Badge key={role} variant="secondary">
-                        {ROLE_LABELS[role]}
-                      </Badge>
-                    ))}
-                  </p>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      <PeopleList people={people} />
 
       {onlyYou && (
         <section aria-labelledby="empty-heading" className="space-y-3 rounded-xl border border-dashed p-6 text-center">

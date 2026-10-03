@@ -127,3 +127,24 @@ export async function createInvitedUser(input: InvitedUser): Promise<{ id: strin
   if (error) throw failure("Couldn't create the account", { message: error.message, code: error.code });
   return { id: data.user.id };
 }
+
+/** Long enough to mean "until an owner reinstates them". */
+const BANNED = "876000h";
+
+/**
+ * Stops someone whose access was removed from staying signed in: their
+ * sign-in can't be refreshed, and they can't sign in again. Their access
+ * token works until it expires, but RLS already gives it nothing. Call it
+ * only from a server action that has already checked the caller is an
+ * owner, after remove_access() succeeded.
+ */
+export async function banUser(userId: string): Promise<void> {
+  const { error } = await admin().auth.admin.updateUserById(userId, { ban_duration: BANNED });
+  if (error) throw failure("Couldn't sign them out", { message: error.message, code: error.code });
+}
+
+/** Lets a reinstated person sign in again. Same rules as banUser(). */
+export async function unbanUser(userId: string): Promise<void> {
+  const { error } = await admin().auth.admin.updateUserById(userId, { ban_duration: "none" });
+  if (error) throw failure("Couldn't let them sign in", { message: error.message, code: error.code });
+}

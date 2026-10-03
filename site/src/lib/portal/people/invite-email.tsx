@@ -62,6 +62,12 @@ export function inviteEmail(input: InviteEmailInput): { subject: string; body: R
             {inviter} gave you new access in {links.appName}. Now you can also use:
           </EmailText>
           <RoleList roles={roles} />
+          {roles.includes("owner") && (
+            <EmailText>
+              Owners also enter a code from an authenticator app when they sign in. You&apos;ll set one up the next
+              time you open the portal.
+            </EmailText>
+          )}
           <EmailButton href={links.signInUrl}>Sign in</EmailButton>
           <EmailNote>
             Sign in with {email} and your password. If you don&apos;t remember it, choose Forgot password? on the

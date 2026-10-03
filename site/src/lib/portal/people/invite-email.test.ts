@@ -87,5 +87,14 @@ describe("the new access email", () => {
     expect(html).toContain('href="https://portal.example.test/login"');
     expect(text).toContain("Forgot password?");
     expect(text).not.toContain("6-digit code");
+    expect(text).not.toContain("authenticator app");
+  });
+
+  it("tells a new owner about two-step sign-in", async () => {
+    const { text } = await renderEmail(inviteEmail({ ...access, roles: ["owner"] }).body);
+
+    expect(text).toContain("Owner");
+    expect(text).toContain("Owners also enter a code from an authenticator app when they sign in.");
+    expect(text).toContain("You'll set one up the next time you open the portal.");
   });
 });

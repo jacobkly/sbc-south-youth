@@ -16,6 +16,7 @@ export default function PeopleLoading() {
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-36" />
               <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-28" />
               <Skeleton className="h-5 w-24 rounded-full" />
             </div>
           </li>
