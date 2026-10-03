@@ -42,6 +42,12 @@ describe("findBackTarget", () => {
   it("doesn't treat a path that only starts with admin as the app", () => {
     expect(findBackTarget([`${APP}/administrator`, `${APP}/admin`], 1)).toBeNull();
   });
+
+  it("goes back within a requester's own pages", () => {
+    const urls = [`${APP}/my`, `${APP}/my/r1`];
+    expect(findBackTarget(urls, 1)).toEqual({ steps: 1, href: "/my" });
+    expect(findBackTarget([`${APP}/myself`, `${APP}/my`], 1)).toBeNull();
+  });
 });
 
 describe("pageLabel", () => {
@@ -52,6 +58,12 @@ describe("pageLabel", () => {
     expect(pageLabel("/admin/payees")).toBe("Payees");
     expect(pageLabel("/admin/reports")).toBe("Reports");
     expect(pageLabel("/admin/settings")).toBe("Settings");
+  });
+
+  it("names a requester's pages", () => {
+    expect(pageLabel("/my")).toBe("My requests");
+    expect(pageLabel("/my/new")).toBe("New request");
+    expect(pageLabel("/my/0b7f7c1e-4f5e-4f3a-9a7e-1f2d3c4b5a69")).toBe("Request");
   });
 
   it("names one request or payee", () => {

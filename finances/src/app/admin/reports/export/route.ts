@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
-import { canUseApp, getCurrentUser } from "@/lib/auth/current-user";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { canUseArea } from "@/lib/auth/roles";
 import { todayInLA } from "@/lib/dates";
 import { reportCsv, reportFileName, summaryCsv, summaryFileName } from "@/lib/reports/export";
 import { parseReportFilters } from "@/lib/reports/filters";
@@ -13,7 +14,7 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
-  if (!user || !canUseApp(user)) {
+  if (!user || !canUseArea(user, "team")) {
     return new Response("You don't have access to reports.", { status: 403 });
   }
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EditPayeeButton } from "@/components/payees/edit-payee-button";
 import { PayeeDetail } from "@/components/payees/payee-detail";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { getCurrentUser, getCurrentUserId } from "@/lib/auth/current-user";
 import { todayInLA } from "@/lib/dates";
 import { PAYEE_COLUMNS } from "@/lib/payees/columns";
 import { loadPayeeTotals } from "@/lib/payees/totals";
@@ -22,12 +22,12 @@ export default async function PayeePage({ params }: PageProps<"/admin/payees/[id
   if (!isUuid(id)) notFound();
 
   const year = Number(todayInLA().slice(0, 4));
-  const supabase = await createClient();
+  const [supabase, userId] = await Promise.all([createClient(), getCurrentUserId()]);
   // The loaders throw on failure, and admin/error.tsx handles it.
   const [{ data: payee, error }, totals, requests, user] = await Promise.all([
     supabase.from("payees").select(PAYEE_COLUMNS).eq("id", id).maybeSingle(),
     loadPayeeTotals(supabase, id, year),
-    loadPayeeRequests(supabase, id, RECENT_REQUESTS),
+    loadPayeeRequests(supabase, id, RECENT_REQUESTS, userId),
     getCurrentUser(),
   ]);
 

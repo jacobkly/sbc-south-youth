@@ -119,13 +119,16 @@ function receiptHint(count: number): string {
  *
  * Most requests have one receipt, so that looks like a single purchase. "Add
  * another receipt" turns it into a list with a total.
+ *
+ * A requester's own form leaves out the payee, since it's always them, and
+ * the no-receipt exception, which only an owner can grant.
  */
 export function RequestFields({
   values,
   errors,
   onChange,
-  payees,
-  onPayeeAdded,
+  payeePicker,
+  allowNoReceipt = true,
   eventNames,
   today,
   pendingReceipts,
@@ -137,9 +140,10 @@ export function RequestFields({
   values: RequestFormValues;
   errors: RequestFormErrors;
   onChange: <K extends keyof RequestFormValues>(key: K, value: RequestFormValues[K]) => void;
-  /** Sorted by name. */
-  payees: PayeeRow[];
-  onPayeeAdded: (payee: PayeeRow) => void;
+  /** Who it's paid to, from payees sorted by name. Left out, the form has no payee field. */
+  payeePicker?: { payees: PayeeRow[]; onAdded: (payee: PayeeRow) => void };
+  /** Shows the "No receipt on file" switch and its reason. */
+  allowNoReceipt?: boolean;
   /** Recent event names, offered as suggestions. */
   eventNames: string[];
   today: IsoDate;
@@ -162,6 +166,8 @@ export function RequestFields({
   const repeats = pickedTwice(picked);
   // Files that can still be picked, on any receipt.
   const room = Math.max(0, pendingReceipts.limit - picked.length);
+  // Without the switch, files can always be added, even to a request an owner marked as having none.
+  const showPicker = !values.no_receipt || !allowNoReceipt;
 
   // After adding or removing a receipt, focus moves to the receipt now in its
   // place (or the add button) and scrolls it into view. Never to a field, so
@@ -280,7 +286,7 @@ export function RequestFields({
     );
   }
 
-  const noReceiptSwitch = receiptCount === 0 && (
+  const noReceiptSwitch = allowNoReceipt && receiptCount === 0 && (
     <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 py-2">
       <Label htmlFor={requestFieldId("no_receipt")} className="text-base font-normal desktop:text-sm">
         No receipt on file
@@ -312,18 +318,20 @@ export function RequestFields({
 
   return (
     <>
-      <FormField id={requestFieldId("payee_id")} label="Payee" error={errors.payee_id} group>
-        <PayeePicker
-          id={requestFieldId("payee_id")}
-          labelId={`${requestFieldId("payee_id")}-label`}
-          payees={payees}
-          value={values.payee_id}
-          onChange={(payeeId) => onChange("payee_id", payeeId)}
-          onAdded={onPayeeAdded}
-          invalid={Boolean(errors.payee_id)}
-          describedBy={describedBy(requestFieldId("payee_id"), errors.payee_id)}
-        />
-      </FormField>
+      {payeePicker && (
+        <FormField id={requestFieldId("payee_id")} label="Payee" error={errors.payee_id} group>
+          <PayeePicker
+            id={requestFieldId("payee_id")}
+            labelId={`${requestFieldId("payee_id")}-label`}
+            payees={payeePicker.payees}
+            value={values.payee_id}
+            onChange={(payeeId) => onChange("payee_id", payeeId)}
+            onAdded={payeePicker.onAdded}
+            invalid={Boolean(errors.payee_id)}
+            describedBy={describedBy(requestFieldId("payee_id"), errors.payee_id)}
+          />
+        </FormField>
+      )}
 
       <FormField id={requestFieldId("type")} label="Type" error={errors.type} group>
         <RadioGroup
@@ -428,7 +436,7 @@ export function RequestFields({
             group
           >
             {savedReceipts?.(lines[0].id)}
-            {!values.no_receipt && picker(0, false)}
+            {showPicker && picker(0, false)}
             {noReceiptSwitch}
           </FormField>
           {addLineButton}
@@ -475,7 +483,7 @@ export function RequestFields({
                     </FormField>
                   </div>
                   {savedReceipts?.(line.id, `Receipt ${index + 1}`)}
-                  {!values.no_receipt && picker(index, true)}
+                  {showPicker && picker(index, true)}
                 </li>
               );
             })}
@@ -511,7 +519,7 @@ export function RequestFields({
         </div>
       )}
 
-      {values.no_receipt && (
+      {allowNoReceipt && values.no_receipt && (
         <FormField
           id={requestFieldId("no_receipt_reason")}
           label="Why there's no receipt"

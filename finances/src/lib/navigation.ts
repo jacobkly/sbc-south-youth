@@ -16,17 +16,21 @@ const PAGE_LABELS: Record<string, string> = {
   "/admin/settings": "Settings",
   "/admin/settings/import": "Import",
   "/account": "Account",
+  "/my": "My requests",
+  "/my/new": "New request",
 };
 
+const APP_ROOTS = ["/admin", "/my", "/account"];
+
 function isAppPath(pathname: string): boolean {
-  return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/account";
+  return APP_ROOTS.some((root) => pathname === root || pathname.startsWith(`${root}/`));
 }
 
 /** A short name for a page of the app, shown on a back button, e.g. "Dashboard". */
 export function pageLabel(pathname: string): string {
   const label = PAGE_LABELS[pathname];
   if (label) return label;
-  if (/^\/admin\/requests\/[^/]+$/.test(pathname)) return "Request";
+  if (/^\/(admin\/requests|my)\/[^/]+$/.test(pathname)) return "Request";
   if (/^\/admin\/payees\/[^/]+$/.test(pathname)) return "Payee";
   return "Back";
 }

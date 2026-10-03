@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatRequestNumber, isEditable, listedDate, requestTitle } from "./format";
+import { formatRequestNumber, isEditable, isEditableByRequester, listedDate, requestTitle } from "./format";
 
 describe("requestTitle", () => {
   it("uses the vendor first", () => {
@@ -32,6 +32,19 @@ describe("isEditable", () => {
     expect(isEditable("paid")).toBe(false);
     expect(isEditable("rejected")).toBe(false);
     expect(isEditable("cancelled")).toBe(false);
+  });
+});
+
+describe("isEditableByRequester", () => {
+  it("lets a requester change a draft or answer a question", () => {
+    expect(isEditableByRequester("draft")).toBe(true);
+    expect(isEditableByRequester("needs_info")).toBe(true);
+  });
+
+  it("locks a request once it's waiting on review or decided", () => {
+    for (const status of ["submitted", "approved", "paid", "rejected", "cancelled"] as const) {
+      expect(isEditableByRequester(status)).toBe(false);
+    }
   });
 });
 

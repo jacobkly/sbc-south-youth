@@ -5,6 +5,7 @@ import { fetchAll } from "@/lib/supabase/fetch-all";
 import {
   defaultTab,
   MAX_QUEUE_PAGES,
+  ownDraftsFilter,
   QUEUE_PAGE_SIZE,
   QUEUE_TAB_STATUSES,
   QUEUE_TABS,
@@ -55,15 +56,19 @@ export type QueuePage = {
   hasMore: boolean;
 };
 
-/** Requests in one tab that match the filters. `payeeIds` are the payees whose names match the search. */
+/**
+ * Requests in one tab that match the filters. `payeeIds` are the payees whose
+ * names match the search, and `userId` is who's looking, whose drafts show.
+ */
 function queueQuery(
   supabase: SupabaseClient<Database>,
   tab: QueueTab,
   filters: QueueFilters,
   payeeIds: readonly string[],
+  userId: string,
   options?: { count: "exact"; head: true },
 ) {
-  let query = supabase.from("reimbursement_requests").select(QUEUE_COLUMNS, options);
+  let query = supabase.from("reimbursement_requests").select(QUEUE_COLUMNS, options).or(ownDraftsFilter(userId));
   const statuses = QUEUE_TAB_STATUSES[tab];
   if (statuses) query = query.in("status", statuses);
   if (filters.from) query = query.gte("purchase_date", filters.from);
@@ -80,9 +85,10 @@ async function loadCounts(
   supabase: SupabaseClient<Database>,
   filters: QueueFilters,
   payeeIds: readonly string[],
+  userId: string,
 ): Promise<Record<QueueTab, number>> {
   const results = await Promise.all(
-    QUEUE_TABS.map((tab) => queueQuery(supabase, tab, filters, payeeIds, { count: "exact", head: true })),
+    QUEUE_TABS.map((tab) => queueQuery(supabase, tab, filters, payeeIds, userId, { count: "exact", head: true })),
   );
   return Object.fromEntries(
     QUEUE_TABS.map((tab, index) => {
@@ -95,18 +101,20 @@ async function loadCounts(
 
 /**
  * The loaded pages of the current tab, and the count in every tab. When the
- * URL doesn't name a tab, the counts pick one. Throws if a query fails.
+ * URL doesn't name a tab, the counts pick one. Drafts show only to the person
+ * who started them. Throws if a query fails.
  */
 export async function loadQueue(
   supabase: SupabaseClient<Database>,
   filters: QueueFilters,
   payeeIds: readonly string[],
+  userId: string,
 ): Promise<QueuePage> {
-  const counting = loadCounts(supabase, filters, payeeIds);
+  const counting = loadCounts(supabase, filters, payeeIds, userId);
   // Only waits for the counts first when it needs them to pick the tab.
   const tab = filters.tab ?? defaultTab(await counting);
   const [rows, counts] = await Promise.all([
-    queueQuery(supabase, tab, filters, payeeIds)
+    queueQuery(supabase, tab, filters, payeeIds, userId)
       .order(sortsByPurchaseDate(filters) ? "purchase_date" : "sort_at", { ascending: false })
       .order("request_number", { ascending: false })
       .range(0, filters.pages * QUEUE_PAGE_SIZE - 1),
@@ -123,14 +131,19 @@ export async function loadQueue(
   };
 }
 
-/** The newest requests by paid or created date, and how many there are in all. Throws if the query fails. */
+/**
+ * The newest requests by paid or created date, and how many there are in all.
+ * Drafts show only to `userId`, who started them. Throws if the query fails.
+ */
 export async function loadRecentRequests(
   supabase: SupabaseClient<Database>,
   limit: number,
+  userId: string,
 ): Promise<{ rows: QueueRow[]; total: number }> {
   const { data, count, error } = await supabase
     .from("reimbursement_requests")
     .select(QUEUE_COLUMNS, { count: "exact" })
+    .or(ownDraftsFilter(userId))
     .order("sort_at", { ascending: false })
     .order("request_number", { ascending: false })
     .limit(limit);
@@ -139,16 +152,20 @@ export async function loadRecentRequests(
   return { rows: data, total: count ?? data.length };
 }
 
-/** A payee's newest requests by paid or created date, and how many they have in all. Throws if the query fails. */
+/**
+ * A payee's newest requests by paid or created date, and how many they have
+ * in all. With `draftsBy`, drafts show only when that person started them.
+ * Throws if the query fails.
+ */
 export async function loadPayeeRequests(
   supabase: SupabaseClient<Database>,
   payeeId: string,
   limit: number,
+  draftsBy?: string,
 ): Promise<{ rows: QueueRow[]; total: number }> {
-  const { data, count, error } = await supabase
-    .from("reimbursement_requests")
-    .select(QUEUE_COLUMNS, { count: "exact" })
-    .eq("payee_id", payeeId)
+  let query = supabase.from("reimbursement_requests").select(QUEUE_COLUMNS, { count: "exact" }).eq("payee_id", payeeId);
+  if (draftsBy) query = query.or(ownDraftsFilter(draftsBy));
+  const { data, count, error } = await query
     .order("sort_at", { ascending: false })
     .order("request_number", { ascending: false })
     .limit(limit);

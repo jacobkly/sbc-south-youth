@@ -174,8 +174,12 @@ export function sharePercent(part: number, total: number): string {
   return `${percent}%`;
 }
 
-/** Everything the dashboard shows. Throws if a query fails. */
-export async function loadDashboard(supabase: SupabaseClient<Database>, today: IsoDate): Promise<DashboardSummary> {
+/** Everything the dashboard shows to `userId`. Throws if a query fails. */
+export async function loadDashboard(
+  supabase: SupabaseClient<Database>,
+  today: IsoDate,
+  userId: string,
+): Promise<DashboardSummary> {
   // From the start of last year, which covers the year-over-year comparison
   // and the chart's 12 months. Paid dates are never in the future, so
   // ending at this month misses nothing.
@@ -204,7 +208,7 @@ export async function loadDashboard(supabase: SupabaseClient<Database>, today: I
     fetchAll((start, end) =>
       supabase.from("payees").select("id, full_name, is_active").order("id").range(start, end),
     ),
-    loadRecentRequests(supabase, LATEST_REQUESTS),
+    loadRecentRequests(supabase, LATEST_REQUESTS, userId),
     supabase.rpc("storage_usage"),
   ]);
 

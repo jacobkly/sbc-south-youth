@@ -7,14 +7,14 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { NarrowPage } from "@/components/nav/app-shell";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentUser, getMfaDevices, getSessionAal } from "@/lib/auth/current-user";
-import { ROLE_LABELS } from "@/lib/auth/roles";
+import { financeRoleLabel } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
   title: "Account",
 };
 
 export default async function AccountPage() {
-  // The layout already checked access, so the user is an active admin or viewer.
+  // The layout already checked access, so the user is active with a finance role.
   const user = await getCurrentUser();
   if (!user) return null;
   const owner = user.roles.includes("owner");
@@ -30,7 +30,7 @@ export default async function AccountPage() {
         <dt className="text-muted-foreground">Email</dt>
         <dd className="truncate">{user.email}</dd>
         <dt className="text-muted-foreground">Role</dt>
-        <dd>{ROLE_LABELS[user.role]}</dd>
+        <dd>{financeRoleLabel(user.roles)}</dd>
       </dl>
 
       <AccountForm userId={user.id} fullName={user.full_name} />

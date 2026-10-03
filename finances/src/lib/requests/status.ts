@@ -145,6 +145,19 @@ export function describeChanges(
   });
 }
 
+/** What an owner asked for most recently, shown while a request needs info. */
+export function infoRequestNote(
+  events: readonly Pick<RequestEvent, "action" | "note" | "created_at">[],
+): string | null {
+  const latest = events
+    .filter((event) => event.action === "info_requested")
+    .reduce<(typeof events)[number] | null>(
+      (newest, event) => (!newest || event.created_at > newest.created_at ? event : newest),
+      null,
+    );
+  return latest?.note?.trim() || null;
+}
+
 /**
  * The date the late-submission warning measures to: when the request was
  * first sent for review, or today while it's still a draft. Returns null

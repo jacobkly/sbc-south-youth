@@ -262,10 +262,11 @@ export function RequestForm({
         values={values}
         errors={errors}
         onChange={set}
-        payees={payees}
-        onPayeeAdded={(added) =>
-          setPayees((current) => [...current, added].sort((a, b) => a.full_name.localeCompare(b.full_name)))
-        }
+        payeePicker={{
+          payees,
+          onAdded: (added) =>
+            setPayees((current) => [...current, added].sort((a, b) => a.full_name.localeCompare(b.full_name))),
+        }}
         eventNames={eventNames}
         today={today}
         pendingReceipts={pendingReceipts}

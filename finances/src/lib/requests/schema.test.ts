@@ -371,6 +371,13 @@ describe("requestSaveErrorMessage", () => {
     expect(requestSaveErrorMessage({ code: "23503" })).toBe("That payee couldn't be found. Choose the payee again.");
   });
 
+  it("explains why a requester can't save", () => {
+    const notLinked = "Your account isn't linked to a payee yet. Ask an owner to link it.";
+    expect(requestSaveErrorMessage({ code: "42501", message: notLinked })).toBe(notLinked);
+    const notYours = "You can only save requests paid to you.";
+    expect(requestSaveErrorMessage({ code: "42501", message: notYours })).toBe(notYours);
+  });
+
   it("shows the database's own sentences, like a receipt that's too big", () => {
     expect(requestSaveErrorMessage({ code: "22023", message: "The purchase date can't be in the future." })).toBe(
       "The purchase date can't be in the future.",

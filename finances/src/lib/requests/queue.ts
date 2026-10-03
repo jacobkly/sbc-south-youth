@@ -143,6 +143,15 @@ export function containsPattern(term: string): string {
   return `%${term.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
 
+/**
+ * The PostgREST `or` filter that leaves out drafts someone else started,
+ * like a request a requester hasn't sent yet. It isn't ready for review,
+ * and only the person who started it can delete it.
+ */
+export function ownDraftsFilter(userId: string): string {
+  return `status.neq.draft,created_by.eq.${userId}`;
+}
+
 /** Quotes a value for a PostgREST `or` filter, so commas, dots, and parentheses in it stay literal. */
 function quoted(value: string): string {
   return `"${value.replace(/["\\]/g, (char) => `\\${char}`)}"`;

@@ -6,6 +6,7 @@ import {
   defaultTab,
   isFiltered,
   MAX_QUEUE_PAGES,
+  ownDraftsFilter,
   parseQueueFilters,
   queueHref,
   requestNumberIn,
@@ -202,5 +203,12 @@ describe("searchFilter", () => {
 
   it("escapes backslashes after the wildcard escape", () => {
     expect(searchFilter("a_b", [])).toContain('vendor.ilike."%a\\\\_b%"');
+  });
+});
+
+describe("ownDraftsFilter", () => {
+  it("keeps every sent request and only the drafts the person started", () => {
+    const userId = "5c1e2d3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
+    expect(ownDraftsFilter(userId)).toBe(`status.neq.draft,created_by.eq.${userId}`);
   });
 });

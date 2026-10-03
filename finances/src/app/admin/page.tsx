@@ -10,7 +10,7 @@ import { TopPayees } from "@/components/dashboard/top-payees";
 import { TypeSplitChart } from "@/components/dashboard/type-split-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { getCurrentUser, getCurrentUserId } from "@/lib/auth/current-user";
 import { loadDashboard } from "@/lib/dashboard/summary";
 import { todayInLA } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
@@ -20,9 +20,9 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  const [supabase, userId] = await Promise.all([createClient(), getCurrentUserId()]);
   // loadDashboard throws on failure, and admin/error.tsx handles it.
-  const [user, summary] = await Promise.all([getCurrentUser(), loadDashboard(supabase, todayInLA())]);
+  const [user, summary] = await Promise.all([getCurrentUser(), loadDashboard(supabase, todayInLA(), userId)]);
   const canEdit = user?.role === "admin";
   const firstName = user?.full_name.trim().split(/\s+/)[0];
 

@@ -9,6 +9,8 @@ import {
   availableSaveOptions,
   blockedByReceiptRule,
   editReceiptError,
+  requesterActions,
+  requesterReceiptError,
   isWrongStatusError,
   lateSubmissionDays,
   needsExternalApprover,
@@ -342,6 +344,40 @@ describe("editReceiptError", () => {
     expect(editReceiptError("needs_info", none)).toMatch(/Add a receipt/);
     expect(editReceiptError("submitted", { receiptCount: 0, noReceipt: true })).toBeUndefined();
     expect(editReceiptError("needs_info", { receiptCount: 1, noReceipt: false })).toBeUndefined();
+  });
+});
+
+describe("requesterActions", () => {
+  it("lets a requester send a draft", () => {
+    expect(requesterActions("draft")).toEqual(["submit"]);
+  });
+
+  it("lets a requester take back a request before it's decided", () => {
+    expect(requesterActions("submitted")).toEqual(["cancel"]);
+    expect(requesterActions("needs_info")).toEqual(["submit", "cancel"]);
+  });
+
+  it("leaves decided and closed requests alone", () => {
+    for (const status of ["approved", "paid", "rejected", "cancelled"] as const) {
+      expect(requesterActions(status)).toEqual([]);
+    }
+  });
+});
+
+describe("requesterReceiptError", () => {
+  const none = { receiptCount: 0, noReceipt: false };
+
+  it("lets a draft wait for its receipt", () => {
+    expect(requesterReceiptError(false, none)).toBeUndefined();
+  });
+
+  it("asks for a photo before sending", () => {
+    expect(requesterReceiptError(true, none)).toBe("Add a photo of your receipt.");
+    expect(requesterReceiptError(true, { receiptCount: 1, noReceipt: false })).toBeUndefined();
+  });
+
+  it("respects an owner's no-receipt exception", () => {
+    expect(requesterReceiptError(true, { receiptCount: 0, noReceipt: true })).toBeUndefined();
   });
 });
 

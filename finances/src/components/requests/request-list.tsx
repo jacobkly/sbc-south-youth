@@ -87,9 +87,10 @@ export function RequestTable({
 }
 
 /**
- * One request in a RequestTable, linking to its page. `children` is the
- * stacked card; a wide list shows `date` and the rest in columns instead,
- * with `dateLabel` before the date when the rows differ in what it means.
+ * One request in a RequestTable, linking to its page under `basePath`.
+ * `children` is the stacked card; a wide list shows `date` and the rest in
+ * columns instead, with `dateLabel` before the date when the rows differ in
+ * what it means.
  */
 export function RequestRow({
   row,
@@ -97,12 +98,13 @@ export function RequestRow({
   dateLabel,
   showPayee,
   showStatus,
+  basePath = "/admin/requests",
   children,
-}: Shown & { row: QueueRow; date: IsoDate; dateLabel?: string; children: ReactNode }) {
+}: Shown & { row: QueueRow; date: IsoDate; dateLabel?: string; basePath?: string; children: ReactNode }) {
   return (
     <li>
       <Link
-        href={`/admin/requests/${row.id}`}
+        href={`${basePath}/${row.id}`}
         className="block min-h-16 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted @4xl:min-h-0"
       >
         <div className="flex items-start gap-3 @4xl:hidden">{children}</div>
@@ -140,12 +142,15 @@ export function RequestList({
   showStatus,
   showPayee = true,
   byPurchaseDate = false,
+  basePath,
   className,
 }: {
   rows: QueueRow[];
   showStatus: boolean;
   showPayee?: boolean;
   byPurchaseDate?: boolean;
+  /** Where each request's page lives, like "/my" for a requester's own. */
+  basePath?: string;
   className?: string;
 }) {
   return (
@@ -159,7 +164,15 @@ export function RequestList({
       {rows.map((row) => {
         const { label, date } = byPurchaseDate ? { label: undefined, date: row.purchase_date } : listedDate(row);
         return (
-          <RequestRow key={row.id} row={row} date={date} dateLabel={label} showPayee={showPayee} showStatus={showStatus}>
+          <RequestRow
+            key={row.id}
+            row={row}
+            date={date}
+            dateLabel={label}
+            showPayee={showPayee}
+            showStatus={showStatus}
+            basePath={basePath}
+          >
             <div className="min-w-0 flex-1">
               {showPayee ? (
                 <>

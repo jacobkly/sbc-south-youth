@@ -34,8 +34,8 @@ describe("mfaHref", () => {
     expect(mfaHref("/admin/requests?tab=paid")).toBe("/mfa?next=%2Fadmin%2Frequests%3Ftab%3Dpaid");
   });
 
-  it("leaves out the dashboard", () => {
-    expect(mfaHref("/admin")).toBe("/mfa");
+  it("leaves out the start page", () => {
+    expect(mfaHref("/")).toBe("/mfa");
   });
 });
 
