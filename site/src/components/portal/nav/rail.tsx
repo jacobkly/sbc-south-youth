@@ -36,7 +36,7 @@ export function Rail(user: NavUser) {
             <li key={item.href}>
               <Link
                 href={item.href}
-                aria-current={isActive(pathname, item.href) ? "page" : undefined}
+                aria-current={isActive(pathname, item) ? "page" : undefined}
                 className={cn(RAIL_LINK_CLASSES, NAV_LINK_STATES)}
               >
                 <span className="flex size-7 items-center justify-center">

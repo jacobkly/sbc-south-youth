@@ -120,11 +120,12 @@ const NOUNS: Partial<Record<string, string>> = {
   post: "Heads-up",
 };
 
-/** A heads-up or event going out or being cancelled, which says more than "changed". */
-function contentStatusChange(row: Pick<FeedRow, "action" | "changes">): "published" | "cancelled" | null {
+/** A heads-up or event going out, being cancelled, or coming back, which says more than "changed". */
+function contentStatusChange(row: Pick<FeedRow, "action" | "changes">): "published" | "cancelled" | "back on" | null {
   if (row.action !== "post.updated" && row.action !== "event.updated") return null;
-  const to = changeOf(row, "status")?.to;
-  return to === "published" || to === "cancelled" ? to : null;
+  const status = changeOf(row, "status");
+  if (status?.from === "cancelled" && status.to === "published") return "back on";
+  return status?.to === "published" || status?.to === "cancelled" ? status.to : null;
 }
 
 /** One event's headline. */
@@ -509,7 +510,7 @@ function iconOf(row: FeedRow): ActivityIcon {
     return "roles";
   }
   const status = contentStatusChange(row);
-  if (status) return status === "published" ? "submitted" : "cancelled";
+  if (status) return status === "published" ? "submitted" : status === "cancelled" ? "cancelled" : "undo";
   const icon = ACTION_ICONS[row.action];
   if (icon) return icon;
   const verb = row.action.split(".")[1];

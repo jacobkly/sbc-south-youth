@@ -35,6 +35,7 @@ function instant(value: string): string {
 
 /** An event row as the pages know it, with the photo to show, if any. */
 export function eventFromRow(row: EventRow, photo?: Photo): SiteEvent {
+  const summary = text(row.summary);
   const description = text(row.body);
   const locationName = text(row.location_name);
   const locationAddress = text(row.address);
@@ -45,6 +46,7 @@ export function eventFromRow(row: EventRow, photo?: Photo): SiteEvent {
     id: row.id,
     slug: row.slug,
     title: row.title,
+    ...(summary && { summary }),
     ...(description && { description }),
     startsAt: instant(row.starts_at),
     endsAt: instant(row.ends_at),

@@ -11,8 +11,11 @@ import {
 } from "lucide-react";
 import { hasRole, type AppRole } from "./roles";
 
-/** A link in the portal's navigation. With roles, only those roles (and owners) see it. */
-export type NavItem = { href: string; label: string; icon: LucideIcon; roles?: AppRole[] };
+/**
+ * A link in the portal's navigation. With roles, only those roles (and
+ * owners) see it. `also` lists other sections that live under it.
+ */
+export type NavItem = { href: string; label: string; icon: LucideIcon; roles?: AppRole[]; also?: string[] };
 
 /** The signed-in person, as the navigation shows them. */
 export type NavUser = {
@@ -24,7 +27,13 @@ export type NavUser = {
 };
 
 export const HOME: NavItem = { href: "/", label: "Home", icon: HouseIcon };
-export const POSTS: NavItem = { href: "/posts", label: "Posts", icon: CalendarDaysIcon, roles: ["site_editor"] };
+export const POSTS: NavItem = {
+  href: "/posts",
+  label: "Posts",
+  icon: CalendarDaysIcon,
+  roles: ["site_editor"],
+  also: ["/events"],
+};
 export const PHOTOS: NavItem = { href: "/photos", label: "Photos", icon: ImagesIcon, roles: ["site_editor"] };
 export const MESSAGES: NavItem = { href: "/messages", label: "Messages", icon: InboxIcon, roles: ["site_messages"] };
 export const ACTIVITY: NavItem = {
@@ -51,9 +60,10 @@ export function comingSoonFor(roles: readonly AppRole[]): NavItem[] {
   return SECTIONS.filter((item) => !MAIN_ITEMS.includes(item)).filter(allowedFor(roles));
 }
 
-export function isActive(pathname: string, href: string): boolean {
-  if (href === HOME.href) return pathname === HOME.href;
-  return pathname === href || pathname.startsWith(`${href}/`);
+/** Whether a nav item is the current page or the section it's in. */
+export function isActive(pathname: string, item: Pick<NavItem, "href" | "also">): boolean {
+  if (item.href === HOME.href) return pathname === HOME.href;
+  return [item.href, ...(item.also ?? [])].some((href) => pathname === href || pathname.startsWith(`${href}/`));
 }
 
 /** Hiding an item is only a convenience: RLS guards the data, and each page checks the role itself. */

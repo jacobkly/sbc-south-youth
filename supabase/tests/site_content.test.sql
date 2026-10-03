@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(50);
+select plan(52);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-4000-8000-000000005e01', 'editor@example.test', '{"full_name": "Site Editor"}'),
@@ -266,6 +266,16 @@ select throws_ok(
 select throws_ok(
   $$ update site.events set cancel_reason = 'Oops' where id = '00000000-0000-4000-8000-000000005c04' $$,
   '23514', null, 'only a cancelled event has a reason'
+);
+select throws_ok(
+  $$ update site.events set status = 'cancelled' where id = '00000000-0000-4000-8000-000000005c04' $$,
+  '55000', 'Only a published event can be cancelled. Delete the draft instead.',
+  'a draft can''t be cancelled, since nobody heard about it'
+);
+select lives_ok(
+  $$ update site.events set status = 'published', cancel_reason = null
+     where id = '00000000-0000-4000-8000-000000005c02' $$,
+  'a cancelled event can be put back on'
 );
 
 -- What the columns accept.

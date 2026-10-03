@@ -3,9 +3,10 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 /**
- * The title of a heads-up that's come down. Ending one swaps the page out
- * from under the button that did it, so focus picks up here instead of
- * falling back to the top of the page.
+ * The title of a heads-up that's come down, or an event that's cancelled
+ * or over. Ending or cancelling one swaps the page out from under the
+ * button that did it, so focus picks up here instead of falling back to
+ * the top of the page.
  */
 export function PastHeading({ children }: { children: ReactNode }) {
   const heading = useRef<HTMLHeadingElement>(null);

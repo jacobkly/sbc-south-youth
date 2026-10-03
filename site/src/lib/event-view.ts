@@ -18,6 +18,8 @@ const NIGHTS_SHOWN = 4;
 export type EventView = {
   slug: string;
   title: string;
+  /** A one-off event's one line for link previews and search results. */
+  summary?: string;
   description?: string;
   photo?: Photo;
   featured: boolean;
@@ -90,6 +92,7 @@ export async function eventView(slug: string): Promise<EventView | null> {
   return {
     slug,
     title: event.title,
+    summary: event.summary,
     description: event.description,
     photo: event.photo,
     featured: event.featured,
@@ -107,4 +110,15 @@ export async function eventView(slug: string): Promise<EventView | null> {
     today,
     jsonLd: eventJsonLd(item, { description: event.description, address, cancelled: Boolean(event.cancelled) }),
   };
+}
+
+/**
+ * An event page's description for search results and link previews: when
+ * and where at a glance, then its short description when it has one.
+ */
+export function eventDescription(
+  view: Pick<EventView, "cancelled" | "date" | "time" | "locationName" | "summary">,
+): string {
+  const facts = [view.cancelled && "Cancelled", view.date, view.time, view.locationName].filter(Boolean).join(" · ");
+  return view.summary ? `${facts}. ${view.summary}` : facts;
 }

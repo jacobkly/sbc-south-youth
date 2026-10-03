@@ -38,6 +38,8 @@ export type SiteEvent = {
   slug: string;
   /** Up to 80 characters. */
   title: string;
+  /** One line, up to 160 characters, for link previews and search results. */
+  summary?: string;
   /** Plain text with line breaks, up to 4,000 characters. */
   description?: string;
   startsAt: string;

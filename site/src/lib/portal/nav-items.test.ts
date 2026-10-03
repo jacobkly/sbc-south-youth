@@ -61,17 +61,23 @@ describe("allowedFor", () => {
 
 describe("isActive", () => {
   it("matches Home only on the home page", () => {
-    expect(isActive("/", HOME.href)).toBe(true);
-    expect(isActive("/account", HOME.href)).toBe(false);
+    expect(isActive("/", HOME)).toBe(true);
+    expect(isActive("/account", HOME)).toBe(false);
   });
 
   it("matches a section and the pages inside it", () => {
-    expect(isActive("/people", PEOPLE.href)).toBe(true);
-    expect(isActive("/people/123", PEOPLE.href)).toBe(true);
+    expect(isActive("/people", PEOPLE)).toBe(true);
+    expect(isActive("/people/123", PEOPLE)).toBe(true);
+  });
+
+  it("lights up Posts for events too, since they live under it", () => {
+    expect(isActive("/events", POSTS)).toBe(true);
+    expect(isActive("/events/123", POSTS)).toBe(true);
+    expect(isActive("/eventsx", POSTS)).toBe(false);
   });
 
   it("doesn't match a section that only starts with the same letters", () => {
-    expect(isActive("/peoplex", PEOPLE.href)).toBe(false);
+    expect(isActive("/peoplex", PEOPLE)).toBe(false);
   });
 });
 

@@ -163,6 +163,12 @@ describe("eventTitle", () => {
       eventTitle(row({ action: "event.updated", changes: status("published", "cancelled"), created_at: at })),
     ).toBe("Event cancelled");
   });
+
+  it("says a cancelled event is back on, not published again", () => {
+    const at = "2026-10-02T17:00:00Z";
+    const changes = { status: { from: "cancelled", to: "published" } };
+    expect(eventTitle(row({ action: "event.updated", changes, created_at: at }))).toBe("Event back on");
+  });
 });
 
 describe("eventChanges", () => {
@@ -320,6 +326,8 @@ describe("eventChanges for site content", () => {
     });
     const published = { ...cancelled, id: "published", changes: { status: { from: "draft", to: "published" } } };
     expect(buildActivityDays([published], context())[0].entries[0].icon).toBe("submitted");
+    const backOn = { ...cancelled, id: "back-on", changes: { status: { from: "cancelled", to: "published" } } };
+    expect(buildActivityDays([backOn], context())[0].entries[0].icon).toBe("undo");
   });
 });
 

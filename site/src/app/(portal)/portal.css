@@ -183,18 +183,20 @@
   html {
     @apply font-sans;
   }
-  /* Date fields show their value on the left like the other fields. iOS
-     otherwise centers it with extra margins. */
+  /* Date and time fields show their value on the left like the other
+     fields. iOS otherwise centers it with extra margins. */
   input[type="date"]::-webkit-date-and-time-value,
+  input[type="time"]::-webkit-date-and-time-value,
   input[type="datetime-local"]::-webkit-date-and-time-value {
     margin: 0;
     text-align: left;
   }
-  /* iOS draws its own date field, with a gray fill and a minimum width that
-     can push past its column. Draw it like the other inputs instead. Tapping
-     still opens the date picker. */
+  /* iOS draws its own date and time fields, with a gray fill and a minimum
+     width that can push past its column. Draw them like the other inputs
+     instead. Tapping still opens the picker. */
   @supports (-webkit-touch-callout: none) {
     input[type="date"],
+    input[type="time"],
     input[type="datetime-local"] {
       -webkit-appearance: none;
       appearance: none;

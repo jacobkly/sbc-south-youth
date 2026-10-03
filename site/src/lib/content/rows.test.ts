@@ -42,6 +42,7 @@ describe("eventFromRow", () => {
       id: "00000000-0000-4000-8000-00000000e001",
       slug: "fall-retreat",
       title: "Fall Retreat",
+      summary: "Three days away.",
       description: "Worship around the fire.\n\nWe leave Friday after school.",
       startsAt: "2026-10-16T17:00:00.000Z",
       endsAt: "2026-10-18T19:00:00.000Z",
@@ -55,7 +56,15 @@ describe("eventFromRow", () => {
   });
 
   it("leaves out empty and blank columns instead of passing null along", () => {
-    const event = eventFromRow({ ...retreatRow, body: "  ", location_name: null, address: null, cost_note: "" });
+    const event = eventFromRow({
+      ...retreatRow,
+      summary: " ",
+      body: "  ",
+      location_name: null,
+      address: null,
+      cost_note: "",
+    });
+    expect(event).not.toHaveProperty("summary");
     expect(event).not.toHaveProperty("description");
     expect(event).not.toHaveProperty("locationName");
     expect(event).not.toHaveProperty("locationAddress");

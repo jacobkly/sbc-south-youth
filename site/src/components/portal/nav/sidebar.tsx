@@ -28,7 +28,7 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
   return (
     <Link
       href={item.href}
-      aria-current={isActive(pathname, item.href) ? "page" : undefined}
+      aria-current={isActive(pathname, item) ? "page" : undefined}
       className={cn(SIDEBAR_LINK_CLASSES, NAV_LINK_STATES)}
     >
       <item.icon className="size-4 shrink-0 opacity-70 group-aria-[current=page]:opacity-100" aria-hidden />

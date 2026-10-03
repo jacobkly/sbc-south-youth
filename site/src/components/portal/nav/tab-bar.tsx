@@ -32,7 +32,7 @@ const SHEET_LINK_CLASSES =
 export function TabBar({ roles, name, avatarPath, financesUrl }: NavUser) {
   const pathname = usePathname();
   const { tabs, more } = splitForTabBar(MAIN_ITEMS.filter(allowedFor(roles)));
-  const moreActive = more.some((item) => isActive(pathname, item.href));
+  const moreActive = more.some((item) => isActive(pathname, item));
 
   return (
     <nav
@@ -41,7 +41,7 @@ export function TabBar({ roles, name, avatarPath, financesUrl }: NavUser) {
     >
       <ul className="glass pointer-events-auto mx-auto flex max-w-md rounded-full p-1">
         {tabs.map((item) => {
-          const active = isActive(pathname, item.href);
+          const active = isActive(pathname, item);
           return (
             <li key={item.href} className="min-w-0 flex-1">
               <Link
@@ -79,7 +79,7 @@ export function TabBar({ roles, name, avatarPath, financesUrl }: NavUser) {
                     <SheetClose asChild>
                       <Link
                         href={item.href}
-                        aria-current={isActive(pathname, item.href) ? "page" : undefined}
+                        aria-current={isActive(pathname, item) ? "page" : undefined}
                         className={SHEET_LINK_CLASSES}
                       >
                         <item.icon className="size-5 text-muted-foreground" aria-hidden />

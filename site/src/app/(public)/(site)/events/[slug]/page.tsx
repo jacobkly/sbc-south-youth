@@ -27,7 +27,7 @@ import { ShareButton } from "@/components/site/share-button";
 import { Tag } from "@/components/tag";
 import { getEventSlugs } from "@/lib/content/loaders";
 import { addDays } from "@/lib/dates";
-import { eventView, type EventView } from "@/lib/event-view";
+import { eventDescription, eventView, type EventView } from "@/lib/event-view";
 import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
 import { jsonLdScript } from "@/lib/json-ld";
 import { pageMetadata } from "@/lib/metadata";
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: PageProps<"/events/[slug]">):
   if (!view) return { title: "Page not found" };
   return pageMetadata({
     title: view.title,
-    description: [view.cancelled && "Cancelled", view.date, view.time, view.locationName].filter(Boolean).join(" · "),
+    description: eventDescription(view),
     path: `/events/${slug}`,
   });
 }
