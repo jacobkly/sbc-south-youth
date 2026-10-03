@@ -6,6 +6,14 @@ export function isSignInPath(pathname: string): boolean {
 }
 
 /**
+ * Routes other services call, like Resend's webhook. Each one checks its own
+ * signature or secret, so the proxy lets them through without a sign-in.
+ */
+export function isApiPath(pathname: string): boolean {
+  return pathname === "/api" || pathname.startsWith("/api/");
+}
+
+/**
  * Where to send someone after they sign in. Only same-site paths are
  * allowed, so a crafted link can't bounce a user to another site. The path
  * goes through the URL parser, which catches tricks browsers accept, like

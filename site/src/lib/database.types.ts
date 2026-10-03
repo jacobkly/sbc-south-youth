@@ -788,6 +788,7 @@ export type Database = {
           p_related_id?: string
           p_related_type?: string
           p_scope: string
+          p_send_now?: boolean
           p_subject: string
           p_template: string
           p_to: string

@@ -90,6 +90,55 @@ export function readPortalEnv(source: Record<string, string | undefined> = proce
   };
 }
 
+export type EmailEnv = {
+  appEnv: AppEnv;
+  /** Unset until both the API key and the sender are set. Then email is off: nothing is logged or sent. */
+  sending: { apiKey: string; from: string } | null;
+  /** Where staging sends every email, so a test never reaches anyone else. */
+  ownerAlertEmail: string | null;
+  /** Checks that a webhook request really came from Resend. */
+  webhookSecret: string | null;
+};
+
+const emailAddress = z.email({ error: "must be an email address" });
+
+// `Name <address>` or a bare address, on one line, so it can't add headers.
+const sender = z.string().refine((value) => {
+  if (/[\r\n]/.test(value)) return false;
+  const named = /^[^<>"]+ <([^<>\s]+)>$/.exec(value);
+  return emailAddress.safeParse(named ? named[1] : value).success;
+}, "must be an address, like Youth <hello@mail.example.com>");
+
+const emailSchema = z.object({
+  RESEND_API_KEY: blankAsMissing
+    .pipe(z.string().startsWith("re_", "must be a Resend API key (re_...)").optional())
+    .optional(),
+  EMAIL_FROM: blankAsMissing.pipe(sender.optional()).optional(),
+  OWNER_ALERT_EMAIL: blankAsMissing.pipe(emailAddress.toLowerCase().optional()).optional(),
+  RESEND_WEBHOOK_SECRET: blankAsMissing
+    .pipe(z.string().startsWith("whsec_", "must be a Resend signing secret (whsec_...)").optional())
+    .optional(),
+});
+
+/**
+ * The email settings, naming any bad one in the error. They're server-only:
+ * nothing here may ever be a NEXT_PUBLIC_ variable.
+ */
+export function readEmailEnv(source: Record<string, string | undefined> = process.env): EmailEnv {
+  const result = emailSchema.safeParse(source);
+  if (!result.success) {
+    const problems = result.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`);
+    throw new Error(`Invalid environment variables: ${problems.join("; ")}`);
+  }
+  const { RESEND_API_KEY, EMAIL_FROM, OWNER_ALERT_EMAIL, RESEND_WEBHOOK_SECRET } = result.data;
+  return {
+    appEnv: readPortalEnv(source).appEnv,
+    sending: RESEND_API_KEY && EMAIL_FROM ? { apiKey: RESEND_API_KEY, from: EMAIL_FROM } : null,
+    ownerAlertEmail: OWNER_ALERT_EMAIL ?? null,
+    webhookSecret: RESEND_WEBHOOK_SECRET ?? null,
+  };
+}
+
 /** Thrown by a write on staging. Its message is safe to show. */
 export class ReadOnlyError extends Error {
   constructor() {

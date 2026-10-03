@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isSignInPath, safeNextPath } from "@/lib/auth/next-path";
+import { isApiPath, isSignInPath, safeNextPath } from "@/lib/auth/next-path";
 import type { Database } from "@/lib/database.types";
 import { supabaseEnv } from "@/lib/supabase/env";
 
@@ -19,6 +19,11 @@ export async function updateSession(request: NextRequest) {
 
   // Dev-only tools work without signing in. Those pages 404 in production.
   if (process.env.NODE_ENV !== "production" && isDevToolPath(pathname)) {
+    return NextResponse.next({ request });
+  }
+
+  // Webhooks carry their own signature and never a sign-in cookie.
+  if (isApiPath(pathname)) {
     return NextResponse.next({ request });
   }
 

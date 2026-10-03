@@ -90,7 +90,9 @@ create policy "Owners read suppressed addresses"
   using ((select public.has_role('owner')));
 
 -- Checks the quota and logs the email, as queued, skipped_quota, or
--- suppressed. Only queued emails may be sent.
+-- suppressed. Only queued emails may be sent. An email the site sends right
+-- away (p_send_now) starts as sending instead, so the drain leaves it alone
+-- unless it sticks there for 15 minutes.
 --
 -- Resend's free plan allows 100 emails a day and 3,000 a month, and we can't
 -- tell when its windows reset, so sends are counted over the last 24 hours
@@ -107,7 +109,8 @@ create function public.email_reserve(
   p_scope text,
   p_env text default 'production',
   p_related_type text default null,
-  p_related_id uuid default null
+  p_related_id uuid default null,
+  p_send_now boolean default false
 )
 returns public.email_log
 language plpgsql
@@ -150,11 +153,16 @@ begin
         and l.counts_toward_quota
         and (l.created_at at time zone 'America/Los_Angeles')::date = (now() at time zone 'America/Los_Angeles')::date
     ) then 'skipped_quota'
+    when p_send_now then 'sending'
     else 'queued'
   end;
 
-  insert into public.email_log (template, priority, to_address, subject, scope, env, related_type, related_id, status)
-  values (p_template, p_priority, v_to, p_subject, p_scope, p_env, p_related_type, p_related_id, v_status)
+  insert into public.email_log (
+    template, priority, to_address, subject, scope, env, related_type, related_id, status, attempts
+  ) values (
+    p_template, p_priority, v_to, p_subject, p_scope, p_env, p_related_type, p_related_id, v_status,
+    case when v_status = 'sending' then 1 else 0 end
+  )
   returning * into v_row;
 
   return v_row;
@@ -208,9 +216,9 @@ begin
 end;
 $$;
 
--- Records what Resend said when the drain sent an email: sent with its
--- Resend ID, or failed with the error. A webhook may already have moved it
--- further, and that status stays.
+-- Records what Resend said when the drain or the site sent an email: sent
+-- with its Resend ID, or failed with the error. A webhook may already have
+-- moved it further, and that status stays.
 create function public.email_mark(
   p_id uuid,
   p_status public.email_status,
@@ -318,14 +326,15 @@ begin
 end;
 $$;
 
-revoke execute on function public.email_reserve(text, integer, text, text, text, text, text, uuid)
+revoke execute on function public.email_reserve(text, integer, text, text, text, text, text, uuid, boolean)
   from public, anon, authenticated;
 revoke execute on function public.email_claim(text, integer) from public, anon, authenticated;
 revoke execute on function public.email_mark(uuid, public.email_status, text, text) from public, anon, authenticated;
 revoke execute on function public.email_record_webhook(text, public.email_status, uuid, text, text, text, timestamptz)
   from public, anon, authenticated;
 
-grant execute on function public.email_reserve(text, integer, text, text, text, text, text, uuid) to service_role;
+grant execute on function public.email_reserve(text, integer, text, text, text, text, text, uuid, boolean)
+  to service_role;
 grant execute on function public.email_claim(text, integer) to service_role;
 grant execute on function public.email_mark(uuid, public.email_status, text, text) to service_role;
 grant execute on function public.email_record_webhook(text, public.email_status, uuid, text, text, text, timestamptz)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSignInPath, safeNextPath } from "./next-path";
+import { isApiPath, isSignInPath, safeNextPath } from "./next-path";
 
 describe("safeNextPath", () => {
   it("keeps same-site paths", () => {
@@ -40,5 +40,15 @@ describe("isSignInPath", () => {
 
   it.each(["/", "/people", "/logins", "/forgotten", "/auth", "/account/setup"])("isn't %s", (pathname) => {
     expect(isSignInPath(pathname)).toBe(false);
+  });
+});
+
+describe("isApiPath", () => {
+  it.each(["/api/webhooks/resend", "/api/email/drain", "/api"])("is %s", (pathname) => {
+    expect(isApiPath(pathname)).toBe(true);
+  });
+
+  it.each(["/", "/apis", "/api-keys", "/people/api", "/login"])("isn't %s", (pathname) => {
+    expect(isApiPath(pathname)).toBe(false);
   });
 });

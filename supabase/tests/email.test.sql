@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(68);
+select plan(71);
 
 -- Fake people: an owner, a finance viewer, a site editor, and an owner whose
 -- access was removed.
@@ -28,7 +28,7 @@ delete from public.email_suppressions;
 select is_empty(
   $$ select f.fn
      from unnest(array[
-       'public.email_reserve(text, integer, text, text, text, text, text, uuid)',
+       'public.email_reserve(text, integer, text, text, text, text, text, uuid, boolean)',
        'public.email_claim(text, integer)',
        'public.email_mark(uuid, public.email_status, text, text)',
        'public.email_record_webhook(text, public.email_status, uuid, text, text, text, timestamptz)'
@@ -41,7 +41,7 @@ select is_empty(
 select is_empty(
   $$ select f.fn
      from unnest(array[
-       'public.email_reserve(text, integer, text, text, text, text, text, uuid)',
+       'public.email_reserve(text, integer, text, text, text, text, text, uuid, boolean)',
        'public.email_claim(text, integer)',
        'public.email_mark(uuid, public.email_status, text, text)',
        'public.email_record_webhook(text, public.email_status, uuid, text, text, text, timestamptz)'
@@ -284,6 +284,13 @@ select results_eq(
   'a suppressed address is never queued, and the skip is logged'
 );
 
+select results_eq(
+  $$ select status::text, attempts::int
+     from public.email_reserve('invite', 2, 'bounced@example.test', 'You''re invited', 'platform', p_send_now => true) $$,
+  $$ values ('suppressed', 0) $$,
+  'an email sent right away to a suppressed address is still skipped'
+);
+
 -- The drain: claim, then mark.
 reset role;
 
@@ -327,6 +334,18 @@ select throws_ok(
   '22023',
   'Claim emails for production or staging.',
   'the drain names its environment'
+);
+
+select results_eq(
+  $$ select status::text, attempts::int
+     from public.email_reserve('invite', 2, 'right-away@example.test', 'You''re invited', 'platform', p_send_now => true) $$,
+  $$ values ('sending', 1) $$,
+  'an email the site sends right away starts as sending'
+);
+
+select is_empty(
+  $$ select 1 from public.email_claim('production', 10) $$,
+  'the drain leaves an email the site is sending right away alone'
 );
 
 reset role;

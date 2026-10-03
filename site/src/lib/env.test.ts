@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertWritable, readPortalEnv, readServerEnv, ReadOnlyError } from "./env";
+import { assertWritable, readEmailEnv, readPortalEnv, readServerEnv, ReadOnlyError } from "./env";
 
 describe("readServerEnv", () => {
   it("allows every variable to be missing", () => {
@@ -77,5 +77,59 @@ describe("assertWritable", () => {
   it("refuses to write on staging, which shares production's data", () => {
     expect(() => assertWritable({ APP_ENV: "staging" })).toThrow(ReadOnlyError);
     expect(() => assertWritable({ VERCEL_ENV: "preview" })).toThrow(/staging/i);
+  });
+});
+
+describe("readEmailEnv", () => {
+  const ready = {
+    RESEND_API_KEY: "re_test_key",
+    EMAIL_FROM: "Example Youth <hello@mail.example.test>",
+  };
+
+  it("turns email off when nothing is set", () => {
+    expect(readEmailEnv({})).toEqual({
+      appEnv: "production",
+      sending: null,
+      ownerAlertEmail: null,
+      webhookSecret: null,
+    });
+  });
+
+  it("sends once the API key and sender are both set", () => {
+    expect(readEmailEnv(ready).sending).toEqual({
+      apiKey: "re_test_key",
+      from: "Example Youth <hello@mail.example.test>",
+    });
+    expect(readEmailEnv({ ...ready, EMAIL_FROM: " " }).sending).toBeNull();
+    expect(readEmailEnv({ ...ready, RESEND_API_KEY: "" }).sending).toBeNull();
+  });
+
+  it("takes a bare sender address too", () => {
+    const bare = readEmailEnv({ ...ready, EMAIL_FROM: "hello@mail.example.test" });
+    expect(bare.sending?.from).toBe("hello@mail.example.test");
+  });
+
+  it("follows APP_ENV like the portal does", () => {
+    expect(readEmailEnv({ VERCEL_ENV: "preview" }).appEnv).toBe("staging");
+    expect(readEmailEnv({ APP_ENV: "production", VERCEL_ENV: "preview" }).appEnv).toBe("production");
+  });
+
+  it("reads the owner alert address in lowercase", () => {
+    expect(readEmailEnv({ OWNER_ALERT_EMAIL: " Owner@Example.test " }).ownerAlertEmail).toBe("owner@example.test");
+  });
+
+  it("reads the webhook secret", () => {
+    expect(readEmailEnv({ RESEND_WEBHOOK_SECRET: "whsec_c2VjcmV0" }).webhookSecret).toBe("whsec_c2VjcmV0");
+  });
+
+  it.each([
+    ["RESEND_API_KEY", "sk_live_123"],
+    ["EMAIL_FROM", "Example Youth"],
+    ["EMAIL_FROM", "Example <not an address>"],
+    ["EMAIL_FROM", "Example <hello@mail.example.test>\r\nBcc: someone@example.test"],
+    ["OWNER_ALERT_EMAIL", "owner"],
+    ["RESEND_WEBHOOK_SECRET", "c2VjcmV0"],
+  ])("rejects %s %j by name", (name, value) => {
+    expect(() => readEmailEnv({ ...ready, [name]: value })).toThrow(new RegExp(name));
   });
 });
