@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { ArrowRightIcon, ReceiptTextIcon } from "lucide-react";
+import { BackupStatusSkeleton, HomeBackup } from "@/components/portal/home/backup-status";
 import { HomeStorage, StorageBarSkeleton } from "@/components/portal/home/storage-bar";
 import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Button } from "@/components/portal/ui/button";
@@ -15,7 +16,8 @@ export default async function PortalHome() {
 
   const firstName = user.full_name.trim().split(/\s+/)[0];
   // An owner's one role covers the rest, so list it alone.
-  const roles = user.roles.includes("owner") ? (["owner"] as const) : sortRoles(user.roles);
+  const isOwner = user.roles.includes("owner");
+  const roles = isOwner ? (["owner"] as const) : sortRoles(user.roles);
   const comingSoon = comingSoonFor(user.roles);
   const financesUrl = canUseFinances(user.roles) ? readPortalEnv().financesUrl : null;
 
@@ -62,6 +64,20 @@ export default async function PortalHome() {
           <HomeStorage />
         </Suspense>
       </section>
+
+      {isOwner && (
+        <section aria-labelledby="backup-heading" className="space-y-3">
+          <div className="space-y-1">
+            <h2 id="backup-heading" className="text-lg font-semibold">
+              Backups
+            </h2>
+            <p className="text-sm text-muted-foreground">A copy of the database and files, made each night.</p>
+          </div>
+          <Suspense fallback={<BackupStatusSkeleton />}>
+            <HomeBackup />
+          </Suspense>
+        </section>
+      )}
 
       <section aria-labelledby="access-heading" className="space-y-3">
         <h2 id="access-heading" className="text-lg font-semibold">

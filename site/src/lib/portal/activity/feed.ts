@@ -1,7 +1,8 @@
 import type { Database, Json } from "@/lib/database.types";
-import { addDays, formatTime, formatWeekdayDate, laDateOf, type IsoDate } from "@/lib/dates";
+import { formatDayLabel, formatTime, laDateOf, type IsoDate } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { toCsv, type CsvValue } from "@/lib/portal/csv";
+import { backupSizes, readBackupSizes } from "@/lib/portal/home/backup";
 import { APP_ROLES, ROLE_LABELS, sortRoles, type AppRole } from "@/lib/portal/roles";
 import { ACTIVITY_SCOPES, SCOPE_LABELS, type ActivityScope } from "./filters";
 import {
@@ -104,6 +105,7 @@ const FIXED_TITLES: Partial<Record<string, string>> = {
   "auth.signed_in": "Signed in",
   "export.downloaded": "Report downloaded",
   "activity.exported": "Activity downloaded",
+  "backup.completed": "Backup saved",
 };
 
 /** How anything else the log takes later reads, like "post.created" as "Post added". */
@@ -415,6 +417,7 @@ export type ActivityIcon =
   | "invite"
   | "sign_in"
   | "download"
+  | "backup"
   | "deleted";
 
 const ACTION_ICONS: Partial<Record<string, ActivityIcon>> = {
@@ -439,6 +442,7 @@ const ACTION_ICONS: Partial<Record<string, ActivityIcon>> = {
   "auth.signed_in": "sign_in",
   "export.downloaded": "download",
   "activity.exported": "download",
+  "backup.completed": "backup",
 };
 
 function iconOf(row: FeedRow): ActivityIcon {
@@ -473,7 +477,7 @@ function personOf(row: FeedRow, ctx: FeedContext): string | null {
   return null;
 }
 
-/** What a row is about: a request, a person by their current name, or a downloaded file. */
+/** What a row is about: a request, a person by their current name, a downloaded file, or a backup's sizes. */
 function subjectOf(row: FeedRow, ctx: FeedContext): string | null {
   if (isRequestRow(row)) {
     const request = row.entity_id ? ctx.requests.get(row.entity_id) : undefined;
@@ -484,6 +488,10 @@ function subjectOf(row: FeedRow, ctx: FeedContext): string | null {
     return (person && ctx.names.get(person)) || row.entity_name || "Someone";
   }
   if (row.action === "export.downloaded") return row.entity_name ?? "A finance report";
+  if (row.action === "backup.completed") {
+    const sizes = readBackupSizes(row.changes);
+    return sizes ? backupSizes(sizes) : null;
+  }
   return row.entity_name;
 }
 
@@ -534,13 +542,6 @@ export type EntryView = {
 
 export type DayView = { date: IsoDate; label: string; entries: EntryView[] };
 
-/** The heading for a day in the feed: "Today", "Yesterday", or e.g. "Fri, Sep 25". */
-export function dayLabel(date: IsoDate, today: IsoDate): string {
-  if (date === today) return "Today";
-  if (date === addDays(today, -1)) return "Yesterday";
-  return formatWeekdayDate(date, today);
-}
-
 function actorName(actorId: string | null, ctx: FeedContext): string | null {
   if (!actorId) return null;
   if (actorId === ctx.meId) return "You";
@@ -579,7 +580,7 @@ function entryView(item: ActivityItem, ctx: FeedContext): EntryView {
     key: item.key,
     createdAt: item.created_at,
     time,
-    when: `${dayLabel(laDateOf(item.created_at), ctx.today)} at ${time}`,
+    when: `${formatDayLabel(laDateOf(item.created_at), ctx.today)} at ${time}`,
     scope: lead.scope,
     icon: bulk ? "bulk" : iconOf(lead),
     title: itemTitle(item),
@@ -600,7 +601,7 @@ export function buildActivityDays(rows: readonly FeedRow[], ctx: FeedContext): D
     const entry = entryView(item, ctx);
     const last = days.at(-1);
     if (last?.date === date) last.entries.push(entry);
-    else days.push({ date, label: dayLabel(date, ctx.today), entries: [entry] });
+    else days.push({ date, label: formatDayLabel(date, ctx.today), entries: [entry] });
   }
   return days;
 }

@@ -179,6 +179,13 @@ export function formatWeekdayDate(date: IsoDate, today: IsoDate = todayInLA()): 
   return format.format(new Date(Date.UTC(year, month - 1, day)));
 }
 
+/** Names a recent day: "Today", "Yesterday", or e.g. "Fri, Sep 25". */
+export function formatDayLabel(date: IsoDate, today: IsoDate = todayInLA()): string {
+  if (date === today) return "Today";
+  if (date === addDays(today, -1)) return "Yesterday";
+  return formatWeekdayDate(date, today);
+}
+
 /** Spells out a date, leaving out this year, e.g. "Saturday, October 10". */
 export function formatLongDate(date: IsoDate, today: IsoDate = todayInLA()): string {
   const { year, month, day } = parseIsoDate(date);

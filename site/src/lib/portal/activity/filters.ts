@@ -7,7 +7,7 @@ import { hasRole, type AppRole } from "@/lib/portal/roles";
  * which rows anyone can actually read.
  */
 
-/** The apps activity comes from. Platform covers people, invites, and sign-ins. */
+/** The apps activity comes from. Platform covers people, invites, sign-ins, and backups. */
 export const ACTIVITY_SCOPES = ["site", "finances", "platform"] as const;
 export type ActivityScope = (typeof ACTIVITY_SCOPES)[number];
 
@@ -77,6 +77,11 @@ const KINDS = {
     label: "Downloads",
     scopes: ["finances", "platform"],
     actions: ["export.downloaded", "activity.exported"],
+  },
+  backups: {
+    label: "Backups",
+    scopes: ["platform"],
+    actions: ["backup.completed"],
   },
 } as const satisfies Record<string, { label: string; scopes: readonly ActivityScope[]; actions: readonly string[] }>;
 

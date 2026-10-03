@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   activityCsv,
   buildActivityDays,
-  dayLabel,
   eventChanges,
   eventTitle,
   groupActivity,
@@ -354,6 +353,37 @@ describe("buildActivityDays", () => {
     ]);
   });
 
+  it("reads a backup by its sizes, with no one behind it", () => {
+    const rows = [
+      row({
+        action: "backup.completed",
+        actor_id: null,
+        changes: { database_bytes: 12_345_678, file_bytes: 234_567_890, files: 1234 },
+        created_at: "2026-10-02T09:14:00.000Z",
+      }),
+    ];
+    const [entry] = buildActivityDays(rows, context())[0].entries;
+    expect(entry).toMatchObject({
+      title: "Backup saved",
+      subject: "Database 12.3 MB · Files 234.6 MB in 1,234 files",
+      byline: null,
+      actor: null,
+      icon: "backup",
+      link: null,
+      when: "Today at 2:14 AM",
+    });
+    expect(entry.events[0].changes).toEqual([]);
+  });
+
+  it("keeps each night's backup as its own item, and shows no sizes it can't read", () => {
+    const rows = [
+      row({ action: "backup.completed", actor_id: null, changes: { database_bytes: 5 }, created_at: "2026-10-02T09:14:00Z" }),
+      row({ action: "backup.completed", actor_id: null, changes: null, created_at: "2026-10-02T09:12:00Z" }),
+    ];
+    const entries = buildActivityDays(rows, context())[0].entries;
+    expect(entries.map((entry) => entry.subject)).toEqual(["Database 0 KB", null]);
+  });
+
   it("splits the feed by Los Angeles day", () => {
     const rows = [
       row({ action: "auth.signed_in", entity_id: EDITOR, actor_id: EDITOR, created_at: "2026-10-02T17:00:00.000Z" }),
@@ -361,14 +391,6 @@ describe("buildActivityDays", () => {
       row({ action: "auth.signed_in", entity_id: EDITOR, actor_id: EDITOR, created_at: "2026-10-02T06:00:00.000Z" }),
     ];
     expect(buildActivityDays(rows, context()).map((day) => day.label)).toEqual(["Today", "Yesterday"]);
-  });
-});
-
-describe("dayLabel", () => {
-  it("says today and yesterday, then the date", () => {
-    expect(dayLabel("2026-10-02", "2026-10-02")).toBe("Today");
-    expect(dayLabel("2026-10-01", "2026-10-02")).toBe("Yesterday");
-    expect(dayLabel("2026-09-25", "2026-10-02")).toBe("Fri, Sep 25");
   });
 });
 

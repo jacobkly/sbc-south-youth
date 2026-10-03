@@ -45,8 +45,9 @@ describe("kindsFor", () => {
       "invites",
       "sign_ins",
       "downloads",
+      "backups",
     ]);
-    expect(kindsFor(owner, "platform")).toEqual(["access", "invites", "sign_ins", "downloads"]);
+    expect(kindsFor(owner, "platform")).toEqual(["access", "invites", "sign_ins", "downloads", "backups"]);
     expect(kindsFor(owner, "site")).toEqual([]);
   });
 });

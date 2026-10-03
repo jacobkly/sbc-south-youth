@@ -4,6 +4,7 @@ import {
   daysBetween,
   formatDate,
   formatDateRange,
+  formatDayLabel,
   formatTime,
   formatLongDate,
   formatWeekdayDate,
@@ -111,6 +112,14 @@ describe("formatDateRange", () => {
     expect(formatDateRange("2026-09-28", "2026-10-04")).toBe("Sep 28 – Oct 4");
     expect(formatDateRange("2026-12-28", "2027-01-03")).toBe("Dec 28 – Jan 3");
     expect(formatDateRange("2026-10-05", "2026-10-05")).toBe("Oct 5");
+  });
+});
+
+describe("formatDayLabel", () => {
+  it("says today and yesterday, then the date", () => {
+    expect(formatDayLabel("2026-10-02", "2026-10-02")).toBe("Today");
+    expect(formatDayLabel("2026-10-01", "2026-10-02")).toBe("Yesterday");
+    expect(formatDayLabel("2026-09-25", "2026-10-02")).toBe("Fri, Sep 25");
   });
 });
 

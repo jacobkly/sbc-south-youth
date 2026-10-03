@@ -9,6 +9,7 @@ import {
   ChevronRightIcon,
   CircleCheckIcon,
   CircleXIcon,
+  DatabaseBackupIcon,
   DownloadIcon,
   FilePlusIcon,
   FileSpreadsheetIcon,
@@ -51,6 +52,7 @@ const ICONS: Record<ActivityIcon, LucideIcon> = {
   invite: MailIcon,
   sign_in: LogInIcon,
   download: DownloadIcon,
+  backup: DatabaseBackupIcon,
   deleted: Trash2Icon,
 };
 
