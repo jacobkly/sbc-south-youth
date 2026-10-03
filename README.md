@@ -26,10 +26,11 @@ The portal is where leaders run the youth site and its people from a phone. It's
 
 - **People:** owners invite leaders by email, give them roles, and remove or restore access. Invited people pick their own password with a 6-digit emailed code.
 - **Home:** a link to finances for finance roles, how full the free plan's storage and database are, and, for owners, when the last nightly backup ran.
+- **Posts:** site editors write the heads-ups on Home and This Week, from a quick template or from scratch. Each one goes up now or at a set time and comes down on its own, and a pinned one leads on Home. Editors can end one early, keep a draft, or post an old one again.
 - **Activity:** one timeline of changes across the site, finances, and people, showing each person only the apps their roles cover. Owners can download it as a CSV.
 - **Email:** finance and owner notices go out through Resend, within the free plan's daily and monthly limits.
 
-The public site already reads heads-ups and events from the database. Screens to post them come next, then photos and the form inbox.
+The public site reads heads-ups and events from the database. A screen to manage events comes next, then photos and the form inbox.
 
 ### Roles
 

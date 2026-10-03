@@ -185,7 +185,8 @@
   }
   /* Date fields show their value on the left like the other fields. iOS
      otherwise centers it with extra margins. */
-  input[type="date"]::-webkit-date-and-time-value {
+  input[type="date"]::-webkit-date-and-time-value,
+  input[type="datetime-local"]::-webkit-date-and-time-value {
     margin: 0;
     text-align: left;
   }
@@ -193,7 +194,8 @@
      can push past its column. Draw it like the other inputs instead. Tapping
      still opens the date picker. */
   @supports (-webkit-touch-callout: none) {
-    input[type="date"] {
+    input[type="date"],
+    input[type="datetime-local"] {
       -webkit-appearance: none;
       appearance: none;
       min-width: 0;

@@ -30,7 +30,7 @@ npm run build
 ## Content
 
 - **Page copy and the weekly nights** live in `src/content/`.
-- **Heads-ups and events** live in the database's `site` schema. The server reads them with the secret key through `site.public_posts()` and `site.public_events()`, which return only what's live. Pages get them from `src/lib/content/loaders.ts`, which caches them for 5 minutes under the `posts` and `events` tags.
+- **Heads-ups and events** live in the database's `site` schema. The server reads them with the secret key through `site.public_posts()` and `site.public_events()`, which return only what's live. Pages get them from `src/lib/content/loaders.ts`, which caches them for 5 minutes under the `posts` and `events` tags. Site editors write heads-ups in the portal, and each change refreshes the `posts` tag, so Home and This Week show it on their next load.
 - **Without the database,** a build still finishes, and pages show their empty states. Once the site is running, a failed read keeps serving the last good page until the database answers again.
 - **A cancelled event** keeps its page, with a banner and the reason, and drops off This Week and Home.
 - **The calendar feed** (`/calendar.ics`) lists the weekly nights and every event that ended less than 30 days ago or hasn't ended yet. Each event's UID comes from its id (`event-<id>@sbcsouthyouth.com`), and its `SEQUENCE` goes up with every edit, so subscribed calendars update it in place. A cancelled event stays in the feed as `STATUS:CANCELLED`, with "Cancelled:" in its title. The feed is cached for 15 minutes, and an event change refreshes it through the `events` tag.
@@ -48,6 +48,8 @@ Until launch, production shows the coming-soon page for every page. Previews and
 ## Leader portal
 
 The portal's pages live in `src/app/(portal)/portal/`, with their own root layout, styles, and components. Rewrites in `src/lib/host.ts` serve that folder at the root of any host whose name starts with `portal` and return 404 for it everywhere else. The public site never loads portal code, Supabase, or a sign-in cookie, and an ESLint rule keeps portal imports out of public pages.
+
+Portal changes run in server actions as the signed-in person, so row-level security checks each one. Actions that need a role start with `requireRole()` in `src/lib/portal/auth/require-role.ts`, which refuses anyone without it, and every change on staging, in words the form can show.
 
 ### Run it locally
 

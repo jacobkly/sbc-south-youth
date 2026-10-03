@@ -77,6 +77,7 @@ export function announcementFromRow(row: PostRow, events: SiteEvent[]): Announce
     body: row.body,
     ...(photo && { photo }),
     pinned: row.pinned,
+    ...(row.tone === "cancellation" && { changeOfPlans: true as const }),
     publishAt: instant(row.starts_at),
     expiresAt: instant(row.ends_at),
     ...(href && { cta: { label: text(row.link_label) ?? DEFAULT_LINK_LABEL, href } }),

@@ -1,3 +1,4 @@
+import { site } from "../content/site";
 import { securityHeaders, type HeaderMode } from "./security-headers";
 
 /**
@@ -19,6 +20,23 @@ import { securityHeaders, type HeaderMode } from "./security-headers";
 export const PORTAL_HOST = String.raw`portal(?:-[a-z0-9-]+)?\..+`;
 
 export const ON_PORTAL_HOST = [{ type: "host" as const, value: PORTAL_HOST }];
+
+/**
+ * The public site that goes with a portal address: the same host without
+ * its portal label, so a local portal links to the local site and the
+ * staging portal to staging. Anything else gets the real site.
+ */
+export function publicSiteUrl(portalUrl: string): string {
+  try {
+    const url = new URL(portalUrl);
+    const host = /^portal(?:-([a-z0-9-]+))?\.(.+)$/.exec(url.host);
+    if (!host) return site.url;
+    const [, environment, rest] = host;
+    return `${url.protocol}//${environment ? `${environment}.` : ""}${rest}`;
+  } catch {
+    return site.url;
+  }
+}
 
 /**
  * Every path except the root, Next's own files, Vercel's scripts, and

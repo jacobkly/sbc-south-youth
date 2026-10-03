@@ -1,7 +1,7 @@
 import "server-only";
 import { EMAIL_PRIORITY, sendEmail, type SendResult } from "@/lib/email/send";
-import { assertWritable, ReadOnlyError } from "@/lib/env";
-import { getCurrentUser, getSessionAal, type PortalUser } from "@/lib/portal/auth/current-user";
+import { getSessionAal, type PortalUser } from "@/lib/portal/auth/current-user";
+import { requireRole } from "@/lib/portal/auth/require-role";
 import type { AppRole } from "@/lib/portal/roles";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError, type AccountLinks } from "./invite";
@@ -20,18 +20,12 @@ export type Supabase = Awaited<ReturnType<typeof createClient>>;
  * first: an active owner, past two-step sign-in, and not on staging.
  */
 export async function requireOwner(refusal: string): Promise<{ me: PortalUser } | { refused: string }> {
-  const me = await getCurrentUser();
-  if (!me?.is_active || !me.roles.includes("owner")) return { refused: refusal };
+  const owner = await requireRole("owner", refusal);
+  if ("refused" in owner) return owner;
   if ((await getSessionAal()) !== "aal2") {
     return { refused: "Enter a code from your authenticator app first. Reload the page to get asked for one." };
   }
-  try {
-    assertWritable();
-  } catch (error) {
-    if (error instanceof ReadOnlyError) return { refused: error.message };
-    throw error;
-  }
-  return { me };
+  return owner;
 }
 
 /** Makes or links the requester's payee. Returns a warning instead of failing what was already saved. */

@@ -1,19 +1,19 @@
-import { ArrowRight, ArrowUpRight, Coffee, HandHelping, Pin } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Coffee, HandHelping } from "lucide-react";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SocialIcon } from "@/components/icons/social-icon";
-import { Tag } from "@/components/tag";
 import { home } from "@/content/home";
 import { leaders } from "@/content/leaders";
 import { site } from "@/content/site";
 import { standingNotes } from "@/content/standing-notes";
-import type { StandingNote, WeeklyGathering } from "@/lib/content/types";
+import type { WeeklyGathering } from "@/lib/content/types";
 import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
 import { daysBetween, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
 import { countdownItems, liveAnnouncements, relativeDay, whenLabels, type FeedItem } from "@/lib/feed";
 import { photoSizes } from "@/lib/photo-sizes";
 import { formatClock, weekdayName } from "@/lib/schedule";
+import { PostTags, type PostLike } from "./announcement-card";
 import { Avatar } from "./avatar";
 import { BentoTile, tileClasses } from "./bento-tile";
 import { Photo } from "./photo";
@@ -147,7 +147,7 @@ export async function BentoGrid() {
  * The pinned announcement, or the newest, as a poster. Its button is the
  * link. The first standing note takes its place when nothing is posted.
  */
-function Spotlight({ post }: { post: StandingNote & { pinned?: boolean } }) {
+function Spotlight({ post }: { post: PostLike }) {
   const cta = post.cta ?? { label: "More on This Week", href: "/this-week" };
   const external = /^https?:\/\//.test(cta.href);
 
@@ -156,18 +156,7 @@ function Spotlight({ post }: { post: StandingNote & { pinned?: boolean } }) {
       title={post.title}
       body={post.body}
       photo={<Photo photo={post.photo} seed={post.id} sizes={spotlightSizes} className={posterPhoto} />}
-      tags={
-        post.pinned && (
-          <div className="flex flex-wrap gap-1.5">
-            {post.pinned && (
-              <Tag tone="accent">
-                <Pin aria-hidden className="mr-1 size-3" />
-                Pinned
-              </Tag>
-            )}
-          </div>
-        )
-      }
+      tags={<PostTags post={post} />}
       action={
         external ? (
           <a href={cta.href} className={posterLink}>

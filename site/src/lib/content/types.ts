@@ -75,6 +75,8 @@ export type Announcement = {
   body: string;
   photo?: Photo;
   pinned: boolean;
+  /** A night that's called off or moved, which the site makes stand out. */
+  changeOfPlans?: true;
   publishAt: string;
   expiresAt: string;
   /** The label is up to 24 characters. */

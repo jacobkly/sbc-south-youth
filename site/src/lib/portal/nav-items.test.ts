@@ -98,14 +98,24 @@ describe("comingSoonFor", () => {
     expect(comingSoonFor(["owner"])).not.toContain(HOME);
     expect(comingSoonFor(["owner"])).not.toContain(PEOPLE);
     expect(comingSoonFor(["owner"])).not.toContain(ACTIVITY);
+    expect(comingSoonFor(["owner"])).not.toContain(POSTS);
+  });
+
+  it("still lists Photos for a site editor", () => {
+    expect(labels(comingSoonFor(["site_editor"]))).toEqual(["Photos"]);
   });
 });
 
 describe("MAIN_ITEMS", () => {
   it("has Activity for anyone whose roles show some", () => {
-    expect(labels(MAIN_ITEMS.filter(allowedFor(["owner"])))).toEqual(["Home", "Activity", "People"]);
-    expect(labels(MAIN_ITEMS.filter(allowedFor(["site_editor"])))).toEqual(["Home", "Activity"]);
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["owner"])))).toEqual(["Home", "Posts", "Activity", "People"]);
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["site_editor"])))).toEqual(["Home", "Posts", "Activity"]);
     expect(labels(MAIN_ITEMS.filter(allowedFor(["finance_viewer"])))).toEqual(["Home", "Activity"]);
+  });
+
+  it("has Posts for site editors and owners", () => {
+    expect(MAIN_ITEMS.filter(allowedFor(["site_editor"]))).toContain(POSTS);
+    expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_messages"]))).not.toContain(POSTS);
   });
 
   it("has People for owners only", () => {

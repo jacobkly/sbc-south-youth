@@ -7,7 +7,7 @@ import { modifyRouteRegex } from "next/dist/lib/redirect-status";
 import { matchHas, prepareDestination } from "next/dist/shared/lib/router/utils/prepare-destination";
 import { describe, expect, it } from "vitest";
 import { config as proxyConfig } from "@/proxy";
-import { NO_PAGE_PATH, ON_PORTAL_HOST, portalRewrites, siteHeaders } from "./host";
+import { NO_PAGE_PATH, ON_PORTAL_HOST, portalRewrites, publicSiteUrl, siteHeaders } from "./host";
 import { COMING_SOON_PATH, gateRewrites } from "./launch-gate";
 
 type Condition = { type: "host"; value: string };
@@ -133,6 +133,21 @@ describe("routing on the public host", () => {
   it("shows coming soon when the gate is closed", () => {
     expect(route(PUBLIC, "/", { gated: true })).toBe(COMING_SOON_PATH);
     expect(route(PUBLIC, "/visit", { gated: true })).toBe(COMING_SOON_PATH);
+  });
+});
+
+describe("publicSiteUrl", () => {
+  it.each([
+    ["https://portal.sbcsouthyouth.com", "https://sbcsouthyouth.com"],
+    ["http://portal.localhost:3001", "http://localhost:3001"],
+    ["https://portal-staging.sbcsouthyouth.com", "https://staging.sbcsouthyouth.com"],
+  ])("takes the portal off %s", (portal, site) => {
+    expect(publicSiteUrl(portal)).toBe(site);
+  });
+
+  it("falls back to the real site for an address that isn't the portal's", () => {
+    expect(publicSiteUrl("https://example.com")).toBe("https://sbcsouthyouth.com");
+    expect(publicSiteUrl("not a url")).toBe("https://sbcsouthyouth.com");
   });
 });
 

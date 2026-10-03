@@ -121,4 +121,9 @@ describe("announcementFromRow", () => {
     const cta = announcementFromRow({ ...postRow, link_url: "https://example.com/merch", link_label: "Shop" }, []).cta;
     expect(cta).toEqual({ label: "Shop", href: "https://example.com/merch" });
   });
+
+  it("marks a change of plans, and only that", () => {
+    expect(announcementFromRow({ ...postRow, tone: "cancellation" }, []).changeOfPlans).toBe(true);
+    expect(announcementFromRow(postRow, [])).not.toHaveProperty("changeOfPlans");
+  });
 });
