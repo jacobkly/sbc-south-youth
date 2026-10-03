@@ -247,6 +247,12 @@ otp_expiry = 3600
 subject = "Your sign-in link"
 content_path = "./supabase/templates/magic-link.html"
 
+# Forgot password and first-time setup send a code, never a link, so it
+# works in any browser.
+[auth.email.template.recovery]
+subject = "Your SBC South Youth code"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true
