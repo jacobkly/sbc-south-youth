@@ -1,13 +1,14 @@
 import { Suspense } from "react";
 import { ArrowRightIcon, ReceiptTextIcon } from "lucide-react";
 import { BackupStatusSkeleton, HomeBackup } from "@/components/portal/home/backup-status";
+import { HomeMessages } from "@/components/portal/home/messages-card";
 import { HomeStorage, StorageBarSkeleton } from "@/components/portal/home/storage-bar";
 import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Button } from "@/components/portal/ui/button";
 import { readPortalEnv } from "@/lib/env";
 import { getCurrentUser } from "@/lib/portal/auth/current-user";
 import { comingSoonFor } from "@/lib/portal/nav-items";
-import { canUseFinances, ROLE_DESCRIPTIONS, ROLE_LABELS, sortRoles } from "@/lib/portal/roles";
+import { canUseFinances, hasRole, ROLE_DESCRIPTIONS, ROLE_LABELS, sortRoles } from "@/lib/portal/roles";
 
 export default async function PortalHome() {
   // The layout already checked access, so this is an active person with a portal role.
@@ -27,6 +28,8 @@ export default async function PortalHome() {
         <h1 className="text-2xl font-semibold tracking-tight">{firstName ? `Hi, ${firstName}` : "Welcome"}</h1>
         <p className="text-muted-foreground">This is where leaders keep the youth site and its people up to date.</p>
       </header>
+
+      {hasRole(user.roles, "site_messages") && <HomeMessages />}
 
       {financesUrl && (
         <section

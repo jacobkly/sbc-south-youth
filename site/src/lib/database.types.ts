@@ -1344,6 +1344,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      message_assignees: {
+        Args: never
+        Returns: {
+          avatar_path: string
+          full_name: string
+          id: string
+        }[]
+      }
       public_events: {
         Args: never
         Returns: {

@@ -97,7 +97,11 @@ describe("splitForTabBar", () => {
 
 describe("comingSoonFor", () => {
   it("lists the sections a person's roles will get that aren't built yet", () => {
-    expect(labels(comingSoonFor(["site_messages"]))).toEqual(["Messages"]);
+    expect(labels(comingSoonFor(["owner"]))).toEqual(["Photos", "Email"]);
+  });
+
+  it("lists nothing once all of a person's sections are built", () => {
+    expect(comingSoonFor(["site_messages"])).toEqual([]);
   });
 
   it("never lists a built section", () => {
@@ -105,6 +109,7 @@ describe("comingSoonFor", () => {
     expect(comingSoonFor(["owner"])).not.toContain(PEOPLE);
     expect(comingSoonFor(["owner"])).not.toContain(ACTIVITY);
     expect(comingSoonFor(["owner"])).not.toContain(POSTS);
+    expect(comingSoonFor(["owner"])).not.toContain(MESSAGES);
   });
 
   it("still lists Photos for a site editor", () => {
@@ -114,7 +119,13 @@ describe("comingSoonFor", () => {
 
 describe("MAIN_ITEMS", () => {
   it("has Activity for anyone whose roles show some", () => {
-    expect(labels(MAIN_ITEMS.filter(allowedFor(["owner"])))).toEqual(["Home", "Posts", "Activity", "People"]);
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["owner"])))).toEqual([
+      "Home",
+      "Posts",
+      "Messages",
+      "Activity",
+      "People",
+    ]);
     expect(labels(MAIN_ITEMS.filter(allowedFor(["site_editor"])))).toEqual(["Home", "Posts", "Activity"]);
     expect(labels(MAIN_ITEMS.filter(allowedFor(["finance_viewer"])))).toEqual(["Home", "Activity"]);
   });
@@ -122,6 +133,12 @@ describe("MAIN_ITEMS", () => {
   it("has Posts for site editors and owners", () => {
     expect(MAIN_ITEMS.filter(allowedFor(["site_editor"]))).toContain(POSTS);
     expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_messages"]))).not.toContain(POSTS);
+  });
+
+  it("has Messages for the Messages role and owners, and not for site editors without it", () => {
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["site_messages"])))).toEqual(["Home", "Messages", "Activity"]);
+    expect(MAIN_ITEMS.filter(allowedFor(["owner"]))).toContain(MESSAGES);
+    expect(MAIN_ITEMS.filter(allowedFor(["site_editor", "finance_viewer"]))).not.toContain(MESSAGES);
   });
 
   it("has People for owners only", () => {

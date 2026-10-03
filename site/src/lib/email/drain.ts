@@ -2,10 +2,9 @@ import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { ReactElement } from "react";
 import { z } from "zod";
-import { bandChoices, roleChoices } from "@/content/forms";
-import { serveAreas } from "@/content/serve-areas";
 import { Constants } from "@/lib/database.types";
 import { readEmailEnv, readFormEnv, readPortalEnv, type AppEnv, type EmailEnv } from "@/lib/env";
+import { answersOf, messageAnswers } from "@/lib/forms/answers";
 import {
   emailClaim,
   emailDetails,
@@ -88,11 +87,7 @@ const formMessage = z.object({
   email: z.string().nullable(),
   phone: z.string().nullable(),
   message: z.string().nullable(),
-  details: z.object({
-    role: z.string().optional(),
-    band: z.string().optional(),
-    areas: z.array(z.string()).optional(),
-  }),
+  details: messageAnswers,
 });
 
 /** What email_details() returns for a form alert: the whole message. */
@@ -104,23 +99,6 @@ const digestDetails = z.object({
   total: z.number().int().positive(),
   messages: z.array(formMessage.extend({ id: z.string(), created_at: z.string() })).min(1),
 });
-
-/** A choice as the form showed it, or as saved if the form no longer has it. */
-function labelOf(choices: readonly { value: string; label: string }[], value: string): string {
-  return choices.find((choice) => choice.value === value)?.label ?? value;
-}
-
-/** A message's form answers, labeled as the form showed them. */
-function answersOf(details: z.infer<typeof formMessage>["details"]): [string, string][] {
-  const shown: [string, string][] = [];
-  if (details.role) shown.push(["Who", labelOf(roleChoices, details.role)]);
-  if (details.band) shown.push(["School", labelOf(bandChoices, details.band)]);
-  if (details.areas) {
-    const titles = details.areas.map((id) => serveAreas.find((area) => area.id === id)?.title ?? id);
-    shown.push(["Serve in", titles.join(", ")]);
-  }
-  return shown;
-}
 
 type Addressed = QueuedEmail & { subject: string };
 

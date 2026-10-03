@@ -99,7 +99,8 @@ select set_eq(
     'import_paid_requests',
     'save_request',
     'missing_receipt',
-    'triage_message'
+    'triage_message',
+    'message_assignees'
   ],
   'signed-in users can call only the app''s RPCs (helpers and trigger functions stay private)'
 );

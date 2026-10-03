@@ -331,6 +331,69 @@ describe("eventChanges for site content", () => {
   });
 });
 
+describe("message triage", () => {
+  const at = "2026-10-02T17:00:00Z";
+  const MESSAGE = "00000000-0000-4000-8000-00000000f100";
+  const triage = (changes: FeedRow["changes"]) =>
+    row({
+      action: "message.updated",
+      scope: "site",
+      entity_id: MESSAGE,
+      entity_name: "serve",
+      actor_id: EDITOR,
+      changes,
+      created_at: at,
+    });
+  const status = (from: string, to: string) => ({ status: { from, to } });
+
+  it("says what happened to a message's status", () => {
+    expect(eventTitle(triage(status("new", "in_progress")))).toBe("Message picked up");
+    expect(eventTitle(triage(status("in_progress", "handled")))).toBe("Message handled");
+    expect(eventTitle(triage(status("new", "spam")))).toBe("Marked as spam");
+    expect(eventTitle(triage(status("handled", "new")))).toBe("Message reopened");
+    expect(eventTitle(triage(status("spam", "in_progress")))).toBe("Message reopened");
+  });
+
+  it("says when it was only assigned, or its outcome set", () => {
+    const assigned = { assigned_to: { from: null, to: OWNER } };
+    expect(eventTitle(triage(assigned))).toBe("Message assigned");
+    expect(eventTitle(triage({ assigned_to: { from: OWNER, to: null } }))).toBe("Message unassigned");
+    expect(eventTitle(triage({ outcome: { from: null, to: "placed" } }))).toBe("Serve outcome set");
+  });
+
+  it("shows the status, outcome, and leader by name", () => {
+    const changes = {
+      status: { from: "new", to: "handled" },
+      outcome: { from: null, to: "placed" },
+      assigned_to: { from: null, to: OWNER },
+    };
+    expect(eventChanges(triage(changes), new Map(), context().names)).toEqual([
+      { label: "Status", from: "New", to: "Handled" },
+      { label: "Outcome", from: "None", to: "Placed on a team" },
+      { label: "Assigned to", from: "Nobody", to: "Test Owner" },
+    ]);
+  });
+
+  it("names a message by its kind, never its sender, and links to it", () => {
+    const [entry] = buildActivityDays([triage(status("new", "handled"))], context())[0].entries;
+    expect(entry).toMatchObject({
+      title: "Message handled",
+      subject: "Serve message",
+      icon: "approved",
+      link: { href: `/messages/${MESSAGE}`, label: "Open message" },
+    });
+  });
+
+  it("marks spam and reopening with their own icons", () => {
+    const spam = buildActivityDays([triage(status("new", "spam"))], context())[0].entries[0];
+    expect(spam.icon).toBe("rejected");
+    const reopened = buildActivityDays([triage(status("handled", "new"))], context())[0].entries[0];
+    expect(reopened.icon).toBe("undo");
+    const assigned = buildActivityDays([triage({ assigned_to: { from: null, to: ME } })], context())[0].entries[0];
+    expect(assigned.icon).toBe("person");
+  });
+});
+
 describe("groupActivity", () => {
   it("shows inviting someone as one item, though it makes three rows", () => {
     const at = "2026-10-02T17:00:00.000Z";

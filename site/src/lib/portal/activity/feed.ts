@@ -3,6 +3,7 @@ import { formatDate, formatDayLabel, formatTime, laDateOf, laTimeOf, type IsoDat
 import { formatCents } from "@/lib/money";
 import { toCsv, type CsvValue } from "@/lib/portal/csv";
 import { backupSizes, readBackupSizes } from "@/lib/portal/home/backup";
+import { KIND_LABELS, OUTCOME_LABELS, STATUS_LABELS } from "@/lib/portal/messages/list";
 import { APP_ROLES, ROLE_LABELS, sortRoles, type AppRole } from "@/lib/portal/roles";
 import { ACTIVITY_SCOPES, SCOPE_LABELS, type ActivityScope } from "./filters";
 import {
@@ -128,6 +129,24 @@ function contentStatusChange(row: Pick<FeedRow, "action" | "changes">): "publish
   return status?.to === "published" || status?.to === "cancelled" ? status.to : null;
 }
 
+/**
+ * A message's triage. Only the Messages role sees these rows, and the log
+ * keeps the kind of message, never who sent it.
+ */
+function messageTitle(row: Pick<FeedRow, "changes">): string {
+  const status = changeOf(row, "status");
+  if (status?.to === "handled") return "Message handled";
+  if (status?.to === "spam") return "Marked as spam";
+  if (status?.from === "handled" || status?.from === "spam") return "Message reopened";
+  if (status?.to === "in_progress") return "Message picked up";
+  if (status?.to === "new") return "Message moved back to New";
+  const assigned = changeOf(row, "assigned_to");
+  if (assigned) return assigned.to == null ? "Message unassigned" : "Message assigned";
+  const outcome = changeOf(row, "outcome");
+  if (outcome) return outcome.to == null ? "Serve outcome cleared" : "Serve outcome set";
+  return "Message changed";
+}
+
 /** One event's headline. */
 export function eventTitle(row: Pick<FeedRow, "action" | "from_status" | "changes">): string {
   if (isRequestRow(row)) return requestEventTitle({ action: requestAction(row), from_status: row.from_status });
@@ -145,6 +164,7 @@ export function eventTitle(row: Pick<FeedRow, "action" | "from_status" | "change
     if (changeOf(row, "sent_count")) return "Invite resent";
     return "Invite changed";
   }
+  if (row.action === "message.updated") return messageTitle(row);
 
   const [type, verb] = row.action.split(".");
   const word = verb ? VERB_WORDS[verb] : undefined;
@@ -161,7 +181,8 @@ export function eventTitle(row: Pick<FeedRow, "action" | "from_status" | "change
 type LogField = {
   field: string;
   label: string;
-  format: (value: Json | undefined) => string;
+  /** `names` has everyone's name by user ID, for fields that hold a person. */
+  format: (value: Json | undefined, names: ReadonlyMap<string, string>) => string;
   isStartingValue: (value: Json | undefined) => boolean;
 };
 
@@ -181,6 +202,12 @@ function formatInstant(value: Json | undefined): string {
 
 function formatText(value: Json | undefined): string {
   return typeof value === "string" && value !== "" ? value : "None";
+}
+
+/** A logged enum value by its label, or as logged if it has none. */
+function formatLabel(labels: Readonly<Record<string, string>>, value: Json | undefined): string {
+  if (typeof value !== "string") return "None";
+  return Object.hasOwn(labels, value) ? labels[value] : value;
 }
 
 function upperFirst(text: string): string {
@@ -245,20 +272,43 @@ const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
     STARTS,
     { field: "cancel_reason", label: "Reason", format: formatText, isStartingValue: (value) => value == null },
   ],
+  message: [
+    {
+      field: "status",
+      label: "Status",
+      format: (value) => formatLabel(STATUS_LABELS, value),
+      isStartingValue: (value) => value === "new",
+    },
+    {
+      field: "outcome",
+      label: "Outcome",
+      format: (value) => formatLabel(OUTCOME_LABELS, value),
+      isStartingValue: (value) => value == null,
+    },
+    {
+      field: "assigned_to",
+      label: "Assigned to",
+      format: (value, names) => (typeof value === "string" ? (names.get(value) ?? "Someone") : "Nobody"),
+      isStartingValue: (value) => value == null,
+    },
+  ],
 };
 
-function describeLogChanges(row: Pick<FeedRow, "action" | "changes">): FieldChange[] {
+function describeLogChanges(
+  row: Pick<FeedRow, "action" | "changes">,
+  names: ReadonlyMap<string, string>,
+): FieldChange[] {
   const [type, verb] = row.action.split(".");
   return (LOG_FIELDS[type] ?? []).flatMap(({ field, label, format, isStartingValue }): FieldChange[] => {
     const change = changeOf(row, field);
     if (!change) return [];
     if (verb === "created") {
-      return isStartingValue(change.to) ? [] : [{ label, from: null, to: format(change.to) }];
+      return isStartingValue(change.to) ? [] : [{ label, from: null, to: format(change.to, names) }];
     }
     if (verb === "deleted") {
-      return isStartingValue(change.from) ? [] : [{ label, from: format(change.from), to: null }];
+      return isStartingValue(change.from) ? [] : [{ label, from: format(change.from, names), to: null }];
     }
-    return [{ label, from: format(change.from), to: format(change.to) }];
+    return [{ label, from: format(change.from, names), to: format(change.to, names) }];
   });
 }
 
@@ -266,8 +316,9 @@ function describeLogChanges(row: Pick<FeedRow, "action" | "changes">): FieldChan
 export function eventChanges(
   row: Pick<FeedRow, "action" | "changes">,
   payeeNames: ReadonlyMap<string, string> = new Map(),
+  names: ReadonlyMap<string, string> = new Map(),
 ): FieldChange[] {
-  if (!isRequestRow(row)) return describeLogChanges(row);
+  if (!isRequestRow(row)) return describeLogChanges(row, names);
   return describeRequestChanges({ action: requestAction(row), changes: row.changes }, payeeNames).map(
     ({ label, from, to }) => ({ label, from, to }),
   );
@@ -502,7 +553,18 @@ const ACTION_ICONS: Partial<Record<string, ActivityIcon>> = {
   "backup.completed": "backup",
 };
 
+/** A message's triage, by what its title says happened. */
+const MESSAGE_ICONS: Partial<Record<string, ActivityIcon>> = {
+  "Message handled": "approved",
+  "Marked as spam": "rejected",
+  "Message reopened": "undo",
+  "Message moved back to New": "undo",
+  "Message assigned": "person",
+  "Message unassigned": "person",
+};
+
 function iconOf(row: FeedRow): ActivityIcon {
+  if (row.action === "message.updated") return MESSAGE_ICONS[eventTitle(row)] ?? "edited";
   if (row.action === "user.updated") {
     const title = eventTitle(row);
     if (title === "Access removed") return "access_removed";
@@ -551,6 +613,10 @@ function subjectOf(row: FeedRow, ctx: FeedContext): string | null {
     const sizes = readBackupSizes(row.changes);
     return sizes ? backupSizes(sizes) : null;
   }
+  if (row.entity_type === "message") {
+    const kind = row.entity_name && Object.hasOwn(KIND_LABELS, row.entity_name) ? row.entity_name : null;
+    return kind ? `${formatLabel(KIND_LABELS, kind)} message` : "A message";
+  }
   return row.entity_name;
 }
 
@@ -561,6 +627,7 @@ function linkOf(row: FeedRow, ctx: FeedContext): ItemLink | null {
     if (!ctx.financesUrl || !row.entity_id || !ctx.requests.has(row.entity_id)) return null;
     return { href: `${ctx.financesUrl}/admin/requests/${row.entity_id}`, label: "Open in Finances" };
   }
+  if (row.entity_type === "message" && row.entity_id) return { href: `/messages/${row.entity_id}`, label: "Open message" };
   const person = personOf(row, ctx);
   // Someone deleted has no page left to open.
   if (ctx.canOpenPeople && person && ctx.names.has(person)) return { href: `/people/${person}`, label: "Open person" };
@@ -614,7 +681,7 @@ function eventView(row: FeedRow, ctx: FeedContext): EventView {
     key: row.id,
     title: eventTitle(row),
     time: formatTime(row.created_at),
-    changes: eventChanges(row, ctx.payeeNames),
+    changes: eventChanges(row, ctx.payeeNames, ctx.names),
     filename: isRequestRow(row) ? eventFilename({ action: requestAction(row), changes: row.changes }) : null,
     note: row.note,
   };
@@ -636,6 +703,7 @@ const COUNT_NOUNS: Partial<Record<string, readonly [string, string]>> = {
   event: ["event", "events"],
   user: ["person", "people"],
   invite: ["invite", "invites"],
+  message: ["message", "messages"],
 };
 
 /** Counts an item's things by kind, most first. */
