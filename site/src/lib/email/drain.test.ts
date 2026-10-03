@@ -230,6 +230,24 @@ describe("drainEmails", () => {
     expect(sent[0].text).toContain("This change was made on Oct 2, 2026 at 3:14 PM, outside the portal.");
   });
 
+  it("warns owners about the month with the count in its subject, and links to Email", async () => {
+    const email = queued("001", {
+      template: "quota-warning",
+      subject: "2,400 of 3,000 emails used this month",
+      related_type: null,
+      related_id: null,
+    });
+    const { deps, sent } = fakes([email], {});
+
+    await drainEmails(deps);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].subject).toBe("2,400 of 3,000 emails used this month");
+    expect(sent[0].text).toContain("2,400 of 3,000 emails used this month");
+    expect(sent[0].text).toContain("only sign-in codes");
+    expect(sent[0].html).toContain('href="https://portal.example.test/email"');
+  });
+
   describe("form alerts", () => {
     const alert = (subject: string) =>
       queued("001", {

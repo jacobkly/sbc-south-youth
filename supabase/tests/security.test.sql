@@ -80,6 +80,7 @@ select set_eq(
     'people_directory',
     'log_event',
     'email_unsuppress',
+    'email_summary',
     'current_payee_id',
     'set_member_role',
     'set_member_active',

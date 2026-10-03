@@ -18,6 +18,7 @@ import { deliverEmail, type OutgoingEmail } from "./send";
 import { dailyDigestEmail } from "./templates/daily-digest";
 import { formAlertEmail } from "./templates/form-alert";
 import { ownerChangedEmail } from "./templates/owner-changed";
+import { quotaWarningEmail } from "./templates/quota-warning";
 import { requestPaidEmail } from "./templates/request-paid";
 import { requestReturnedEmail } from "./templates/request-returned";
 import { requestSubmittedEmail } from "./templates/request-submitted";
@@ -162,6 +163,10 @@ const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: Drai
     });
     return { body };
   },
+  // Its subject carries the month's count, so it needs no details.
+  "quota-warning": (email, _details, { portalUrl }) => ({
+    body: quotaWarningEmail({ subject: email.subject, url: `${portalUrl}/email` }),
+  }),
   "form-alert": (email, details, { portalUrl }) => {
     const parsed = messageDetails.safeParse(details);
     if (!email.related_id || !parsed.success) return null;

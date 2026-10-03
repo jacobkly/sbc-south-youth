@@ -3,7 +3,6 @@ import {
   ACCOUNT,
   ACTIVITY,
   allowedFor,
-  comingSoonFor,
   EMAIL,
   HOME,
   isActive,
@@ -95,29 +94,6 @@ describe("splitForTabBar", () => {
   });
 });
 
-describe("comingSoonFor", () => {
-  it("lists the sections a person's roles will get that aren't built yet", () => {
-    expect(labels(comingSoonFor(["owner"]))).toEqual(["Email"]);
-  });
-
-  it("lists nothing once all of a person's sections are built", () => {
-    expect(comingSoonFor(["site_messages"])).toEqual([]);
-  });
-
-  it("never lists a built section", () => {
-    expect(comingSoonFor(["owner"])).not.toContain(HOME);
-    expect(comingSoonFor(["owner"])).not.toContain(PEOPLE);
-    expect(comingSoonFor(["owner"])).not.toContain(ACTIVITY);
-    expect(comingSoonFor(["owner"])).not.toContain(POSTS);
-    expect(comingSoonFor(["owner"])).not.toContain(MESSAGES);
-    expect(comingSoonFor(["owner"])).not.toContain(PHOTOS);
-  });
-
-  it("lists nothing for a site editor once Photos is built", () => {
-    expect(comingSoonFor(["site_editor"])).toEqual([]);
-  });
-});
-
 describe("MAIN_ITEMS", () => {
   it("has Activity for anyone whose roles show some", () => {
     expect(labels(MAIN_ITEMS.filter(allowedFor(["owner"])))).toEqual([
@@ -127,6 +103,7 @@ describe("MAIN_ITEMS", () => {
       "Messages",
       "Activity",
       "People",
+      "Email",
     ]);
     expect(labels(MAIN_ITEMS.filter(allowedFor(["site_editor"])))).toEqual(["Home", "Posts", "Photos", "Activity"]);
     expect(labels(MAIN_ITEMS.filter(allowedFor(["finance_viewer"])))).toEqual(["Home", "Activity"]);
@@ -152,5 +129,10 @@ describe("MAIN_ITEMS", () => {
   it("has People for owners only", () => {
     expect(MAIN_ITEMS.filter(allowedFor(["owner"]))).toContain(PEOPLE);
     expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_editor", "site_messages"]))).not.toContain(PEOPLE);
+  });
+
+  it("has Email for owners only", () => {
+    expect(MAIN_ITEMS.filter(allowedFor(["owner"]))).toContain(EMAIL);
+    expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_editor", "site_messages"]))).not.toContain(EMAIL);
   });
 });

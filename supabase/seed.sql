@@ -255,6 +255,38 @@ cross join (values
 
 select set_config('request.jwt.claims', '', false);
 
+-- A month of email for the owner's Email screen: sign-in codes and invites
+-- that went out, an invite that bounced and a paid notice marked as spam
+-- (both now blocked), an alert Resend never took, and two the quota skipped.
+-- None is queued, so the drain sends nothing.
+insert into public.email_log (template, priority, scope, to_address, subject, status, resend_id, error, created_at)
+select 'auth', 1, 'platform', 'alex@example.test', 'Your sign-in code', 'delivered'::public.email_status,
+  're_seed_auth_' || g, null::text,
+  now() - g * interval '23 hours'
+from generate_series(1, 18) as g
+union all
+select 'invite', 2, 'platform', 'invitee' || g || '@example.test', 'You''re invited', 'delivered',
+  're_seed_invite_' || g, null, now() - g * interval '2 days 3 hours'
+from generate_series(1, 6) as g
+union all
+select 'invite', 2, 'platform', 'old-address@example.test', 'You''re invited', 'bounced', 're_seed_bounce', null,
+  now() - interval '3 days 4 hours'
+union all
+select 'request-paid', 3, 'finances', 'payee@example.test', 'R-0040 was paid', 'complained', 're_seed_spam', null,
+  now() - interval '9 days'
+union all
+select 'form-alert', 4, 'site', 'youth@example.test', 'New Contact message', 'failed', null,
+  'Couldn''t reach Resend. It timed out.', now() - interval '1 day 2 hours'
+union all
+select 'form-alert', 4, 'site', 'youth@example.test', 'New Visit message', 'skipped_quota', null, null,
+  now() - interval '6 days' - g * interval '1 hour'
+from generate_series(1, 2) as g;
+
+insert into public.email_suppressions (address, reason, email_log_id, created_at)
+select l.to_address, case l.status when 'complained' then 'complained' else 'bounced' end, l.id, l.created_at
+from public.email_log l
+where l.resend_id in ('re_seed_bounce', 're_seed_spam');
+
 -- Where the database pokes the email drain: the site's dev server, reached
 -- from the database container and answering as the portal. The secret is for
 -- local use only, and the site's drain checks for the same one.

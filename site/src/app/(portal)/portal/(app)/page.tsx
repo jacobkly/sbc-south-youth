@@ -1,13 +1,13 @@
 import { Suspense } from "react";
 import { ArrowRightIcon, ReceiptTextIcon } from "lucide-react";
 import { BackupStatusSkeleton, HomeBackup } from "@/components/portal/home/backup-status";
+import { HomeEmailAlert } from "@/components/portal/home/email-alert";
 import { HomeMessages } from "@/components/portal/home/messages-card";
 import { HomeStorage, StorageBarSkeleton } from "@/components/portal/home/storage-bar";
 import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Button } from "@/components/portal/ui/button";
 import { readPortalEnv } from "@/lib/env";
 import { getCurrentUser } from "@/lib/portal/auth/current-user";
-import { comingSoonFor } from "@/lib/portal/nav-items";
 import { canUseFinances, hasRole, ROLE_DESCRIPTIONS, ROLE_LABELS, sortRoles } from "@/lib/portal/roles";
 
 export default async function PortalHome() {
@@ -19,7 +19,6 @@ export default async function PortalHome() {
   // An owner's one role covers the rest, so list it alone.
   const isOwner = user.roles.includes("owner");
   const roles = isOwner ? (["owner"] as const) : sortRoles(user.roles);
-  const comingSoon = comingSoonFor(user.roles);
   const financesUrl = canUseFinances(user.roles) ? readPortalEnv().financesUrl : null;
 
   return (
@@ -28,6 +27,12 @@ export default async function PortalHome() {
         <h1 className="text-2xl font-semibold tracking-tight">{firstName ? `Hi, ${firstName}` : "Welcome"}</h1>
         <p className="text-muted-foreground">This is where leaders keep the youth site and its people up to date.</p>
       </header>
+
+      {isOwner && (
+        <Suspense fallback={null}>
+          <HomeEmailAlert />
+        </Suspense>
+      )}
 
       {hasRole(user.roles, "site_messages") && <HomeMessages />}
 
@@ -95,30 +100,6 @@ export default async function PortalHome() {
           ))}
         </ul>
       </section>
-
-      {comingSoon.length > 0 && (
-        <section aria-labelledby="coming-heading" className="space-y-3">
-          <div className="space-y-1">
-            <h2 id="coming-heading" className="text-lg font-semibold">
-              Coming soon
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              These join the menu as they&apos;re built, and you&apos;ll see the ones your access covers.
-            </p>
-          </div>
-          <ul className="flex flex-wrap gap-2">
-            {comingSoon.map((item) => (
-              <li
-                key={item.href}
-                className="inline-flex h-9 items-center gap-2 rounded-full border bg-card px-3.5 text-sm"
-              >
-                <item.icon className="size-4 text-muted-foreground" aria-hidden />
-                {item.label}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </NarrowPage>
   );
 }

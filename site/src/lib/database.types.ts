@@ -898,6 +898,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      email_summary: { Args: never; Returns: Json }
       email_unsuppress: { Args: { p_id: string }; Returns: undefined }
       has_role: {
         Args: { p_roles: Database["public"]["Enums"]["app_role"][] }
@@ -980,6 +981,7 @@ export type Database = {
           id: string
         }[]
       }
+      queue_quota_warning: { Args: never; Returns: number }
       record_as_paid: {
         Args: {
           p_external_approver?: string

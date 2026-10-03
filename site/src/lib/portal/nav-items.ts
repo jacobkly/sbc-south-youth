@@ -46,19 +46,8 @@ export const PEOPLE: NavItem = { href: "/people", label: "People", icon: UsersIc
 export const EMAIL: NavItem = { href: "/email", label: "Email", icon: MailIcon, roles: ["owner"] };
 export const ACCOUNT: NavItem = { href: "/account", label: "Account", icon: UserRoundIcon };
 
-/** Every section the portal will have, in order. */
-const SECTIONS: NavItem[] = [HOME, POSTS, PHOTOS, MESSAGES, ACTIVITY, PEOPLE, EMAIL];
-
-/**
- * The sections that exist so far, in order. Each joins when its screen is
- * built, so nobody is shown a link to a page that isn't there yet.
- */
-export const MAIN_ITEMS: NavItem[] = [HOME, POSTS, PHOTOS, MESSAGES, ACTIVITY, PEOPLE];
-
-/** Sections a person's roles will get that aren't built yet, for Home to mention. */
-export function comingSoonFor(roles: readonly AppRole[]): NavItem[] {
-  return SECTIONS.filter((item) => !MAIN_ITEMS.includes(item)).filter(allowedFor(roles));
-}
+/** The portal's sections, in order. Account sits apart, at the end. */
+export const MAIN_ITEMS: NavItem[] = [HOME, POSTS, PHOTOS, MESSAGES, ACTIVITY, PEOPLE, EMAIL];
 
 /** Whether a nav item is the current page or the section it's in. */
 export function isActive(pathname: string, item: Pick<NavItem, "href" | "also">): boolean {

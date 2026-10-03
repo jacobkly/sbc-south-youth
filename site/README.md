@@ -94,6 +94,15 @@ The Preview tab on a heads-up or event shows the draft with the public site's ow
 - The frame's server action sits beside its page and renders the draft with `src/lib/portal/preview/preview.ts`. It checks for a site editor, takes only the form's own fields, and never saves anything.
 - Portal pages may frame only the portal's own pages (`frame-src 'self'`), only `/preview` lets them (`frame-ancestors 'self'`), and every other page refuses to be framed.
 
+### Email
+
+Everything the apps send goes through `public.email_log`, which is also the outbox. Resend's free plan allows 100 emails a day and 3,000 a month, and `email_reserve()` keeps the last of that room for the emails that matter most.
+
+- **Limits:** counted over the last 24 hours and 31 days, since Resend doesn't say when its own day or month starts. Finance emails and form alerts stop at 80 in a day, invites and owner alerts at 90, and the daily digest at 100. Everything stops at 2,900 in a month, leaving the rest for sign-in codes, which Supabase sends straight to Resend. Emails that were skipped, blocked, or never reached Resend don't count.
+- **Email screen:** owners see both limits as meters with what they're holding back, what each kind of email sent with any that bounced, failed, or were skipped, the newest failures, bounces, and spam reports, and the blocked addresses. `public.email_summary()` returns counts only, never an address or a subject, and `src/lib/portal/email/summary.ts` turns them into what the screen says. It mirrors `email_reserve()`'s caps, so change both together.
+- **Blocked addresses:** an address that bounced or was marked as spam gets nothing more. An owner can unblock one once it's fixed, which runs `email_unsuppress()` as them.
+- **Warnings:** an owner's Home shows a card once either limit passes 80%. Each morning, `public.queue_quota_warning()` emails every owner once the last 31 days pass 2,400, at most once a calendar month in Los Angeles time.
+
 ### Run it locally
 
 1. From the repo root, start the local stack with `npx supabase start`, then load the fake data with `npx supabase db reset`.
