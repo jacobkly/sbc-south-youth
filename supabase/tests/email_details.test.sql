@@ -41,9 +41,10 @@ insert into public.request_lines (id, request_id, position, amount_cents, vendor
   ('00000000-0000-4000-8000-00000000f001', '00000000-0000-4000-8000-00000000c001', 1, 4550, 'Fake Store'),
   ('00000000-0000-4000-8000-00000000f002', '00000000-0000-4000-8000-00000000c002', 1, 1200, 'Fake Market');
 
--- No pokes, and an outbox with only what this test queues.
+-- No pokes, and an outbox and messages with only what this test queues.
 delete from vault.secrets where name in ('email_drain_url', 'email_drain_secret', 'email_drain_host');
 delete from public.email_log;
+delete from site.messages;
 
 -- The requester submits.
 set local role authenticated;

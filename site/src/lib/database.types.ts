@@ -1230,6 +1230,7 @@ export type Database = {
           assigned_to: string | null
           created_at: string
           details: NonNullable<Json>
+          digest_id: string | null
           email: string | null
           env: string
           handled_at: string | null
@@ -1249,6 +1250,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           details?: NonNullable<Json>
+          digest_id?: string | null
           email?: string | null
           env?: string
           handled_at?: string | null
@@ -1268,6 +1270,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           details?: NonNullable<Json>
+          digest_id?: string | null
           email?: string | null
           env?: string
           handled_at?: string | null
@@ -1375,6 +1378,10 @@ export type Database = {
           title: string
           tone: Database["site"]["Enums"]["post_tone"]
         }[]
+      }
+      queue_message_digest: {
+        Args: { p_env: string; p_to: string }
+        Returns: number
       }
       submit_message: {
         Args: {

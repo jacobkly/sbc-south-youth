@@ -73,6 +73,8 @@ function fakes(rows: QueuedEmail[], details: Record<string, unknown>, overrides:
       pauses.push(ms);
     },
     now: () => 0,
+    queueDigest: async () => 0,
+    digestTo: () => "youth@example.test",
     ...overrides,
   };
   return { deps, claims, sent, marked, pauses, outbox };
@@ -453,6 +455,234 @@ describe("drainEmails", () => {
     expect(sent).toEqual([]);
   });
 
+  describe("the daily digest", () => {
+    const TAKEDOWN_ID = "00000000-0000-4000-8000-0000000000f1";
+    const VISIT_ID = "00000000-0000-4000-8000-0000000000f2";
+    const SERVE_ID = "00000000-0000-4000-8000-0000000000f3";
+    const digestEmail = (subject: string) =>
+      queued("0d1", {
+        template: "daily-digest",
+        to_address: "youth@example.test",
+        subject,
+        related_type: null,
+        related_id: null,
+      });
+    const TAKEDOWN = {
+      id: TAKEDOWN_ID,
+      kind: "takedown",
+      name: "Pat Example",
+      email: "pat@example.test",
+      phone: null,
+      message: "Please take down the photo from Friday.",
+      details: { role: "parent" },
+      created_at: "2026-10-02T23:05:00Z",
+    };
+    const VISIT = {
+      id: VISIT_ID,
+      kind: "visit",
+      name: "Vi Example",
+      email: null,
+      phone: "555-555-0101",
+      message: "Coming Friday.",
+      details: {},
+      created_at: "2026-10-02T22:14:00Z",
+    };
+    const SERVE = {
+      id: SERVE_ID,
+      kind: "serve",
+      name: "Sam Example",
+      email: "sam@example.test",
+      phone: null,
+      message: null,
+      details: { areas: ["worship", "media"] },
+      created_at: "2026-10-02T22:30:00Z",
+    };
+
+    /** A drain whose database queues `digest` when asked, listing `listed` messages, or nothing when it's null. */
+    function digestFakes(
+      rows: QueuedEmail[],
+      digest: QueuedEmail | null,
+      listed: number,
+      details: Record<string, unknown>,
+      overrides: Partial<DrainDeps> = {},
+    ) {
+      const made = fakes(rows, details, overrides);
+      const queuedFor: { env: string; to: string }[] = [];
+      made.deps.queueDigest = async (env, to) => {
+        queuedFor.push({ env, to });
+        if (!digest) return 0;
+        made.outbox.push(digest);
+        return listed;
+      };
+      return { ...made, queuedFor };
+    }
+
+    it("queues one digest for the youth inbox when the morning poke asks, and sends it with the rest", async () => {
+      const alert = queued("001");
+      const digest = digestEmail("3 messages from the website are waiting");
+      const { deps, sent, queuedFor } = digestFakes([alert], digest, 3, {
+        [alert.id]: SUBMITTED,
+        [digest.id]: { env: "production", total: 3, messages: [TAKEDOWN, VISIT, SERVE] },
+      });
+
+      const result = await drainEmails(deps, { digest: true });
+
+      expect(result).toEqual({ status: "drained", sent: 2, failed: 0, digest: 3 });
+      expect(queuedFor).toEqual([{ env: "production", to: "youth@example.test" }]);
+      expect(sent.map((email) => email.subject)).toEqual([
+        "R-0042 is ready for review",
+        "3 messages from the website are waiting",
+      ]);
+      expect(sent[1]).toMatchObject({ to: "youth@example.test", idempotencyKey: digest.id });
+      expect(sent[1]).not.toHaveProperty("replyTo");
+    });
+
+    it("lists every waiting message in one email, in order, each with a way to write back and a link", async () => {
+      const digest = digestEmail("3 messages from the website are waiting");
+      const { deps, sent } = digestFakes([], digest, 3, {
+        [digest.id]: { env: "production", total: 3, messages: [TAKEDOWN, VISIT, SERVE] },
+      });
+
+      await drainEmails(deps, { digest: true });
+
+      expect(sent).toHaveLength(1);
+      const { text, html } = sent[0];
+      for (const line of [
+        "3 messages from the website are waiting",
+        "Pat Example asked us to take down a photo.",
+        "Please take down the photo from Friday.",
+        "pat@example.test",
+        "Parent or guardian",
+        "Vi Example is planning a visit.",
+        "555-555-0101",
+        "Sam Example wants to serve.",
+        "Worship, Media",
+        "Oct 2, 2026 at 3:14 PM",
+        "Replying to this email won't reach them",
+      ]) {
+        expect(text).toContain(line);
+      }
+      expect(text.indexOf("Pat Example")).toBeLessThan(text.indexOf("Vi Example"));
+      expect(text.indexOf("Vi Example")).toBeLessThan(text.indexOf("Sam Example"));
+      for (const id of [TAKEDOWN_ID, VISIT_ID, SERVE_ID]) {
+        expect(html).toContain(`href="https://portal.example.test/messages/${id}"`);
+      }
+      expect(html).toContain('href="https://portal.example.test/messages"');
+    });
+
+    it("says how many more are in the portal when there are too many to show", async () => {
+      const digest = digestEmail("26 messages from the website are waiting");
+      const shown = Array.from({ length: 20 }, (_, index) => ({ ...VISIT, name: `Guest${index + 1} Example` }));
+      const { deps, sent } = digestFakes([], digest, 26, {
+        [digest.id]: { env: "production", total: 26, messages: shown },
+      });
+
+      await drainEmails(deps, { digest: true });
+
+      expect(sent).toHaveLength(1);
+      expect(sent[0].text).toContain("Here are 20 of them. The other 6 are in the portal.");
+      expect(sent[0].text).toContain("Guest20 Example is planning a visit.");
+    });
+
+    it("shortens a long message, since the portal has the rest", async () => {
+      const digest = digestEmail("1 message from the website is waiting");
+      const long = "Long question here. ".repeat(100).trim();
+      const contact = { ...TAKEDOWN, kind: "contact", message: long };
+      const { deps, sent } = digestFakes([], digest, 1, {
+        [digest.id]: { env: "production", total: 1, messages: [contact] },
+      });
+
+      await drainEmails(deps, { digest: true });
+
+      expect(sent[0].text).toContain("Long question here. Long question here.");
+      expect(sent[0].text).toContain("…");
+      expect(sent[0].text).not.toContain(long);
+    });
+
+    it("sends nothing when no message is waiting", async () => {
+      const { deps, sent, queuedFor } = digestFakes([], null, 0, {});
+
+      const result = await drainEmails(deps, { digest: true });
+
+      expect(result).toEqual({ status: "drained", sent: 0, failed: 0, digest: 0 });
+      expect(queuedFor).toHaveLength(1);
+      expect(sent).toEqual([]);
+    });
+
+    it("never queues a digest on an ordinary poke", async () => {
+      const { deps, queuedFor } = digestFakes([], digestEmail("1 message from the website is waiting"), 1, {});
+
+      const result = await drainEmails(deps);
+
+      expect(result).toEqual({ status: "drained", sent: 0, failed: 0 });
+      expect(queuedFor).toEqual([]);
+    });
+
+    it("marks staging's digest as tests, for the address staging sends to", async () => {
+      const digest = digestEmail("1 message from the website is waiting");
+      const { deps, sent, queuedFor } = digestFakes(
+        [],
+        digest,
+        1,
+        { [digest.id]: { env: "staging", total: 1, messages: [SERVE] } },
+        { env: { ...PRODUCTION, appEnv: "staging" }, digestTo: () => "owner@example.test" },
+      );
+
+      await drainEmails(deps, { digest: true });
+
+      expect(queuedFor).toEqual([{ env: "staging", to: "owner@example.test" }]);
+      expect(sent[0].text).toContain("Tests from the staging site.");
+      expect(sent[0].text).not.toContain("Replying to this email");
+    });
+
+    it("skips the digest, and still drains, when there's no inbox to send it to", async () => {
+      const alert = queued("001");
+      const { deps, sent, queuedFor } = digestFakes(
+        [alert],
+        null,
+        0,
+        { [alert.id]: SUBMITTED },
+        { digestTo: () => null },
+      );
+
+      const result = await drainEmails(deps, { digest: true });
+
+      expect(result).toEqual({ status: "drained", sent: 1, failed: 0, digest: 0 });
+      expect(queuedFor).toEqual([]);
+      expect(sent).toHaveLength(1);
+    });
+
+    it("still drains when the digest can't be queued", async () => {
+      const alert = queued("001");
+      const { deps, sent } = fakes(
+        [alert],
+        { [alert.id]: SUBMITTED },
+        {
+          queueDigest: async () => {
+            throw new Error("Couldn't queue the digest: connect ECONNREFUSED");
+          },
+        },
+      );
+
+      const result = await drainEmails(deps, { digest: true });
+
+      expect(result).toEqual({ status: "drained", sent: 1, failed: 0, digest: 0 });
+      expect(sent).toHaveLength(1);
+    });
+
+    it("marks failed a digest whose messages are gone", async () => {
+      const digest = digestEmail("1 message from the website is waiting");
+      const { deps, sent, marked } = digestFakes([], digest, 1, {});
+
+      await drainEmails(deps, { digest: true });
+
+      expect(sent).toEqual([]);
+      expect(marked).toEqual([
+        { id: digest.id, status: "failed", error: "Couldn't build the email: its details are missing" },
+      ]);
+    });
+  });
+
   it("claims only staging's own emails on staging", async () => {
     const { deps, claims } = fakes([], {}, { env: { ...PRODUCTION, appEnv: "staging" } });
 
@@ -484,6 +714,24 @@ describe("handleDrainRequest", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "drained", sent: 2, failed: 0 });
     expect(drained).toBe(1);
+  });
+
+  it("asks for the digest only when the database pokes with ?digest=1", async () => {
+    const asked: unknown[] = [];
+    const drain = async (options: { digest: boolean }) => {
+      asked.push(options);
+      return { status: "drained" as const, sent: 0, failed: 0 };
+    };
+    const morning = new Request("https://portal.example.test/api/email/drain?digest=1", {
+      method: "POST",
+      headers: { authorization: "Bearer test-drain-secret" },
+      body: "{}",
+    });
+
+    await handleDrainRequest(morning, { secret: "test-drain-secret", drain });
+    await handleDrainRequest(poke("Bearer test-drain-secret"), { secret: "test-drain-secret", drain });
+
+    expect(asked).toEqual([{ digest: true }, { digest: false }]);
   });
 
   it.each([

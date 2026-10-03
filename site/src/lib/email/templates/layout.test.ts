@@ -1,7 +1,17 @@
 import { createElement as h } from "react";
 import { describe, expect, it } from "vitest";
 import { renderEmail } from "../render";
-import { EmailButton, EmailFacts, EmailHeading, EmailLayout, EmailNote, EmailQuote, EmailText } from "./layout";
+import {
+  EmailButton,
+  EmailFacts,
+  EmailHeading,
+  EmailLayout,
+  EmailLink,
+  EmailNote,
+  EmailQuote,
+  EmailSubheading,
+  EmailText,
+} from "./layout";
 
 function sample(name: string) {
   return h(
@@ -67,6 +77,22 @@ describe("the email layout", () => {
 
     expect(text).toMatch(/^Amount +\$45\.50$/m);
     expect(text).toMatch(/^Store +Fake Store$/m);
+  });
+
+  it("starts each item in a list with a subheading and gives it its own link", async () => {
+    const { html, text } = await renderEmail(
+      h(
+        EmailLayout,
+        { preview: "Two messages.", reason: "You take messages." },
+        h(EmailSubheading, null, "Alex Example wants to serve."),
+        h(EmailLink, { href: "https://portal.example.test/messages/1" }, "Open in the portal"),
+      ),
+    );
+
+    expect(html).toMatch(/<h2[^>]*>Alex Example wants to serve\.<\/h2>/);
+    expect(html).toMatch(/<a href="https:\/\/portal\.example\.test\/messages\/1"[^>]*class="email-link"/);
+    expect(text).toContain("Alex Example wants to serve.");
+    expect(text).toContain("Open in the portal https://portal.example.test/messages/1");
   });
 
   it("keeps a quote's line breaks", async () => {

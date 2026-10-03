@@ -5,10 +5,18 @@ import { z } from "zod";
 import { bandChoices, roleChoices } from "@/content/forms";
 import { serveAreas } from "@/content/serve-areas";
 import { Constants } from "@/lib/database.types";
-import { readEmailEnv, readPortalEnv, type AppEnv, type EmailEnv } from "@/lib/env";
-import { emailClaim, emailDetails, emailMark, type ClaimedEmail, type EmailMark } from "@/lib/supabase/admin";
+import { readEmailEnv, readFormEnv, readPortalEnv, type AppEnv, type EmailEnv } from "@/lib/env";
+import {
+  emailClaim,
+  emailDetails,
+  emailMark,
+  queueMessageDigest,
+  type ClaimedEmail,
+  type EmailMark,
+} from "@/lib/supabase/admin";
 import { renderEmail, type RenderedEmail } from "./render";
 import { deliverEmail, type OutgoingEmail } from "./send";
+import { dailyDigestEmail } from "./templates/daily-digest";
 import { formAlertEmail } from "./templates/form-alert";
 import { ownerChangedEmail } from "./templates/owner-changed";
 import { requestPaidEmail } from "./templates/request-paid";
@@ -18,7 +26,9 @@ import { requestSubmittedEmail } from "./templates/request-submitted";
 /**
  * The outbox drain. The database queues finance, owner, and form emails
  * in email_log and pokes the portal, which claims a few at a time, writes
- * them, sends them through Resend, and records what happened.
+ * them, sends them through Resend, and records what happened. Each
+ * morning's poke also queues the daily digest of messages whose alerts
+ * never went.
  */
 
 export type QueuedEmail = ClaimedEmail;
@@ -38,9 +48,14 @@ export type DrainDeps = {
   pause: (ms: number) => Promise<void>;
   /** Milliseconds, for the time budget. */
   now: () => number;
+  /** Queues the daily digest and returns how many messages it lists. */
+  queueDigest: (env: AppEnv, to: string) => Promise<number>;
+  /** Where the digest goes, the same inbox as the form alerts. Null when email is off. */
+  digestTo: () => string | null;
 };
 
-export type DrainResult = { status: "off" } | { status: "drained"; sent: number; failed: number };
+/** `digest` is how many messages the morning's digest lists, only when the poke asked for it. */
+export type DrainResult = { status: "off" } | { status: "drained"; sent: number; failed: number; digest?: number };
 
 /** How many emails one claim takes. A crash leaves at most this many waiting out the 15-minute retry. */
 const BATCH_SIZE = 5;
@@ -64,8 +79,10 @@ const requestDetails = z.object({
 
 const ownerDetails = z.object({ name: z.string(), by: z.string().nullable() });
 
-/** What email_details() returns for a form alert: the whole message. */
-const messageDetails = z.object({
+const appEnv = z.enum(["production", "staging"]);
+
+/** A message from a form, as the emails show it. */
+const formMessage = z.object({
   kind: z.enum(Constants.site.Enums.message_kind),
   name: z.string(),
   email: z.string().nullable(),
@@ -76,7 +93,16 @@ const messageDetails = z.object({
     band: z.string().optional(),
     areas: z.array(z.string()).optional(),
   }),
-  env: z.enum(["production", "staging"]),
+});
+
+/** What email_details() returns for a form alert: the whole message. */
+const messageDetails = formMessage.extend({ env: appEnv });
+
+/** What email_details() returns for the daily digest: up to 20 messages, and how many in all. */
+const digestDetails = z.object({
+  env: appEnv,
+  total: z.number().int().positive(),
+  messages: z.array(formMessage.extend({ id: z.string(), created_at: z.string() })).min(1),
 });
 
 /** A choice as the form showed it, or as saved if the form no longer has it. */
@@ -84,7 +110,19 @@ function labelOf(choices: readonly { value: string; label: string }[], value: st
   return choices.find((choice) => choice.value === value)?.label ?? value;
 }
 
-type Addressed = QueuedEmail & { subject: string; related_id: string };
+/** A message's form answers, labeled as the form showed them. */
+function answersOf(details: z.infer<typeof formMessage>["details"]): [string, string][] {
+  const shown: [string, string][] = [];
+  if (details.role) shown.push(["Who", labelOf(roleChoices, details.role)]);
+  if (details.band) shown.push(["School", labelOf(bandChoices, details.band)]);
+  if (details.areas) {
+    const titles = details.areas.map((id) => serveAreas.find((area) => area.id === id)?.title ?? id);
+    shown.push(["Serve in", titles.join(", ")]);
+  }
+  return shown;
+}
+
+type Addressed = QueuedEmail & { subject: string };
 
 /** An email's body, and where a reply goes when it isn't the sender. */
 type Written = { body: ReactElement; replyTo?: string };
@@ -93,7 +131,7 @@ type Written = { body: ReactElement; replyTo?: string };
 const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: DrainLinks) => Written | null> = {
   "request-submitted": (email, details, { financesUrl }) => {
     const parsed = requestDetails.safeParse(details);
-    if (!parsed.success || !parsed.data.payee) return null;
+    if (!email.related_id || !parsed.success || !parsed.data.payee) return null;
     const { amount_cents, vendor, description, by, payee, by_payee } = parsed.data;
     const body = requestSubmittedEmail({
       subject: email.subject,
@@ -109,7 +147,7 @@ const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: Drai
   },
   "request-returned": (email, details, { financesUrl }) => {
     const parsed = requestDetails.safeParse(details);
-    if (!parsed.success) return null;
+    if (!email.related_id || !parsed.success) return null;
     const { amount_cents, vendor, by, note } = parsed.data;
     const body = requestReturnedEmail({
       subject: email.subject,
@@ -123,7 +161,7 @@ const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: Drai
   },
   "request-paid": (email, details, { financesUrl }) => {
     const parsed = requestDetails.safeParse(details);
-    if (!parsed.success) return null;
+    if (!email.related_id || !parsed.success) return null;
     const { amount_cents, vendor, payment_method, paid_at } = parsed.data;
     const body = requestPaidEmail({
       subject: email.subject,
@@ -137,7 +175,7 @@ const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: Drai
   },
   "owner-changed": (email, details, { portalUrl }) => {
     const parsed = ownerDetails.safeParse(details);
-    if (!parsed.success) return null;
+    if (!email.related_id || !parsed.success) return null;
     const body = ownerChangedEmail({
       subject: email.subject,
       by: parsed.data.by,
@@ -148,16 +186,9 @@ const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: Drai
   },
   "form-alert": (email, details, { portalUrl }) => {
     const parsed = messageDetails.safeParse(details);
-    if (!parsed.success) return null;
+    if (!email.related_id || !parsed.success) return null;
     const { kind, name, email: from, phone, message, details: answers, env } = parsed.data;
     const staging = env === "staging";
-    const shown: [string, string][] = [];
-    if (answers.role) shown.push(["Who", labelOf(roleChoices, answers.role)]);
-    if (answers.band) shown.push(["School", labelOf(bandChoices, answers.band)]);
-    if (answers.areas) {
-      const titles = answers.areas.map((id) => serveAreas.find((area) => area.id === id)?.title ?? id);
-      shown.push(["Serve in", titles.join(", ")]);
-    }
     const body = formAlertEmail({
       subject: email.subject,
       kind,
@@ -165,13 +196,36 @@ const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: Drai
       email: from,
       phone,
       message,
-      answers: shown,
+      answers: answersOf(answers),
       at: email.created_at,
       staging,
       url: `${portalUrl}/messages/${email.related_id}`,
     });
     // On staging nobody else may hear about a test, so a reply can't reach them.
     return from && !staging ? { body, replyTo: from } : { body };
+  },
+  // It's from several people at once, so there's no Reply-To. Each one is written back to on their own.
+  "daily-digest": (email, details, { portalUrl }) => {
+    const parsed = digestDetails.safeParse(details);
+    if (!parsed.success) return null;
+    const { env, total, messages } = parsed.data;
+    const body = dailyDigestEmail({
+      subject: email.subject,
+      total,
+      messages: messages.map((shown) => ({
+        kind: shown.kind,
+        name: shown.name,
+        email: shown.email,
+        phone: shown.phone,
+        message: shown.message,
+        answers: answersOf(shown.details),
+        at: shown.created_at,
+        url: `${portalUrl}/messages/${shown.id}`,
+      })),
+      staging: env === "staging",
+      url: `${portalUrl}/messages`,
+    });
+    return { body };
   },
 };
 
@@ -186,10 +240,10 @@ async function build(email: QueuedEmail, deps: DrainDeps): Promise<Built | { pro
   if (!Object.hasOwn(TEMPLATES, email.template)) {
     return { problem: `the drain doesn't write ${email.template} emails` };
   }
-  const { to_address: to, subject, related_id } = email;
-  if (!to || !subject || !related_id) return { problem: "its details are missing" };
+  const { to_address: to, subject } = email;
+  if (!to || !subject) return { problem: "its details are missing" };
   const details = await deps.details(email.id);
-  const written = TEMPLATES[email.template]({ ...email, subject, related_id }, details, deps.links);
+  const written = TEMPLATES[email.template]({ ...email, subject }, details, deps.links);
   return written ? { to, subject, ...written } : { problem: "its details are missing" };
 }
 
@@ -209,13 +263,21 @@ async function markQuietly(mark: DrainDeps["mark"], input: EmailMark): Promise<v
  * Resend's idempotency key, so a retried row can't go out twice either.
  * Only reading the outbox throws: one bad email is marked failed and the
  * drain goes on.
+ *
+ * With `digest`, it first asks the database to queue the daily digest, so
+ * the digest goes out with everything else. A digest that can't be queued
+ * never stops the drain, and its messages wait for tomorrow's.
  */
-export async function drainEmails(deps: DrainDeps = defaultDrainDeps()): Promise<DrainResult> {
+export async function drainEmails(
+  deps: DrainDeps = defaultDrainDeps(),
+  { digest = false }: { digest?: boolean } = {},
+): Promise<DrainResult> {
   const { env } = deps;
   if (!env.sending) return { status: "off" };
   const { from } = env.sending;
   const started = deps.now();
   const result = { status: "drained" as const, sent: 0, failed: 0 };
+  const listed = digest ? await queueDigest(deps) : null;
   let sentOne = false;
 
   const deliver = async (email: QueuedEmail): Promise<"sent" | "failed"> => {
@@ -275,7 +337,22 @@ export async function drainEmails(deps: DrainDeps = defaultDrainDeps()): Promise
     if (batch.length === 0) break;
     for (const email of batch) result[await deliver(email)]++;
   }
-  return result;
+  return listed === null ? result : { ...result, digest: listed };
+}
+
+/** Queues the daily digest, or logs why not and returns 0. */
+async function queueDigest(deps: DrainDeps): Promise<number> {
+  try {
+    const to = deps.digestTo();
+    if (!to) {
+      console.warn("[email] There's no inbox for the daily digest, so it was skipped");
+      return 0;
+    }
+    return await deps.queueDigest(deps.env.appEnv, to);
+  } catch (error) {
+    console.error("[email] Couldn't queue the daily digest", error);
+    return 0;
+  }
 }
 
 function text(status: number, body: string): Response {
@@ -291,11 +368,11 @@ function sameSecret(given: string, secret: string): boolean {
 /**
  * The database's poke. Only the database knows the secret, so nobody else
  * can make the portal spend the email quota, and the drain only ever sends
- * what the database already queued.
+ * what the database already queued. The morning's poke adds `?digest=1`.
  */
 export async function handleDrainRequest(
   request: Request,
-  { secret, drain }: { secret: string | null; drain: () => Promise<DrainResult> },
+  { secret, drain }: { secret: string | null; drain: (options: { digest: boolean }) => Promise<DrainResult> },
 ): Promise<Response> {
   if (!secret) return text(503, "The email drain isn't set up.");
 
@@ -303,7 +380,8 @@ export async function handleDrainRequest(
   if (!bearer || !sameSecret(bearer[1], secret)) return text(401, "Wrong secret.");
 
   try {
-    return Response.json(await drain());
+    const digest = new URL(request.url).searchParams.get("digest") === "1";
+    return Response.json(await drain({ digest }));
   } catch (error) {
     console.error("[email] The drain failed", error);
     return text(500, "Couldn't drain the outbox.");
@@ -325,5 +403,8 @@ function defaultDrainDeps(): DrainDeps {
     render: renderEmail,
     pause: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     now: () => Date.now(),
+    queueDigest: queueMessageDigest,
+    // Read only when the digest is asked for, so a missing form setting can't break an ordinary poke.
+    digestTo: () => readFormEnv().alertTo,
   };
 }

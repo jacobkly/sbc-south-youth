@@ -75,7 +75,7 @@ The maintainer runs `link` and `db push` against the hosted project. Claude does
 
 - No client writes `public.activity_log` directly. Only security definer functions do: the `log_activity()` trigger, the `log_event()` RPC, and a few RPCs that log their own event, like `record_backup()`. `public.activity_feed` is a `security_invoker` view joining it with finances' `request_events`, so each table's RLS decides what a person sees.
 - Never put message text, email addresses, or phone numbers in an activity row's `changes`.
-- `public.email_log` is also the email outbox. `email_reserve()` checks suppressions and the free plan's daily and monthly limits, then queues a row. Database triggers queue finance and owner emails, `site.submit_message()` queues form alerts, `pg_net` asks the portal's `/api/email/drain` to send them, and Resend's webhook records delivery. Apart from Supabase Auth's own code emails, never send email any other way.
+- `public.email_log` is also the email outbox. `email_reserve()` checks suppressions and the free plan's daily and monthly limits, then queues a row. Database triggers queue finance and owner emails, `site.submit_message()` queues form alerts, `site.queue_message_digest()` queues the morning's digest of messages whose alerts never went, `pg_net` asks the portal's `/api/email/drain` to send them, and Resend's webhook records delivery. Apart from Supabase Auth's own code emails, never send email any other way.
 - Retention runs nightly in `pg_cron`: site and platform activity after 2 years, email addresses after 90 days, cron history after 14 days, handled form messages after 12 months, spam after 30 days, and form rate-limit rows after 24 hours. Finance records are never pruned.
 
 ### Roles

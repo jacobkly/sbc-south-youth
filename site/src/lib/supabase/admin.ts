@@ -162,6 +162,17 @@ export async function emailClaim(env: "production" | "staging", limit: number): 
   }));
 }
 
+/**
+ * Queues the daily digest of open messages whose alerts never went, and
+ * returns how many it lists. 0 means none were waiting, or the quota or the
+ * once-a-day rule skipped it. The database keeps any message out of two.
+ */
+export async function queueMessageDigest(env: "production" | "staging", to: string): Promise<number> {
+  const { data, error } = await admin().schema("site").rpc("queue_message_digest", { p_env: env, p_to: to });
+  if (error) throw failure("Couldn't queue the digest", error);
+  return data;
+}
+
 /** What a queued email shows, read only while the drain is sending it. Null when there's nothing to show. */
 export async function emailDetails(id: string): Promise<Json> {
   const { data, error } = await admin().rpc("email_details", { p_log_id: id });

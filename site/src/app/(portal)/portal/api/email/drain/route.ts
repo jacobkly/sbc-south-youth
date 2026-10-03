@@ -10,5 +10,8 @@ export const maxDuration = 60;
  * has a sign-in. The morning digest pokes with `?digest=1`, which drains too.
  */
 export async function POST(request: Request) {
-  return handleDrainRequest(request, { secret: readEmailEnv().drainSecret, drain: () => drainEmails() });
+  return handleDrainRequest(request, {
+    secret: readEmailEnv().drainSecret,
+    drain: (options) => drainEmails(undefined, options),
+  });
 }

@@ -86,7 +86,7 @@ The seed adds fake people for each kind of access. Its header comment lists them
 
 | Job | When (UTC) | What it does |
 | --- | --- | --- |
-| `email-daily-digest` | 15:00 | Asks the portal to send anything still in the email queue. The form inbox's daily digest joins it later |
+| `email-daily-digest` | 15:00 | Asks the portal to send anything still in the email queue, and to send the form inbox one email listing the messages whose alerts never went |
 | `prune-old-activity` | 10:00 | Deletes site and people activity older than two years. Finance history stays |
 | `clear-old-email-addresses` | 10:05 | Clears recipient addresses from the email log after 90 days |
 | `prune-cron-history` | 10:10 | Deletes `pg_cron`'s own run history after 14 days |

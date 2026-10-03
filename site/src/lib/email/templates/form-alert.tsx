@@ -21,13 +21,19 @@ export type FormAlertInput = {
   url: string;
 };
 
-const SUMMARY: Record<FormAlertInput["kind"], (name: string) => string> = {
+/** One line on what someone asked for, which the daily digest uses too. */
+export const MESSAGE_SUMMARY: Record<FormAlertInput["kind"], (name: string) => string> = {
   contact: (name) => `${name} sent a message from the Contact page.`,
   takedown: (name) => `${name} asked us to take down a photo.`,
   visit: (name) => `${name} is planning a visit.`,
   join: (name) => `${name} wants to join the group chat.`,
   serve: (name) => `${name} wants to serve.`,
 };
+
+/** When a message came in, in Los Angeles time, like "Oct 2, 2026 at 3:14 PM". */
+export function sentAt(at: string): string {
+  return `${formatDate(laDateOf(at))} at ${formatTime(at)}`;
+}
 
 /**
  * Tells the youth inbox someone sent a form, with the whole message, so a
@@ -36,12 +42,12 @@ const SUMMARY: Record<FormAlertInput["kind"], (name: string) => string> = {
 export function formAlertEmail(input: FormAlertInput): ReactElement {
   const { subject, kind, name, email, phone, message, answers, at, staging, url } = input;
   const firstName = name.split(/\s+/)[0];
-  const summary = SUMMARY[kind](name);
+  const summary = MESSAGE_SUMMARY[kind](name);
   const facts: [string, string][] = [];
   if (email) facts.push(["Email", email]);
   if (phone) facts.push(["Phone", phone]);
   facts.push(...answers.map(([label, value]): [string, string] => [label, value]));
-  facts.push(["Sent", `${formatDate(laDateOf(at))} at ${formatTime(at)}`]);
+  facts.push(["Sent", sentAt(at)]);
 
   const reply = staging
     ? "A test from the staging site. Replying won't reach the sender."

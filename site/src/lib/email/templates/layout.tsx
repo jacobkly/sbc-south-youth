@@ -31,6 +31,7 @@ const darkMode = `
   .email-text { color: #e5e5e5 !important; }
   .email-muted { color: #a3a3a3 !important; }
   .email-button { background-color: #fafafa !important; color: #0a0a0a !important; }
+  .email-link { color: #fafafa !important; }
   .email-rule { border-color: #262626 !important; }
   .email-quote { border-color: #525252 !important; }
 }
@@ -174,6 +175,26 @@ export function EmailHeading({ children }: { children?: ReactNode }) {
   );
 }
 
+/** Starts one item in a list of several, like each message in a digest, with a rule above it. */
+export function EmailSubheading({ children }: { children?: ReactNode }) {
+  return (
+    <h2
+      className="email-heading email-rule"
+      style={{
+        margin: "24px 0 12px",
+        paddingTop: 20,
+        borderTop: `1px solid ${colors.border}`,
+        color: colors.heading,
+        fontSize: 18,
+        fontWeight: 600,
+        lineHeight: "24px",
+      }}
+    >
+      {children}
+    </h2>
+  );
+}
+
 export function EmailText({ children }: { children?: ReactNode }) {
   return (
     <p className="email-text" style={{ margin: "0 0 16px", color: colors.text, fontSize: 16, lineHeight: "24px" }}>
@@ -200,6 +221,21 @@ export function EmailButton({ href, children }: { href: string; children?: React
           padding: "12px 20px",
           textDecoration: "none",
         }}
+      >
+        {children}
+      </a>
+    </p>
+  );
+}
+
+/** A plain link on its own line, for when the email has more than one place to go. */
+export function EmailLink({ href, children }: { href: string; children?: ReactNode }) {
+  return (
+    <p style={{ margin: "0 0 16px", fontSize: 16, lineHeight: "24px" }}>
+      <a
+        href={href}
+        className="email-link"
+        style={{ color: colors.heading, fontWeight: 600, textDecoration: "underline" }}
       >
         {children}
       </a>
