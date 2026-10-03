@@ -115,7 +115,7 @@ select throws_ok(
        '[{"id": "00000000-0000-4000-8000-00000000f009", "amount_cents": 500, "vendor": "Fake Store"}]'
      ) $$,
   '42501',
-  'Only an admin can save requests.',
+  'You don''t have permission to save requests.',
   'a member can''t create requests'
 );
 
@@ -159,7 +159,7 @@ select throws_ok(
        '[{"id": "00000000-0000-4000-8000-00000000f009", "amount_cents": 500, "vendor": "Fake Store"}]'
      ) $$,
   '42501',
-  'Only an admin can save requests.',
+  'You don''t have permission to save requests.',
   'a viewer can''t create requests'
 );
 

@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(28);
 
 select tables_are(
   'public',
@@ -103,6 +103,8 @@ select policies_are(
     'Receipt files are readable with their request',
     'Admins upload receipt files to open requests',
     'Admins delete receipt files from open requests',
+    'Requesters upload receipt files to their editable requests',
+    'Requesters delete receipt files from their editable requests',
     'Avatars are readable by their owner, admins, and viewers',
     'Active users upload their own avatar',
     'Active users delete their own avatars'
@@ -122,15 +124,20 @@ select is_empty(
 );
 
 -- A deactivated admin reads nothing: one row in every table, then a check of
--- each table as them. users.test.sql covers their own users row.
-insert into auth.users (id, email, raw_user_meta_data)
-values ('00000000-0000-4000-8000-00000000a001', 'former@example.test', '{"full_name": "Former Admin"}');
+-- each table as them. users.test.sql covers their own users row. A site
+-- editor reads nothing from finances either, even linked to the payee.
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-4000-8000-00000000a001', 'former@example.test', '{"full_name": "Former Admin"}'),
+  ('00000000-0000-4000-8000-00000000a002', 'editor@example.test', '{"full_name": "Site Editor"}');
 
 update public.users set role = 'admin', is_active = false
 where id = '00000000-0000-4000-8000-00000000a001';
 
-insert into public.payees (id, full_name)
-values ('00000000-0000-4000-8000-00000000b001', 'Test Payee');
+update public.users set roles = '{site_editor}'
+where id = '00000000-0000-4000-8000-00000000a002';
+
+insert into public.payees (id, full_name, user_id, linked_at)
+values ('00000000-0000-4000-8000-00000000b001', 'Test Payee', '00000000-0000-4000-8000-00000000a002', now());
 
 insert into public.reimbursement_requests (
   id, payee_id, created_by, type, amount_cents, purchase_date, vendor, description, status, submitted_at
@@ -177,6 +184,21 @@ where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p') and c.
 select is_empty(
   $$ select 1 from storage.objects where bucket_id = 'receipts' $$,
   'a deactivated admin reads no receipt files'
+);
+
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a002", "role": "authenticated"}', true);
+
+select is_empty(
+  format('select 1 from public.%I', t.name),
+  format('a site editor reads nothing from %s', t.name)
+)
+from unnest(array[
+  'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'request_lines', 'receipts', 'request_report'
+]) as t (name);
+
+select is_empty(
+  $$ select 1 from storage.objects where bucket_id = 'receipts' $$,
+  'a site editor reads no receipt files'
 );
 
 reset role;
