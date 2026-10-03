@@ -60,6 +60,8 @@ npm run db:types                             # regenerate the finances app's dat
 
 Migrations can land on `dev` or `main`. Push them from the `dev` checkout after it has merged `main`, and before pushing any code that needs them.
 
+The site's heads-ups and events live in a separate `site` schema. `[api] schemas` in `supabase/config.toml` exposes it locally. On the hosted project, add `site` under Project Settings → Data API → Exposed schemas too. Anyone without the Site editor role still reads nothing there, and the public site reads only what's live, through functions only the server's secret key can call.
+
 ### Local stack
 
 With Docker Desktop, run the whole backend on your computer:

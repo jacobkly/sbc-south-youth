@@ -31,6 +31,16 @@ export function scopesFor(roles: readonly AppRole[]): ActivityScope[] {
 
 /** Kinds of action to narrow to, each a set of logged actions in one or more apps. */
 const KINDS = {
+  posts: {
+    label: "Heads-ups",
+    scopes: ["site"],
+    actions: ["post.created", "post.updated", "post.deleted"],
+  },
+  events: {
+    label: "Events",
+    scopes: ["site"],
+    actions: ["event.created", "event.updated", "event.deleted"],
+  },
   requests: {
     label: "Request edits",
     scopes: ["finances"],

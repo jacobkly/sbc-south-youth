@@ -31,12 +31,14 @@ describe("scopesFor", () => {
 describe("kindsFor", () => {
   it("offers only the actions in the apps someone can see", () => {
     expect(kindsFor(["finances"], "all")).toEqual(["requests", "status", "payments", "receipts", "downloads"]);
-    expect(kindsFor(["site"], "all")).toEqual([]);
+    expect(kindsFor(["site"], "all")).toEqual(["posts", "events"]);
   });
 
   it("narrows to the app picked", () => {
     const owner = scopesFor(["owner"]);
     expect(kindsFor(owner, "all")).toEqual([
+      "posts",
+      "events",
       "requests",
       "status",
       "payments",
@@ -48,7 +50,7 @@ describe("kindsFor", () => {
       "backups",
     ]);
     expect(kindsFor(owner, "platform")).toEqual(["access", "invites", "sign_ins", "downloads", "backups"]);
-    expect(kindsFor(owner, "site")).toEqual([]);
+    expect(kindsFor(owner, "site")).toEqual(["posts", "events"]);
   });
 });
 

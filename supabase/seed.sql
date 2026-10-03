@@ -153,6 +153,108 @@ select set_config('request.jwt.claims', '', false);
 -- Making the seed's owner an owner isn't news, so drop the alert it queued.
 delete from public.email_log where template = 'owner-changed';
 
+-- Site content around this week: events counted from this week's Monday and
+-- heads-ups from today, in Los Angeles time. One heads-up is scheduled for
+-- later and one has ended, and one event is still a draft. Written as the
+-- site editor, so Activity names them.
+select set_config(
+  'request.jwt.claims', '{"sub": "00000000-0000-4000-8000-5eed0000a003", "role": "authenticated"}', false
+);
+
+insert into site.events (
+  id, slug, title, summary, body, starts_at, ends_at, all_day, location_name, address, cost_note, featured, status
+)
+select
+  e.id, e.slug, e.title, e.summary, e.body,
+  (w.monday + e.starts) at time zone 'America/Los_Angeles',
+  (w.monday + e.ends) at time zone 'America/Los_Angeles',
+  e.all_day, e.location_name, e.address, e.cost_note, e.featured, e.status::site.event_status
+from (select date_trunc('week', now() at time zone 'America/Los_Angeles') as monday) as w
+cross join (values
+  (
+    '00000000-0000-4000-8000-5eed0000e001'::uuid, 'kickoff-night', 'Kickoff Night',
+    'Worship, food, and a first look at the season.',
+    'A big night to start the season: worship, food, and a first look at what''s coming up.',
+    interval '-2 days 18 hours', interval '-2 days 21 hours', false, 'SBC South', null, null, false, 'published'
+  ),
+  (
+    '00000000-0000-4000-8000-5eed0000e002', 'volleyball-saturday', 'Volleyball Saturday',
+    'Come play or come watch. Every skill level is welcome.',
+    E'Come play or come watch. Every skill level is welcome, and drinks are on us.\n\n'
+      'Bring a water bottle and shoes you can run in.',
+    interval '5 days 14 hours', interval '5 days 17 hours', false, 'Example Park',
+    '400 Example Avenue, Maple Valley, WA 98038', 'Free', false, 'published'
+  ),
+  (
+    '00000000-0000-4000-8000-5eed0000e003', 'weekend-retreat', 'Weekend Retreat',
+    'A night away with worship, games, and a lot of good food.',
+    E'A night away with the whole group: worship around the fire, games, time outside, and a lot of good food.\n\n'
+      'We leave from the church parking lot Saturday morning and are back Sunday by lunch. '
+      'A packing list goes out the week before.',
+    interval '12 days 9 hours', interval '13 days 12 hours', false, 'Example Pines Camp',
+    '1 Example Pines Road, Exampleville, WA 00000', '$40 per student', true, 'published'
+  ),
+  (
+    '00000000-0000-4000-8000-5eed0000e004', 'worship-night', 'Worship Night',
+    'A long evening of worship and prayer.',
+    'A long evening of worship and prayer. Bring a friend.',
+    interval '20 days 18 hours', interval '20 days 20 hours', false, 'SBC South', null, null, true, 'published'
+  ),
+  (
+    '00000000-0000-4000-8000-5eed0000e005', 'serve-day', 'Serve Day',
+    'Help get the church ready for the season.',
+    E'Help get the church ready for the season: yard work, cleaning, and setting up rooms. '
+      'Come for any part of the day.\n\nLunch is on us.',
+    interval '26 days', interval '27 days', true, 'SBC South', null, null, false, 'published'
+  ),
+  (
+    '00000000-0000-4000-8000-5eed0000e006', 'all-church-campout', 'All-Church Campout',
+    'A weekend of camping with the whole church.',
+    'A weekend of camping with the whole church. Families, students, and leaders all together.',
+    interval '75 days', interval '77 days', true, 'Example Lake Campground',
+    '2 Example Lake Road, Exampleville, WA 00000', null, false, 'published'
+  ),
+  (
+    '00000000-0000-4000-8000-5eed0000e007', 'game-night', 'Game Night',
+    'Board games, snacks, and a lot of noise.',
+    'Board games, snacks, and a lot of noise. Bring a game if you have a favorite.',
+    interval '33 days 18 hours 30 minutes', interval '33 days 20 hours 30 minutes', false, 'SBC South', null, null,
+    false, 'draft'
+  )
+) as e (id, slug, title, summary, body, starts, ends, all_day, location_name, address, cost_note, featured, status);
+
+-- The retreat signups end when the retreat starts.
+insert into site.posts (id, title, body, link_url, link_label, pinned, status, starts_at, ends_at)
+select
+  p.id, p.title, p.body, p.link_url, p.link_label, p.pinned, 'published',
+  (d.today + p.starts) at time zone 'America/Los_Angeles',
+  coalesce(
+    (d.today + p.ends) at time zone 'America/Los_Angeles',
+    (select starts_at from site.events where slug = 'weekend-retreat')
+  )
+from (select date_trunc('day', now() at time zone 'America/Los_Angeles') as today) as d
+cross join (values
+  (
+    '00000000-0000-4000-8000-5eed0000d001'::uuid, 'Retreat signups are open',
+    'Spots are limited, so sign up soon. We need a headcount for food and cabins by the Sunday before we leave.',
+    '/events/weekend-retreat', 'See the retreat', true, interval '-4 days 9 hours', null::interval
+  ),
+  (
+    '00000000-0000-4000-8000-5eed0000d002', 'Youth hoodies are here', 'Get one at the cafe when it''s open.',
+    null, null, false, interval '-6 days 9 hours', interval '21 days 9 hours'
+  ),
+  (
+    '00000000-0000-4000-8000-5eed0000d003', 'Save the date', 'Scheduled for later. It shouldn''t show yet.',
+    null, null, false, interval '3 days 9 hours', interval '30 days 9 hours'
+  ),
+  (
+    '00000000-0000-4000-8000-5eed0000d004', 'Kickoff photos are up', 'Ended yesterday. It shouldn''t show.',
+    null, null, false, interval '-8 days 9 hours', interval '-1 days 9 hours'
+  )
+) as p (id, title, body, link_url, link_label, pinned, starts, ends);
+
+select set_config('request.jwt.claims', '', false);
+
 -- Where the database pokes the email drain: the site's dev server, reached
 -- from the database container and answering as the portal. The secret is for
 -- local use only, and the site's drain checks for the same one.

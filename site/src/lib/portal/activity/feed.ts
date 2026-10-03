@@ -1,5 +1,5 @@
 import type { Database, Json } from "@/lib/database.types";
-import { formatDayLabel, formatTime, laDateOf, type IsoDate } from "@/lib/dates";
+import { formatDate, formatDayLabel, formatTime, laDateOf, laTimeOf, type IsoDate } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { toCsv, type CsvValue } from "@/lib/portal/csv";
 import { backupSizes, readBackupSizes } from "@/lib/portal/home/backup";
@@ -108,12 +108,24 @@ const FIXED_TITLES: Partial<Record<string, string>> = {
   "backup.completed": "Backup saved",
 };
 
-/** How anything else the log takes later reads, like "post.created" as "Post added". */
+/** How anything else the log takes reads, like "event.created" as "Event added". */
 const VERB_WORDS: Partial<Record<string, string>> = {
   created: "added",
   updated: "changed",
   deleted: "removed",
 };
+
+/** What the site calls things whose table names say otherwise. */
+const NOUNS: Partial<Record<string, string>> = {
+  post: "Heads-up",
+};
+
+/** A heads-up or event going out or being cancelled, which says more than "changed". */
+function contentStatusChange(row: Pick<FeedRow, "action" | "changes">): "published" | "cancelled" | null {
+  if (row.action !== "post.updated" && row.action !== "event.updated") return null;
+  const to = changeOf(row, "status")?.to;
+  return to === "published" || to === "cancelled" ? to : null;
+}
 
 /** One event's headline. */
 export function eventTitle(row: Pick<FeedRow, "action" | "from_status" | "changes">): string {
@@ -136,19 +148,21 @@ export function eventTitle(row: Pick<FeedRow, "action" | "from_status" | "change
   const [type, verb] = row.action.split(".");
   const word = verb ? VERB_WORDS[verb] : undefined;
   if (!type || !word) return row.action;
-  const noun = type.replaceAll("_", " ");
-  return `${noun.charAt(0).toUpperCase()}${noun.slice(1)} ${word}`;
+  const noun = NOUNS[type] ?? `${type.charAt(0).toUpperCase()}${type.slice(1).replaceAll("_", " ")}`;
+  return `${noun} ${contentStatusChange(row) ?? word}`;
 }
 
-/** Logged fields worth showing, in the order they show. */
-const LOG_FIELDS = [
-  ["roles", "Roles"],
-  ["is_active", "Access"],
-  ["status", "Invite"],
-  ["sent_count", "Times sent"],
-] as const;
-
-type LogField = (typeof LOG_FIELDS)[number][0];
+/**
+ * A logged field worth showing: its label, how its value reads, and whether
+ * a value is what every new row starts with, so it isn't worth showing on
+ * something added or deleted.
+ */
+type LogField = {
+  field: string;
+  label: string;
+  format: (value: Json | undefined) => string;
+  isStartingValue: (value: Json | undefined) => boolean;
+};
 
 function formatRoles(value: Json | undefined): string {
   if (!Array.isArray(value)) return "None";
@@ -157,47 +171,93 @@ function formatRoles(value: Json | undefined): string {
   return roles.length > 0 ? roles.map((role) => ROLE_LABELS[role]).join(", ") : "None";
 }
 
-function formatLogValue(field: LogField, value: Json | undefined): string {
-  switch (field) {
-    case "roles":
-      return formatRoles(value);
-    case "is_active":
-      return value === true ? "Active" : "Removed";
-    case "status":
-      if (value === "pending") return "Pending";
-      if (value === "accepted") return "Accepted";
-      return String(value ?? "None");
-    case "sent_count":
-      return String(value ?? 0);
-  }
+/** A logged timestamp in Los Angeles, as just its date at midnight, which is how all-day events start. */
+function formatInstant(value: Json | undefined): string {
+  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return "None";
+  const date = formatDate(laDateOf(value));
+  return laTimeOf(value) === "00:00" ? date : `${date} at ${formatTime(value)}`;
 }
 
-/** What every new account or invite starts with, so it isn't worth showing. */
-function isStartingValue(field: LogField, value: Json | undefined): boolean {
-  switch (field) {
-    case "roles":
-      return !Array.isArray(value) || value.length === 0;
-    case "is_active":
-      return value === true;
-    case "status":
-      return value === "pending";
-    case "sent_count":
-      return typeof value !== "number" || value <= 1;
-  }
+function formatText(value: Json | undefined): string {
+  return typeof value === "string" && value !== "" ? value : "None";
 }
+
+function upperFirst(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+const ROLES: LogField = {
+  field: "roles",
+  label: "Roles",
+  format: formatRoles,
+  isStartingValue: (value) => !Array.isArray(value) || value.length === 0,
+};
+
+/** A heads-up's or event's status: Draft, Published, or Cancelled. */
+const CONTENT_STATUS: LogField = {
+  field: "status",
+  label: "Status",
+  format: (value) => (typeof value === "string" ? upperFirst(value) : "None"),
+  isStartingValue: (value) => value === "draft",
+};
+
+/** The title names the item already, so it shows only when it changes. */
+const TITLE: LogField = { field: "title", label: "Title", format: formatText, isStartingValue: () => true };
+
+const STARTS: LogField = { field: "starts_at", label: "Starts", format: formatInstant, isStartingValue: () => false };
+
+/** Logged fields worth showing for each kind of thing, in the order they show. */
+const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
+  user: [
+    ROLES,
+    {
+      field: "is_active",
+      label: "Access",
+      format: (value) => (value === true ? "Active" : "Removed"),
+      isStartingValue: (value) => value === true,
+    },
+  ],
+  invite: [
+    ROLES,
+    {
+      field: "status",
+      label: "Invite",
+      format: (value) => (value === "pending" ? "Pending" : value === "accepted" ? "Accepted" : formatText(value)),
+      isStartingValue: (value) => value === "pending",
+    },
+    {
+      field: "sent_count",
+      label: "Times sent",
+      format: (value) => String(value ?? 0),
+      isStartingValue: (value) => typeof value !== "number" || value <= 1,
+    },
+  ],
+  post: [
+    CONTENT_STATUS,
+    TITLE,
+    STARTS,
+    { field: "ends_at", label: "Ends", format: formatInstant, isStartingValue: () => false },
+  ],
+  event: [
+    CONTENT_STATUS,
+    TITLE,
+    STARTS,
+    { field: "cancel_reason", label: "Reason", format: formatText, isStartingValue: (value) => value == null },
+  ],
+};
 
 function describeLogChanges(row: Pick<FeedRow, "action" | "changes">): FieldChange[] {
-  const verb = row.action.split(".")[1];
-  return LOG_FIELDS.flatMap(([field, label]): FieldChange[] => {
+  const [type, verb] = row.action.split(".");
+  return (LOG_FIELDS[type] ?? []).flatMap(({ field, label, format, isStartingValue }): FieldChange[] => {
     const change = changeOf(row, field);
     if (!change) return [];
     if (verb === "created") {
-      return isStartingValue(field, change.to) ? [] : [{ label, from: null, to: formatLogValue(field, change.to) }];
+      return isStartingValue(change.to) ? [] : [{ label, from: null, to: format(change.to) }];
     }
     if (verb === "deleted") {
-      return isStartingValue(field, change.from) ? [] : [{ label, from: formatLogValue(field, change.from), to: null }];
+      return isStartingValue(change.from) ? [] : [{ label, from: format(change.from), to: null }];
     }
-    return [{ label, from: formatLogValue(field, change.from), to: formatLogValue(field, change.to) }];
+    return [{ label, from: format(change.from), to: format(change.to) }];
   });
 }
 
@@ -324,10 +384,6 @@ function lowerFirst(text: string): string {
   return text.charAt(0).toLowerCase() + text.slice(1);
 }
 
-function upperFirst(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 const FILE_COUNT_TITLES: Partial<Record<string, (count: number) => string>> = {
   "request.receipt_added": (count) => `${count} files added`,
   "request.receipt_removed": (count) => `${count} files removed`,
@@ -452,6 +508,8 @@ function iconOf(row: FeedRow): ActivityIcon {
     if (title === "Access restored") return "access_restored";
     return "roles";
   }
+  const status = contentStatusChange(row);
+  if (status) return status === "published" ? "submitted" : "cancelled";
   const icon = ACTION_ICONS[row.action];
   if (icon) return icon;
   const verb = row.action.split(".")[1];
@@ -536,8 +594,10 @@ export type EntryView = {
   /** Oldest first. */
   events: EventView[];
   link: ItemLink | null;
-  /** A bulk item's requests, with links where there are any. */
+  /** A bulk item's things, with links where there are any. */
   related: { label: string; href: string | null }[];
+  /** What a bulk item touched, counted by kind: "11 requests", "7 events, 4 heads-ups". */
+  relatedSummary: string | null;
 };
 
 export type DayView = { date: IsoDate; label: string; entries: EntryView[] };
@@ -568,6 +628,31 @@ function relatedOf(item: ActivityItem, ctx: FeedContext): EntryView["related"] {
     .map((row) => ({ label: subjectOf(row, ctx) ?? eventTitle(row), href: linkOf(row, ctx)?.href ?? null }));
 }
 
+/** Each kind of thing, as one and as many. */
+const COUNT_NOUNS: Partial<Record<string, readonly [string, string]>> = {
+  request: ["request", "requests"],
+  post: ["heads-up", "heads-ups"],
+  event: ["event", "events"],
+  user: ["person", "people"],
+  invite: ["invite", "invites"],
+};
+
+/** Counts an item's things by kind, most first. */
+function relatedSummaryOf(item: ActivityItem): string {
+  const kinds = new Map<string, Set<string | null>>();
+  for (const row of item.events) {
+    kinds.set(row.entity_type, (kinds.get(row.entity_type) ?? new Set()).add(row.entity_id));
+  }
+  return [...kinds]
+    .map(([type, ids]) => ({ type, count: ids.size }))
+    .sort((a, b) => b.count - a.count)
+    .map(({ type, count }) => {
+      const [one, many] = COUNT_NOUNS[type] ?? ["thing", "things"];
+      return `${count} ${count === 1 ? one : many}`;
+    })
+    .join(", ");
+}
+
 function entryView(item: ActivityItem, ctx: FeedContext): EntryView {
   const lead = leadEvent(item.events);
   const actorId = lead.actor_id ?? item.events.find((row) => row.actor_id)?.actor_id ?? null;
@@ -590,6 +675,7 @@ function entryView(item: ActivityItem, ctx: FeedContext): EntryView {
     events: item.events.map((row) => eventView(row, ctx)),
     link: bulk ? null : linkOf(lead, ctx),
     related: bulk ? relatedOf(item, ctx) : [],
+    relatedSummary: bulk ? relatedSummaryOf(item) : null,
   };
 }
 

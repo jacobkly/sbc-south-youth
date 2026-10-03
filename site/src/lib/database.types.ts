@@ -1139,6 +1139,175 @@ export type Database = {
       [_ in never]: never
     }
   }
+  site: {
+    Tables: {
+      events: {
+        Row: {
+          address: string | null
+          all_day: boolean
+          body: string | null
+          cancel_reason: string | null
+          cost_note: string | null
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          featured: boolean
+          id: string
+          location_name: string | null
+          sequence: number
+          slug: string
+          starts_at: string
+          status: Database["site"]["Enums"]["event_status"]
+          summary: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          address?: string | null
+          all_day?: boolean
+          body?: string | null
+          cancel_reason?: string | null
+          cost_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at: string
+          featured?: boolean
+          id?: string
+          location_name?: string | null
+          sequence?: number
+          slug: string
+          starts_at: string
+          status?: Database["site"]["Enums"]["event_status"]
+          summary?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          address?: string | null
+          all_day?: boolean
+          body?: string | null
+          cancel_reason?: string | null
+          cost_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          featured?: boolean
+          id?: string
+          location_name?: string | null
+          sequence?: number
+          slug?: string
+          starts_at?: string
+          status?: Database["site"]["Enums"]["event_status"]
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          id: string
+          link_label: string | null
+          link_url: string | null
+          pinned: boolean
+          starts_at: string
+          status: Database["site"]["Enums"]["post_status"]
+          title: string
+          tone: Database["site"]["Enums"]["post_tone"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          id?: string
+          link_label?: string | null
+          link_url?: string | null
+          pinned?: boolean
+          starts_at?: string
+          status?: Database["site"]["Enums"]["post_status"]
+          title: string
+          tone?: Database["site"]["Enums"]["post_tone"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          id?: string
+          link_label?: string | null
+          link_url?: string | null
+          pinned?: boolean
+          starts_at?: string
+          status?: Database["site"]["Enums"]["post_status"]
+          title?: string
+          tone?: Database["site"]["Enums"]["post_tone"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      public_events: {
+        Args: never
+        Returns: {
+          address: string
+          all_day: boolean
+          body: string
+          cancel_reason: string
+          cost_note: string
+          ends_at: string
+          featured: boolean
+          id: string
+          location_name: string
+          sequence: number
+          slug: string
+          starts_at: string
+          status: Database["site"]["Enums"]["event_status"]
+          summary: string
+          title: string
+          updated_at: string
+        }[]
+      }
+      public_posts: {
+        Args: never
+        Returns: {
+          body: string
+          ends_at: string
+          id: string
+          link_label: string
+          link_url: string
+          pinned: boolean
+          starts_at: string
+          title: string
+          tone: Database["site"]["Enums"]["post_tone"]
+        }[]
+      }
+    }
+    Enums: {
+      event_status: "draft" | "published" | "cancelled"
+      post_status: "draft" | "published"
+      post_tone: "info" | "cancellation"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
@@ -1294,6 +1463,13 @@ export const Constants = {
         "cancelled",
       ],
       user_role: ["member", "admin", "viewer"],
+    },
+  },
+  site: {
+    Enums: {
+      event_status: ["draft", "published", "cancelled"],
+      post_status: ["draft", "published"],
+      post_tone: ["info", "cancellation"],
     },
   },
 } as const

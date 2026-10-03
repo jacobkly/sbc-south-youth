@@ -1,11 +1,11 @@
--- Schema-wide security checks, so a new table, function, or policy can't
--- quietly skip the rules: RLS everywhere, nothing for anon, pinned search
--- paths, and a known list of functions clients can call.
+-- Schema-wide security checks on public and site, so a new table, function,
+-- or policy can't quietly skip the rules: RLS everywhere, nothing for anon,
+-- pinned search paths, and a known list of functions clients can call.
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(32);
+select plan(35);
 
 select tables_are(
   'public',
@@ -14,9 +14,17 @@ select tables_are(
   'public has only the known tables (add new ones here once they have RLS and tests)'
 );
 
+select tables_are(
+  'site',
+  array['posts', 'events'],
+  'site has only the known tables (add new ones here once they have RLS and tests)'
+);
+
 select is_empty(
   $$ select c.relname from pg_class c
-     where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p') and not c.relrowsecurity $$,
+     where c.relnamespace in ('public'::regnamespace, 'site'::regnamespace)
+       and c.relkind in ('r', 'p')
+       and not c.relrowsecurity $$,
   'every table has RLS turned on'
 );
 
@@ -24,7 +32,7 @@ select is_empty(
   $$ select c.relname, p.privilege
      from pg_class c
      cross join unnest(array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger']) as p (privilege)
-     where c.relnamespace = 'public'::regnamespace
+     where c.relnamespace in ('public'::regnamespace, 'site'::regnamespace)
        and c.relkind in ('r', 'p', 'v', 'm')
        and has_table_privilege('anon', c.oid, p.privilege) $$,
   'anon has no privileges on any table or view'
@@ -34,7 +42,7 @@ select is_empty(
   $$ select c.relname, p.privilege
      from pg_class c
      cross join unnest(array['truncate', 'references', 'trigger']) as p (privilege)
-     where c.relnamespace = 'public'::regnamespace
+     where c.relnamespace in ('public'::regnamespace, 'site'::regnamespace)
        and c.relkind in ('r', 'p', 'v', 'm')
        and has_table_privilege('authenticated', c.oid, p.privilege) $$,
   'signed-in users can''t truncate, reference, or add triggers to any table'
@@ -43,7 +51,7 @@ select is_empty(
 select is_empty(
   $$ select c.relname
      from pg_class c
-     where c.relnamespace = 'public'::regnamespace
+     where c.relnamespace in ('public'::regnamespace, 'site'::regnamespace)
        and c.relkind = 'S'
        and (has_sequence_privilege('anon', c.oid, 'usage') or has_sequence_privilege('authenticated', c.oid, 'usage')) $$,
   'clients can''t use any sequence'
@@ -51,13 +59,15 @@ select is_empty(
 
 select is_empty(
   $$ select p.proname from pg_proc p
-     where p.pronamespace = 'public'::regnamespace and has_function_privilege('anon', p.oid, 'execute') $$,
+     where p.pronamespace in ('public'::regnamespace, 'site'::regnamespace)
+       and has_function_privilege('anon', p.oid, 'execute') $$,
   'anon can''t call any function'
 );
 
 select set_eq(
   $$ select p.proname::text from pg_proc p
-     where p.pronamespace = 'public'::regnamespace and has_function_privilege('authenticated', p.oid, 'execute') $$,
+     where p.pronamespace in ('public'::regnamespace, 'site'::regnamespace)
+       and has_function_privilege('authenticated', p.oid, 'execute') $$,
   array[
     'current_app_role',
     'has_role',
@@ -95,15 +105,15 @@ select set_eq(
 
 select is_empty(
   $$ select p.proname from pg_proc p
-     where p.pronamespace = 'public'::regnamespace
+     where p.pronamespace in ('public'::regnamespace, 'site'::regnamespace)
        and not coalesce(p.proconfig, '{}') @> array['search_path=""'] $$,
   'every function pins search_path to empty'
 );
 
 select is_empty(
   $$ select tablename, policyname from pg_policies
-     where schemaname = 'public' and roles <> array['authenticated']::name[] $$,
-  'every policy in public applies to signed-in users only'
+     where schemaname in ('public', 'site') and roles <> array['authenticated']::name[] $$,
+  'every policy in public and site applies to signed-in users only'
 );
 
 select policies_are(
@@ -179,6 +189,12 @@ values ('invitee@example.test', 'bounced', '00000000-0000-4000-8000-00000000e001
 insert into public.invites (user_id, email, full_name, roles)
 values ('00000000-0000-4000-8000-00000000a001', 'former@example.test', 'Former Admin', '{owner}');
 
+insert into site.posts (id, title, body, status)
+values ('00000000-0000-4000-8000-00000000a501', 'Test heads-up', 'Showing now.', 'published');
+
+insert into site.events (id, slug, title, starts_at, ends_at, status)
+values ('00000000-0000-4000-8000-00000000a502', 'security-test', 'Test event', now(), now(), 'published');
+
 select ok(
   exists (select 1 from public.app_settings)
   and exists (select 1 from public.payees where id = '00000000-0000-4000-8000-00000000b001')
@@ -190,6 +206,8 @@ select ok(
   and exists (select 1 from public.email_log where id = '00000000-0000-4000-8000-00000000e001')
   and exists (select 1 from public.email_suppressions where address = 'invitee@example.test')
   and exists (select 1 from public.invites where user_id = '00000000-0000-4000-8000-00000000a001')
+  and exists (select 1 from site.posts where id = '00000000-0000-4000-8000-00000000a501')
+  and exists (select 1 from site.events where id = '00000000-0000-4000-8000-00000000a502')
   and exists (select 1 from storage.objects where bucket_id = 'receipts'),
   'every table has a row for the deactivated admin to be refused'
 );
@@ -198,11 +216,12 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
 
 select is_empty(
-  format('select 1 from public.%I', c.relname),
+  format('select 1 from %I.%I', n.nspname, c.relname),
   format('a deactivated admin reads nothing from %s', c.relname)
 )
 from pg_class c
-where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p') and c.relname <> 'users';
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname in ('public', 'site') and c.relkind in ('r', 'p') and c.relname <> 'users';
 
 select is_empty(
   $$ select 1 from storage.objects where bucket_id = 'receipts' $$,

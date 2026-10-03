@@ -137,10 +137,31 @@ describe("eventTitle", () => {
 
   it("still reads for things the portal will log later", () => {
     const at = "2026-10-02T17:00:00Z";
-    expect(eventTitle(row({ action: "post.created", created_at: at }))).toBe("Post added");
-    expect(eventTitle(row({ action: "event.updated", created_at: at }))).toBe("Event changed");
     expect(eventTitle(row({ action: "photo.deleted", created_at: at }))).toBe("Photo removed");
+    expect(eventTitle(row({ action: "photo_place.updated", created_at: at }))).toBe("Photo place changed");
     expect(eventTitle(row({ action: "mystery", created_at: at }))).toBe("mystery");
+  });
+
+  it("calls posts heads-ups, the way the site does", () => {
+    const at = "2026-10-02T17:00:00Z";
+    expect(eventTitle(row({ action: "post.created", created_at: at }))).toBe("Heads-up added");
+    expect(eventTitle(row({ action: "post.updated", created_at: at }))).toBe("Heads-up changed");
+    expect(eventTitle(row({ action: "post.deleted", created_at: at }))).toBe("Heads-up removed");
+    expect(eventTitle(row({ action: "event.updated", created_at: at }))).toBe("Event changed");
+  });
+
+  it("says when a heads-up or event goes out or is cancelled", () => {
+    const at = "2026-10-02T17:00:00Z";
+    const status = (from: string, to: string) => ({ status: { from, to } });
+    expect(eventTitle(row({ action: "post.updated", changes: status("draft", "published"), created_at: at }))).toBe(
+      "Heads-up published",
+    );
+    expect(eventTitle(row({ action: "event.updated", changes: status("draft", "published"), created_at: at }))).toBe(
+      "Event published",
+    );
+    expect(
+      eventTitle(row({ action: "event.updated", changes: status("published", "cancelled"), created_at: at })),
+    ).toBe("Event cancelled");
   });
 });
 
@@ -197,6 +218,108 @@ describe("eventChanges", () => {
       { label: "Payee", from: "None", to: "Test Payee" },
       { label: "Amount", from: "$10.00", to: "$12.00" },
     ]);
+  });
+});
+
+describe("eventChanges for site content", () => {
+  const at = "2026-10-02T17:00:00Z";
+  const site = (fields: Partial<FeedRow> & Pick<FeedRow, "action">) =>
+    row({ scope: "site", created_at: at, ...fields });
+
+  it("labels a heads-up's status as its status, not an invite's", () => {
+    const changes = { status: { from: "draft", to: "published" } };
+    expect(eventChanges(site({ action: "post.updated", changes }))).toEqual([
+      { label: "Status", from: "Draft", to: "Published" },
+    ]);
+  });
+
+  it("shows an event's new title, time, and why it was cancelled", () => {
+    const changes = {
+      title: { from: "Game night", to: "Game night (moved)" },
+      // A body edit logs only the bumped sequence, which isn't worth showing.
+      sequence: { from: 1, to: 2 },
+      starts_at: { from: "2026-10-03T18:00:00-07:00", to: "2026-10-10T19:30:00-07:00" },
+      status: { from: "published", to: "cancelled" },
+      cancel_reason: { from: null, to: "Rained out" },
+    };
+    expect(eventChanges(site({ action: "event.updated", changes }))).toEqual([
+      { label: "Status", from: "Published", to: "Cancelled" },
+      { label: "Title", from: "Game night", to: "Game night (moved)" },
+      { label: "Starts", from: "Oct 3, 2026 at 6:00 PM", to: "Oct 10, 2026 at 7:30 PM" },
+      { label: "Reason", from: "None", to: "Rained out" },
+    ]);
+  });
+
+  it("shows an all-day start as just its date", () => {
+    const changes = { starts_at: { from: "2026-10-24T00:00:00-07:00", to: "2026-10-31T00:00:00-07:00" } };
+    expect(eventChanges(site({ action: "event.updated", changes }))).toEqual([
+      { label: "Starts", from: "Oct 24, 2026", to: "Oct 31, 2026" },
+    ]);
+  });
+
+  it("shows when a heads-up runs, and leaves out the draft status and the title a new one starts with", () => {
+    const draft = {
+      title: { from: null, to: "Youth hoodies are here" },
+      status: { from: null, to: "draft" },
+      starts_at: { from: null, to: "2026-10-02T10:00:00-07:00" },
+      ends_at: { from: null, to: "2026-10-09T10:00:00-07:00" },
+    };
+    expect(eventChanges(site({ action: "post.created", changes: draft }))).toEqual([
+      { label: "Starts", from: null, to: "Oct 2, 2026 at 10:00 AM" },
+      { label: "Ends", from: null, to: "Oct 9, 2026 at 10:00 AM" },
+    ]);
+    const live = { ...draft, status: { from: null, to: "published" } };
+    expect(eventChanges(site({ action: "post.created", changes: live }))[0]).toEqual({
+      label: "Status",
+      from: null,
+      to: "Published",
+    });
+  });
+
+  it("reads seeded site content as one item by whoever added it, listing each thing", () => {
+    const rows = ["Kickoff night", "Volleyball Saturday", "Retreat signups are open"].map((title, index) =>
+      site({
+        action: index < 2 ? "event.created" : "post.created",
+        entity_type: index < 2 ? "event" : "post",
+        entity_id: `00000000-0000-4000-8000-00000000f00${index}`,
+        entity_name: title,
+        actor_id: EDITOR,
+        changes: { title: { from: null, to: title }, status: { from: null, to: "published" } },
+      }),
+    );
+    const [entry] = buildActivityDays(rows, context())[0].entries;
+    expect(entry).toMatchObject({
+      title: "3 changes at once",
+      relatedSummary: "2 events, 1 heads-up",
+      scope: "site",
+      byline: "by Test Editor",
+      icon: "bulk",
+    });
+    expect(entry.related.map((related) => related.label).sort()).toEqual([
+      "Kickoff night",
+      "Retreat signups are open",
+      "Volleyball Saturday",
+    ]);
+  });
+
+  it("names one heads-up or event by its title, with an icon for what happened", () => {
+    const cancelled = site({
+      action: "event.updated",
+      entity_type: "event",
+      entity_id: "00000000-0000-4000-8000-00000000f010",
+      entity_name: "Worship night",
+      actor_id: EDITOR,
+      changes: { status: { from: "published", to: "cancelled" } },
+    });
+    const [entry] = buildActivityDays([cancelled], context())[0].entries;
+    expect(entry).toMatchObject({
+      title: "Event cancelled",
+      subject: "Worship night",
+      icon: "cancelled",
+      link: null,
+    });
+    const published = { ...cancelled, id: "published", changes: { status: { from: "draft", to: "published" } } };
+    expect(buildActivityDays([published], context())[0].entries[0].icon).toBe("submitted");
   });
 });
 
@@ -324,6 +447,7 @@ describe("buildActivityDays", () => {
     expect(entry.title).toBe("Created 3 requests at once");
     expect(entry.icon).toBe("bulk");
     expect(entry.related).toHaveLength(3);
+    expect(entry.relatedSummary).toBe("3 requests");
     expect(entry.related[0]).toEqual({
       label: "R-0012 · Test Payee · $12.00 · Test Market",
       href: `https://finances.example.test/admin/requests/${REQUEST}`,

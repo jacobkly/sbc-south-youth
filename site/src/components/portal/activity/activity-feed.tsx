@@ -128,10 +128,8 @@ function EntryRow({ entry, showScope, onOpen }: { entry: EntryView; showScope: b
           </time>
         </span>
         {entry.subject && <span className="block truncate text-sm text-muted-foreground">{entry.subject}</span>}
-        {entry.related.length > 0 && (
-          <span className="block text-sm text-muted-foreground">
-            {entry.related.length === 1 ? "1 request" : `${entry.related.length} requests`}
-          </span>
+        {entry.relatedSummary && (
+          <span className="block truncate text-sm text-muted-foreground">{entry.relatedSummary}</span>
         )}
         {meta && <span className="block text-xs text-muted-foreground">{meta}</span>}
       </span>
@@ -174,7 +172,7 @@ function EntryDetails({ entry }: { entry: EntryView }) {
           hasDetails && <EventDetails event={entry.events[0]} />
         )}
 
-        {entry.related.length > 0 && <RelatedList related={entry.related} />}
+        {entry.related.length > 0 && <RelatedList related={entry.related} summary={entry.relatedSummary} />}
 
         {entry.link && (
           <Button asChild variant="outline" className="h-11 w-full">
@@ -243,12 +241,12 @@ function ChangeText({ change }: { change: FieldChange }) {
   );
 }
 
-/** A bulk item's requests, each opening in finances when it can. */
-function RelatedList({ related }: { related: EntryView["related"] }) {
+/** A bulk item's things, each opening where it can, like a request in finances. */
+function RelatedList({ related, summary }: { related: EntryView["related"]; summary: string | null }) {
   return (
     <section aria-labelledby="related-heading" className="space-y-1">
       <h3 id="related-heading" className="text-xs font-medium text-muted-foreground">
-        {related.length === 1 ? "1 request" : `${related.length} requests`}
+        {summary}
       </h3>
       <ul>
         {related.map((item, index) => (
