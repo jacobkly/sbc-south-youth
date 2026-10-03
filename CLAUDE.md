@@ -13,9 +13,9 @@ Monorepo for SBC South Youth web projects on `sbcsouthyouth.com`. Each app is it
 
 ## Current focus
 
-- **The portal is the active work.** First people and roles, then requester self-service and read-only viewers in finances, then site content, the form inbox, and photos.
+- **The portal is the active work.** People and roles, invites, requester self-service and read-only viewers in finances, the Activity screen, email, storage, and backup status are built. Next is one shared sign-in for both apps, once the maintainer has checked this work on the hosted project, then site content, the form inbox, and photos.
 - **The public site** keeps fake content and hotlinked placeholder photos until the portal replaces them. Forms validate but don't save or send yet (`TODO(wire-up)`). Wiring them to Supabase, email, and bot protection comes with the portal. The site doesn't launch until real photos fill every spot.
-- **Finances** gets bug fixes, small features, and the requester and viewer screens. Receipts live in Supabase Storage, compressed in the browser to fit the 1 GB free tier.
+- **Finances** gets bug fixes and small features. Its requester and viewer screens are built. Receipts live in Supabase Storage, compressed in the browser to fit the 1 GB free tier.
 
 ## Commands
 
@@ -29,20 +29,27 @@ npm test               # Vitest unit tests (src/**/*.test.ts)
 npm run build
 ```
 
-`site/` has the same scripts, and its dev server runs at http://localhost:3001.
+`site/` has the same scripts. Its dev server runs at http://localhost:3001 and the portal at http://portal.localhost:3001. Its `typecheck` runs `next typegen` first, so route types exist before `tsc`.
 
 Run these from the repo root, where the Supabase CLI is installed:
 
 ```bash
-npx supabase db push --dry-run  # list migrations the linked project doesn't have yet
-npx supabase db push            # apply them
-npm run db:types                # regenerate finances/src/lib/database.types.ts
-npx supabase start              # local Supabase stack (needs Docker Desktop)
-npx supabase db reset           # rebuild local DB from migrations and seed
-npx supabase test db            # pgTAP tests in supabase/tests
+npx supabase db push --dry-run     # list migrations the linked project doesn't have yet
+npx supabase db push               # apply them
+npm run db:types                   # regenerate finances/src/lib/database.types.ts from the hosted project
+npx supabase start                 # local Supabase stack (needs Docker Desktop)
+npx supabase migration up --local  # apply new migrations to the local DB, keeping its data
+npx supabase db reset              # rebuild local DB from migrations and seed
+npx supabase test db               # pgTAP tests in supabase/tests
+npm run db:types:local             # finances types from the local stack
+npm run db:types:site              # site/src/lib/database.types.ts (public and site schemas)
 ```
 
-The maintainer runs `link` and `db push` against the hosted project. Claude doesn't handle the database password.
+The maintainer runs `link` and `db push` against the hosted project. Claude doesn't handle the database password, and never runs anything with `--linked`, including `npm run db:types`.
+
+- Use `migration up --local` for a new migration. `db reset` wipes local data, including anything another session is using.
+- The local type generator formats its output differently from the committed files. When a migration changes the types, edit the committed file by hand in its existing format instead of committing a reformatted one.
+- The seed's header comment lists the fake people for each role and their local password. Local email goes to Mailpit at http://localhost:54324.
 
 ## Rules
 
@@ -60,6 +67,15 @@ The maintainer runs `link` and `db push` against the hosted project. Claude does
 - `anon` gets no access to anything. The one exception is the public `site-photos` bucket, so published photos load by URL.
 - Site content tables and functions (posts, events, photos, messages) live in the `site` schema. Shared platform tables (invites, activity, email log, app errors) live in `public`, next to `public.users`.
 - The service role key never goes in the frontend or any `NEXT_PUBLIC_` variable.
+- Functions that only scheduled jobs run (pruning, retention) are plain functions with `execute` revoked from `public`, `anon`, `authenticated`, and `service_role`. `pg_cron` runs them as the database owner.
+- `backup_job` is the nightly backup's own role. It reads every row (`pg_read_all_data` and `bypassrls`) and writes nothing, and `public.record_backup()` is the only function it can run. Never grant it more, and never put its password in the repo.
+
+### Activity and email
+
+- No client writes `public.activity_log` directly. Only security definer functions do: the `log_activity()` trigger, the `log_event()` RPC, and a few RPCs that log their own event, like `record_backup()`. `public.activity_feed` is a `security_invoker` view joining it with finances' `request_events`, so each table's RLS decides what a person sees.
+- Never put message text, email addresses, or phone numbers in an activity row's `changes`.
+- `public.email_log` is also the email outbox. `email_reserve()` checks suppressions and the free plan's daily and monthly limits, then queues a row. Database triggers queue finance and owner emails, `pg_net` asks the portal's `/api/email/drain` to send them, and Resend's webhook records delivery. Apart from Supabase Auth's own code emails, never send email any other way.
+- Retention runs nightly in `pg_cron`: site and platform activity after 2 years, email addresses after 90 days, and cron history after 14 days. Finance records are never pruned.
 
 ### Roles
 
@@ -104,6 +120,8 @@ Roles are a fixed Postgres enum, `public.app_role`, and each person's roles are 
 - Placeholder photos are hotlinked, never committed. Every one is replaced before launch.
 - **Launch gate:** a Vercel production build serves `/coming-soon` for every page until `SITE_LIVE=true` is set on the site's Vercel project. Never remove or bypass the gate without the maintainer. The gate skips only the portal host.
 - **Staging:** the `dev` branch deploys to `staging.sbcsouthyouth.com`, a Vercel preview behind Vercel Authentication that always shows the full site. Before launch, the maintainer pushes `main` to both branches. After launch, site changes go to `dev` first and reach `main` once they're checked on staging.
+- **Portal hosts:** any host starting with `portal` serves `app/(portal)/portal/` at its root (rewrites in `site/src/lib/host.ts`), and `/portal/*` is a 404 on every other host. Portal code links with host-relative paths (`/people`, not `/portal/people`).
+- **Portal staging is read-only.** A Vercel preview, or `APP_ENV=staging`, shares production's data. Every server action that changes data calls `assertWritable()` first, and staging email goes only to `OWNER_ALERT_EMAIL`.
 - The Supabase secret key is only for the site's server, in `server-only` modules. It may only call functions that `service_role` alone can execute, and never reads tables. The only other calls are three Auth admin calls (create an invited account, ban a removed one, unban a reinstated one), each from a server action that first checks the caller is an owner.
 - Public pages read posts, events, and photos only through `site.public_*()` functions that only `service_role` can execute. Every other portal write runs as the signed-in person, so RLS applies.
 

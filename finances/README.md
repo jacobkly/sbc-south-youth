@@ -19,11 +19,13 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 
 ## Supabase
 
-The Supabase project lives in [`supabase/`](../supabase/) at the repo root, since the public site will share it. Run the Supabase CLI from the repo root after `npm install` there. See the root [README](../README.md#database) for the commands.
+The Supabase project lives in [`supabase/`](../supabase/) at the repo root, since the site and its leader portal share it. Run the Supabase CLI from the repo root after `npm install` there. See the root [README](../README.md#database) for the commands.
 
 For local development, either put a hosted project's URL and publishable key in `.env.local`, or run the local stack with Docker Desktop and use the values from `npx supabase status`.
 
-The local stack loads [`supabase/seed.sql`](../supabase/seed.sql) on `npx supabase db reset`: a fake admin and viewer, payees, and requests in every status. Its header comment has the local sign-in.
+The local stack loads [`supabase/seed.sql`](../supabase/seed.sql) on `npx supabase db reset`: fake people for each kind of access (an owner, a finance viewer, a requester, and a site-only leader), payees, and requests in every status. Its header comment has the local sign-ins.
+
+People and roles are managed in the leader portal. Owners invite people there, and a requester or finance viewer then signs in here with the password they chose.
 
 ## Preview on a phone
 
