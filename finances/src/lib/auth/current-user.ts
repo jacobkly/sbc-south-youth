@@ -44,6 +44,9 @@ export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
   return user && { ...user, role: financeRoleFrom(user.roles) };
 });
 
+/** The signed-in person's id, from the session. Redirects to sign-in when there's no session. */
+export const getCurrentUserId = cache(async (): Promise<string> => (await getClaims()).sub);
+
 /**
  * The payee the signed-in person is linked to, which is who their own
  * requests are paid to. Null until an owner links them.

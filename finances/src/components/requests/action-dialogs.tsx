@@ -41,6 +41,8 @@ export type ActionRequest = {
   purchaseDate: string;
   receiptCount: number;
   noReceipt: boolean;
+  /** The payee is someone else who follows it in My requests, so they answer when asked for info. */
+  payeeFollows?: boolean;
 };
 
 /** An action being confirmed. `key` changes each time one opens, so its fields start blank. */
@@ -138,7 +140,18 @@ const RESUBMIT: ActionCopy = {
 /** A requester sending their own request, not an owner marking one ready. */
 const REQUESTER_SUBMIT: ActionCopy = { ...COPY.submit, description: "An owner reviews it next." };
 
-export function actionCopy(action: RequestAction, status: RequestStatus, requester = false): ActionCopy {
+/** Asking a payee who follows the request, so they're the one who answers. */
+const ASK_PAYEE: ActionCopy = {
+  ...COPY.request_info,
+  description: "They see your note in My requests and can resubmit it from there.",
+};
+
+export function actionCopy(
+  action: RequestAction,
+  status: RequestStatus,
+  { requester = false, payeeFollows = false }: { requester?: boolean; payeeFollows?: boolean } = {},
+): ActionCopy {
+  if (action === "request_info" && payeeFollows) return ASK_PAYEE;
   if (action !== "submit") return COPY[action];
   if (status === "needs_info") return RESUBMIT;
   return requester ? REQUESTER_SUBMIT : COPY.submit;
@@ -189,7 +202,7 @@ export function ActionSheet({
   if (opened !== null && opened !== last) setLast(opened);
   const current = opened ?? last;
   const [busy, setBusy] = useState(false);
-  const copy = current && actionCopy(current.action, request.status, requester);
+  const copy = current && actionCopy(current.action, request.status, { requester, payeeFollows: request.payeeFollows });
 
   return (
     <Sheet open={opened !== null} onOpenChange={(open) => !open && !busy && onClose()}>

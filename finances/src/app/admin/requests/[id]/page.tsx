@@ -77,6 +77,7 @@ export default async function RequestPage({ params }: PageProps<"/admin/requests
         purchaseDate: details.purchase_date,
         receiptCount: details.receipts.length,
         noReceipt: details.no_receipt,
+        payeeFollows: details.payee?.user_id != null && details.payee.user_id !== user.id,
       }}
       selfPayee={details.payee?.user_id === user.id}
       enteredBySelf={details.created_by === user.id}

@@ -67,7 +67,7 @@ export function RequestActions({
   }
 
   function button(action: RequestAction, wide: boolean) {
-    const copy = actionCopy(action, status);
+    const copy = actionCopy(action, status, { requester, payeeFollows: request.payeeFollows });
     return (
       <Button
         key={action}
