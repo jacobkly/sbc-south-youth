@@ -7,6 +7,7 @@ import {
   EMAIL,
   HOME,
   isActive,
+  MAIN_ITEMS,
   MESSAGES,
   PEOPLE,
   PHOTOS,
@@ -95,5 +96,13 @@ describe("comingSoonFor", () => {
 
   it("never lists a built section", () => {
     expect(comingSoonFor(["owner"])).not.toContain(HOME);
+    expect(comingSoonFor(["owner"])).not.toContain(PEOPLE);
+  });
+});
+
+describe("MAIN_ITEMS", () => {
+  it("has People for owners only", () => {
+    expect(MAIN_ITEMS.filter(allowedFor(["owner"]))).toContain(PEOPLE);
+    expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_editor", "site_messages"]))).not.toContain(PEOPLE);
   });
 });

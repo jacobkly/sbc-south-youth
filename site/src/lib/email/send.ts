@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import type { Database } from "@/lib/database.types";
 import { readEmailEnv, type EmailEnv } from "@/lib/env";
 import { emailMark, emailReserve, type EmailMark, type EmailReserve } from "@/lib/supabase/admin";
+import { sendToLocalInbox } from "./local-inbox";
 import { renderEmail, type RenderedEmail } from "./render";
 
 /**
@@ -145,16 +146,21 @@ export async function sendEmail(message: EmailMessage, deps: EmailDeps = default
   return { status: "sent", logId };
 }
 
-/** The real database and Resend, read fresh each call so a missing setting only turns email off. */
+/**
+ * The real database and Resend (or the local inbox in development), read
+ * fresh each call so a missing setting only turns email off.
+ */
 function defaultEmailDeps(): EmailDeps {
   const env = readEmailEnv();
+  const sending = env.sending;
   return {
     env,
     reserve: emailReserve,
     mark: emailMark,
     render: renderEmail,
     send: async ({ idempotencyKey, ...email }) => {
-      const resend = new Resend(env.sending?.apiKey);
+      if (sending && "localInbox" in sending) return sendToLocalInbox(sending.localInbox, email);
+      const resend = new Resend(sending?.apiKey);
       const { data, error } = await resend.emails.send(email, { idempotencyKey });
       if (error) return { error: `${error.name}: ${error.message}` };
       return { id: data.id };

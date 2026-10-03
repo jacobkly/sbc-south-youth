@@ -22,7 +22,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
   owner: "Everything in the portal and finances, including people, roles, and paying reimbursements.",
   finance_viewer: "Read every submitted request, receipt, and report in finances, without changing anything.",
-  finance_requester: "Submit your own reimbursements with receipt photos in finances.",
+  finance_requester: "Submit reimbursements with receipt photos in finances, and follow each one until it's paid.",
   site_editor: "Post heads-ups and events, and upload, place, and take down photos.",
   site_messages: "Read and handle Visit, Join, Serve, and Contact messages.",
 };

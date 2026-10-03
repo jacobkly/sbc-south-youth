@@ -56,6 +56,8 @@ export type PortalEnv = {
   appEnv: AppEnv;
   /** Where the portal links for reimbursements. */
   financesUrl: string;
+  /** The portal's own address, for links in emails. */
+  portalUrl: string;
 };
 
 const blankAsMissing = z
@@ -63,13 +65,14 @@ const blankAsMissing = z
   .trim()
   .transform((value) => value || undefined);
 
+const webAddress = z.url({ protocol: /^https?$/, error: "must be an http or https address" });
+
 const portalSchema = z.object({
   APP_ENV: blankAsMissing.pipe(z.enum(["production", "staging"]).optional()).optional(),
   /** Set by Vercel on every build: production, preview, or development. */
   VERCEL_ENV: z.string().optional(),
-  FINANCES_URL: blankAsMissing
-    .pipe(z.url({ protocol: /^https?$/, error: "must be an http or https address" }).optional())
-    .optional(),
+  FINANCES_URL: blankAsMissing.pipe(webAddress.optional()).optional(),
+  PORTAL_URL: blankAsMissing.pipe(webAddress.optional()).optional(),
 });
 
 /**
@@ -83,17 +86,22 @@ export function readPortalEnv(source: Record<string, string | undefined> = proce
     const problems = result.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`);
     throw new Error(`Invalid environment variables: ${problems.join("; ")}`);
   }
-  const { APP_ENV, VERCEL_ENV, FINANCES_URL } = result.data;
+  const { APP_ENV, VERCEL_ENV, FINANCES_URL, PORTAL_URL } = result.data;
   return {
     appEnv: APP_ENV ?? (VERCEL_ENV === "preview" ? "staging" : "production"),
     financesUrl: (FINANCES_URL ?? "https://finances.sbcsouthyouth.com").replace(/\/+$/, ""),
+    portalUrl: (PORTAL_URL ?? "https://portal.sbcsouthyouth.com").replace(/\/+$/, ""),
   };
 }
 
 export type EmailEnv = {
   appEnv: AppEnv;
-  /** Unset until both the API key and the sender are set. Then email is off: nothing is logged or sent. */
-  sending: { apiKey: string; from: string } | null;
+  /**
+   * Unset until the sender and either the API key or a local inbox are set.
+   * Then email is off: nothing is logged or sent. A local inbox wins over
+   * Resend, so a dev machine with a real key still never emails anyone.
+   */
+  sending: { apiKey: string; from: string } | { localInbox: string; from: string } | null;
   /** Where staging sends every email, so a test never reaches anyone else. */
   ownerAlertEmail: string | null;
   /** Checks that a webhook request really came from Resend. */
@@ -109,6 +117,10 @@ const sender = z.string().refine((value) => {
   return emailAddress.safeParse(named ? named[1] : value).success;
 }, "must be an address, like Youth <hello@mail.example.com>");
 
+// Only this computer: a local inbox is a dev tool, and an address anywhere
+// else would send real email around Resend's suppression and logs.
+const loopback = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\/*$/;
+
 const emailSchema = z.object({
   RESEND_API_KEY: blankAsMissing
     .pipe(z.string().startsWith("re_", "must be a Resend API key (re_...)").optional())
@@ -117,6 +129,12 @@ const emailSchema = z.object({
   OWNER_ALERT_EMAIL: blankAsMissing.pipe(emailAddress.toLowerCase().optional()).optional(),
   RESEND_WEBHOOK_SECRET: blankAsMissing
     .pipe(z.string().startsWith("whsec_", "must be a Resend signing secret (whsec_...)").optional())
+    .optional(),
+  /** Mailpit from the local Supabase stack, like http://127.0.0.1:54324. Local development only. */
+  EMAIL_LOCAL_INBOX: blankAsMissing
+    .pipe(
+      z.string().regex(loopback, "must be an http address on this computer, like http://127.0.0.1:54324").optional(),
+    )
     .optional(),
 });
 
@@ -130,10 +148,16 @@ export function readEmailEnv(source: Record<string, string | undefined> = proces
     const problems = result.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`);
     throw new Error(`Invalid environment variables: ${problems.join("; ")}`);
   }
-  const { RESEND_API_KEY, EMAIL_FROM, OWNER_ALERT_EMAIL, RESEND_WEBHOOK_SECRET } = result.data;
+  const { RESEND_API_KEY, EMAIL_FROM, OWNER_ALERT_EMAIL, RESEND_WEBHOOK_SECRET, EMAIL_LOCAL_INBOX } = result.data;
+  let sending: EmailEnv["sending"] = null;
+  if (EMAIL_FROM && EMAIL_LOCAL_INBOX) {
+    sending = { localInbox: EMAIL_LOCAL_INBOX.replace(/\/+$/, ""), from: EMAIL_FROM };
+  } else if (EMAIL_FROM && RESEND_API_KEY) {
+    sending = { apiKey: RESEND_API_KEY, from: EMAIL_FROM };
+  }
   return {
     appEnv: readPortalEnv(source).appEnv,
-    sending: RESEND_API_KEY && EMAIL_FROM ? { apiKey: RESEND_API_KEY, from: EMAIL_FROM } : null,
+    sending,
     ownerAlertEmail: OWNER_ALERT_EMAIL ?? null,
     webhookSecret: RESEND_WEBHOOK_SECRET ?? null,
   };

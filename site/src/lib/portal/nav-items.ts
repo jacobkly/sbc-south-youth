@@ -44,7 +44,7 @@ const SECTIONS: NavItem[] = [HOME, POSTS, PHOTOS, MESSAGES, ACTIVITY, PEOPLE, EM
  * The sections that exist so far, in order. Each joins when its screen is
  * built, so nobody is shown a link to a page that isn't there yet.
  */
-export const MAIN_ITEMS: NavItem[] = [HOME];
+export const MAIN_ITEMS: NavItem[] = [HOME, PEOPLE];
 
 /** Sections a person's roles will get that aren't built yet, for Home to mention. */
 export function comingSoonFor(roles: readonly AppRole[]): NavItem[] {

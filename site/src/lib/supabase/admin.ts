@@ -7,6 +7,8 @@ import type { Database } from "@/lib/database.types";
  * functions that service_role alone can execute, and it can't read any
  * table, so each export here is one named function. Nothing hands out the
  * client itself, so no caller can reach `.from()` or a different `.rpc()`.
+ * The only Auth admin calls are for people an owner manages: creating an
+ * invited account, and banning or unbanning one whose access changes.
  */
 
 type EmailStatus = Database["public"]["Enums"]["email_status"];
@@ -105,4 +107,23 @@ export async function emailRecordWebhook(event: EmailWebhookEvent): Promise<void
     p_at: event.at ?? undefined,
   });
   if (error) throw failure("Couldn't record the webhook", error);
+}
+
+export type InvitedUser = { email: string; fullName: string };
+
+/**
+ * Creates the account for someone an owner is inviting, with no password
+ * and the email already confirmed: setup emails them a code before they can
+ * pick a password, which proves the address. handle_new_user() makes their
+ * users row, with no roles. Call it only from a server action that has
+ * already checked the caller is an owner.
+ */
+export async function createInvitedUser(input: InvitedUser): Promise<{ id: string }> {
+  const { data, error } = await admin().auth.admin.createUser({
+    email: input.email,
+    email_confirm: true,
+    user_metadata: { full_name: input.fullName },
+  });
+  if (error) throw failure("Couldn't create the account", { message: error.message, code: error.code });
+  return { id: data.user.id };
 }

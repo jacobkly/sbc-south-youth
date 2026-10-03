@@ -36,7 +36,11 @@ describe("readServerEnv", () => {
 
 describe("readPortalEnv", () => {
   it("treats a build with nothing set as production, with the real finances address", () => {
-    expect(readPortalEnv({})).toEqual({ appEnv: "production", financesUrl: "https://finances.sbcsouthyouth.com" });
+    expect(readPortalEnv({})).toEqual({
+      appEnv: "production",
+      financesUrl: "https://finances.sbcsouthyouth.com",
+      portalUrl: "https://portal.sbcsouthyouth.com",
+    });
   });
 
   it("treats a Vercel preview as staging when APP_ENV is unset, so a forgotten variable stays safe", () => {
@@ -66,6 +70,14 @@ describe("readPortalEnv", () => {
       expect(() => readPortalEnv({ FINANCES_URL: value })).toThrow(/FINANCES_URL/);
     },
   );
+
+  it("reads the portal's own address, for links in emails", () => {
+    expect(readPortalEnv({ PORTAL_URL: "http://portal.localhost:3001/" }).portalUrl).toBe(
+      "http://portal.localhost:3001",
+    );
+    expect(readPortalEnv({ PORTAL_URL: "" }).portalUrl).toBe("https://portal.sbcsouthyouth.com");
+    expect(() => readPortalEnv({ PORTAL_URL: "portal.example.test" })).toThrow(/PORTAL_URL/);
+  });
 });
 
 describe("assertWritable", () => {
@@ -108,6 +120,31 @@ describe("readEmailEnv", () => {
     const bare = readEmailEnv({ ...ready, EMAIL_FROM: "hello@mail.example.test" });
     expect(bare.sending?.from).toBe("hello@mail.example.test");
   });
+
+  it("delivers to a local inbox instead, when one is set", () => {
+    const local = { EMAIL_FROM: ready.EMAIL_FROM, EMAIL_LOCAL_INBOX: "http://127.0.0.1:54324/" };
+
+    expect(readEmailEnv(local).sending).toEqual({
+      localInbox: "http://127.0.0.1:54324",
+      from: "Example Youth <hello@mail.example.test>",
+    });
+    expect(readEmailEnv({ ...ready, ...local }).sending).toEqual(readEmailEnv(local).sending);
+    expect(readEmailEnv({ EMAIL_LOCAL_INBOX: "http://localhost:54324" }).sending).toBeNull();
+  });
+
+  it.each(["http://localhost:8025", "http://[::1]:8025", "http://127.0.0.1"])(
+    "takes the local inbox %j",
+    (value) => {
+      expect(readEmailEnv({ ...ready, EMAIL_LOCAL_INBOX: value }).sending).toMatchObject({ localInbox: value });
+    },
+  );
+
+  it.each(["https://mail.example.test", "http://10.0.0.5:8025", "ftp://localhost", "http://localhost.example.test"])(
+    "refuses a local inbox %j that isn't on this computer",
+    (value) => {
+      expect(() => readEmailEnv({ ...ready, EMAIL_LOCAL_INBOX: value })).toThrow(/EMAIL_LOCAL_INBOX/);
+    },
+  );
 
   it("follows APP_ENV like the portal does", () => {
     expect(readEmailEnv({ VERCEL_ENV: "preview" }).appEnv).toBe("staging");

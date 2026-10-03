@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import type { Tables } from "@/lib/database.types";
 import { type AssuranceLevel, type MfaDevice, verifiedDevices } from "@/lib/portal/auth/mfa";
 import { createClient } from "@/lib/supabase/server";
@@ -25,7 +26,8 @@ const getClaims = cache(async () => {
 /**
  * The signed-in person's account, loaded once per request. Redirects to
  * sign-in when there's no session. Returns null if the account row is
- * missing, which the shell treats as "no access".
+ * missing, which the shell treats as "no access". Once the page is sent,
+ * it also marks them as seen.
  */
 export const getCurrentUser = cache(async (): Promise<PortalUser | null> => {
   const { sub: userId } = await getClaims();
@@ -37,8 +39,26 @@ export const getCurrentUser = cache(async (): Promise<PortalUser | null> => {
     .maybeSingle();
 
   if (error) throw error;
+  // The client is made here because a page can't read cookies inside after().
+  if (user?.is_active) after(() => markSeen(supabase));
   return user;
 });
+
+/**
+ * Records the visit, which the database does at most once an hour. The
+ * visit that does also accepts a pending invite, so the first one after
+ * setup marks the invite accepted.
+ */
+async function markSeen(supabase: Awaited<ReturnType<typeof createClient>>): Promise<void> {
+  const { data: wrote, error } = await supabase.rpc("touch_last_seen");
+  if (error) {
+    console.error("[portal] Couldn't record the visit", error);
+    return;
+  }
+  if (!wrote) return;
+  const { error: acceptError } = await supabase.rpc("accept_invite");
+  if (acceptError) console.error("[portal] Couldn't accept the invite", acceptError);
+}
 
 /** "aal2" once this session has entered a code from an authenticator app. */
 export async function getSessionAal(): Promise<AssuranceLevel> {
