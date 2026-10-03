@@ -91,16 +91,23 @@ describe("splitForTabBar", () => {
 
 describe("comingSoonFor", () => {
   it("lists the sections a person's roles will get that aren't built yet", () => {
-    expect(labels(comingSoonFor(["site_messages"]))).toEqual(["Messages", "Activity"]);
+    expect(labels(comingSoonFor(["site_messages"]))).toEqual(["Messages"]);
   });
 
   it("never lists a built section", () => {
     expect(comingSoonFor(["owner"])).not.toContain(HOME);
     expect(comingSoonFor(["owner"])).not.toContain(PEOPLE);
+    expect(comingSoonFor(["owner"])).not.toContain(ACTIVITY);
   });
 });
 
 describe("MAIN_ITEMS", () => {
+  it("has Activity for anyone whose roles show some", () => {
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["owner"])))).toEqual(["Home", "Activity", "People"]);
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["site_editor"])))).toEqual(["Home", "Activity"]);
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["finance_viewer"])))).toEqual(["Home", "Activity"]);
+  });
+
   it("has People for owners only", () => {
     expect(MAIN_ITEMS.filter(allowedFor(["owner"]))).toContain(PEOPLE);
     expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_editor", "site_messages"]))).not.toContain(PEOPLE);

@@ -672,6 +672,23 @@ export type Database = {
       }
     }
     Views: {
+      activity_feed: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          changes: Json | null
+          created_at: string | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string | null
+          from_status: Database["public"]["Enums"]["request_status"] | null
+          id: string | null
+          note: string | null
+          scope: string | null
+          to_status: Database["public"]["Enums"]["request_status"] | null
+        }
+        Relationships: []
+      }
       request_report: {
         Row: {
           amount_cents: number | null
