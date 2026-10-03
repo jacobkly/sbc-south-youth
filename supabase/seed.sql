@@ -3,9 +3,12 @@
 -- Local only. It creates sign-ins with a known password, so never load it into
 -- the hosted project (`db push` leaves it out unless given --include-seed).
 --
--- Sign in at http://localhost:3000 with the password local-dev-password as:
---   alex@example.test  admin (also a payee, to try self-approval)
---   sam@example.test   viewer
+-- Sign in to finances (http://localhost:3000) or the portal
+-- (http://portal.localhost:3001) with the password local-dev-password as:
+--   alex@example.test   owner (also a payee, to try self-approval)
+--   sam@example.test    finance viewer
+--   jo@example.test     site editor and messages, so the portal only
+--   riley@example.test  requester only, so finances only
 --
 -- Dates count back from today, so the dashboard always has recent activity.
 
@@ -22,7 +25,9 @@ select
   '', '', '', ''
 from (values
   ('00000000-0000-4000-8000-5eed0000a001'::uuid, 'alex@example.test', 'Alex Example'),
-  ('00000000-0000-4000-8000-5eed0000a002'::uuid, 'sam@example.test', 'Sam Sample')
+  ('00000000-0000-4000-8000-5eed0000a002'::uuid, 'sam@example.test', 'Sam Sample'),
+  ('00000000-0000-4000-8000-5eed0000a003'::uuid, 'jo@example.test', 'Jo Example'),
+  ('00000000-0000-4000-8000-5eed0000a004'::uuid, 'riley@example.test', 'Riley Example')
 ) as u (id, email, full_name);
 
 insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
@@ -31,11 +36,16 @@ select
   jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
   now(), now(), now()
 from auth.users u
-where u.id in ('00000000-0000-4000-8000-5eed0000a001', '00000000-0000-4000-8000-5eed0000a002');
+where u.id in (
+  '00000000-0000-4000-8000-5eed0000a001', '00000000-0000-4000-8000-5eed0000a002',
+  '00000000-0000-4000-8000-5eed0000a003', '00000000-0000-4000-8000-5eed0000a004'
+);
 
--- The signup trigger gave both no roles.
+-- The signup trigger gave everyone no roles.
 update public.users set roles = '{owner}' where id = '00000000-0000-4000-8000-5eed0000a001';
 update public.users set roles = '{finance_viewer}' where id = '00000000-0000-4000-8000-5eed0000a002';
+update public.users set roles = '{site_editor,site_messages}' where id = '00000000-0000-4000-8000-5eed0000a003';
+update public.users set roles = '{finance_requester}' where id = '00000000-0000-4000-8000-5eed0000a004';
 
 insert into public.payees (id, full_name, email, notes, is_active, user_id, linked_at, linked_by) values
   (

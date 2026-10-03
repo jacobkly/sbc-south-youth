@@ -48,3 +48,57 @@ export function readServerEnv(source: Record<string, string | undefined> = proce
   }
   return { giveCashtag: result.data.GIVE_CASHTAG ?? null, textNumber: result.data.CHURCH_TEXT_NUMBER ?? null };
 }
+
+export type AppEnv = "production" | "staging";
+
+export type PortalEnv = {
+  /** Staging is the dev branch's preview. It shares production's data, so it never writes. */
+  appEnv: AppEnv;
+  /** Where the portal links for reimbursements. */
+  financesUrl: string;
+};
+
+const blankAsMissing = z
+  .string()
+  .trim()
+  .transform((value) => value || undefined);
+
+const portalSchema = z.object({
+  APP_ENV: blankAsMissing.pipe(z.enum(["production", "staging"]).optional()).optional(),
+  /** Set by Vercel on every build: production, preview, or development. */
+  VERCEL_ENV: z.string().optional(),
+  FINANCES_URL: blankAsMissing
+    .pipe(z.url({ protocol: /^https?$/, error: "must be an http or https address" }).optional())
+    .optional(),
+});
+
+/**
+ * The portal's server variables, naming any bad one in the error. Without
+ * APP_ENV, a Vercel preview counts as staging, so forgetting to set it
+ * can't let a preview write real data.
+ */
+export function readPortalEnv(source: Record<string, string | undefined> = process.env): PortalEnv {
+  const result = portalSchema.safeParse(source);
+  if (!result.success) {
+    const problems = result.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`);
+    throw new Error(`Invalid environment variables: ${problems.join("; ")}`);
+  }
+  const { APP_ENV, VERCEL_ENV, FINANCES_URL } = result.data;
+  return {
+    appEnv: APP_ENV ?? (VERCEL_ENV === "preview" ? "staging" : "production"),
+    financesUrl: (FINANCES_URL ?? "https://finances.sbcsouthyouth.com").replace(/\/+$/, ""),
+  };
+}
+
+/** Thrown by a write on staging. Its message is safe to show. */
+export class ReadOnlyError extends Error {
+  constructor() {
+    super("This is the staging copy of the portal, so it can't save changes. Use the real portal to make them.");
+    this.name = "ReadOnlyError";
+  }
+}
+
+/** Stops a server write on staging. Call it first in every server action that changes data. */
+export function assertWritable(source: Record<string, string | undefined> = process.env): void {
+  if (readPortalEnv(source).appEnv === "staging") throw new ReadOnlyError();
+}
