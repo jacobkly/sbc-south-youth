@@ -10,7 +10,7 @@ select plan(91);
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-4000-8000-00000000a001', 'admin@example.test', '{"full_name": "Test Admin"}'),
   ('00000000-0000-4000-8000-00000000a002', 'viewer@example.test', '{"full_name": "Test Viewer"}'),
-  ('00000000-0000-4000-8000-00000000a003', 'member@example.test', '{"full_name": "Test Member"}'),
+  ('00000000-0000-4000-8000-00000000a003', 'requester@example.test', '{"full_name": "Test Requester"}'),
   ('00000000-0000-4000-8000-00000000a004', 'other.admin@example.test', '{"full_name": "Other Admin"}'),
   ('00000000-0000-4000-8000-00000000a005', 'former@example.test', '{"full_name": "Former Member"}');
 
@@ -18,12 +18,13 @@ update public.users set role = 'admin' where id in (
   '00000000-0000-4000-8000-00000000a001', '00000000-0000-4000-8000-00000000a004'
 );
 update public.users set role = 'viewer' where id = '00000000-0000-4000-8000-00000000a002';
+update public.users set roles = '{finance_requester}' where id = '00000000-0000-4000-8000-00000000a003';
 update public.users set is_active = false where id = '00000000-0000-4000-8000-00000000a005';
 
--- b002 is the member's payee, for the member paths kept for self-service.
+-- b002 is the requester's payee.
 insert into public.payees (id, full_name, user_id, linked_at) values
   ('00000000-0000-4000-8000-00000000b001', 'Test Payee', null, null),
-  ('00000000-0000-4000-8000-00000000b002', 'Member Payee', '00000000-0000-4000-8000-00000000a003', now());
+  ('00000000-0000-4000-8000-00000000b002', 'Requester Payee', '00000000-0000-4000-8000-00000000a003', now());
 
 -- Requests for the review loop (c0xx), for refused transitions (c1xx, one per
 -- status), and for allowed transitions (c2xx, one per transition). All were
@@ -114,28 +115,28 @@ select throws_ok(
   '42501', 'You don''t have permission to submit requests.', 'a deactivated user can''t submit'
 );
 
--- As the member, whose payee is b002.
+-- As the requester, whose payee is b002.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a003", "role": "authenticated"}', true);
 
 select throws_ok(
   $$ select public.submit_request('00000000-0000-4000-8000-00000000c006') $$,
-  'P0002', 'That request doesn''t exist.', 'a member can''t submit someone else''s request, or learn it exists'
+  'P0002', 'That request doesn''t exist.', 'a requester can''t submit someone else''s request, or learn it exists'
 );
 select throws_ok(
   $$ select public.cancel_request('00000000-0000-4000-8000-00000000c003') $$,
-  'P0002', 'That request doesn''t exist.', 'a member can''t cancel someone else''s request, or learn it exists'
+  'P0002', 'That request doesn''t exist.', 'a requester can''t cancel someone else''s request, or learn it exists'
 );
 select throws_ok(
   $$ select public.request_info('00000000-0000-4000-8000-00000000c003', 'Why?') $$,
-  '42501', 'Only an admin can ask for more info.', 'a member can''t ask for more info'
+  '42501', 'Only an admin can ask for more info.', 'a requester can''t ask for more info'
 );
 select lives_ok(
   $$ select public.submit_request('00000000-0000-4000-8000-00000000c005') $$,
-  'a member can submit their own request'
+  'a requester can submit their own request'
 );
 select lives_ok(
   $$ select public.cancel_request('00000000-0000-4000-8000-00000000c005') $$,
-  'a member can cancel their own request'
+  'a requester can cancel their own request'
 );
 
 -- As the admin.
