@@ -54,6 +54,16 @@ The Visit, Join, Serve, and Contact forms check their answers on the page and ag
 
 To try the forms locally, put Cloudflare's test keys from `.env.example` in `.env.local`, set `FORM_IP_SALT` and `YOUTH_INBOX_EMAIL`, and turn on local email (see below). Alerts then land in Mailpit.
 
+## Photos
+
+Site photos live in Supabase, so site editors can change them from the portal without a deploy. Until the portal's upload screens are built, pages still show the hotlinked placeholders in `src/content/photos.ts`.
+
+- **Files:** each photo has two WebP files in the public `site-photos` bucket, `<photo id>/lg.webp` and `sm.webp`. The id is random, so a file name never says who's in a photo. The bucket takes only WebP files up to 1 MB. Anyone can load a file by its URL, but only site editors list, add, or delete them.
+- **Records:** `site.photos` holds each photo's alt text, its size in pixels, and where it shows: one named spot on the site, like `home-hero`, or one event's cover. Putting a photo in a spot or on an event sends the one that was there back to the library.
+- **Uploading:** the files go up first and the row after, which checks both files are there and records their size. A photo's files can't be replaced once it's up, and uploads stop when storage reaches 95% of the free plan's 1 GB, so receipts always have room.
+- **Taking down:** `site.remove_photo()` takes a photo off the site and keeps a record of who took it down, when, and why, linked to the takedown request if there was one. Its files can be deleted after that, and the record goes 2 years later. Leaders with Messages see the photos that came down for a takedown request, so they can close it.
+- **Reading:** `site.public_photos()` returns only photos in a spot or on a published or cancelled event's page, and only the server's secret key can call it.
+
 ## Launch gate
 
 Until launch, production shows the coming-soon page for every page. Previews and local builds show the full site.

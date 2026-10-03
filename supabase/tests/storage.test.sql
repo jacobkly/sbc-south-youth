@@ -79,6 +79,7 @@ select is(
   '[
     {"bucket": "avatars", "objects": 1, "bytes": 4200},
     {"bucket": "receipts", "objects": 3, "bytes": 200500},
+    {"bucket": "site-photos", "objects": 0, "bytes": 0},
     {"bucket": "test-empty", "objects": 0, "bytes": 0}
   ]'::jsonb,
   'a site editor sees each bucket''s file count and bytes, empty buckets included'
@@ -134,7 +135,7 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-000000
 
 select is(
   jsonb_array_length(public.storage_summary() -> 'buckets'),
-  3,
+  4,
   'an owner can see storage'
 );
 

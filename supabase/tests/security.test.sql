@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(36);
+select plan(37);
 
 select tables_are(
   'public',
@@ -16,7 +16,7 @@ select tables_are(
 
 select tables_are(
   'site',
-  array['posts', 'events', 'messages', 'form_rate_limits'],
+  array['posts', 'events', 'messages', 'form_rate_limits', 'photos'],
   'site has only the known tables (add new ones here once they have RLS and tests)'
 );
 
@@ -100,7 +100,9 @@ select set_eq(
     'save_request',
     'missing_receipt',
     'triage_message',
-    'message_assignees'
+    'message_assignees',
+    'remove_photo',
+    'photo_uploads_open'
   ],
   'signed-in users can call only the app''s RPCs (helpers and trigger functions stay private)'
 );
@@ -129,9 +131,12 @@ select policies_are(
     'Requesters delete receipt files from their editable requests',
     'Avatars are readable by their owner and portal roles',
     'Active users upload their own avatar',
-    'Active users delete their own avatars'
+    'Active users delete their own avatars',
+    'Site editors see photo files',
+    'Site editors upload new photo files while storage has room',
+    'Site editors delete files of photos that aren''t up'
   ],
-  'storage has only the receipt and avatar file policies'
+  'storage has only the receipt, avatar, and site photo file policies'
 );
 
 select is_empty(
@@ -140,9 +145,10 @@ select is_empty(
   'every file policy applies to signed-in users only'
 );
 
-select is_empty(
+select results_eq(
   $$ select id from storage.buckets where public $$,
-  'every bucket is private'
+  $$ values ('site-photos') $$,
+  'every bucket is private but site photos, whose files load by URL'
 );
 
 -- A deactivated admin reads nothing: one row in every table, then a check of
@@ -202,6 +208,13 @@ values ('00000000-0000-4000-8000-00000000a503', 'visit', 'Test Visitor', 'visito
 
 insert into site.form_rate_limits (ip_hash) values (repeat('e', 64));
 
+insert into storage.objects (bucket_id, name, metadata) values
+  ('site-photos', '00000000-0000-4000-8000-00000000a504/lg.webp', '{"size": 2000}'),
+  ('site-photos', '00000000-0000-4000-8000-00000000a504/sm.webp', '{"size": 500}');
+
+insert into site.photos (id, alt, width, height)
+values ('00000000-0000-4000-8000-00000000a504', 'A test photo', 1600, 1067);
+
 select ok(
   exists (select 1 from public.app_settings)
   and exists (select 1 from public.payees where id = '00000000-0000-4000-8000-00000000b001')
@@ -217,6 +230,7 @@ select ok(
   and exists (select 1 from site.events where id = '00000000-0000-4000-8000-00000000a502')
   and exists (select 1 from site.messages where id = '00000000-0000-4000-8000-00000000a503')
   and exists (select 1 from site.form_rate_limits)
+  and exists (select 1 from site.photos where id = '00000000-0000-4000-8000-00000000a504')
   and exists (select 1 from storage.objects where bucket_id = 'receipts'),
   'every table has a row for the deactivated admin to be refused'
 );

@@ -24,8 +24,10 @@ update public.users set roles = '{site_messages}'
 where id in ('00000000-0000-4000-8000-000000006e04', '00000000-0000-4000-8000-000000006e06');
 update public.users set roles = '{site_messages}', is_active = false where id = '00000000-0000-4000-8000-000000006e05';
 
--- An empty outbox, so the alerts below are the only emails.
+-- An empty outbox and history, so the alerts and triage below are the only
+-- ones.
 delete from public.email_log;
+delete from public.activity_log;
 
 -- Who can reach what.
 select is_empty(

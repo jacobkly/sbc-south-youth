@@ -32,7 +32,7 @@ The portal is where leaders run the youth site and its people from a phone. It's
 - **Activity:** one timeline of changes across the site, finances, and people, showing each person only the apps their roles cover. Owners can download it as a CSV.
 - **Email:** finance and owner notices, and an email for each form message, go out through Resend, within the free plan's daily and monthly limits.
 
-The public site reads heads-ups and events from the database. Its Visit, Join, Serve, and Contact forms save messages there, checked by Cloudflare Turnstile and limited to 5 an hour from one address, and each one emails the youth inbox so a leader can reply to the sender. Leaders with the Messages role follow up on them in the portal's Messages screen. Photos come next.
+The public site reads heads-ups and events from the database. Its Visit, Join, Serve, and Contact forms save messages there, checked by Cloudflare Turnstile and limited to 5 an hour from one address, and each one emails the youth inbox so a leader can reply to the sender. Leaders with the Messages role follow up on them in the portal's Messages screen. Site photos now have a place in the database and a public bucket only site editors can add to, and the portal's upload and photo library come next.
 
 ### Roles
 
@@ -63,7 +63,7 @@ npm run db:types                             # regenerate the finances app's dat
 
 Migrations can land on `dev` or `main`. Push them from the `dev` checkout after it has merged `main`, and before pushing any code that needs them.
 
-The site's heads-ups and events live in a separate `site` schema. `[api] schemas` in `supabase/config.toml` exposes it locally. On the hosted project, add `site` under Project Settings → Data API → Exposed schemas too. Anyone without the Site editor role still reads nothing there, and the public site reads only what's live, through functions only the server's secret key can call.
+The site's heads-ups, events, form messages, and photo records live in a separate `site` schema, and photo files in the public `site-photos` bucket. `[api] schemas` in `supabase/config.toml` exposes it locally. On the hosted project, add `site` under Project Settings → Data API → Exposed schemas too. Anyone without the Site editor role still reads nothing there, and the public site reads only what's live, through functions only the server's secret key can call.
 
 ### Local stack
 
@@ -92,6 +92,7 @@ The seed adds fake people for each kind of access. Its header comment lists them
 | `prune-cron-history` | 10:10 | Deletes `pg_cron`'s own run history after 14 days |
 | `prune-messages` | 10:15 | Deletes form messages 12 months after they were handled, and spam after 30 days. Open messages stay |
 | `prune-form-rate-limits` | 10:20 | Deletes the forms' rate-limit rows after 24 hours |
+| `prune-removed-photos` | 10:25 | Deletes the record of a taken-down photo 2 years after it came down |
 
 When a change queues an email, the database asks the portal to send it right away through `pg_net`. That needs three Vault secrets on the hosted project: `email_drain_url` (`https://portal.sbcsouthyouth.com/api/email/drain`), `email_drain_secret` (the same value as the site's `EMAIL_DRAIN_SECRET`), and, only when the URL can't name the portal host, `email_drain_host`. Without them, emails wait in the queue.
 

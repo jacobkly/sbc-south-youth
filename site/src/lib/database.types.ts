@@ -1288,6 +1288,75 @@ export type Database = {
         }
         Relationships: []
       }
+      photos: {
+        Row: {
+          alt: string
+          bytes_total: number
+          created_at: string
+          event_id: string | null
+          height: number
+          id: string
+          removed_at: string | null
+          removed_by: string | null
+          removed_reason: string | null
+          spot: string | null
+          status: Database["site"]["Enums"]["photo_status"]
+          takedown_message_id: string | null
+          updated_at: string
+          uploaded_by: string | null
+          width: number
+        }
+        Insert: {
+          alt: string
+          bytes_total?: number
+          created_at?: string
+          event_id?: string | null
+          height: number
+          id?: string
+          removed_at?: string | null
+          removed_by?: string | null
+          removed_reason?: string | null
+          spot?: string | null
+          status?: Database["site"]["Enums"]["photo_status"]
+          takedown_message_id?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          width: number
+        }
+        Update: {
+          alt?: string
+          bytes_total?: number
+          created_at?: string
+          event_id?: string | null
+          height?: number
+          id?: string
+          removed_at?: string | null
+          removed_by?: string | null
+          removed_reason?: string | null
+          spot?: string | null
+          status?: Database["site"]["Enums"]["photo_status"]
+          takedown_message_id?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_takedown_message_id_fkey"
+            columns: ["takedown_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           body: string
@@ -1352,6 +1421,7 @@ export type Database = {
           id: string
         }[]
       }
+      photo_uploads_open: { Args: never; Returns: boolean }
       public_events: {
         Args: never
         Returns: {
@@ -1373,6 +1443,17 @@ export type Database = {
           updated_at: string
         }[]
       }
+      public_photos: {
+        Args: never
+        Returns: {
+          alt: string
+          event_id: string
+          height: number
+          id: string
+          spot: string
+          width: number
+        }[]
+      }
       public_posts: {
         Args: never
         Returns: {
@@ -1390,6 +1471,10 @@ export type Database = {
       queue_message_digest: {
         Args: { p_env: string; p_to: string }
         Returns: number
+      }
+      remove_photo: {
+        Args: { p_id: string; p_message_id?: string; p_reason: string }
+        Returns: undefined
       }
       submit_message: {
         Args: {
@@ -1410,6 +1495,7 @@ export type Database = {
       event_status: "draft" | "published" | "cancelled"
       message_kind: "visit" | "join" | "serve" | "contact" | "takedown"
       message_status: "new" | "in_progress" | "handled" | "spam"
+      photo_status: "published" | "removed"
       post_status: "draft" | "published"
       post_tone: "info" | "cancellation"
       serve_outcome: "placed" | "not_now"
@@ -1580,6 +1666,7 @@ export const Constants = {
       event_status: ["draft", "published", "cancelled"],
       message_kind: ["visit", "join", "serve", "contact", "takedown"],
       message_status: ["new", "in_progress", "handled", "spam"],
+      photo_status: ["published", "removed"],
       post_status: ["draft", "published"],
       post_tone: ["info", "cancellation"],
       serve_outcome: ["placed", "not_now"],
