@@ -149,3 +149,13 @@ select public.record_as_paid(
 );
 
 select set_config('request.jwt.claims', '', false);
+
+-- Making the seed's owner an owner isn't news, so drop the alert it queued.
+delete from public.email_log where template = 'owner-changed';
+
+-- Where the database pokes the email drain: the site's dev server, reached
+-- from the database container and answering as the portal. The secret is for
+-- local use only, and the site's drain checks for the same one.
+select vault.create_secret('http://host.docker.internal:3001/api/email/drain', 'email_drain_url');
+select vault.create_secret('local-only-drain-secret', 'email_drain_secret');
+select vault.create_secret('portal.localhost:3001', 'email_drain_host');
