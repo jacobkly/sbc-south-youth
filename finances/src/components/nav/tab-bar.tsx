@@ -5,19 +5,7 @@ import { usePathname } from "next/navigation";
 import { EllipsisIcon } from "lucide-react";
 import { cn } from "cn";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import {
-  ACCOUNT,
-  ACTIVITY,
-  allowedFor,
-  DASHBOARD,
-  isActive,
-  NEW_REQUEST,
-  PAYEES,
-  REPORTS,
-  REQUESTS,
-  SETTINGS,
-  type NavUser,
-} from "@/components/nav/nav-items";
+import { isActive, navFor, type NavUser } from "@/components/nav/nav-items";
 import { UserAvatar } from "@/components/nav/user-avatar";
 import { ResponsiveSheetContent } from "@/components/ui/responsive-sheet";
 import {
@@ -29,9 +17,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-const TAB_ITEMS = [DASHBOARD, REQUESTS, NEW_REQUEST, PAYEES];
-const MORE_ITEMS = [REPORTS, ACTIVITY, SETTINGS, ACCOUNT];
-
 const TAB_CLASSES =
   "flex h-14 w-full flex-col items-center justify-center gap-0.5 rounded-full text-[0.6875rem] font-medium text-muted-foreground outline-none transition-[color,background-color,scale] focus-visible:ring-2 focus-visible:ring-ring active:scale-95 motion-reduce:active:scale-100";
 const ACTIVE_TAB_CLASSES = "bg-foreground/[0.07] text-foreground";
@@ -42,10 +27,10 @@ const ACTIVE_TAB_CLASSES = "bg-foreground/[0.07] text-foreground";
  * steps aside while the keyboard is up, so the field being typed in has the
  * little room that's left, and comes back after.
  */
-export function TabBar({ role, name, avatarPath }: NavUser) {
+export function TabBar({ role, requester, name, avatarPath }: NavUser) {
   const pathname = usePathname();
-  const allowed = allowedFor(role);
-  const moreActive = MORE_ITEMS.some((item) => isActive(pathname, item.href));
+  const nav = navFor({ role, requester });
+  const moreActive = nav.more.some((item) => isActive(pathname, item.href));
 
   return (
     <nav
@@ -53,9 +38,9 @@ export function TabBar({ role, name, avatarPath }: NavUser) {
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)-0.5rem))] rail:hidden wide:hidden typing:hidden"
     >
       <ul className="glass pointer-events-auto mx-auto flex max-w-md rounded-full p-1">
-        {TAB_ITEMS.filter(allowed).map((item) => {
+        {nav.tabs.map((item) => {
           const active = isActive(pathname, item.href);
-          const isNew = item === NEW_REQUEST;
+          const isNew = item === nav.create;
           return (
             <li key={item.href} className="min-w-0 flex-1">
               <Link
@@ -93,7 +78,7 @@ export function TabBar({ role, name, avatarPath }: NavUser) {
                 </div>
               </SheetHeader>
               <ul className="px-4">
-                {MORE_ITEMS.filter(allowed).map((item) => (
+                {nav.more.map((item) => (
                   <li key={item.href}>
                     <SheetClose asChild>
                       <Link

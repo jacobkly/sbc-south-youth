@@ -232,7 +232,10 @@ export function isFutureDateError(error: SaveError | null): boolean {
 
 /** A plain message for a failed request save. Raw database errors never reach the screen. */
 export function requestSaveErrorMessage(error: SaveError | null): string {
-  if (error?.code === "42501" || error?.code === "PGRST116") return "You don't have permission to save requests.";
+  if (error?.code === "42501" || error?.code === "PGRST116") {
+    // A requester hears why, like an account that isn't linked to a payee yet.
+    return appErrorMessage(error) ?? "You don't have permission to save requests.";
+  }
   if (error?.code === "23503") return "That payee couldn't be found. Choose the payee again.";
   return appErrorMessage(error) ?? "Couldn't save the request. Check your connection and try again.";
 }

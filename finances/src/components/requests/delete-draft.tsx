@@ -14,16 +14,20 @@ import { formatRequestNumber } from "@/lib/requests/format";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * Deletes a draft the signed-in admin entered, with its receipts, after
- * confirming in a sheet. Goes to the dashboard once it's gone.
+ * Deletes a draft the signed-in person entered, with its receipts, after
+ * confirming in a sheet. Goes to their home page once it's gone.
  */
 export function DeleteDraft({
   request,
   userId,
+  afterDeleteHref,
   disabled,
 }: {
+  /** `payeeName` reads after "to", so "you" works for a requester's own. */
   request: { id: string; requestNumber: number; amountCents: number; payeeName: string };
   userId: string;
+  /** Where to go once it's deleted, like the dashboard. */
+  afterDeleteHref: string;
   /** True while the form is saving. */
   disabled?: boolean;
 }) {
@@ -46,8 +50,8 @@ export function DeleteDraft({
       setError(message);
       return;
     }
-    // Stays pending while the dashboard loads. Replaced, so going back can't land on a deleted draft.
-    router.replace("/admin");
+    // Stays pending while the next page loads. Replaced, so going back can't land on a deleted draft.
+    router.replace(afterDeleteHref);
   }
 
   return (

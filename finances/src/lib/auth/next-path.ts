@@ -7,11 +7,12 @@ export function isSignInPath(pathname: string): boolean {
 
 /**
  * Where to send someone after they sign in. Only same-site paths are
- * allowed, so a crafted link can't bounce a user to another site. The path
+ * allowed, so a crafted link can't bounce a user to another site. The
+ * fallback is the start page, which sends each person to their home. The path
  * goes through the URL parser, which catches tricks browsers accept, like
  * backslashes or tabs that turn "/" into "//".
  */
-export function safeNextPath(value: string | null | undefined, fallback = "/admin"): string {
+export function safeNextPath(value: string | null | undefined, fallback = "/"): string {
   if (!value || !value.startsWith("/")) {
     return fallback;
   }

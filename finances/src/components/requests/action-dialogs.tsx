@@ -135,8 +135,13 @@ const RESUBMIT: ActionCopy = {
   done: "Resubmitted.",
 };
 
-export function actionCopy(action: RequestAction, status: RequestStatus): ActionCopy {
-  return action === "submit" && status === "needs_info" ? RESUBMIT : COPY[action];
+/** A requester sending their own request, not an owner marking one ready. */
+const REQUESTER_SUBMIT: ActionCopy = { ...COPY.submit, description: "An owner reviews it next." };
+
+export function actionCopy(action: RequestAction, status: RequestStatus, requester = false): ActionCopy {
+  if (action !== "submit") return COPY[action];
+  if (status === "needs_info") return RESUBMIT;
+  return requester ? REQUESTER_SUBMIT : COPY.submit;
 }
 
 const ID_PREFIX = "action";
@@ -166,6 +171,7 @@ export function ActionSheet({
   request,
   selfPayee,
   allowExternalApproval,
+  requester = false,
   onClose,
   onDone,
   onStale,
@@ -174,6 +180,8 @@ export function ActionSheet({
   request: ActionRequest;
   selfPayee: boolean;
   allowExternalApproval: boolean;
+  /** Their own request: it reads "to you", and only an owner can mark a receipt as missing. */
+  requester?: boolean;
   onClose: () => void;
 }) {
   // Keep showing the last action while the sheet animates closed.
@@ -181,7 +189,7 @@ export function ActionSheet({
   if (opened !== null && opened !== last) setLast(opened);
   const current = opened ?? last;
   const [busy, setBusy] = useState(false);
-  const copy = current && actionCopy(current.action, request.status);
+  const copy = current && actionCopy(current.action, request.status, requester);
 
   return (
     <Sheet open={opened !== null} onOpenChange={(open) => !open && !busy && onClose()}>
@@ -192,7 +200,7 @@ export function ActionSheet({
               <SheetTitle>{copy.title}</SheetTitle>
               <SheetDescription>
                 {formatRequestNumber(request.requestNumber)} · {formatCents(request.amountCents)} to{" "}
-                {request.payeeName}. {copy.description}
+                {requester ? "you" : request.payeeName}. {copy.description}
               </SheetDescription>
             </SheetHeader>
             <ActionForm
@@ -203,6 +211,7 @@ export function ActionSheet({
               request={request}
               selfPayee={selfPayee}
               allowExternalApproval={allowExternalApproval}
+              requester={requester}
               onBusyChange={setBusy}
               onDone={onDone}
               onStale={onStale}
@@ -221,6 +230,7 @@ function ActionForm({
   request,
   selfPayee,
   allowExternalApproval,
+  requester,
   onBusyChange,
   onDone,
   onStale,
@@ -231,6 +241,7 @@ function ActionForm({
   request: ActionRequest;
   selfPayee: boolean;
   allowExternalApproval: boolean;
+  requester: boolean;
   onBusyChange: (busy: boolean) => void;
 }) {
   const [values, setValues] = useState<RequestActionValues>({
@@ -314,7 +325,9 @@ function ActionForm({
         <Alert role="note">
           <InfoIcon />
           <AlertDescription>
-            It needs a receipt first. Edit it to add one, or turn on “No receipt on file.”
+            {requester
+              ? "It needs a photo of your receipt first. Edit it to add one."
+              : "It needs a receipt first. Edit it to add one, or turn on “No receipt on file.”"}
           </AlertDescription>
         </Alert>
       )}

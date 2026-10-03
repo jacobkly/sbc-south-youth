@@ -14,7 +14,7 @@ import { todayInLA, type IsoDate } from "@/lib/dates";
 import type { PayeeRow } from "@/lib/payees/columns";
 import type { SignedReceiptUrls } from "@/lib/receipts/signed-urls";
 import { MAX_RECEIPTS, removeReceipt, uploadReceipt } from "@/lib/receipts/upload";
-import { editReceiptError } from "@/lib/requests/actions";
+import { editReceiptError, requesterReceiptError } from "@/lib/requests/actions";
 import { formatRequestNumber, type RequestStatus } from "@/lib/requests/format";
 import {
   errorsAfterChange,
@@ -47,9 +47,14 @@ export type EditableRequest = {
 
 const CLOSED_MESSAGE = "You can't edit it anymore. Someone may have approved or closed it since this page loaded.";
 
+const CLOSED_ERRORS = new Set([
+  "This request can't be edited anymore.",
+  "Only a draft or a request that needs info can be edited.",
+]);
+
 /** The database turned the save down because the request isn't open anymore. */
 function isClosedError(error: { code?: string; message?: string }): boolean {
-  return error.code === "55000" && error.message === "This request can't be edited anymore.";
+  return error.code === "55000" && CLOSED_ERRORS.has(error.message ?? "");
 }
 
 function count(n: number, one: string, many: string): string {
@@ -60,25 +65,34 @@ function count(n: number, one: string, many: string): string {
  * Edits a request that's still open. Changes, removed files, and new ones
  * are all saved together, then it goes back to the request. The database
  * logs each change in the request's history.
+ *
+ * A requester edits their own: there's no payee to pick or no-receipt
+ * exception to turn on, and anything past a draft needs a receipt photo.
  */
 export function EditRequestForm({
   request,
-  payees: initialPayees,
+  payees: initialPayees = null,
   eventNames,
   today,
   deletableBy,
+  detailHref,
+  afterDeleteHref,
 }: {
   request: EditableRequest;
-  /** Active payees plus the request's own, sorted by name. */
-  payees: PayeeRow[];
+  /** Active payees plus the request's own, sorted by name. Null for a requester, who can't change who's paid. */
+  payees?: PayeeRow[] | null;
   eventNames: string[];
   today: IsoDate;
-  /** The signed-in admin, when they entered this draft and can delete it. */
+  /** The signed-in person, when they entered this draft and can delete it. */
   deletableBy: string | null;
+  /** The request's page, where saving and Go back return to. */
+  detailHref: string;
+  /** Where to go once the draft is deleted. */
+  afterDeleteHref: string;
 }) {
   const router = useRouter();
-  const detailHref = `/admin/requests/${request.id}`;
-  const [payees, setPayees] = useState(initialPayees);
+  const requester = initialPayees === null;
+  const [payees, setPayees] = useState(initialPayees ?? []);
   const [values, setValues] = useState(request.values);
   const [errors, setErrors] = useState<RequestFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -125,7 +139,10 @@ export function EditRequestForm({
     if (preparing) return;
     const parsed = requestSchema(todayInLA()).safeParse(values);
     const next: RequestFormErrors = parsed.success ? {} : requestFieldErrors(parsed.error, values.lines);
-    const receiptError = editReceiptError(request.status, { receiptCount, noReceipt: values.no_receipt });
+    const receiptContext = { receiptCount, noReceipt: values.no_receipt };
+    const receiptError = requester
+      ? requesterReceiptError(request.status !== "draft", receiptContext)
+      : editReceiptError(request.status, receiptContext);
     if (receiptError) next.receipts = receiptError;
     if (!parsed.success || receiptError) {
       showFieldErrors(next);
@@ -205,8 +222,8 @@ export function EditRequestForm({
         removal={{
           marked,
           onToggle: toggleRemove,
-          // A file can't come back while "No receipt on file" is on.
-          canKeep: receiptCount < MAX_RECEIPTS && !values.no_receipt,
+          // A file can't come back while "No receipt on file" is on, which a requester can't change.
+          canKeep: receiptCount < MAX_RECEIPTS && (requester || !values.no_receipt),
           locked: pending,
         }}
       />
@@ -229,10 +246,16 @@ export function EditRequestForm({
           values={values}
           errors={errors}
           onChange={set}
-          payees={payees}
-          onPayeeAdded={(added) =>
-            setPayees((current) => [...current, added].sort((a, b) => a.full_name.localeCompare(b.full_name)))
+          payeePicker={
+            requester
+              ? undefined
+              : {
+                  payees,
+                  onAdded: (added) =>
+                    setPayees((current) => [...current, added].sort((a, b) => a.full_name.localeCompare(b.full_name))),
+                }
           }
+          allowNoReceipt={!requester}
           eventNames={eventNames}
           today={today}
           pendingReceipts={pendingReceipts}
@@ -277,6 +300,7 @@ export function EditRequestForm({
               payeeName: request.payeeName,
             }}
             userId={deletableBy}
+            afterDeleteHref={afterDeleteHref}
             disabled={pending}
           />
         </div>

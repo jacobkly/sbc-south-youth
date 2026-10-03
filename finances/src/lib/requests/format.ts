@@ -27,6 +27,16 @@ export function isEditable(status: RequestStatus): boolean {
 }
 
 /**
+ * A requester edits their draft, or answers a question about it. Once it's
+ * waiting on review it's locked, so it can't change while being checked.
+ */
+export const REQUESTER_EDITABLE_STATUSES = ["draft", "needs_info"] as const satisfies readonly RequestStatus[];
+
+export function isEditableByRequester(status: RequestStatus): boolean {
+  return (REQUESTER_EDITABLE_STATUSES as readonly RequestStatus[]).includes(status);
+}
+
+/**
  * What a list calls a request: the vendor, else what was bought, else its
  * type, since the vendor and description are optional.
  */

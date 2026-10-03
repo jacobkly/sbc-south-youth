@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { FileXIcon, PencilIcon, TriangleAlertIcon } from "lucide-react";
+import { FileXIcon, MessageCircleQuestionIcon, PencilIcon, TriangleAlertIcon } from "lucide-react";
 import { BackLink } from "@/components/nav/back-link";
 import { ReceiptGallery, type GalleryGroup, type GalleryReceipt } from "@/components/receipts/receipt-gallery";
 import { StatusBadge } from "@/components/requests/status-badge";
@@ -13,6 +13,7 @@ import type { SignedReceiptUrls } from "@/lib/receipts/signed-urls";
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/requests/actions";
 import { formatRequestNumber, REQUEST_TYPE_LABELS, type RequestStatus } from "@/lib/requests/format";
 import type { RequestType } from "@/lib/requests/schema";
+import { infoRequestNote } from "@/lib/requests/status";
 
 export type RequestDetailData = {
   request_number: number;
@@ -29,7 +30,8 @@ export type RequestDetailData = {
   paid_at: string | null;
   payment_method: PaymentMethod | null;
   payment_reference: string | null;
-  payee: { full_name: string } | null;
+  /** Left out on a requester's own request, since it's always them. */
+  payee?: { full_name: string } | null;
   /** In order. There's always at least one. */
   lines: { id: string; amount_cents: number; vendor: string | null }[];
   /** Oldest first. */
@@ -111,7 +113,7 @@ function receiptGroups(request: RequestDetailData): GalleryGroup[] {
   });
 }
 
-/** A request's summary, receipts, details, and history, with room for the actions an admin can take. */
+/** A request's summary, receipts, details, and history, with room for the actions the signed-in person can take. */
 export function RequestDetail({
   request,
   events,
@@ -120,6 +122,8 @@ export function RequestDetail({
   late,
   actions,
   editHref,
+  backHref = "/admin/requests",
+  backLabel = "Requests",
 }: {
   request: RequestDetailData;
   /** Oldest first. */
@@ -131,13 +135,17 @@ export function RequestDetail({
   actions?: ReactNode;
   /** Where to edit it, while it can still be edited by this user. */
   editHref?: string;
+  /** Where the back link goes when there's no page to go back to. */
+  backHref?: string;
+  backLabel?: string;
 }) {
   const { receipts } = request;
+  const missing = request.status === "needs_info" ? infoRequestNote(events) : null;
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <BackLink fallbackHref="/admin/requests" fallbackLabel="Requests" />
+        <BackLink fallbackHref={backHref} fallbackLabel={backLabel} />
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -145,7 +153,7 @@ export function RequestDetail({
               <StatusBadge status={request.status} />
             </div>
             <h1 className="text-3xl font-semibold tracking-tight tabular-nums">{formatCents(request.amount_cents)}</h1>
-            <p className="text-lg break-words">{request.payee?.full_name}</p>
+            {request.payee && <p className="text-lg break-words">{request.payee.full_name}</p>}
           </div>
           {editHref && (
             <Button variant="outline" className="h-11 shrink-0" asChild>
@@ -165,6 +173,14 @@ export function RequestDetail({
       */}
       <div className="flex flex-col gap-6 @4xl/main:grid @4xl/main:grid-cols-2 @4xl/main:items-start">
         <div className={COLUMN}>
+          {missing && (
+            <Alert role="note">
+              <MessageCircleQuestionIcon />
+              <AlertTitle>What&apos;s missing</AlertTitle>
+              <AlertDescription className="break-words whitespace-pre-wrap">{missing}</AlertDescription>
+            </Alert>
+          )}
+
           {late && (
             <Alert role="note">
               <TriangleAlertIcon />

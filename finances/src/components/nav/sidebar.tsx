@@ -6,20 +6,7 @@ import { ChevronsUpDownIcon, LogOutIcon, PlusIcon, UserRoundIcon } from "lucide-
 import { cn } from "cn";
 import { useSignOut } from "@/components/auth/sign-out-button";
 import { LogoMark } from "@/components/nav/logo-mark";
-import {
-  ACCOUNT,
-  ACTIVITY,
-  allowedFor,
-  DASHBOARD,
-  isActive,
-  NEW_REQUEST,
-  PAYEES,
-  REPORTS,
-  REQUESTS,
-  SETTINGS,
-  type NavItem,
-  type NavUser,
-} from "@/components/nav/nav-items";
+import { ACCOUNT, isActive, navFor, type NavItem, type NavUser } from "@/components/nav/nav-items";
 import { UserAvatar } from "@/components/nav/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,9 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ROLE_LABELS } from "@/lib/auth/roles";
-
-export const MAIN_ITEMS = [DASHBOARD, REQUESTS, PAYEES, REPORTS, ACTIVITY];
 
 /** How a sidebar or rail link looks when hovered, focused, or showing the current page. */
 export const NAV_LINK_STATES =
@@ -55,7 +39,12 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
  * The signed-in user, with Account and Sign out. In the sidebar it shows the
  * name and role. In the rail it's just the picture, so the menu names them.
  */
-export function AccountMenu({ role, name, avatarPath, compact = false }: NavUser & { compact?: boolean }) {
+export function AccountMenu({
+  roleLabel,
+  name,
+  avatarPath,
+  compact = false,
+}: Pick<NavUser, "roleLabel" | "name" | "avatarPath"> & { compact?: boolean }) {
   const { pending, signOut } = useSignOut();
 
   return (
@@ -72,7 +61,7 @@ export function AccountMenu({ role, name, avatarPath, compact = false }: NavUser
           <>
             <span className="min-w-0 flex-1 leading-tight">
               <span className="block truncate text-sm font-medium">{name}</span>
-              <span className="block truncate text-xs text-muted-foreground">{ROLE_LABELS[role]}</span>
+              <span className="block truncate text-xs text-muted-foreground">{roleLabel}</span>
             </span>
             <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           </>
@@ -83,7 +72,7 @@ export function AccountMenu({ role, name, avatarPath, compact = false }: NavUser
           <>
             <DropdownMenuLabel className="leading-tight">
               <span className="block truncate text-sm font-medium">{name}</span>
-              <span className="block truncate text-xs font-normal text-muted-foreground">{ROLE_LABELS[role]}</span>
+              <span className="block truncate text-xs font-normal text-muted-foreground">{roleLabel}</span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
           </>
@@ -116,15 +105,15 @@ export function AccountMenu({ role, name, avatarPath, compact = false }: NavUser
  * Navigation on wide screens: PCs, and tablets held sideways, where the links
  * grow to finger size. Narrower PC windows get the rail and phones the tab bar.
  */
-export function Sidebar({ role, name, avatarPath }: NavUser) {
+export function Sidebar(user: NavUser) {
   const pathname = usePathname();
-  const allowed = allowedFor(role);
-  const creating = isActive(pathname, NEW_REQUEST.href);
+  const nav = navFor(user);
+  const creating = nav.create !== null && isActive(pathname, nav.create.href);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground wide:flex">
       <Link
-        href={DASHBOARD.href}
+        href={nav.home.href}
         className="m-2 flex items-center gap-3 rounded-lg p-2 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       >
         <LogoMark className="size-9" />
@@ -134,10 +123,10 @@ export function Sidebar({ role, name, avatarPath }: NavUser) {
         </span>
       </Link>
 
-      {allowed(NEW_REQUEST) && (
+      {nav.create && (
         <div className="px-3 pb-4">
           <Button asChild variant={creating ? "outline" : "default"} className="h-9 w-full justify-start gap-2 px-3 touch:h-11 touch:text-base">
-            <Link href={NEW_REQUEST.href} aria-current={creating ? "page" : undefined}>
+            <Link href={nav.create.href} aria-current={creating ? "page" : undefined}>
               <PlusIcon aria-hidden />
               New request
             </Link>
@@ -147,21 +136,23 @@ export function Sidebar({ role, name, avatarPath }: NavUser) {
 
       <nav aria-label="Main" className="flex flex-1 flex-col overflow-y-auto px-3">
         <ul className="space-y-0.5">
-          {MAIN_ITEMS.filter(allowed).map((item) => (
+          {nav.main.map((item) => (
             <li key={item.href}>
               <SidebarLink item={item} pathname={pathname} />
             </li>
           ))}
         </ul>
         <ul className="mt-auto space-y-0.5 pb-3">
-          <li>
-            <SidebarLink item={SETTINGS} pathname={pathname} />
-          </li>
+          {nav.footer.map((item) => (
+            <li key={item.href}>
+              <SidebarLink item={item} pathname={pathname} />
+            </li>
+          ))}
         </ul>
       </nav>
 
       <div className="border-t border-sidebar-border p-2">
-        <AccountMenu role={role} name={name} avatarPath={avatarPath} />
+        <AccountMenu {...user} />
       </div>
     </aside>
   );

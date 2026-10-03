@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { changedPayeeIds, describeChanges, eventFilename, eventTitle, lateCheckDate } from "./status";
+import {
+  changedPayeeIds,
+  describeChanges,
+  eventFilename,
+  eventTitle,
+  infoRequestNote,
+  lateCheckDate,
+  type RequestEvent,
+} from "./status";
 
 const PAYEE_A = "00000000-0000-4000-8000-00000000000a";
 const PAYEE_B = "00000000-0000-4000-8000-00000000000b";
@@ -22,6 +30,31 @@ describe("eventTitle", () => {
 
   it("shows an unknown action as is", () => {
     expect(eventTitle({ action: "archived", from_status: null })).toBe("archived");
+  });
+});
+
+describe("infoRequestNote", () => {
+  const event = (action: string, note: string | null, created_at: string): RequestEvent => ({
+    action,
+    from_status: null,
+    note,
+    changes: null,
+    created_at,
+  });
+
+  it("finds the newest question, in any order", () => {
+    const events = [
+      event("info_requested", "Which store?", "2026-09-01T10:00:00Z"),
+      event("info_requested", "Which retreat?", "2026-09-03T10:00:00Z"),
+      event("submitted", null, "2026-09-02T10:00:00Z"),
+    ];
+    expect(infoRequestNote(events)).toBe("Which retreat?");
+  });
+
+  it("has nothing to show without a question", () => {
+    expect(infoRequestNote([])).toBeNull();
+    expect(infoRequestNote([event("submitted", null, "2026-09-01T10:00:00Z")])).toBeNull();
+    expect(infoRequestNote([event("info_requested", "  ", "2026-09-01T10:00:00Z")])).toBeNull();
   });
 });
 

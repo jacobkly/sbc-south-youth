@@ -4,19 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
 import { LogoMark } from "@/components/nav/logo-mark";
-import {
-  allowedFor,
-  DASHBOARD,
-  isActive,
-  NEW_REQUEST,
-  SETTINGS,
-  type NavItem,
-  type NavUser,
-} from "@/components/nav/nav-items";
-import { AccountMenu, MAIN_ITEMS, NAV_LINK_STATES } from "@/components/nav/sidebar";
+import { isActive, navFor, type NavItem, type NavUser } from "@/components/nav/nav-items";
+import { AccountMenu, NAV_LINK_STATES } from "@/components/nav/sidebar";
 
-function RailLink({ item, pathname }: { item: NavItem; pathname: string }) {
-  const isNew = item === NEW_REQUEST;
+function RailLink({ item, pathname, isNew = false }: { item: NavItem; pathname: string; isNew?: boolean }) {
   return (
     <Link
       href={item.href}
@@ -47,15 +38,15 @@ function RailLink({ item, pathname }: { item: NavItem; pathname: string }) {
  * icons with short labels. The account menu sits at the bottom, like the
  * sidebar's.
  */
-export function Rail({ role, name, avatarPath }: NavUser) {
+export function Rail(user: NavUser) {
   const pathname = usePathname();
-  const allowed = allowedFor(role);
+  const nav = navFor(user);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-18 flex-col items-center border-r border-sidebar-border bg-sidebar text-sidebar-foreground rail:flex">
       <Link
-        href={DASHBOARD.href}
-        aria-label="SBC South Youth Finances, dashboard"
+        href={nav.home.href}
+        aria-label={`SBC South Youth Finances, ${nav.home.label.toLowerCase()}`}
         className="my-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       >
         <LogoMark className="size-10" />
@@ -63,21 +54,28 @@ export function Rail({ role, name, avatarPath }: NavUser) {
 
       <nav aria-label="Main" className="flex w-full flex-1 flex-col items-center overflow-y-auto">
         <ul className="flex flex-col items-center gap-1">
-          {[NEW_REQUEST, ...MAIN_ITEMS].filter(allowed).map((item) => (
+          {nav.create && (
+            <li>
+              <RailLink item={nav.create} pathname={pathname} isNew />
+            </li>
+          )}
+          {nav.main.map((item) => (
             <li key={item.href}>
               <RailLink item={item} pathname={pathname} />
             </li>
           ))}
         </ul>
         <ul className="mt-auto flex flex-col items-center gap-1 pt-4 pb-2">
-          <li>
-            <RailLink item={SETTINGS} pathname={pathname} />
-          </li>
+          {nav.footer.map((item) => (
+            <li key={item.href}>
+              <RailLink item={item} pathname={pathname} />
+            </li>
+          ))}
         </ul>
       </nav>
 
       <div className="flex w-full justify-center border-t border-sidebar-border py-2">
-        <AccountMenu role={role} name={name} avatarPath={avatarPath} compact />
+        <AccountMenu {...user} compact />
       </div>
     </aside>
   );

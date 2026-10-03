@@ -6,7 +6,7 @@ import { CircleCheckIcon } from "lucide-react";
 import { actionCopy, ActionSheet, type ActionRequest, type OpenedAction } from "@/components/requests/action-dialogs";
 import { Button } from "@/components/ui/button";
 import { todayInLA } from "@/lib/dates";
-import { availableActions, type RequestAction } from "@/lib/requests/actions";
+import { availableActions, requesterActions, type RequestAction } from "@/lib/requests/actions";
 import type { RequestStatus } from "@/lib/requests/format";
 import { cn } from "@/lib/utils";
 
@@ -19,22 +19,25 @@ const PRIMARY: Partial<Record<RequestStatus, RequestAction>> = {
 };
 
 /**
- * The status changes open to the signed-in admin, as a grid of buttons. Each
- * opens a sheet to confirm it, and the page reloads once it's done so the
- * status and history catch up.
+ * The status changes open to the signed-in person, as a grid of buttons.
+ * Each opens a sheet to confirm it, and the page reloads once it's done so
+ * the status and history catch up.
  */
 export function RequestActions({
   request,
   selfPayee,
   enteredBySelf,
   allowExternalApproval,
+  requester = false,
 }: {
   request: ActionRequest;
-  /** The payee is linked to the signed-in admin. */
+  /** The payee is linked to the signed-in person. */
   selfPayee: boolean;
-  /** The signed-in admin entered the request. */
+  /** The signed-in person entered the request. */
   enteredBySelf: boolean;
   allowExternalApproval: boolean;
+  /** Their own request, opened from My requests: they can only send it or take it back. */
+  requester?: boolean;
 }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
@@ -44,10 +47,13 @@ export function RequestActions({
   const [opens, setOpens] = useState(0);
 
   const { status } = request;
-  const actions = availableActions({ status, selfPayee, enteredBySelf, allowExternalApproval });
+  const actions = requester
+    ? requesterActions(status)
+    : availableActions({ status, selfPayee, enteredBySelf, allowExternalApproval });
   const primary = actions.find((action) => action === PRIMARY[status]);
   const others = actions.filter((action) => action !== primary);
-  const selfApprovalBlocked = selfPayee && !allowExternalApproval && (status === "draft" || status === "submitted");
+  const selfApprovalBlocked =
+    !requester && selfPayee && !allowExternalApproval && (status === "draft" || status === "submitted");
 
   function open(action: RequestAction) {
     setMessage(null);
@@ -108,6 +114,7 @@ export function RequestActions({
         request={request}
         selfPayee={selfPayee}
         allowExternalApproval={allowExternalApproval}
+        requester={requester}
         onClose={() => setOpened(null)}
         onDone={(done) => {
           setOpened(null);

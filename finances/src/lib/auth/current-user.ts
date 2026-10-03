@@ -44,10 +44,16 @@ export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
   return user && { ...user, role: financeRoleFrom(user.roles) };
 });
 
-/** Active admins and viewers can use the app. RLS enforces the same rule on the data. */
-export function canUseApp(user: AppUser): boolean {
-  return user.is_active && (user.role === "admin" || user.role === "viewer");
-}
+/**
+ * The payee the signed-in person is linked to, which is who their own
+ * requests are paid to. Null until an owner links them.
+ */
+export const getCurrentPayeeId = cache(async (): Promise<string | null> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("current_payee_id");
+  if (error) throw error;
+  return data ?? null;
+});
 
 /** "aal2" once this session has entered a code from an authenticator app. */
 export async function getSessionAal(): Promise<AssuranceLevel> {

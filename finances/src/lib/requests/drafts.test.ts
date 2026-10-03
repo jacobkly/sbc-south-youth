@@ -87,12 +87,12 @@ describe("deleteDraft", () => {
     expect(calls).toEqual(["check"]);
   });
 
-  it("leaves another admin's draft alone", async () => {
+  it("leaves someone else's draft alone", async () => {
     const { client, calls } = fakeClient({
       current: { data: { status: "draft", created_by: "00000000-0000-4000-8000-0000000000b2" }, error: null },
     });
 
-    expect(await deleteDraft(client, REQUEST_ID, USER_ID)).toBe("Only the admin who entered a draft can delete it.");
+    expect(await deleteDraft(client, REQUEST_ID, USER_ID)).toBe("Only the person who entered a draft can delete it.");
 
     expect(calls).toEqual(["check"]);
   });
@@ -133,7 +133,7 @@ describe("deleteDraft", () => {
   it("reports a request delete that didn't go through", async () => {
     const blocked = fakeClient({ deleted: { data: [], error: null } });
     expect(await deleteDraft(blocked.client, REQUEST_ID, USER_ID)).toBe(
-      "Only the admin who entered a draft can delete it.",
+      "Only the person who entered a draft can delete it.",
     );
 
     const failed = fakeClient({ deleted: { data: null, error: { code: "08006" } } });

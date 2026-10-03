@@ -139,6 +139,17 @@ export function editReceiptError(
   return status !== "draft" && missingReceipt(context) ? RECEIPT_REQUIRED : undefined;
 }
 
+/**
+ * Why a requester's request can't be sent yet. They always need a photo of
+ * the receipt; only an owner can mark one as missing, and that's kept.
+ */
+export function requesterReceiptError(
+  sending: boolean,
+  context: Pick<SaveContext, "receiptCount" | "noReceipt">,
+): string | undefined {
+  return sending && missingReceipt(context) ? "Add a photo of your receipt." : undefined;
+}
+
 function approverError(approver: string): string | undefined {
   if (!approver) return "Enter who approved it.";
   if (approver.length > MAX_EXTERNAL_APPROVER) return `Keep the name to ${MAX_EXTERNAL_APPROVER} characters or fewer.`;
@@ -305,6 +316,17 @@ export function availableActions({
     if (recordsApproval(action)) return !selfPayee || allowExternalApproval;
     return true;
   });
+}
+
+/**
+ * The status changes a requester can make on their own request: send it,
+ * resend it with the missing info, or take it back before it's decided.
+ */
+export function requesterActions(status: RequestStatus): RequestAction[] {
+  if (status === "draft") return ["submit"];
+  if (status === "submitted") return ["cancel"];
+  if (status === "needs_info") return ["submit", "cancel"];
+  return [];
 }
 
 export function isNoteAction(action: RequestAction): action is NoteAction {

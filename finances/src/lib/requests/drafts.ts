@@ -3,7 +3,7 @@ import type { Database } from "@/lib/database.types";
 import { RECEIPTS_BUCKET } from "@/lib/receipts/upload";
 import { RETRY_MESSAGE } from "./actions";
 
-const NOT_YOURS = "Only the admin who entered a draft can delete it.";
+const NOT_YOURS = "Only the person who entered a draft can delete it.";
 
 /** Enough for a full request plus any files left behind by failed uploads. */
 const MAX_FILES = 100;

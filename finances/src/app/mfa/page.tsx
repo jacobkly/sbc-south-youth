@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { AuthPage } from "@/components/auth/auth-page";
 import { MfaStep } from "@/components/auth/mfa-step";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { canUseApp, getCurrentUser, getMfaDevices, getSessionAal } from "@/lib/auth/current-user";
+import { getCurrentUser, getMfaDevices, getSessionAal } from "@/lib/auth/current-user";
 import { safeNextPath } from "@/lib/auth/next-path";
+import { canUseArea } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
   title: "Two-step sign-in",
@@ -20,7 +21,7 @@ export default async function MfaPage({ searchParams }: PageProps<"/mfa">) {
 
   const user = await getCurrentUser();
   // The shell shows anyone without access the No access screen.
-  if (!user || !canUseApp(user)) redirect(next);
+  if (!user || !canUseArea(user, "account")) redirect(next);
   if ((await getSessionAal()) === "aal2") redirect(next);
 
   const devices = await getMfaDevices();
