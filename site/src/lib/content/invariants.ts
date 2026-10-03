@@ -2,8 +2,9 @@ import type { Announcement, FaqItem, Leader, Photo, SiteEvent, WeeklyGathering }
 
 /**
  * Rules the content must follow, checked by the tests so a typo fails
- * the build instead of breaking a page. The limits match the columns
- * the portal will store this content in.
+ * the build instead of breaking a page. The event and heads-up limits
+ * match their columns, so fixtures stay realistic; the database checks
+ * the real ones itself.
  */
 
 export type ContentBundle = {
@@ -98,8 +99,8 @@ export function contentProblems(content: ContentBundle): string[] {
     const label = `announcement "${announcement.id}"`;
     if (announcementIds.has(announcement.id)) problems.push(`${label}: id is used twice`);
     announcementIds.add(announcement.id);
-    checkLength(label, "title", announcement.title, 60);
-    checkLength(label, "body", announcement.body, 400);
+    checkLength(label, "title", announcement.title, 80);
+    checkLength(label, "body", announcement.body, 280);
     checkLength(label, "button label", announcement.cta?.label, 24);
     const publishes = checkInstant(label, "publishAt", announcement.publishAt);
     const expires = checkInstant(label, "expiresAt", announcement.expiresAt);

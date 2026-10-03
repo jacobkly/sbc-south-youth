@@ -9,7 +9,8 @@ const KEEP_PAST_DAYS = 30;
 /**
  * The calendar people subscribe to: the weekly nights, then every event
  * that hasn't ended or ended in the last month. Calendar apps check back
- * on their own, so new and changed events show up without a new file.
+ * on their own, so new and changed events show up without a new file,
+ * and a cancelled one drops off.
  */
 async function feed(): Promise<string> {
   "use cache";
@@ -22,7 +23,7 @@ async function feed(): Promise<string> {
   const entries = [
     ...gatherings.map((gathering) => gatheringEntry(gathering, church, now)),
     ...events
-      .filter((event) => Date.parse(event.endsAt) > since)
+      .filter((event) => !event.cancelled && Date.parse(event.endsAt) > since)
       .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
       .map((event) => eventEntry(event, church)),
   ];

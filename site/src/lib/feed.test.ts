@@ -137,6 +137,15 @@ describe("upcomingItems: events", () => {
     const late = event({ startsAt: "2026-10-10T05:30:00Z", endsAt: "2026-10-10T06:30:00Z" });
     expect(upcomingItems({ gatherings: [], events: [late], now })[0].date).toBe("2026-10-09");
   });
+
+  it("leaves cancelled events off, whether or not they have a reason", () => {
+    const times = { startsAt: "2026-10-08T19:00:00-07:00", endsAt: "2026-10-08T21:00:00-07:00" };
+    const cancelled = event({ slug: "cancelled", cancelled: {}, ...times });
+    const rained = event({ slug: "rained-out", cancelled: { reason: "Rained out." }, ...times });
+    const on = event({ slug: "still-on", ...times });
+    const items = upcomingItems({ gatherings: [], events: [cancelled, rained, on], now });
+    expect(items.map((item) => item.slug)).toEqual(["still-on"]);
+  });
 });
 
 describe("featuredItems", () => {
@@ -163,6 +172,11 @@ describe("featuredItems", () => {
   it("looks as far ahead as the agenda", () => {
     const tooFar = event({ slug: "too-far", featured: true, startsAt: "2026-12-03T19:00:00-08:00", endsAt: "2026-12-03T21:00:00-08:00" });
     expect(featuredItems([tooFar, retreat], now).map((item) => item.slug)).toEqual(["retreat"]);
+  });
+
+  it("skips a cancelled one, so the countdown moves on to the next", () => {
+    const cancelled = { ...retreat, slug: "cancelled-retreat", cancelled: { reason: "Not enough signups." } };
+    expect(featuredItems([cancelled], now)).toEqual([]);
   });
 });
 

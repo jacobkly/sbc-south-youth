@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { sampleAnnouncements } from "@/content/announcements";
-import { sampleEvents } from "@/content/events";
 import { moreItems } from "@/components/site/nav-items";
 import { visitFaq } from "@/content/faq";
 import { give } from "@/content/give";
@@ -12,8 +10,6 @@ import { gatherings } from "@/content/schedule";
 import { site } from "@/content/site";
 import { standingNotes } from "@/content/standing-notes";
 import { visit } from "@/content/visit";
-import { addDays, laInstant } from "@/lib/dates";
-import { upcomingItems } from "@/lib/feed";
 import { contentProblems } from "./invariants";
 import type { Announcement, Leader, SiteEvent, WeeklyGathering } from "./types";
 
@@ -66,53 +62,6 @@ describe("contentProblems", () => {
         extra: [site, visit, safety, privacy, standingNotes],
       }),
     ).toEqual([]);
-  });
-
-  it("passes the sample events and announcements on every day of the week", () => {
-    for (let offset = 0; offset < 7; offset++) {
-      const now = laInstant(addDays("2026-09-28", offset), "12:00");
-      expect(contentProblems({ gatherings, events: sampleEvents(now), announcements: sampleAnnouncements(now) })).toEqual(
-        [],
-      );
-    }
-  });
-
-  it("keeps the sample events off youth night", () => {
-    const now = laInstant("2026-09-28", "12:00");
-    // Every weekly night from before the first sample event to past the last.
-    const nights = upcomingItems({ gatherings, events: [], now: laInstant("2026-09-14", "00:00"), days: 120 });
-    const overlaps = (a: { startsAt: string; endsAt: string }, b: { startsAt: string; endsAt: string }) =>
-      Date.parse(a.startsAt) < Date.parse(b.endsAt) && Date.parse(b.startsAt) < Date.parse(a.endsAt);
-    const clashes = sampleEvents(now).filter((event) => nights.some((night) => overlaps(event, night)));
-    expect(clashes.map((event) => event.slug)).toEqual([]);
-  });
-
-  it("keeps the sample calendar light but still shows every kind of event", () => {
-    const now = laInstant("2026-09-28", "12:00");
-    const events = sampleEvents(now);
-    const day = 24 * 60 * 60 * 1000;
-    const kinds = {
-      past: events.some((event) => Date.parse(event.endsAt) < now.getTime()),
-      allDay: events.some((event) => event.allDay),
-      multiDay: events.some((event) => Date.parse(event.endsAt) - Date.parse(event.startsAt) > day),
-      pastTheAgenda: events.some((event) => Date.parse(event.startsAt) > now.getTime() + 56 * day),
-      featuredPhoto: events.some((event) => event.featured && event.photo),
-      generatedArt: events.some((event) => !event.photo),
-      costNote: events.some((event) => event.costNote),
-      volleyball: events.some((event) => /volleyball/i.test(event.title)),
-    };
-    expect(kinds).toEqual(Object.fromEntries(Object.keys(kinds).map((kind) => [kind, true])));
-    expect(upcomingItems({ gatherings: [], events, now }).length).toBeLessThanOrEqual(6);
-  });
-
-  it("keeps a pinned, a scheduled, and an expired sample post", () => {
-    const now = laInstant("2026-09-28", "12:00");
-    const posts = sampleAnnouncements(now);
-    expect(posts.some((post) => post.pinned)).toBe(true);
-    expect(posts.some((post) => Date.parse(post.publishAt) > now.getTime())).toBe(true);
-    expect(posts.some((post) => Date.parse(post.expiresAt) < now.getTime())).toBe(true);
-    expect(posts.map((post) => post.title).join(" ")).toMatch(/hoodies/i);
-    expect(posts.map((post) => post.title).join(" ")).not.toMatch(/shirts|bring a friend/i);
   });
 
   it("keeps the safety page to what the church actually does", () => {
@@ -181,9 +130,9 @@ describe("contentProblems", () => {
   });
 
   it("catches text over the database limits", () => {
-    const long = { ...announcement, title: "x".repeat(61), cta: { label: "y".repeat(25), href: "/visit" } };
+    const long = { ...announcement, title: "x".repeat(81), cta: { label: "y".repeat(25), href: "/visit" } };
     const problems = contentProblems({ announcements: [long] });
-    expect(problems).toContainEqual(expect.stringMatching(/title.*60/));
+    expect(problems).toContainEqual(expect.stringMatching(/title.*80/));
     expect(problems).toContainEqual(expect.stringMatching(/label.*24/));
   });
 

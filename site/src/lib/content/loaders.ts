@@ -1,13 +1,16 @@
-import { cacheLife } from "next/cache";
-import { sampleAnnouncements } from "@/content/announcements";
-import { sampleEvents } from "@/content/events";
+import { cacheLife, cacheTag } from "next/cache";
+import { seedEventPhotos } from "@/content/events";
 import { gatherings } from "@/content/schedule";
+import { publicEvents, publicPosts } from "@/lib/supabase/admin";
+import { readOrNothing } from "./read";
+import { announcementFromRow, eventFromRow } from "./rows";
 import type { Announcement, SiteEvent, WeeklyGathering } from "./types";
 
 /**
- * The one door pages use to get the schedule, events, and announcements.
- * They come from repo files for now. The portal will swap these bodies
- * for database reads without touching any page.
+ * The one door pages use to get the schedule, events, and heads-ups. The
+ * weekly nights live in code. Events and heads-ups come from the database
+ * through `site.public_*()`, cached with the feed and tagged so a portal
+ * change can refresh them right away.
  */
 
 /** The weekly nights, in week order starting Sunday. */
@@ -15,14 +18,18 @@ export async function getSchedule(): Promise<WeeklyGathering[]> {
   return [...gatherings].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
 }
 
-/**
- * Every event, past and future, in no particular order. The samples move
- * with the calendar, so they refresh with the feed.
- */
+/** Every published or cancelled event, past and future, soonest first. */
 export async function getEvents(): Promise<SiteEvent[]> {
   "use cache";
+  cacheTag("events");
+  const rows = await readOrNothing("events", publicEvents);
+  if (!rows) {
+    // Nothing, after a failed read, is tried again sooner.
+    cacheLife("minutes");
+    return [];
+  }
   cacheLife("feed");
-  return sampleEvents(new Date());
+  return rows.map((row) => eventFromRow(row, seedEventPhotos[row.id]));
 }
 
 /** What an `/events/[slug]` page shows: a one-off event or a weekly night. */
@@ -43,9 +50,18 @@ export async function getEventSlugs(): Promise<string[]> {
   return [...gatherings, ...events].map((entry) => entry.slug);
 }
 
-/** Every announcement, including scheduled and expired ones. */
+/**
+ * The heads-ups showing now, pinned first. One that links to an event
+ * borrows its photo, so they refresh with the events too.
+ */
 export async function getAnnouncements(): Promise<Announcement[]> {
   "use cache";
+  cacheTag("posts", "events");
+  const [rows, events] = await Promise.all([readOrNothing("heads-ups", publicPosts), getEvents()]);
+  if (!rows) {
+    cacheLife("minutes");
+    return [];
+  }
   cacheLife("feed");
-  return sampleAnnouncements(new Date());
+  return rows.map((row) => announcementFromRow(row, events));
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { EventRow, PostRow } from "@/lib/content/rows";
 import type { Database, Json } from "@/lib/database.types";
 
 /**
@@ -30,6 +31,10 @@ function admin(): SupabaseClient<Database> {
   // No session of its own and never a user's cookies: every call acts as service_role.
   client = createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    // Never Next's fetch cache, which outlives deploys. The content loaders
+    // cache their reads under tags a portal change can refresh, and every
+    // other call here changes something.
+    global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
   });
   return client;
 }
@@ -37,6 +42,20 @@ function admin(): SupabaseClient<Database> {
 /** A Postgres error as an Error, keeping its message for the email log. */
 function failure(action: string, error: { message: string; code?: string }): Error {
   return new Error(`${action}: ${error.message}${error.code ? ` (${error.code})` : ""}`);
+}
+
+/** The events the public site shows: published and cancelled ones, past and future, soonest first. */
+export async function publicEvents(): Promise<EventRow[]> {
+  const { data, error } = await admin().schema("site").rpc("public_events");
+  if (error) throw failure("Couldn't read the events", error);
+  return data;
+}
+
+/** The heads-ups showing right now, pinned first, then newest. */
+export async function publicPosts(): Promise<PostRow[]> {
+  const { data, error } = await admin().schema("site").rpc("public_posts");
+  if (error) throw failure("Couldn't read the heads-ups", error);
+  return data;
 }
 
 export type EmailReserve = {

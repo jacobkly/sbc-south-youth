@@ -1,17 +1,17 @@
 # Site
 
-Public website for SBC South Youth on `sbcsouthyouth.com`, for students, parents, and visitors, plus the invite-only leader portal on `portal.sbcsouthyouth.com`. Built with Next.js (App Router, TypeScript, Tailwind CSS). The portal adds Supabase (Postgres, Auth, Storage) and shadcn/ui.
+Public website for SBC South Youth on `sbcsouthyouth.com`, for students, parents, and visitors, plus the invite-only leader portal on `portal.sbcsouthyouth.com`. Built with Next.js (App Router, TypeScript, Tailwind CSS). Heads-ups and events come from Supabase (Postgres), and the portal adds Supabase Auth and Storage, and shadcn/ui.
 
 ## Prerequisites
 
 - Node.js 24 or newer
-- For the portal: Docker Desktop for the local Supabase stack, or a hosted project's URL and keys
+- For heads-ups, events, and the portal: Docker Desktop for the local Supabase stack, or a hosted project's URL and keys
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env.local   # only the portal needs these; the public site runs without them
+cp .env.example .env.local   # without these, the public site runs with no heads-ups or events
 npm run dev
 ```
 
@@ -26,6 +26,14 @@ npm run typecheck      # generates Next's route types first, then runs tsc
 npm test               # Vitest unit tests (src/**/*.test.ts)
 npm run build
 ```
+
+## Content
+
+- **Page copy and the weekly nights** live in `src/content/`.
+- **Heads-ups and events** live in the database's `site` schema. The server reads them with the secret key through `site.public_posts()` and `site.public_events()`, which return only what's live. Pages get them from `src/lib/content/loaders.ts`, which caches them for 5 minutes under the `posts` and `events` tags.
+- **Without the database,** a build still finishes, and pages show their empty states. Once the site is running, a failed read keeps serving the last good page until the database answers again.
+- **A cancelled event** keeps its page, with a banner and the reason, and drops off This Week and the calendar.
+- **Fake events and heads-ups** come from `supabase/seed.sql`. Until the portal handles photos, their placeholder photos are matched to the seed's event ids in `src/content/events.ts`.
 
 ## Launch gate
 
@@ -63,19 +71,19 @@ Vercel previews of the `dev` branch are staging. Staging shares production's dat
 
 ## Environment variables
 
-The public site needs none of these until launch, and pages show a placeholder when one is missing. `.env.example` explains each portal variable in more detail.
+The public site needs only `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY`, for heads-ups and events. Without them it still builds, with none showing, and pages show a placeholder when any other one is missing. `.env.example` explains each variable in more detail.
 
 | Variable | Used for |
 | --- | --- |
 | `SITE_LIVE` | `true` opens the launch gate (read at build time) |
 | `GIVE_CASHTAG` | The Cash App cashtag on the Give page, like `$ExampleYouth`. Without it, Give shows a "coming soon" card and the Give buttons stay hidden |
 | `CHURCH_TEXT_NUMBER` | A church-owned number that takes texts, for "let us know you're coming". Never a leader's personal cell |
-| `NEXT_PUBLIC_SUPABASE_URL` | The Supabase project's URL (portal) |
+| `NEXT_PUBLIC_SUPABASE_URL` | The Supabase project's URL (heads-ups, events, and the portal) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The publishable key. Safe in the browser, since row-level security decides access |
 | `NEXT_PUBLIC_AUTH_COOKIE_NAME`, `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` | The sign-in cookie's name and domain. Leave both empty to keep it on the portal's own host |
 | `APP_ENV` | `production` or `staging`. Empty means production, except on Vercel previews, which are staging |
 | `FINANCES_URL`, `PORTAL_URL` | Where the portal links to finances and to itself. Default to the real addresses |
-| `SUPABASE_SECRET_KEY` | Server only. Calls the email functions and creates, bans, and unbans invited accounts. Never a `NEXT_PUBLIC_` variable |
+| `SUPABASE_SECRET_KEY` | Server only. Reads the site's heads-ups and events, calls the email functions, and creates, bans, and unbans invited accounts. Never a `NEXT_PUBLIC_` variable |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Sending email. Without both, email is off |
 | `OWNER_ALERT_EMAIL` | Owner alerts, and every email on staging |
 | `RESEND_WEBHOOK_SECRET` | Checks that webhook calls came from Resend |

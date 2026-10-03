@@ -7,13 +7,13 @@ export async function generateStaticParams() {
   return (await getEventSlugs()).map((slug) => ({ slug }));
 }
 
-/** One event, or a weekly night that repeats from its next date. */
+/** One event, or a weekly night that repeats from its next date. A cancelled event has no file. */
 async function fileFor(slug: string): Promise<string | null> {
   "use cache";
   cacheLife("feed");
 
   const content = await getBySlug(slug);
-  if (!content) return null;
+  if (!content || (content.kind === "event" && content.event.cancelled)) return null;
   const now = new Date();
   const church = formatAddress();
   const entry =

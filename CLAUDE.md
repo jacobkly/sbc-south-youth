@@ -13,8 +13,8 @@ Monorepo for SBC South Youth web projects on `sbcsouthyouth.com`. Each app is it
 
 ## Current focus
 
-- **The portal is the active work.** People and roles, invites, requester self-service and read-only viewers in finances, the Activity screen, email, storage, and backup status are built. Next is one shared sign-in for both apps, once the maintainer has checked this work on the hosted project, then site content, the form inbox, and photos.
-- **The public site** keeps fake content and hotlinked placeholder photos until the portal replaces them. Forms validate but don't save or send yet (`TODO(wire-up)`). Wiring them to Supabase, email, and bot protection comes with the portal. The site doesn't launch until real photos fill every spot.
+- **The portal is the active work.** People and roles, invites, requester self-service and read-only viewers in finances, the Activity screen, email, storage, and backup status are built. Site content is under way: the public site reads heads-ups and events from the database, and the portal screens to post them come next, then the form inbox and photos. One shared sign-in for both apps waits until the maintainer has checked this work on the hosted project.
+- **The public site** reads heads-ups and events from the `site` schema, and the local seed holds fake ones. Weekly nights and page copy stay in `site/src/content/`, and photos stay hotlinked placeholders until the portal replaces them. Forms validate but don't save or send yet (`TODO(wire-up)`). Wiring them to Supabase, email, and bot protection comes with the portal. The site doesn't launch until real photos fill every spot.
 - **Finances** gets bug fixes and small features. Its requester and viewer screens are built. Receipts live in Supabase Storage, compressed in the browser to fit the 1 GB free tier.
 
 ## Commands
@@ -124,6 +124,7 @@ Roles are a fixed Postgres enum, `public.app_role`, and each person's roles are 
 - **Portal staging is read-only.** A Vercel preview, or `APP_ENV=staging`, shares production's data. Every server action that changes data calls `assertWritable()` first, and staging email goes only to `OWNER_ALERT_EMAIL`.
 - The Supabase secret key is only for the site's server, in `server-only` modules. It may only call functions that `service_role` alone can execute, and never reads tables. The only other calls are three Auth admin calls (create an invited account, ban a removed one, unban a reinstated one), each from a server action that first checks the caller is an owner.
 - Public pages read posts, events, and photos only through `site.public_*()` functions that only `service_role` can execute. Every other portal write runs as the signed-in person, so RLS applies.
+- Pages get that content only from `site/src/lib/content/loaders.ts`. It caches each read with the `feed` lifetime under the `events` and `posts` tags, so a portal server action can refresh them right away with `updateTag`. A read that fails while building gives empty states so the build finishes. Once the site is running, the error stands, so Next keeps serving the last good page.
 
 ### Git
 

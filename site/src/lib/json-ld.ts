@@ -25,9 +25,13 @@ type EventJsonLd = {
 
 /**
  * An event, or one night of a weekly gathering, as a schema.org Event.
- * Without an address the place isn't set yet, so it's left out.
+ * Without an address the place isn't set yet, so it's left out. A
+ * cancelled event says so, so search results stop showing it as on.
  */
-export function eventJsonLd(item: FeedItem, { description, address }: { description?: string; address?: string }): EventJsonLd {
+export function eventJsonLd(
+  item: FeedItem,
+  { description, address, cancelled }: { description?: string; address?: string; cancelled?: boolean },
+): EventJsonLd {
   // An all-day event ends at midnight after its last day.
   const lastDay = addDays(laDateOf(item.endsAt), -1);
   const [startDate, endDate] = item.allDay
@@ -41,7 +45,7 @@ export function eventJsonLd(item: FeedItem, { description, address }: { descript
     ...(description && { description }),
     startDate,
     endDate,
-    eventStatus: "https://schema.org/EventScheduled",
+    eventStatus: cancelled ? "https://schema.org/EventCancelled" : "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     ...(address && { location: { "@type": "Place", name: item.locationName ?? site.campus, address } }),
     ...(item.photo && { image: [item.photo.src] }),

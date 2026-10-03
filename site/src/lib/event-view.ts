@@ -29,6 +29,8 @@ export type EventView = {
   locationName?: string;
   address?: string;
   costNote?: string;
+  /** Set when a one-off event is called off. The page stays up with a banner. */
+  cancelled?: { reason?: string };
   /** When the calendar buttons give way to "already happened". Weekly nights don't end. */
   endsAt: number | null;
   ended: boolean;
@@ -97,11 +99,12 @@ export async function eventView(slug: string): Promise<EventView | null> {
     locationName: event.locationName,
     address,
     costNote: event.costNote,
+    ...(event.cancelled && { cancelled: event.cancelled }),
     endsAt,
     ended: endsAt <= now.getTime(),
     googleCalendar: googleCalendarUrl(eventEntry(event, church)),
     nights: [],
     today,
-    jsonLd: eventJsonLd(item, { description: event.description, address }),
+    jsonLd: eventJsonLd(item, { description: event.description, address, cancelled: Boolean(event.cancelled) }),
   };
 }

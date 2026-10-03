@@ -89,7 +89,8 @@ export function eventItem(event: SiteEvent): FeedItem {
 
 /**
  * Everything that hasn't ended yet and starts within `days` days of
- * today, soonest first. Something that ends exactly now is over.
+ * today, soonest first. Something that ends exactly now is over, and a
+ * cancelled event is left off.
  */
 export function upcomingItems({
   gatherings,
@@ -106,7 +107,7 @@ export function upcomingItems({
   const lastDay = addDays(today, days);
   const items = [
     ...gatherings.flatMap((gathering) => gatheringNights(gathering, today, lastDay)),
-    ...events.map(eventItem),
+    ...events.filter((event) => !event.cancelled).map(eventItem),
   ];
   return items
     .filter((item) => Date.parse(item.endsAt) > now.getTime() && item.date <= lastDay)

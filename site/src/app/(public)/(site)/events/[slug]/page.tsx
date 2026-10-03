@@ -1,4 +1,17 @@
-import { ArrowLeft, ArrowRight, CalendarDays, CalendarPlus, Clock, History, MapPin, Repeat, Star, Ticket } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Ban,
+  CalendarDays,
+  CalendarOff,
+  CalendarPlus,
+  Clock,
+  History,
+  MapPin,
+  Repeat,
+  Star,
+  Ticket,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -25,9 +38,10 @@ export async function generateStaticParams() {
 }
 
 /**
- * Every event is known when the site builds, so any other slug is a 404.
- * Letting it block, instead of streaming a loading shell, means it gets a
- * real 404 status.
+ * Events known when the site builds are prerendered. Any other slug, like
+ * one added since, renders on its first visit, or 404s if there's no such
+ * event. Letting it block, instead of streaming a loading shell, means a
+ * missing one gets a real 404 status.
  */
 export const instant = false;
 
@@ -38,7 +52,7 @@ export async function generateMetadata({ params }: PageProps<"/events/[slug]">):
   if (!view) return { title: "Page not found" };
   return pageMetadata({
     title: view.title,
-    description: [view.date, view.time, view.locationName].filter(Boolean).join(" · "),
+    description: [view.cancelled && "Cancelled", view.date, view.time, view.locationName].filter(Boolean).join(" · "),
     path: `/events/${slug}`,
   });
 }
@@ -95,7 +109,13 @@ function Hero({ view }: { view: EventView }) {
           </ButtonLink>
           <div className="mt-auto pt-16">
             <div className="flex flex-wrap gap-1.5">
-              {view.featured && (
+              {view.cancelled && (
+                <Tag tone="accent">
+                  <Ban aria-hidden className="mr-1 size-3" />
+                  Cancelled
+                </Tag>
+              )}
+              {view.featured && !view.cancelled && (
                 <Tag tone="solid">
                   <Star aria-hidden className="mr-1 size-3 fill-current" />
                   Featured
@@ -109,7 +129,13 @@ function Hero({ view }: { view: EventView }) {
               )}
             </div>
             <h1 className="mt-4 max-w-4xl font-display text-display text-balance">{view.title}</h1>
-            <p className="mt-4 font-display text-h3 font-bold text-accent">{view.date}</p>
+            <p
+              className={`mt-4 font-display text-h3 font-bold ${
+                view.cancelled ? "text-white/60 line-through decoration-accent decoration-[0.1em]" : "text-accent"
+              }`}
+            >
+              {view.date}
+            </p>
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-white/80">
               <p className="flex items-center gap-1.5">
                 <Clock aria-hidden className="size-4 shrink-0" />
@@ -122,9 +148,23 @@ function Hero({ view }: { view: EventView }) {
                 </p>
               )}
             </div>
+            {view.cancelled && <CancelledBanner reason={view.cancelled.reason} />}
           </div>
         </div>
       </header>
+    </div>
+  );
+}
+
+/** Why it's off, over the poster, so it's the first thing anyone sees. */
+function CancelledBanner({ reason }: { reason?: string }) {
+  return (
+    <div className="mt-6 max-w-xl rounded-card bg-black/45 p-4 ring-1 ring-white/25 ring-inset backdrop-blur-md sm:p-5">
+      <p className="flex items-center gap-2 font-semibold">
+        <Ban aria-hidden className="size-4.5 shrink-0 text-accent" />
+        This one&apos;s cancelled.
+      </p>
+      {reason && <p className="mt-1 whitespace-pre-line text-white/80">{reason}</p>}
     </div>
   );
 }
@@ -165,39 +205,57 @@ function DetailsCard({ view }: { view: EventView }) {
           )}
         </dl>
 
-        <div
-          data-item
-          data-until={view.endsAt ?? undefined}
-          hidden={view.ended || undefined}
-          suppressHydrationWarning
-          className="mt-6 flex flex-col gap-2 border-t border-line pt-6 @xl:grid @xl:grid-cols-3"
-        >
-          <a href={`/events/${view.slug}/calendar.ics`} className={buttonClasses({ className: "w-full" })}>
-            <CalendarPlus aria-hidden />
-            {view.weekly ? "Add every week" : "Add to calendar"}
-          </a>
-          <a href={view.googleCalendar} className={buttonClasses({ variant: "secondary", className: "w-full" })}>
-            Google Calendar
-          </a>
-          <ShareButton title={view.title} path={`/events/${view.slug}`} variant="ghost" className="w-full" />
-        </div>
+        {view.cancelled ? (
+          <div className="mt-6 border-t border-line pt-6">
+            <p className="flex items-center gap-2 font-semibold">
+              <CalendarOff aria-hidden className="size-4.5 text-accent-ink" />
+              It&apos;s off the calendar.
+            </p>
+            <p className="mt-1 text-small text-muted">
+              If you added it to yours, you can delete it. Here&apos;s what&apos;s still on.
+            </p>
+            <ButtonLink href="/this-week" className="mt-4 w-full">
+              See this week
+              <ArrowRight aria-hidden />
+            </ButtonLink>
+          </div>
+        ) : (
+          <>
+            <div
+              data-item
+              data-until={view.endsAt ?? undefined}
+              hidden={view.ended || undefined}
+              suppressHydrationWarning
+              className="mt-6 flex flex-col gap-2 border-t border-line pt-6 @xl:grid @xl:grid-cols-3"
+            >
+              <a href={`/events/${view.slug}/calendar.ics`} className={buttonClasses({ className: "w-full" })}>
+                <CalendarPlus aria-hidden />
+                {view.weekly ? "Add every week" : "Add to calendar"}
+              </a>
+              <a href={view.googleCalendar} className={buttonClasses({ variant: "secondary", className: "w-full" })}>
+                Google Calendar
+              </a>
+              <ShareButton title={view.title} path={`/events/${view.slug}`} variant="ghost" className="w-full" />
+            </div>
 
-        <div
-          data-empty
-          hidden={!view.ended}
-          suppressHydrationWarning
-          className="mt-6 border-t border-line pt-6"
-        >
-          <p className="flex items-center gap-2 font-semibold">
-            <History aria-hidden className="size-4.5 text-accent-ink" />
-            This one already happened.
-          </p>
-          <p className="mt-1 text-small text-muted">Thanks to everyone who came. Here&apos;s what&apos;s next.</p>
-          <ButtonLink href="/this-week" className="mt-4 w-full">
-            See this week
-            <ArrowRight aria-hidden />
-          </ButtonLink>
-        </div>
+            <div
+              data-empty
+              hidden={!view.ended}
+              suppressHydrationWarning
+              className="mt-6 border-t border-line pt-6"
+            >
+              <p className="flex items-center gap-2 font-semibold">
+                <History aria-hidden className="size-4.5 text-accent-ink" />
+                This one already happened.
+              </p>
+              <p className="mt-1 text-small text-muted">Thanks to everyone who came. Here&apos;s what&apos;s next.</p>
+              <ButtonLink href="/this-week" className="mt-4 w-full">
+                See this week
+                <ArrowRight aria-hidden />
+              </ButtonLink>
+            </div>
+          </>
+        )}
       </div>
     </aside>
   );

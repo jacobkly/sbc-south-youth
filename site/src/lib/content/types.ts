@@ -1,8 +1,8 @@
 /**
- * The content the site shows, shaped like the tables the portal will
- * store it in. Pages get events, announcements, and the schedule through
- * the loaders in this folder, so moving them to the database later
- * doesn't touch the pages.
+ * The content the site shows. Pages get events, announcements, and the
+ * schedule through the loaders in this folder: events and announcements
+ * (heads-ups) come from the database, mapped to these shapes in rows.ts,
+ * and the rest lives in `src/content/`.
  *
  * Instants are ISO 8601 strings with an offset, like
  * "2026-10-09T18:00:00-07:00". Wall-clock times are "HH:MM", 24-hour,
@@ -54,13 +54,19 @@ export type SiteEvent = {
   /** Up to 60 characters, like "$40, due Nov 1". */
   costNote?: string;
   featured: boolean;
+  /**
+   * Set once it's called off. Its page stays up with a banner, but it
+   * leaves the agenda and Home.
+   */
+  cancelled?: { reason?: string };
 };
 
+/** A heads-up. Its photo is the one of the event it links to, if any. */
 export type Announcement = {
   id: string;
-  /** Up to 60 characters. */
+  /** Up to 80 characters. */
   title: string;
-  /** Up to 400 characters. */
+  /** Up to 280 characters. */
   body: string;
   photo?: Photo;
   pinned: boolean;

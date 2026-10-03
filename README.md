@@ -29,7 +29,7 @@ The portal is where leaders run the youth site and its people from a phone. It's
 - **Activity:** one timeline of changes across the site, finances, and people, showing each person only the apps their roles cover. Owners can download it as a CSV.
 - **Email:** finance and owner notices go out through Resend, within the free plan's daily and monthly limits.
 
-Heads-ups, events, photos, and the form inbox move into the portal next.
+The public site already reads heads-ups and events from the database. Screens to post them come next, then photos and the form inbox.
 
 ### Roles
 

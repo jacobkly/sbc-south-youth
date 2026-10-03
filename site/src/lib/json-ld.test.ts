@@ -51,6 +51,11 @@ describe("eventJsonLd", () => {
     expect(data).not.toHaveProperty("image");
     expect(data).not.toHaveProperty("description");
   });
+
+  it("says when an event is cancelled, and that it's on otherwise", () => {
+    expect(eventJsonLd(retreat, { cancelled: true }).eventStatus).toBe("https://schema.org/EventCancelled");
+    expect(eventJsonLd(retreat, {}).eventStatus).toBe("https://schema.org/EventScheduled");
+  });
 });
 
 describe("jsonLdScript", () => {
