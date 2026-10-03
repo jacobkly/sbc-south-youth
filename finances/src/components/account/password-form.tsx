@@ -4,11 +4,8 @@ import { useState } from "react";
 import { describedBy, FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createClient } from "@/lib/supabase/client";
-
-const MIN_PASSWORD_LENGTH = 12;
-// Supabase hashes passwords with bcrypt, which only reads the first 72 bytes.
-const MAX_PASSWORD_LENGTH = 72;
+import { MIN_PASSWORD_LENGTH, newPasswordErrors } from "@/lib/password";
+import { checkPassword, createClient } from "@/lib/supabase/client";
 
 const FIELDS = { current: "current-password", next: "new-password", confirm: "confirm-password" } as const;
 
@@ -17,7 +14,7 @@ type Errors = Partial<Record<Field, string>>;
 
 /**
  * Changes the password. The current password is checked by signing in with
- * it, and afterward every other device is signed out.
+ * it on the side, and afterward every other device is signed out.
  */
 export function PasswordForm({ email }: { email: string }) {
   const [values, setValues] = useState<Record<Field, string>>({ current: "", next: "", confirm: "" });
@@ -41,9 +38,10 @@ export function PasswordForm({ email }: { email: string }) {
     setMessage(null);
     const found: Errors = {};
     if (!values.current) found.current = "Enter your current password.";
-    if (values.next.length < MIN_PASSWORD_LENGTH) found.next = `Use at least ${MIN_PASSWORD_LENGTH} characters.`;
+    const fresh = newPasswordErrors({ password: values.next, confirm: values.confirm });
+    if (fresh.password) found.next = fresh.password;
     else if (values.next === values.current) found.next = "Use a different password from your current one.";
-    if (!found.next && values.confirm !== values.next) found.confirm = "The passwords don't match.";
+    else if (fresh.confirm) found.confirm = fresh.confirm;
     if (Object.keys(found).length > 0) {
       showErrors(found);
       return;
@@ -51,12 +49,12 @@ export function PasswordForm({ email }: { email: string }) {
 
     setPending(true);
     const supabase = createClient();
-    const check = await supabase.auth.signInWithPassword({ email, password: values.current });
-    if (check.error) {
+    const checkError = await checkPassword(email, values.current);
+    if (checkError) {
       setPending(false);
-      if (check.error.code === "invalid_credentials") {
+      if (checkError.code === "invalid_credentials") {
         showErrors({ current: "That isn't your current password." });
-      } else if (check.error.status === 429) {
+      } else if (checkError.status === 429) {
         setMessage({ kind: "error", text: "Too many attempts. Wait a few minutes, then try again." });
       } else {
         setMessage({ kind: "error", text: "Couldn't change your password. Try again." });
@@ -71,6 +69,8 @@ export function PasswordForm({ email }: { email: string }) {
         showErrors({ next: "That password is too weak. Try a longer one." });
       } else if (error.code === "same_password") {
         showErrors({ next: "That's already your password." });
+      } else if (error.code === "insufficient_aal") {
+        setMessage({ kind: "error", text: "Enter a code from your authenticator app first, under Two-step sign-in." });
       } else {
         setMessage({ kind: "error", text: "Couldn't change your password. Try again." });
       }
@@ -101,7 +101,6 @@ export function PasswordForm({ email }: { email: string }) {
           id={FIELDS.current}
           type="password"
           autoComplete="current-password"
-          maxLength={MAX_PASSWORD_LENGTH}
           value={values.current}
           onChange={(event) => change("current", event.target.value)}
           aria-invalid={Boolean(errors.current)}
@@ -119,7 +118,6 @@ export function PasswordForm({ email }: { email: string }) {
           id={FIELDS.next}
           type="password"
           autoComplete="new-password"
-          maxLength={MAX_PASSWORD_LENGTH}
           value={values.next}
           onChange={(event) => change("next", event.target.value)}
           aria-invalid={Boolean(errors.next)}
@@ -132,7 +130,6 @@ export function PasswordForm({ email }: { email: string }) {
           id={FIELDS.confirm}
           type="password"
           autoComplete="new-password"
-          maxLength={MAX_PASSWORD_LENGTH}
           value={values.confirm}
           onChange={(event) => change("confirm", event.target.value)}
           aria-invalid={Boolean(errors.confirm)}

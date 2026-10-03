@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { cn } from "cn";
 import { AccountTheme } from "@/components/account-theme";
 import { AdminNav } from "@/components/nav/admin-nav";
 import type { NavUser } from "@/components/nav/nav-items";
 import { NoAccess } from "@/components/nav/no-access";
 import { RefreshOnHistory } from "@/components/nav/refresh-on-history";
-import { canUseApp, getCurrentUser } from "@/lib/auth/current-user";
+import { canUseApp, getCurrentUser, getSessionAal } from "@/lib/auth/current-user";
+import { ownerNeedsMfa } from "@/lib/auth/mfa";
 import { parseSavedTheme } from "@/lib/theme";
 
 /**
@@ -17,6 +19,9 @@ export async function AppShell({ children }: { children: ReactNode }) {
   if (!user || !canUseApp(user)) {
     return <NoAccess email={user?.email ?? null} />;
   }
+  // Owners enter a code from their phone first, or set one up. Signing in
+  // usually goes there directly; this catches anyone who skipped ahead.
+  if (ownerNeedsMfa(user.roles, await getSessionAal())) redirect("/mfa");
 
   return (
     <>

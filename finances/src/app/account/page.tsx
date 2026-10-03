@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { AccountForm } from "@/components/account/account-form";
 import { AvatarForm } from "@/components/account/avatar-form";
+import { MfaDevices } from "@/components/account/mfa-devices";
 import { PasswordForm } from "@/components/account/password-form";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { NarrowPage } from "@/components/nav/app-shell";
 import { Separator } from "@/components/ui/separator";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { getCurrentUser, getMfaDevices, getSessionAal } from "@/lib/auth/current-user";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
@@ -16,6 +17,8 @@ export default async function AccountPage() {
   // The layout already checked access, so the user is an active admin or viewer.
   const user = await getCurrentUser();
   if (!user) return null;
+  const owner = user.roles.includes("owner");
+  const [devices, aal] = await Promise.all([getMfaDevices(), getSessionAal()]);
 
   return (
     <NarrowPage className="space-y-6">
@@ -40,6 +43,14 @@ export default async function AccountPage() {
         </h2>
         <PasswordForm email={user.email} />
       </section>
+
+      {/* Only owners need it, but anyone else who has a device can still manage it. */}
+      {(owner || devices.length > 0) && (
+        <>
+          <Separator />
+          <MfaDevices devices={devices} owner={owner} verified={aal === "aal2"} />
+        </>
+      )}
 
       <Separator />
 

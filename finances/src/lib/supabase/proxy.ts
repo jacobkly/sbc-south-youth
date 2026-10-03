@@ -1,15 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { safeNextPath } from "@/lib/auth/next-path";
+import { isSignInPath, safeNextPath } from "@/lib/auth/next-path";
 import type { Database } from "@/lib/database.types";
 import { supabaseEnv } from "@/lib/supabase/env";
 
 function isDevToolPath(pathname: string) {
   return pathname === "/dev" || pathname.startsWith("/dev/");
-}
-
-function isSignInPath(pathname: string) {
-  return pathname === "/login" || pathname.startsWith("/auth/");
 }
 
 /**
