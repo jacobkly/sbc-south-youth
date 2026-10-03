@@ -99,7 +99,11 @@ select throws_ok(
   '42501', 'Only an admin can approve requests.', 'a member can''t approve'
 );
 
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a005", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a005", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c002') $$,
@@ -107,7 +111,11 @@ select throws_ok(
 );
 
 -- As the admin: approving.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select throws_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-0000000fffff') $$,
@@ -190,7 +198,11 @@ select is(
 );
 
 -- As the other admin, approving the first admin's reimbursement.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a004", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a004", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select lives_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c006') $$,
@@ -198,7 +210,11 @@ select lives_ok(
 );
 
 -- As the admin: paying and undoing.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select throws_ok(
   $$ select public.mark_paid('00000000-0000-4000-8000-00000000c002', null) $$,
@@ -356,7 +372,11 @@ select throws_ok(
   'with outside approvers off, an admin can''t record their own payment'
 );
 
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a004", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a004", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select lives_ok(
   $$ select public.approve_request('00000000-0000-4000-8000-00000000c007') $$,

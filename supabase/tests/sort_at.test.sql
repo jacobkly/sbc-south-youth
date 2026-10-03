@@ -21,7 +21,11 @@ select has_index(
 );
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 -- An old receipt, entered today.
 select public.save_request(

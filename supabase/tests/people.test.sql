@@ -128,7 +128,11 @@ select is_empty(
 );
 
 -- As the owner: inviting.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select results_eq(
   $$ select user_id, email, full_name, roles::text, status, invited_by, sent_count, accepted_at
@@ -172,7 +176,11 @@ select is(public.accept_invite(), false, 'accepting again changes nothing');
 select is_empty($$ select 1 from public.invites $$, 'an invitee can''t read invites, even their own');
 
 -- As the owner again.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select results_eq(
   $$ select status, accepted_at is not null from public.invites
@@ -225,7 +233,11 @@ select ok(
 );
 
 -- As the owner: removing access.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select throws_ok(
   $$ select public.remove_access('00000000-0000-4000-8000-00000000a001') $$,
@@ -293,7 +305,11 @@ select ok(
 select is(public.touch_last_seen(), false, 'a removed person isn''t marked as seen');
 
 -- As the owner: reinstating.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select throws_ok(
   $$ select public.reinstate('00000000-0000-4000-8000-0000000fffff') $$,
@@ -330,7 +346,11 @@ select results_eq(
 update public.users set roles = '{owner}' where id = '00000000-0000-4000-8000-00000000a006';
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select lives_ok(
   $$ select public.remove_access('00000000-0000-4000-8000-00000000a006') $$,

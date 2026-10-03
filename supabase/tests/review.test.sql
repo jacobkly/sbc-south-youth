@@ -139,7 +139,11 @@ select lives_ok(
 );
 
 -- As the admin.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select throws_ok(
   $$ select public.submit_request('00000000-0000-4000-8000-0000000fffff') $$,
@@ -209,7 +213,11 @@ select results_eq(
 );
 
 -- As the other admin, who didn't enter c003.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a004", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a004", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select throws_ok(
   $$ select public.cancel_request('00000000-0000-4000-8000-00000000c003') $$,
@@ -219,7 +227,11 @@ select throws_ok(
 );
 
 -- As the admin who entered it.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select lives_ok(
   $$ select public.cancel_request('00000000-0000-4000-8000-00000000c003') $$,

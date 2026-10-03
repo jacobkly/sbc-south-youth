@@ -176,7 +176,11 @@ with removed as (
 select is(count(*)::int, 0, 'a viewer can''t delete requests') from removed;
 
 -- As the admin.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select is(
   (select count(*)::int from public.reimbursement_requests

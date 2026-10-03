@@ -21,7 +21,11 @@ values ('00000000-0000-4000-8000-00000000b001', 'Test Payee');
 -- Entered as the admin, so the created events record them as the actor. c001
 -- goes through the whole review loop, c002 stays a draft, and the rest end in
 -- the other final states.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 insert into public.reimbursement_requests (
   id, payee_id, created_by, type, amount_cents, purchase_date, vendor, description, no_receipt, no_receipt_reason
@@ -209,7 +213,11 @@ select is_empty(
 );
 
 -- As the admin, deleting the draft.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select lives_ok(
   $$ delete from public.reimbursement_requests where id = '00000000-0000-4000-8000-00000000c002' $$,

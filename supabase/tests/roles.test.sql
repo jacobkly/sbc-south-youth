@@ -117,7 +117,11 @@ select ok(not public.has_role('owner'), 'roles in user_metadata are ignored');
 select is(public.current_app_role()::text, 'member', 'an active person with no roles is a member to the older rules');
 
 -- As the site editor.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a003", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a003", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select ok(public.has_role('site_editor'), 'a site editor holds site_editor');
 select ok(not public.has_role('finance_viewer'), 'a site editor holds no finance role');
@@ -137,7 +141,11 @@ select ok(not public.has_role('site_editor'), 'a removed person keeps their role
 select is(public.current_app_role(), null, 'a removed person has no role for the older rules');
 
 -- As the owner.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select ok(public.has_role('finance_requester'), 'an owner counts as a requester');
 select ok(public.has_role('site_messages'), 'an owner counts as a messages handler');

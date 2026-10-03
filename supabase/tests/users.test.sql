@@ -150,7 +150,11 @@ select throws_ok(
 );
 
 -- As the deactivated admin.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a005", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a005", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select is(public.current_app_role(), null, 'a deactivated user has no role');
 
@@ -177,7 +181,11 @@ select throws_ok(
 );
 
 -- As the admin.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select throws_ok(
   $$ select public.set_member_role('00000000-0000-4000-8000-00000000a001', 'member') $$,

@@ -156,7 +156,11 @@ select results_eq(
 set local role authenticated;
 
 -- As the owner.
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
+  true
+);
 
 select set_eq(
   $$ select distinct scope from public.activity_feed $$,

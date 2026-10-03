@@ -1007,6 +1007,7 @@ export type Database = {
       }
       request_lines_summary: { Args: { p_request_id: string }; Returns: Json }
       request_vendor_list: { Args: { p_request_id: string }; Returns: string }
+      require_aal2: { Args: never; Returns: undefined }
       require_note: { Args: { p_note: string }; Returns: string }
       save_request: {
         Args: {

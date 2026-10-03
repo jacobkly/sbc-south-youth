@@ -56,10 +56,11 @@ insert into public.payees (id, full_name, email, notes, is_active, user_id, link
   ('00000000-0000-4000-8000-5eed0000b003', 'Jordan Placeholder', null, null, true, null, null, null),
   ('00000000-0000-4000-8000-5eed0000b004', 'Casey Test', null, 'Moved away', false, null, null, null);
 
--- Act as the admin, so the RPCs run their checks and the audit log has an actor.
+-- Act as the admin, so the RPCs run their checks and the audit log has an
+-- actor. Approving and paying need a session that has entered a code.
 select set_config(
   'request.jwt.claims',
-  '{"sub": "00000000-0000-4000-8000-5eed0000a001", "role": "authenticated"}',
+  '{"sub": "00000000-0000-4000-8000-5eed0000a001", "role": "authenticated", "aal": "aal2"}',
   false
 );
 
