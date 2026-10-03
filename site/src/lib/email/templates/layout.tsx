@@ -14,6 +14,7 @@ const colors = {
   page: "#f5f5f5",
   card: "#ffffff",
   border: "#e5e5e5",
+  quote: "#d4d4d4",
   heading: "#0a0a0a",
   text: "#262626",
   muted: "#737373",
@@ -30,6 +31,8 @@ const darkMode = `
   .email-text { color: #e5e5e5 !important; }
   .email-muted { color: #a3a3a3 !important; }
   .email-button { background-color: #fafafa !important; color: #0a0a0a !important; }
+  .email-rule { border-color: #262626 !important; }
+  .email-quote { border-color: #525252 !important; }
 }
 `;
 
@@ -201,6 +204,75 @@ export function EmailButton({ href, children }: { href: string; children?: React
         {children}
       </a>
     </p>
+  );
+}
+
+/** A few labels and values, like a request's amount and store, one per row. */
+export function EmailFacts({ facts }: { facts: readonly (readonly [label: string, value: ReactNode])[] }) {
+  const cell: CSSProperties = { borderBottom: `1px solid ${colors.border}`, verticalAlign: "top" };
+  return (
+    <table
+      role="presentation"
+      width="100%"
+      cellPadding={0}
+      cellSpacing={0}
+      border={0}
+      className="email-rule"
+      style={{ margin: "0 0 20px", borderTop: `1px solid ${colors.border}` }}
+      // Plain text lines the labels and values up in two columns.
+      data-text-format="dataTable"
+    >
+      <tbody>
+        {facts.map(([label, value]) => (
+          <tr key={label}>
+            <td
+              className="email-muted email-rule"
+              style={{
+                ...cell,
+                width: 88,
+                padding: "10px 12px 10px 0",
+                color: colors.muted,
+                fontSize: 14,
+                lineHeight: "22px",
+              }}
+            >
+              {label}
+            </td>
+            <td
+              className="email-text email-rule"
+              style={{ ...cell, padding: "10px 0", color: colors.text, fontSize: 16, lineHeight: "22px" }}
+            >
+              {value}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** Someone's own words, like an owner's question, set apart from ours. Line breaks stay. */
+export function EmailQuote({ children }: { children: string }) {
+  const lines = children.split(/\r?\n/);
+  return (
+    <blockquote
+      className="email-text email-quote"
+      style={{
+        margin: "0 0 16px",
+        padding: "2px 0 2px 14px",
+        borderLeft: `3px solid ${colors.quote}`,
+        color: colors.text,
+        fontSize: 16,
+        lineHeight: "24px",
+      }}
+    >
+      {lines.map((line, index) => (
+        <span key={index}>
+          {index > 0 && <br />}
+          {line}
+        </span>
+      ))}
+    </blockquote>
   );
 }
 

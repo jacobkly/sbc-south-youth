@@ -17,6 +17,7 @@ const PRODUCTION: EmailEnv = {
   sending: { apiKey: "re_test", from: "Example Youth <hello@mail.example.test>" },
   ownerAlertEmail: "owner@example.test",
   webhookSecret: null,
+  drainSecret: null,
 };
 
 const message: EmailMessage = {

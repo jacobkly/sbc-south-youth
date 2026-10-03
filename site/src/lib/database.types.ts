@@ -821,6 +821,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      email_details: { Args: { p_log_id: string }; Returns: Json }
       email_mark: {
         Args: {
           p_error?: string

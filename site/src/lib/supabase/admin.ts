@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/database.types";
+import type { Database, Json } from "@/lib/database.types";
 
 /**
  * The Supabase secret key, for the site's server only. It may call only
@@ -83,6 +83,37 @@ export async function emailMark(input: EmailMark): Promise<void> {
     ...(input.status === "sent" ? { p_resend_id: input.resendId } : { p_error: input.error }),
   });
   if (error) throw failure("Couldn't mark the email", error);
+}
+
+export type ClaimedEmail = Pick<
+  Database["public"]["Tables"]["email_log"]["Row"],
+  "id" | "template" | "to_address" | "subject" | "related_type" | "related_id" | "resend_id" | "created_at"
+>;
+
+/**
+ * Hands the drain up to `limit` queued emails for one environment and marks
+ * them sending, so a drain running at the same time never gets the same ones.
+ */
+export async function emailClaim(env: "production" | "staging", limit: number): Promise<ClaimedEmail[]> {
+  const { data, error } = await admin().rpc("email_claim", { p_env: env, p_limit: limit });
+  if (error) throw failure("Couldn't claim queued emails", error);
+  return data.map(({ id, template, to_address, subject, related_type, related_id, resend_id, created_at }) => ({
+    id,
+    template,
+    to_address,
+    subject,
+    related_type,
+    related_id,
+    resend_id,
+    created_at,
+  }));
+}
+
+/** What a queued email shows, read only while the drain is sending it. Null when there's nothing to show. */
+export async function emailDetails(id: string): Promise<Json> {
+  const { data, error } = await admin().rpc("email_details", { p_log_id: id });
+  if (error) throw failure("Couldn't read the email's details", error);
+  return data;
 }
 
 export type EmailWebhookEvent = {

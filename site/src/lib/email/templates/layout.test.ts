@@ -1,7 +1,7 @@
 import { createElement as h } from "react";
 import { describe, expect, it } from "vitest";
 import { renderEmail } from "../render";
-import { EmailButton, EmailHeading, EmailLayout, EmailNote, EmailText } from "./layout";
+import { EmailButton, EmailFacts, EmailHeading, EmailLayout, EmailNote, EmailQuote, EmailText } from "./layout";
 
 function sample(name: string) {
   return h(
@@ -49,5 +49,32 @@ describe("the email layout", () => {
     expect(text).toContain("You're getting this because an owner invited you.");
     expect(text).not.toMatch(/<[a-z]/i);
     expect(text).not.toContain("Set up your account in a minute.");
+  });
+
+  it("puts each fact on its own line in plain text, label first", async () => {
+    const { text } = await renderEmail(
+      h(
+        EmailLayout,
+        { preview: "A request is waiting.", reason: "You're an owner." },
+        h(EmailFacts, {
+          facts: [
+            ["Amount", "$45.50"],
+            ["Store", "Fake Store"],
+          ],
+        }),
+      ),
+    );
+
+    expect(text).toMatch(/^Amount +\$45\.50$/m);
+    expect(text).toMatch(/^Store +Fake Store$/m);
+  });
+
+  it("keeps a quote's line breaks", async () => {
+    const { html, text } = await renderEmail(
+      h(EmailLayout, { preview: "A question.", reason: "You asked." }, h(EmailQuote, null, "Which event?\nAnd when?")),
+    );
+
+    expect(html).toMatch(/Which event\?(<!-- -->)?<\/span><span><br\/?>(<!-- -->)?And when\?/);
+    expect(text).toMatch(/^> Which event\?\n> And when\?$/m);
   });
 });

@@ -104,6 +104,7 @@ describe("readEmailEnv", () => {
       sending: null,
       ownerAlertEmail: null,
       webhookSecret: null,
+      drainSecret: null,
     });
   });
 
@@ -159,6 +160,11 @@ describe("readEmailEnv", () => {
     expect(readEmailEnv({ RESEND_WEBHOOK_SECRET: "whsec_c2VjcmV0" }).webhookSecret).toBe("whsec_c2VjcmV0");
   });
 
+  it("reads the drain secret", () => {
+    expect(readEmailEnv({ EMAIL_DRAIN_SECRET: " a-long-test-secret " }).drainSecret).toBe("a-long-test-secret");
+    expect(readEmailEnv({ EMAIL_DRAIN_SECRET: "" }).drainSecret).toBeNull();
+  });
+
   it.each([
     ["RESEND_API_KEY", "sk_live_123"],
     ["EMAIL_FROM", "Example Youth"],
@@ -166,6 +172,7 @@ describe("readEmailEnv", () => {
     ["EMAIL_FROM", "Example <hello@mail.example.test>\r\nBcc: someone@example.test"],
     ["OWNER_ALERT_EMAIL", "owner"],
     ["RESEND_WEBHOOK_SECRET", "c2VjcmV0"],
+    ["EMAIL_DRAIN_SECRET", "too-short"],
   ])("rejects %s %j by name", (name, value) => {
     expect(() => readEmailEnv({ ...ready, [name]: value })).toThrow(new RegExp(name));
   });

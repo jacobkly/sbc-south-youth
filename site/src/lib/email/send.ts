@@ -146,6 +146,18 @@ export async function sendEmail(message: EmailMessage, deps: EmailDeps = default
   return { status: "sent", logId };
 }
 
+/** Hands one email to Resend, or to the local inbox in development. */
+export async function deliverEmail(
+  sending: NonNullable<EmailEnv["sending"]>,
+  { idempotencyKey, ...email }: OutgoingEmail,
+): Promise<{ id: string } | { error: string }> {
+  if ("localInbox" in sending) return sendToLocalInbox(sending.localInbox, email);
+  const resend = new Resend(sending.apiKey);
+  const { data, error } = await resend.emails.send(email, { idempotencyKey });
+  if (error) return { error: `${error.name}: ${error.message}` };
+  return { id: data.id };
+}
+
 /**
  * The real database and Resend (or the local inbox in development), read
  * fresh each call so a missing setting only turns email off.
@@ -158,12 +170,6 @@ function defaultEmailDeps(): EmailDeps {
     reserve: emailReserve,
     mark: emailMark,
     render: renderEmail,
-    send: async ({ idempotencyKey, ...email }) => {
-      if (sending && "localInbox" in sending) return sendToLocalInbox(sending.localInbox, email);
-      const resend = new Resend(sending?.apiKey);
-      const { data, error } = await resend.emails.send(email, { idempotencyKey });
-      if (error) return { error: `${error.name}: ${error.message}` };
-      return { id: data.id };
-    },
+    send: async (email) => (sending ? deliverEmail(sending, email) : { error: "Email isn't set up" }),
   };
 }

@@ -106,6 +106,8 @@ export type EmailEnv = {
   ownerAlertEmail: string | null;
   /** Checks that a webhook request really came from Resend. */
   webhookSecret: string | null;
+  /** Shared with the database, which sends it when it pokes the drain. */
+  drainSecret: string | null;
 };
 
 const emailAddress = z.email({ error: "must be an email address" });
@@ -130,6 +132,7 @@ const emailSchema = z.object({
   RESEND_WEBHOOK_SECRET: blankAsMissing
     .pipe(z.string().startsWith("whsec_", "must be a Resend signing secret (whsec_...)").optional())
     .optional(),
+  EMAIL_DRAIN_SECRET: blankAsMissing.pipe(z.string().min(16, "must be at least 16 characters").optional()).optional(),
   /** Mailpit from the local Supabase stack, like http://127.0.0.1:54324. Local development only. */
   EMAIL_LOCAL_INBOX: blankAsMissing
     .pipe(
@@ -148,7 +151,14 @@ export function readEmailEnv(source: Record<string, string | undefined> = proces
     const problems = result.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`);
     throw new Error(`Invalid environment variables: ${problems.join("; ")}`);
   }
-  const { RESEND_API_KEY, EMAIL_FROM, OWNER_ALERT_EMAIL, RESEND_WEBHOOK_SECRET, EMAIL_LOCAL_INBOX } = result.data;
+  const {
+    RESEND_API_KEY,
+    EMAIL_FROM,
+    OWNER_ALERT_EMAIL,
+    RESEND_WEBHOOK_SECRET,
+    EMAIL_DRAIN_SECRET,
+    EMAIL_LOCAL_INBOX,
+  } = result.data;
   let sending: EmailEnv["sending"] = null;
   if (EMAIL_FROM && EMAIL_LOCAL_INBOX) {
     sending = { localInbox: EMAIL_LOCAL_INBOX.replace(/\/+$/, ""), from: EMAIL_FROM };
@@ -160,6 +170,7 @@ export function readEmailEnv(source: Record<string, string | undefined> = proces
     sending,
     ownerAlertEmail: OWNER_ALERT_EMAIL ?? null,
     webhookSecret: RESEND_WEBHOOK_SECRET ?? null,
+    drainSecret: EMAIL_DRAIN_SECRET ?? null,
   };
 }
 
