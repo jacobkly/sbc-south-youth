@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeftIcon, FlagIcon, MailIcon, MessageSquareTextIcon, PhoneIcon } from "lucide-react";
+import {
+  ChevronLeftIcon,
+  CircleCheckIcon,
+  FlagIcon,
+  ImagesIcon,
+  MailIcon,
+  MessageSquareTextIcon,
+  PhoneIcon,
+} from "lucide-react";
 import { MessageBadges } from "@/components/portal/messages/message-badges";
 import { MessageTriage } from "@/components/portal/messages/message-triage";
 import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Alert, AlertDescription, AlertTitle } from "@/components/portal/ui/alert";
 import { Button } from "@/components/portal/ui/button";
+import { formatDayLabel, laDateOf, todayInLA } from "@/lib/dates";
 import { MESSAGE_SUMMARY, sentAt } from "@/lib/email/templates/form-alert";
 import { readPortalEnv } from "@/lib/env";
 import { answersOf, readAnswers } from "@/lib/forms/answers";
@@ -21,6 +30,7 @@ import {
   tabOf,
 } from "@/lib/portal/messages/list";
 import { loadAssignees, loadMessage } from "@/lib/portal/messages/queries";
+import { loadTakedownPhotos } from "@/lib/portal/photos/queries";
 import { hasRole } from "@/lib/portal/roles";
 
 // The kind, never the sender's name, so names stay out of tab titles and history.
@@ -45,8 +55,13 @@ export default async function MessagePage({ params }: PageProps<"/portal/message
   const message = await loadMessage((await params).id);
   if (!message) notFound();
 
-  const [assignees, names] = await Promise.all([loadAssignees(), loadPeopleNames()]);
+  const [assignees, names, takenDown] = await Promise.all([
+    loadAssignees(),
+    loadPeopleNames(),
+    message.kind === "takedown" ? loadTakedownPhotos(message.id) : [],
+  ]);
   const now = new Date();
+  const today = todayInLA(now);
   // Staging shares production's data, so it doesn't change messages.
   const readOnly = readPortalEnv().appEnv === "staging";
   const firstName = message.name.trim().split(/\s+/)[0];
@@ -75,14 +90,59 @@ export default async function MessagePage({ params }: PageProps<"/portal/message
         </div>
       </div>
 
-      {message.kind === "takedown" && !isClosed(message.status) && (
-        <Alert variant="destructive">
-          <FlagIcon />
-          <AlertTitle>Take the photo down first</AlertTitle>
-          <AlertDescription>
-            <p>Find the photo they mean and take it off the site, then reply to let them know it&apos;s gone.</p>
-          </AlertDescription>
-        </Alert>
+      {message.kind === "takedown" &&
+        !isClosed(message.status) &&
+        (takenDown.length > 0 ? (
+          <Alert>
+            <CircleCheckIcon />
+            <AlertTitle>The photo is down</AlertTitle>
+            <AlertDescription>
+              <p>Reply to let them know it&apos;s gone, then mark it handled.</p>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert variant="destructive">
+            <FlagIcon />
+            <AlertTitle>Take the photo down first</AlertTitle>
+            <AlertDescription>
+              <p>Find the photo they mean and take it off the site, then reply to let them know it&apos;s gone.</p>
+            </AlertDescription>
+            {/* Photos only lists requests from the real site. */}
+            {hasRole(me.roles, "site_editor") && message.env === "production" && (
+              <div className="col-start-2 pt-3 pb-1">
+                <Button asChild variant="outline" className="h-11 px-4 text-foreground">
+                  <Link href={`/photos?takedown=${message.id}`}>
+                    <ImagesIcon aria-hidden />
+                    Find the photo
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </Alert>
+        ))}
+
+      {takenDown.length > 0 && (
+        <section aria-labelledby="taken-down-heading" className="space-y-3">
+          <h2 id="taken-down-heading" className="text-lg font-semibold">
+            {takenDown.length === 1 ? "Photo taken down" : "Photos taken down"}
+          </h2>
+          <ul className="divide-y rounded-xl border bg-card">
+            {takenDown.map((photo) => (
+              <li key={photo.id} className="space-y-1 p-4">
+                <p className="break-words">{photo.alt}</p>
+                <p className="text-sm text-muted-foreground">
+                  {[
+                    formatDayLabel(laDateOf(photo.removedAt), today),
+                    photo.removedBy ? names.get(photo.removedBy) : undefined,
+                    photo.reason,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <section aria-labelledby="message-heading" className="space-y-3">

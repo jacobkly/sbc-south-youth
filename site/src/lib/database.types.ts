@@ -1425,6 +1425,13 @@ export type Database = {
         }[]
       }
       photo_uploads_open: { Args: never; Returns: boolean }
+      photos_with_files_left: {
+        Args: never
+        Returns: {
+          id: string
+          mime_type: string
+        }[]
+      }
       public_events: {
         Args: never
         Returns: {

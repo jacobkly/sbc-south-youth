@@ -102,7 +102,8 @@ select set_eq(
     'triage_message',
     'message_assignees',
     'remove_photo',
-    'photo_uploads_open'
+    'photo_uploads_open',
+    'photos_with_files_left'
   ],
   'signed-in users can call only the app''s RPCs (helpers and trigger functions stay private)'
 );

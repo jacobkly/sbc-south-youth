@@ -29,10 +29,11 @@ The portal is where leaders run the youth site and its people from a phone. It's
 - **Posts:** site editors write the heads-ups on Home and This Week, from a quick template or from scratch. Each one goes up now or at a set time and comes down on its own, and a pinned one leads on Home. Editors can end one early, keep a draft, or post an old one again.
 - **Events:** under Posts, site editors add one-off events with a day and time (or all day), a place, a cost, and details. Each one gets its own page, shows on This Week, and lands in calendars that subscribe. Editors can feature one, for a big card on This Week and a countdown on Home, cancel one with a reason, which keeps its page up with a banner, put it back on, or start a new one from a past one.
 - **Previews:** a Preview tab on each heads-up and event shows the draft the way the site will show it, in dark or light, before it goes up. A heads-up shows as its This Week card and as Home's lead, and an event shows as its This Week row and its own page.
+- **Photos:** site editors add photos from their phone, describe each one, and put it in a spot on the site or on an event's cover. Taking one down asks why, can answer a takedown request from the Contact form, and deletes its files, keeping only a short record for 2 years.
 - **Activity:** one timeline of changes across the site, finances, and people, showing each person only the apps their roles cover. Owners can download it as a CSV.
 - **Email:** finance and owner notices, and an email for each form message, go out through Resend, within the free plan's daily and monthly limits.
 
-The public site reads heads-ups and events from the database. Its Visit, Join, Serve, and Contact forms save messages there, checked by Cloudflare Turnstile and limited to 5 an hour from one address, and each one emails the youth inbox so a leader can reply to the sender. Leaders with the Messages role follow up on them in the portal's Messages screen. Site editors add photos on the portal's Photos screen, which shrinks them on the phone and leaves their location data behind before they go to a public bucket. Placing them on the site and taking them down come next.
+The public site reads heads-ups and events from the database. Its Visit, Join, Serve, and Contact forms save messages there, checked by Cloudflare Turnstile and limited to 5 an hour from one address, and each one emails the youth inbox so a leader can reply to the sender. Leaders with the Messages role follow up on them in the portal's Messages screen. Site editors add photos on the portal's Photos screen, which shrinks them on the phone and leaves their location data behind before they go to a public bucket. Public pages show them in place of the placeholder photos next.
 
 ### Roles
 
@@ -43,7 +44,7 @@ Each person can hold several roles. Owner counts as all of them.
 | Owner | Everything in both apps. The only role that invites people, changes roles, removes access, and approves or pays reimbursements. Uses two-step sign-in |
 | Finance viewer | Read every submitted request, receipt, and report in finances. Change nothing |
 | Requester | Submit their own reimbursements in finances and see only their own requests |
-| Site editor | Post heads-ups and events, and upload and take down photos |
+| Site editor | Post heads-ups and events, and add, place, and take down photos |
 | Messages | Read and handle messages from the site's forms |
 
 The database enforces every role with row-level security, so hiding a button is never what keeps someone out.

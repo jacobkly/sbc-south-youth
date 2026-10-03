@@ -97,10 +97,12 @@ select ok(
 select is_empty(
   $$ select p.proname from pg_proc p
      where p.pronamespace = 'site'::regnamespace
-       and p.proname not in ('triage_message', 'message_assignees', 'remove_photo', 'photo_uploads_open')
+       and p.proname not in (
+         'triage_message', 'message_assignees', 'remove_photo', 'photo_uploads_open', 'photos_with_files_left'
+       )
        and (has_function_privilege('anon', p.oid, 'execute')
             or has_function_privilege('authenticated', p.oid, 'execute')) $$,
-  'no client can call a site function but triage, its leader picker, photo removal, and the storage check for uploads'
+  'no client can call a site function but triage, its leader picker, and the photo library''s checks and takedown'
 );
 
 select ok(
