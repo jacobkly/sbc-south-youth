@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRightIcon, CircleAlertIcon, CircleCheckIcon, DatabaseBackupIcon, TriangleAlertIcon } from "lucide-react";
+import { ArrowRightIcon, CircleCheckIcon, DatabaseBackupIcon, TriangleAlertIcon } from "lucide-react";
 import { cn } from "cn";
+import { LoadError } from "@/components/portal/load-error";
 import { Button } from "@/components/portal/ui/button";
 import { Skeleton } from "@/components/portal/ui/skeleton";
 import { activityHref, DEFAULT_ACTIVITY_FILTERS } from "@/lib/portal/activity/filters";
@@ -75,15 +76,6 @@ export function BackupStatusSkeleton() {
   );
 }
 
-function BackupStatusError() {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border bg-card p-4 text-sm">
-      <CircleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-      <p className="text-muted-foreground">Backups couldn&apos;t load. Refresh the page to try again.</p>
-    </div>
-  );
-}
-
 /** Loads the newest backup as the signed-in owner. A failure only hides this card, not the rest of Home. */
 export async function HomeBackup() {
   let report: BackupReport | null;
@@ -91,7 +83,7 @@ export async function HomeBackup() {
     report = await loadLastBackup();
   } catch (error) {
     await reportPortalError("Home backups", error);
-    return <BackupStatusError />;
+    return <LoadError text="Backups couldn't load." />;
   }
   return <BackupStatus status={backupStatus(report, new Date())} />;
 }

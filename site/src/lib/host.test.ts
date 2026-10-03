@@ -90,7 +90,32 @@ describe.each([{ gated: false }, { gated: true }])("routing with the gate %o", (
     expect(route(PORTAL, "/sitemap.xml", gate)).toBe(PORTAL_404);
   });
 
-  it.each(["/portal", "/portal/", "/portal/people", NO_PAGE_PATH])(
+  it("gives the portal host its own home screen app and icons", () => {
+    expect(route(PORTAL, "/manifest.webmanifest", gate)).toBe("/portal/manifest.webmanifest");
+    for (const icon of ["icon.png", "apple-icon.png", "icon-512.png"]) {
+      expect(route(PORTAL, `/${icon}`, gate)).toBe(`/portal/icons/${icon}`);
+      expect(route("portal.localhost:3001", `/${icon}`, gate)).toBe(`/portal/icons/${icon}`);
+    }
+  });
+
+  it.each([
+    ["/icon-1024.png", "/icon-1024.png"],
+    ["/icons/icon.png", "/icons/icon.png"],
+    ["/apple-icon.png.map", "/apple-icon.png.map"],
+    // A page path, not a file.
+    ["/iconxpng", "/portal/iconxpng"],
+  ])("serves %s as %s, not a portal icon", (pathname, page) => {
+    expect(route(PORTAL, pathname, gate)).toBe(page);
+  });
+
+  it.each([
+    "/portal",
+    "/portal/",
+    "/portal/people",
+    "/portal/manifest.webmanifest",
+    "/portal/icons/icon.png",
+    NO_PAGE_PATH,
+  ])(
     "gives %s on the portal host the portal's 404",
     (pathname) => {
       expect(route(PORTAL, pathname, gate)).toBe(PORTAL_404);
@@ -102,14 +127,12 @@ describe.each([{ gated: false }, { gated: true }])("routing with the gate %o", (
     "/_next/image",
     "/_vercel/insights/script.js",
     "/favicon.ico",
-    "/icon.png",
-    "/apple-icon.png",
-    "/manifest.webmanifest",
+    "/opengraph-image.png",
   ])("leaves the file %s alone on the portal host", (pathname) => {
     expect(route(PORTAL, pathname, gate)).toBe(pathname);
   });
 
-  it.each(["/portal", "/portal/", "/portal/people", "/portal/robots.txt"])(
+  it.each(["/portal", "/portal/", "/portal/people", "/portal/robots.txt", "/portal/icons/icon.png"])(
     "hides %s on every other host",
     (pathname) => {
       for (const host of [PUBLIC, "localhost:3001", "staging.sbcsouthyouth.com"]) {
@@ -128,6 +151,15 @@ describe("routing on the public host", () => {
     expect(route(PUBLIC, "/", { gated: false })).toBe("/");
     expect(route(PUBLIC, "/visit", { gated: false })).toBe("/visit");
     expect(route(PUBLIC, "/robots.txt", { gated: false })).toBe("/robots.txt");
+  });
+
+  it("keeps the public site's own home screen app and icons", () => {
+    for (const gated of [false, true]) {
+      for (const file of ["/manifest.webmanifest", "/icon.png", "/apple-icon.png"]) {
+        expect(route(PUBLIC, file, { gated })).toBe(file);
+        expect(route("localhost:3001", file, { gated })).toBe(file);
+      }
+    }
   });
 
   it("shows coming soon when the gate is closed", () => {

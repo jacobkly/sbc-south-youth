@@ -3,6 +3,7 @@ import "./portal.css";
 import { Geist } from "next/font/google";
 import { ThemeScript } from "@/components/portal/theme-script";
 import { site } from "@/content/site";
+import { PORTAL_NAME, PORTAL_SHORT_NAME } from "@/lib/portal/install";
 import { THEME_CONFIG } from "@/lib/portal/theme";
 import { cn } from "@/lib/portal/utils";
 
@@ -14,16 +15,18 @@ const shareImage = { url: "/opengraph-image.png", width: 1200, height: 630, alt:
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: "SBC South Youth Portal",
-    template: "%s · SBC South Youth Portal",
+    default: PORTAL_NAME,
+    template: `%s · ${PORTAL_NAME}`,
   },
-  applicationName: "SBC South Youth Portal",
-  // Home screen name on iPhone, which would otherwise be the page title.
-  // `capable: false` keeps it opening in Safari.
-  appleWebApp: { title: "SBC South Youth Portal", capable: false },
+  applicationName: PORTAL_NAME,
+  // Added to an iPhone's home screen, it opens full screen under this name,
+  // with no Safari buttons, so every screen needs its own way back. The
+  // status bar takes the theme-color. The manifest and icons on the portal
+  // host are its own (see lib/portal/install.ts).
+  appleWebApp: { title: PORTAL_SHORT_NAME, capable: true, statusBarStyle: "default" },
   // Private app: keep it out of search engines.
   robots: { index: false, follow: false },
-  openGraph: { siteName: "SBC South Youth Portal", type: "website", images: [shareImage] },
+  openGraph: { siteName: PORTAL_NAME, type: "website", images: [shareImage] },
   twitter: { card: "summary_large_image", images: [shareImage] },
 };
 

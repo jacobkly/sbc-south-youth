@@ -1,11 +1,11 @@
 import { CircleCheckIcon } from "lucide-react";
+import { LoadError } from "@/components/portal/load-error";
 import { Badge } from "@/components/portal/ui/badge";
 import { Skeleton } from "@/components/portal/ui/skeleton";
 import { formatDayLabel, formatTime, laDateOf } from "@/lib/dates";
 import { loadEmailProblems, type EmailProblem } from "@/lib/portal/email/queries";
 import { PROBLEMS, templateLabel } from "@/lib/portal/email/summary";
 import { reportPortalError } from "@/lib/portal/errors";
-import { SectionError } from "./email-usage";
 
 const STATUS_LABELS = Object.fromEntries(PROBLEMS.map(({ status, label }) => [status, label])) as Record<
   EmailProblem["status"],
@@ -67,7 +67,7 @@ export async function RecentProblems() {
     problems = await loadEmailProblems();
   } catch (error) {
     await reportPortalError("Email problems", error);
-    return <SectionError text="Recent problems couldn't load. Refresh the page to try again." />;
+    return <LoadError text="Recent problems couldn't load." />;
   }
   return <EmailProblems problems={problems} />;
 }

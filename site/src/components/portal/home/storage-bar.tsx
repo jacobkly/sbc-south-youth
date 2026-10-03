@@ -1,5 +1,6 @@
-import { CircleAlertIcon, TriangleAlertIcon } from "lucide-react";
+import { TriangleAlertIcon } from "lucide-react";
 import { cn } from "cn";
+import { LoadError } from "@/components/portal/load-error";
 import { Skeleton } from "@/components/portal/ui/skeleton";
 import { reportPortalError } from "@/lib/portal/errors";
 import { loadStorage } from "@/lib/portal/home/queries";
@@ -168,15 +169,6 @@ export function StorageBarSkeleton() {
   );
 }
 
-function StorageBarError() {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border bg-card p-4 text-sm">
-      <CircleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-      <p className="text-muted-foreground">Storage couldn&apos;t load. Refresh the page to try again.</p>
-    </div>
-  );
-}
-
 /** Loads the numbers as the signed-in person. A failure only hides the bar, not the rest of Home. */
 export async function HomeStorage() {
   let overview: StorageOverview;
@@ -184,7 +176,7 @@ export async function HomeStorage() {
     overview = await loadStorage();
   } catch (error) {
     await reportPortalError("Home storage", error);
-    return <StorageBarError />;
+    return <LoadError text="Storage couldn't load." />;
   }
   return <StorageBar overview={overview} />;
 }

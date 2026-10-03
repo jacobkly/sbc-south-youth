@@ -22,7 +22,7 @@ See [`finances/README.md`](finances/README.md) for local setup.
 
 ## Leader portal
 
-The portal is where leaders run the youth site and its people from a phone. It's invite-only and lives inside the site app, on its own host.
+The portal is where leaders run the youth site and its people from a phone. It's invite-only and lives inside the site app, on its own host. Added to a phone's home screen, it opens full screen as "Youth Portal", with its own icon.
 
 - **People:** owners invite leaders by email, give them roles, and remove or restore access. Invited people pick their own password with a 6-digit emailed code.
 - **Home:** a link to finances for finance roles, how full the free plan's storage and database are, and, for owners, when the last nightly backup ran, the errors the site and portal ran into in the last 30 days, and a warning once either email limit passes 80%.

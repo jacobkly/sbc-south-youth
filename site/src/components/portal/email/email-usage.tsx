@@ -1,5 +1,6 @@
-import { CircleAlertIcon, MailCheckIcon, TriangleAlertIcon } from "lucide-react";
+import { MailCheckIcon, TriangleAlertIcon } from "lucide-react";
 import { cn } from "cn";
+import { LoadError } from "@/components/portal/load-error";
 import { Skeleton } from "@/components/portal/ui/skeleton";
 import { formatWeekdayDate, laDateOf } from "@/lib/dates";
 import { reportPortalError } from "@/lib/portal/errors";
@@ -172,15 +173,6 @@ export function EmailTemplatesSkeleton() {
   );
 }
 
-export function SectionError({ text }: { text: string }) {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border bg-card p-4 text-sm">
-      <CircleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-      <p className="text-muted-foreground">{text}</p>
-    </div>
-  );
-}
-
 /** Loads the counts as the owner. A failure only hides these two sections, not the rest of the screen. */
 export async function EmailUsageSections() {
   let overview: EmailOverview;
@@ -188,7 +180,7 @@ export async function EmailUsageSections() {
     overview = await loadEmailOverview();
   } catch (error) {
     await reportPortalError("Email use", error);
-    return <SectionError text="Email use couldn't load. Refresh the page to try again." />;
+    return <LoadError text="Email use couldn't load." />;
   }
 
   return (

@@ -1,9 +1,9 @@
+import { LoadError } from "@/components/portal/load-error";
 import { formatDayLabel, laDateOf } from "@/lib/dates";
 import { readPortalEnv } from "@/lib/env";
 import { loadSuppressions, type Suppression } from "@/lib/portal/email/queries";
 import { reportPortalError } from "@/lib/portal/errors";
 import { BlockedAddresses } from "./blocked-addresses";
-import { SectionError } from "./email-usage";
 
 /** Loads the blocked addresses as the owner. A failure only hides this section. */
 export async function BlockedSection() {
@@ -12,7 +12,7 @@ export async function BlockedSection() {
     suppressions = await loadSuppressions();
   } catch (error) {
     await reportPortalError("Blocked addresses", error);
-    return <SectionError text="Blocked addresses couldn't load. Refresh the page to try again." />;
+    return <LoadError text="Blocked addresses couldn't load." />;
   }
 
   const dates = Object.fromEntries(suppressions.map(({ id, createdAt }) => [id, formatDayLabel(laDateOf(createdAt))]));

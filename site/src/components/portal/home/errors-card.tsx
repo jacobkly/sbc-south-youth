@@ -1,4 +1,5 @@
-import { CircleAlertIcon, CircleCheckIcon } from "lucide-react";
+import { CircleCheckIcon } from "lucide-react";
+import { LoadError } from "@/components/portal/load-error";
 import { Badge } from "@/components/portal/ui/badge";
 import { Skeleton } from "@/components/portal/ui/skeleton";
 import { reportPortalError } from "@/lib/portal/errors";
@@ -62,15 +63,6 @@ export function ErrorsCardSkeleton() {
   );
 }
 
-function ErrorsCardError() {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border bg-card p-4 text-sm">
-      <CircleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-      <p className="text-muted-foreground">Errors couldn&apos;t load. Refresh the page to try again.</p>
-    </div>
-  );
-}
-
 /** Loads the newest errors as the signed-in owner. A failure only hides this list, not the rest of Home. */
 export async function HomeErrors() {
   let overview: ErrorsOverview;
@@ -78,7 +70,7 @@ export async function HomeErrors() {
     overview = await loadErrors();
   } catch (error) {
     await reportPortalError("Home errors", error);
-    return <ErrorsCardError />;
+    return <LoadError text="Errors couldn't load." />;
   }
   return <ErrorsCard overview={overview} />;
 }

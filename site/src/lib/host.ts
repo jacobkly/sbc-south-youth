@@ -75,6 +75,14 @@ export function portalRewrites(): Rewrite[] {
     // Search engines stay out of the portal, which has nothing to list.
     { source: "/robots.txt", has: ON_PORTAL_HOST, destination: "/portal/robots.txt" },
     { source: "/sitemap.xml", has: ON_PORTAL_HOST, destination: NO_PAGE_PATH },
+    // Its own home screen app and icons. The icons keep the names the root
+    // layout links to, so the same tags give each host its own.
+    { source: "/manifest.webmanifest", has: ON_PORTAL_HOST, destination: "/portal/manifest.webmanifest" },
+    {
+      source: String.raw`/:file(icon\.png|apple-icon\.png|icon-512\.png)`,
+      has: ON_PORTAL_HOST,
+      destination: "/portal/icons/:file",
+    },
     { source: PAGE_PATH, has: ON_PORTAL_HOST, destination: "/portal/:path" },
     // Last, so no rule here sees the path it makes.
     { source: "/", has: ON_PORTAL_HOST, destination: "/portal" },

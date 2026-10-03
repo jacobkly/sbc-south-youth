@@ -111,6 +111,14 @@ Vercel's free plan keeps runtime logs for only a short time, so the server also 
 - **What's kept:** where it happened, one line of message, a code, who hit it, and whether it came from staging. Never a stack, and email addresses and phone numbers come out of the message first. A page error's message is hidden in production, so its code is the digest that matches Vercel's logs.
 - **Limits:** only the secret key can write, through `report_error()`, which keeps at most 100 an hour so a loop of failures can't fill the database. Only owners read it, and a nightly job deletes errors after 30 days.
 
+### Home screen app
+
+Added to a phone's home screen, the portal opens full screen as "Youth Portal", without the browser's buttons.
+
+- **Files:** the root layout links `/manifest.webmanifest`, `/icon.png`, and `/apple-icon.png` on both hosts. On the portal host, rewrites in `src/lib/host.ts` swap in the portal's own from `src/app/(portal)/portal/manifest.webmanifest/` and `src/app/(portal)/portal/icons/[file]/`, plus `/icon-512.png` for Android. The public host never serves them.
+- **Manifest and icons:** both come from `src/lib/portal/install.ts`. The icons are the logo on the portal's dark tile, drawn with `next/og` when the site builds, and the logo stays inside the circle Android may crop a maskable icon to.
+- **No browser buttons:** every screen needs its own way back, and a section that couldn't load shows `LoadError` (`src/components/portal/load-error.tsx`), whose Try again button loads the screen's data again in place.
+
 ### Run it locally
 
 1. From the repo root, start the local stack with `npx supabase start`, then load the fake data with `npx supabase db reset`.
@@ -128,6 +136,7 @@ For local email, set `EMAIL_FROM` and `EMAIL_LOCAL_INBOX=http://127.0.0.1:54324`
 | `/auth/callback` | Sign-in links in Supabase's own emails, if a template uses one |
 | `/activity/export` | An owner's Download button on Activity |
 | `/preview` | The Preview tab's frame on a heads-up or event. Only portal pages can frame it |
+| `/manifest.webmanifest`, `/icon.png`, `/apple-icon.png`, `/icon-512.png` | A phone's browser, when a leader adds the portal to their home screen. The public host has its own at the same paths |
 
 ### Staging
 
