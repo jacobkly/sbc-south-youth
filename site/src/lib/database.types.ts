@@ -1207,6 +1207,84 @@ export type Database = {
         }
         Relationships: []
       }
+      form_rate_limits: {
+        Row: {
+          created_at: string
+          id: string
+          ip_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_hash?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          details: NonNullable<Json>
+          email: string | null
+          env: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          internal_note: string | null
+          kind: Database["site"]["Enums"]["message_kind"]
+          message: string | null
+          name: string
+          notified_at: string | null
+          outcome: Database["site"]["Enums"]["serve_outcome"] | null
+          phone: string | null
+          status: Database["site"]["Enums"]["message_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          details?: NonNullable<Json>
+          email?: string | null
+          env?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          internal_note?: string | null
+          kind: Database["site"]["Enums"]["message_kind"]
+          message?: string | null
+          name: string
+          notified_at?: string | null
+          outcome?: Database["site"]["Enums"]["serve_outcome"] | null
+          phone?: string | null
+          status?: Database["site"]["Enums"]["message_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          details?: NonNullable<Json>
+          email?: string | null
+          env?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          internal_note?: string | null
+          kind?: Database["site"]["Enums"]["message_kind"]
+          message?: string | null
+          name?: string
+          notified_at?: string | null
+          outcome?: Database["site"]["Enums"]["serve_outcome"] | null
+          phone?: string | null
+          status?: Database["site"]["Enums"]["message_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           body: string
@@ -1298,11 +1376,28 @@ export type Database = {
           tone: Database["site"]["Enums"]["post_tone"]
         }[]
       }
+      submit_message: {
+        Args: {
+          p_alert_to?: string
+          p_env: string
+          p_ip_hash: string
+          p_kind: Database["site"]["Enums"]["message_kind"]
+          p_payload: Json
+        }
+        Returns: string
+      }
+      triage_message: {
+        Args: { p_changes: Json; p_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       event_status: "draft" | "published" | "cancelled"
+      message_kind: "visit" | "join" | "serve" | "contact" | "takedown"
+      message_status: "new" | "in_progress" | "handled" | "spam"
       post_status: "draft" | "published"
       post_tone: "info" | "cancellation"
+      serve_outcome: "placed" | "not_now"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1468,8 +1563,11 @@ export const Constants = {
   site: {
     Enums: {
       event_status: ["draft", "published", "cancelled"],
+      message_kind: ["visit", "join", "serve", "contact", "takedown"],
+      message_status: ["new", "in_progress", "handled", "spam"],
       post_status: ["draft", "published"],
       post_tone: ["info", "cancellation"],
+      serve_outcome: ["placed", "not_now"],
     },
   },
 } as const

@@ -7,8 +7,7 @@ import type { Announcement, Photo, SiteEvent } from "./types";
  * so it's tested on its own.
  */
 
-type Returns<Name extends keyof Database["site"]["Functions"]> =
-  Database["site"]["Functions"][Name]["Returns"][number];
+type Returns<Name extends "public_events" | "public_posts"> = Database["site"]["Functions"][Name]["Returns"][number];
 
 /** The generated types call every column a function returns non-null. These can be null. */
 type WithNulls<Row, Key extends keyof Row> = Omit<Row, Key> & { [Column in Key]: Row[Column] | null };

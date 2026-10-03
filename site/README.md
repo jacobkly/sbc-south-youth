@@ -37,6 +37,15 @@ npm run build
 - **The calendar feed** (`/calendar.ics`) lists the weekly nights and every event that ended less than 30 days ago or hasn't ended yet. Each event's UID comes from its id (`event-<id>@sbcsouthyouth.com`), and its `SEQUENCE` goes up with every edit, so subscribed calendars update it in place. A cancelled event stays in the feed as `STATUS:CANCELLED`, with "Cancelled:" in its title. The feed is cached for 15 minutes, and an event change refreshes it through the `events` tag.
 - **Fake events and heads-ups** come from `supabase/seed.sql`. Until the portal handles photos, their placeholder photos are matched to the seed's event ids in `src/content/events.ts`.
 
+## Form messages
+
+The Visit, Join, Serve, and Contact forms check their answers on the page and again in a server action, with the same rules from `src/lib/forms/schemas.ts`. They don't save yet (`TODO(wire-up)`), but the database side is ready:
+
+- **Saving:** the site's server calls `site.submit_message()` with the secret key. It checks the fields again, keeps only the ones each form takes, and queues an alert email for the address it's given. A full outbox never stops a message saving.
+- **Rate limit:** the server sends a salted hash of the sender's IP address, never the address. A 6th message in an hour from the same hash is refused with HTTP 429, and the hashes are deleted after 24 hours.
+- **Reading:** only leaders with the Messages role read messages, and they change a message's status, assignment, outcome, and note only through `site.triage_message()`. Activity logs those changes, never what the sender or a leader wrote.
+- **Keeping:** handled messages are deleted after 12 months and spam after 30 days. Open messages stay until someone handles them.
+
 ## Launch gate
 
 Until launch, production shows the coming-soon page for every page. Previews and local builds show the full site.

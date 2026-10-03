@@ -32,7 +32,7 @@ The portal is where leaders run the youth site and its people from a phone. It's
 - **Activity:** one timeline of changes across the site, finances, and people, showing each person only the apps their roles cover. Owners can download it as a CSV.
 - **Email:** finance and owner notices go out through Resend, within the free plan's daily and monthly limits.
 
-The public site reads heads-ups and events from the database. The form inbox comes next, then photos.
+The public site reads heads-ups and events from the database. The database is ready for form messages, with a rate limit and an alert for each one. The site's forms save to it next, then the portal's Messages inbox and photos.
 
 ### Roles
 
@@ -90,6 +90,8 @@ The seed adds fake people for each kind of access. Its header comment lists them
 | `prune-old-activity` | 10:00 | Deletes site and people activity older than two years. Finance history stays |
 | `clear-old-email-addresses` | 10:05 | Clears recipient addresses from the email log after 90 days |
 | `prune-cron-history` | 10:10 | Deletes `pg_cron`'s own run history after 14 days |
+| `prune-messages` | 10:15 | Deletes form messages 12 months after they were handled, and spam after 30 days. Open messages stay |
+| `prune-form-rate-limits` | 10:20 | Deletes the forms' rate-limit rows after 24 hours |
 
 When a change queues an email, the database asks the portal to send it right away through `pg_net`. That needs three Vault secrets on the hosted project: `email_drain_url` (`https://portal.sbcsouthyouth.com/api/email/drain`), `email_drain_secret` (the same value as the site's `EMAIL_DRAIN_SECRET`), and, only when the URL can't name the portal host, `email_drain_host`. Without them, emails wait in the queue.
 

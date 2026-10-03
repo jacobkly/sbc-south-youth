@@ -97,9 +97,10 @@ select ok(
 select is_empty(
   $$ select p.proname from pg_proc p
      where p.pronamespace = 'site'::regnamespace
+       and p.proname <> 'triage_message'
        and (has_function_privilege('anon', p.oid, 'execute')
             or has_function_privilege('authenticated', p.oid, 'execute')) $$,
-  'no client can call a site function'
+  'no client can call a site function but triage, which checks for Messages itself'
 );
 
 select ok(

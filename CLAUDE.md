@@ -13,8 +13,8 @@ Monorepo for SBC South Youth web projects on `sbcsouthyouth.com`. Each app is it
 
 ## Current focus
 
-- **The portal is the active work.** People and roles, invites, requester self-service and read-only viewers in finances, the Activity screen, email, storage, and backup status are built. Site content is under way: the public site reads heads-ups and events from the database, and site editors post heads-ups and events from the portal's Posts screen (Heads-ups and Events tabs), with a Preview tab that shows a draft the way the site will show it. The form inbox comes next, then photos. One shared sign-in for both apps waits until the maintainer has checked this work on the hosted project.
-- **The public site** reads heads-ups and events from the `site` schema, and the local seed holds fake ones. Weekly nights and page copy stay in `site/src/content/`, and photos stay hotlinked placeholders until the portal replaces them. Forms validate but don't save or send yet (`TODO(wire-up)`). Wiring them to Supabase, email, and bot protection comes with the portal. The site doesn't launch until real photos fill every spot.
+- **The portal is the active work.** People and roles, invites, requester self-service and read-only viewers in finances, the Activity screen, email, storage, and backup status are built. Site content is under way: the public site reads heads-ups and events from the database, and site editors post heads-ups and events from the portal's Posts screen (Heads-ups and Events tabs), with a Preview tab that shows a draft the way the site will show it. The form inbox is under way: `site.messages` and `site.submit_message()` are in, the site's forms save to them next, then the portal's Messages screen. Photos follow. One shared sign-in for both apps waits until the maintainer has checked this work on the hosted project.
+- **The public site** reads heads-ups and events from the `site` schema, and the local seed holds fake ones. Weekly nights and page copy stay in `site/src/content/`, and photos stay hotlinked placeholders until the portal replaces them. Forms validate but don't save or send yet (`TODO(wire-up)`). Wiring them to `site.submit_message()`, email, and bot protection comes next. The site doesn't launch until real photos fill every spot.
 - **Finances** gets bug fixes and small features. Its requester and viewer screens are built. Receipts live in Supabase Storage, compressed in the browser to fit the 1 GB free tier.
 
 ## Commands
@@ -67,6 +67,7 @@ The maintainer runs `link` and `db push` against the hosted project. Claude does
 - `anon` gets no access to anything. The one exception is the public `site-photos` bucket, so published photos load by URL.
 - Site content tables and functions (posts, events, photos, messages) live in the `site` schema. Shared platform tables (invites, activity, email log, app errors) live in `public`, next to `public.users`.
 - The service role key never goes in the frontend or any `NEXT_PUBLIC_` variable.
+- Form messages enter `site.messages` only through `site.submit_message()`, which the site's server calls with the secret key. It takes a salted hash of the sender's IP, never the IP, and refuses a 6th message in an hour with HTTP 429 (`PT429`). Only the Messages role reads them, and it changes them only through `site.triage_message()`.
 - Functions that only scheduled jobs run (pruning, retention) are plain functions with `execute` revoked from `public`, `anon`, `authenticated`, and `service_role`. `pg_cron` runs them as the database owner.
 - `backup_job` is the nightly backup's own role. It reads every row (`pg_read_all_data` and `bypassrls`) and writes nothing, and `public.record_backup()` is the only function it can run. Never grant it more, and never put its password in the repo.
 
@@ -74,8 +75,8 @@ The maintainer runs `link` and `db push` against the hosted project. Claude does
 
 - No client writes `public.activity_log` directly. Only security definer functions do: the `log_activity()` trigger, the `log_event()` RPC, and a few RPCs that log their own event, like `record_backup()`. `public.activity_feed` is a `security_invoker` view joining it with finances' `request_events`, so each table's RLS decides what a person sees.
 - Never put message text, email addresses, or phone numbers in an activity row's `changes`.
-- `public.email_log` is also the email outbox. `email_reserve()` checks suppressions and the free plan's daily and monthly limits, then queues a row. Database triggers queue finance and owner emails, `pg_net` asks the portal's `/api/email/drain` to send them, and Resend's webhook records delivery. Apart from Supabase Auth's own code emails, never send email any other way.
-- Retention runs nightly in `pg_cron`: site and platform activity after 2 years, email addresses after 90 days, and cron history after 14 days. Finance records are never pruned.
+- `public.email_log` is also the email outbox. `email_reserve()` checks suppressions and the free plan's daily and monthly limits, then queues a row. Database triggers queue finance and owner emails, `site.submit_message()` queues form alerts, `pg_net` asks the portal's `/api/email/drain` to send them, and Resend's webhook records delivery. Apart from Supabase Auth's own code emails, never send email any other way.
+- Retention runs nightly in `pg_cron`: site and platform activity after 2 years, email addresses after 90 days, cron history after 14 days, handled form messages after 12 months, spam after 30 days, and form rate-limit rows after 24 hours. Finance records are never pruned.
 
 ### Roles
 

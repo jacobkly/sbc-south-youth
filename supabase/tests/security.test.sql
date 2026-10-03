@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(35);
+select plan(36);
 
 select tables_are(
   'public',
@@ -16,7 +16,7 @@ select tables_are(
 
 select tables_are(
   'site',
-  array['posts', 'events'],
+  array['posts', 'events', 'messages', 'form_rate_limits'],
   'site has only the known tables (add new ones here once they have RLS and tests)'
 );
 
@@ -98,7 +98,8 @@ select set_eq(
     'cancel_request',
     'import_paid_requests',
     'save_request',
-    'missing_receipt'
+    'missing_receipt',
+    'triage_message'
   ],
   'signed-in users can call only the app''s RPCs (helpers and trigger functions stay private)'
 );
@@ -195,6 +196,11 @@ values ('00000000-0000-4000-8000-00000000a501', 'Test heads-up', 'Showing now.',
 insert into site.events (id, slug, title, starts_at, ends_at, status)
 values ('00000000-0000-4000-8000-00000000a502', 'security-test', 'Test event', now(), now(), 'published');
 
+insert into site.messages (id, kind, name, email)
+values ('00000000-0000-4000-8000-00000000a503', 'visit', 'Test Visitor', 'visitor@example.test');
+
+insert into site.form_rate_limits (ip_hash) values (repeat('e', 64));
+
 select ok(
   exists (select 1 from public.app_settings)
   and exists (select 1 from public.payees where id = '00000000-0000-4000-8000-00000000b001')
@@ -208,6 +214,8 @@ select ok(
   and exists (select 1 from public.invites where user_id = '00000000-0000-4000-8000-00000000a001')
   and exists (select 1 from site.posts where id = '00000000-0000-4000-8000-00000000a501')
   and exists (select 1 from site.events where id = '00000000-0000-4000-8000-00000000a502')
+  and exists (select 1 from site.messages where id = '00000000-0000-4000-8000-00000000a503')
+  and exists (select 1 from site.form_rate_limits)
   and exists (select 1 from storage.objects where bucket_id = 'receipts'),
   'every table has a row for the deactivated admin to be refused'
 );
@@ -215,13 +223,14 @@ select ok(
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated"}', true);
 
+-- Signed-in people can't select from the rate limits at all, so they're left out.
 select is_empty(
   format('select 1 from %I.%I', n.nspname, c.relname),
   format('a deactivated admin reads nothing from %s', c.relname)
 )
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
-where n.nspname in ('public', 'site') and c.relkind in ('r', 'p') and c.relname <> 'users';
+where n.nspname in ('public', 'site') and c.relkind in ('r', 'p') and c.relname not in ('users', 'form_rate_limits');
 
 select is_empty(
   $$ select 1 from storage.objects where bucket_id = 'receipts' $$,
