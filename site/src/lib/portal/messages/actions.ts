@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { requireRole } from "@/lib/portal/auth/require-role";
-import { friendlyError } from "@/lib/portal/people/invite";
+import { actionError } from "@/lib/portal/errors";
 import { createClient } from "@/lib/supabase/server";
 import { loadAssignees, loadMessage } from "./queries";
 import { planTriage, triagedMessage } from "./triage";
@@ -34,7 +34,10 @@ export async function triageMessage(id: string, input: unknown): Promise<TriageR
 
   const supabase = await createClient();
   const { error } = await supabase.schema("site").rpc("triage_message", { p_id: message.id, p_changes: plan.changes });
-  if (error) return failed(friendlyError(error, "Couldn't save that. Check your connection and try again."));
+  if (error) {
+    const fallback = "Couldn't save that. Check your connection and try again.";
+    return failed(await actionError("Triage a message", error, fallback));
+  }
 
   const { assigned_to } = plan.changes;
   const names =

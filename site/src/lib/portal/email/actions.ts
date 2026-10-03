@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/portal/auth/require-role";
-import { friendlyError } from "@/lib/portal/people/invite";
+import { actionError } from "@/lib/portal/errors";
 import { createClient } from "@/lib/supabase/server";
 
 export type AllowResult = { status: "failed"; message: string } | { status: "done" };
@@ -26,7 +26,7 @@ export async function allowAddress(id: string): Promise<AllowResult> {
     refresh();
     return { status: "failed", message: "That address isn't blocked anymore." };
   }
-  if (error) return { status: "failed", message: friendlyError(error, FALLBACK) };
+  if (error) return { status: "failed", message: await actionError("Unblock an address", error, FALLBACK) };
 
   refresh();
   return { status: "done" };

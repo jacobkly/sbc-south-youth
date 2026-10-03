@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { ArrowRightIcon, ReceiptTextIcon } from "lucide-react";
 import { BackupStatusSkeleton, HomeBackup } from "@/components/portal/home/backup-status";
 import { HomeEmailAlert } from "@/components/portal/home/email-alert";
+import { ErrorsCardSkeleton, HomeErrors } from "@/components/portal/home/errors-card";
 import { HomeMessages } from "@/components/portal/home/messages-card";
 import { HomeStorage, StorageBarSkeleton } from "@/components/portal/home/storage-bar";
 import { NarrowPage } from "@/components/portal/nav/app-shell";
@@ -83,6 +84,22 @@ export default async function PortalHome() {
           </div>
           <Suspense fallback={<BackupStatusSkeleton />}>
             <HomeBackup />
+          </Suspense>
+        </section>
+      )}
+
+      {isOwner && (
+        <section aria-labelledby="errors-heading" className="space-y-3">
+          <div className="space-y-1">
+            <h2 id="errors-heading" className="text-lg font-semibold">
+              Errors
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Problems the site and portal ran into. Each stays here for 30 days.
+            </p>
+          </div>
+          <Suspense fallback={<ErrorsCardSkeleton />}>
+            <HomeErrors />
           </Suspense>
         </section>
       )}

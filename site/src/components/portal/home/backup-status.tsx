@@ -4,6 +4,7 @@ import { cn } from "cn";
 import { Button } from "@/components/portal/ui/button";
 import { Skeleton } from "@/components/portal/ui/skeleton";
 import { activityHref, DEFAULT_ACTIVITY_FILTERS } from "@/lib/portal/activity/filters";
+import { reportPortalError } from "@/lib/portal/errors";
 import { backupStatus, type BackupReport, type BackupStatus as Status } from "@/lib/portal/home/backup";
 import { loadLastBackup } from "@/lib/portal/home/queries";
 
@@ -89,7 +90,7 @@ export async function HomeBackup() {
   try {
     report = await loadLastBackup();
   } catch (error) {
-    console.error("[portal] Couldn't load the last backup", error);
+    await reportPortalError("Home backups", error);
     return <BackupStatusError />;
   }
   return <BackupStatus status={backupStatus(report, new Date())} />;

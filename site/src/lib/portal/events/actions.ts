@@ -3,7 +3,7 @@
 import { refresh, updateTag } from "next/cache";
 import { laDateOf } from "@/lib/dates";
 import { requireRole } from "@/lib/portal/auth/require-role";
-import { friendlyError } from "@/lib/portal/people/invite";
+import { actionError } from "@/lib/portal/errors";
 import { createClient } from "@/lib/supabase/server";
 import type { EventRow, EventState } from "./list";
 import { loadEvent, takenSlugs } from "./queries";
@@ -69,7 +69,7 @@ export async function saveEvent(
       : await table.insert({ ...plan.row, slug: slug ?? slugify(plan.row.title) }).select("id, slug").single();
     if (saved.error?.code !== TAKEN || !plan.newSlug || tries === SLUG_TRIES) break;
   }
-  if (saved.error) return failed(friendlyError(saved.error, fallback));
+  if (saved.error) return failed(await actionError("Save an event", saved.error, fallback));
 
   updateTag("events");
   const publishing = existing?.status !== "published";
@@ -93,7 +93,12 @@ export async function cancelEvent(id: string, reason: string): Promise<EventActi
     const plan = planCancel(event, reason, now);
     if (plan.kind !== "write") return failed(plan.message);
     const { error } = await (await events()).update(plan.row).eq("id", event.id);
-    return outcome(error, "Couldn't cancel the event.", "Cancelled. The site and calendars show it called off.");
+    return outcome(
+      "Cancel an event",
+      error,
+      "Couldn't cancel the event.",
+      "Cancelled. The site and calendars show it called off.",
+    );
   });
 }
 
@@ -103,7 +108,12 @@ export async function restoreEvent(id: string): Promise<EventActionResult> {
     const plan = planRestore(event, now);
     if (plan.kind === "refuse") return failed(plan.message);
     const { error } = await (await events()).update(plan.row).eq("id", event.id);
-    return outcome(error, "Couldn't put the event back on.", "It's back on, on the site and in calendars.");
+    return outcome(
+      "Restore an event",
+      error,
+      "Couldn't put the event back on.",
+      "It's back on, on the site and in calendars.",
+    );
   });
 }
 
@@ -118,7 +128,7 @@ export async function deleteEvent(id: string): Promise<EventActionResult> {
       const plan = planRemove(event, now);
       if (plan.kind === "refuse") return failed(plan.message);
       const { error } = await (await events()).delete().eq("id", event.id);
-      return outcome(error, "Couldn't delete the draft.", "Deleted the draft.");
+      return outcome("Delete an event", error, "Couldn't delete the draft.", "Deleted the draft.");
     },
     { refreshPage: false },
   );
@@ -128,12 +138,13 @@ async function events() {
   return (await createClient()).schema("site").from("events");
 }
 
-function outcome(
+async function outcome(
+  source: string,
   error: { code?: string; message: string } | null,
   couldnt: string,
   message: string,
-): EventActionResult {
-  if (error) return failed(friendlyError(error, `${couldnt} Check your connection and try again.`));
+): Promise<EventActionResult> {
+  if (error) return failed(await actionError(source, error, `${couldnt} Check your connection and try again.`));
   return { status: "done", message };
 }
 

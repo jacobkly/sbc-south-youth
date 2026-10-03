@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/portal/ui/skeleton";
 import { formatDayLabel, formatTime, laDateOf } from "@/lib/dates";
 import { loadEmailProblems, type EmailProblem } from "@/lib/portal/email/queries";
 import { PROBLEMS, templateLabel } from "@/lib/portal/email/summary";
+import { reportPortalError } from "@/lib/portal/errors";
 import { SectionError } from "./email-usage";
 
 const STATUS_LABELS = Object.fromEntries(PROBLEMS.map(({ status, label }) => [status, label])) as Record<
@@ -65,7 +66,7 @@ export async function RecentProblems() {
   try {
     problems = await loadEmailProblems();
   } catch (error) {
-    console.error("[portal] Couldn't load email problems", error);
+    await reportPortalError("Email problems", error);
     return <SectionError text="Recent problems couldn't load. Refresh the page to try again." />;
   }
   return <EmailProblems problems={problems} />;

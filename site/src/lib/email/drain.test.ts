@@ -53,6 +53,7 @@ function fakes(rows: QueuedEmail[], details: Record<string, unknown>, overrides:
   const sent: OutgoingEmail[] = [];
   const marked: Parameters<DrainDeps["mark"]>[0][] = [];
   const pauses: number[] = [];
+  const reports: { source: string; message: string }[] = [];
   const deps: DrainDeps = {
     env: PRODUCTION,
     links: { financesUrl: "https://finances.example.test", portalUrl: "https://portal.example.test" },
@@ -75,9 +76,12 @@ function fakes(rows: QueuedEmail[], details: Record<string, unknown>, overrides:
     now: () => 0,
     queueDigest: async () => 0,
     digestTo: () => "youth@example.test",
+    report: (source, error) => {
+      reports.push({ source, message: error instanceof Error ? error.message : String(error) });
+    },
     ...overrides,
   };
-  return { deps, claims, sent, marked, pauses, outbox };
+  return { deps, claims, sent, marked, pauses, outbox, reports };
 }
 
 describe("drainEmails", () => {
@@ -653,9 +657,9 @@ describe("drainEmails", () => {
       expect(sent[0].text).not.toContain("Replying to this email");
     });
 
-    it("skips the digest, and still drains, when there's no inbox to send it to", async () => {
+    it("skips the digest, still drains, and tells the owners when there's no inbox to send it to", async () => {
       const alert = queued("001");
-      const { deps, sent, queuedFor } = digestFakes(
+      const { deps, sent, queuedFor, reports } = digestFakes(
         [alert],
         null,
         0,
@@ -668,11 +672,27 @@ describe("drainEmails", () => {
       expect(result).toEqual({ status: "drained", sent: 1, failed: 0, digest: 0 });
       expect(queuedFor).toEqual([]);
       expect(sent).toHaveLength(1);
+      expect(reports).toEqual([
+        { source: "Daily digest", message: "Set YOUTH_INBOX_EMAIL so form messages reach the youth inbox." },
+      ]);
     });
 
-    it("still drains when the digest can't be queued", async () => {
+    it("names the owner alert address when staging has nowhere to send the digest", async () => {
+      const { deps, reports } = digestFakes([], null, 0, {}, {
+        env: { ...PRODUCTION, appEnv: "staging" },
+        digestTo: () => null,
+      });
+
+      await drainEmails(deps, { digest: true });
+
+      expect(reports).toEqual([
+        { source: "Daily digest", message: "Set OWNER_ALERT_EMAIL so staging's form messages reach the owner." },
+      ]);
+    });
+
+    it("still drains when the digest can't be queued, and reports it to the owners", async () => {
       const alert = queued("001");
-      const { deps, sent } = fakes(
+      const { deps, sent, reports } = fakes(
         [alert],
         { [alert.id]: SUBMITTED },
         {
@@ -686,6 +706,9 @@ describe("drainEmails", () => {
 
       expect(result).toEqual({ status: "drained", sent: 1, failed: 0, digest: 0 });
       expect(sent).toHaveLength(1);
+      expect(reports).toEqual([
+        { source: "Daily digest", message: "Couldn't queue the digest: connect ECONNREFUSED" },
+      ]);
     });
 
     it("marks failed a digest whose messages are gone", async () => {
@@ -780,14 +803,17 @@ describe("handleDrainRequest", () => {
     expect(response.status).toBe(503);
   });
 
-  it("answers 500 when the outbox can't be read", async () => {
+  it("answers 500 when the outbox can't be read, and reports it to the owners", async () => {
+    const reported: unknown[] = [];
     const response = await handleDrainRequest(poke("Bearer test-drain-secret"), {
       secret: "test-drain-secret",
       drain: async () => {
         throw new Error("connect ECONNREFUSED");
       },
+      report: (error) => reported.push(error),
     });
 
     expect(response.status).toBe(500);
+    expect(reported).toEqual([new Error("connect ECONNREFUSED")]);
   });
 });

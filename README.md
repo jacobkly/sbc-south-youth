@@ -25,7 +25,7 @@ See [`finances/README.md`](finances/README.md) for local setup.
 The portal is where leaders run the youth site and its people from a phone. It's invite-only and lives inside the site app, on its own host.
 
 - **People:** owners invite leaders by email, give them roles, and remove or restore access. Invited people pick their own password with a 6-digit emailed code.
-- **Home:** a link to finances for finance roles, how full the free plan's storage and database are, and, for owners, when the last nightly backup ran and a warning once either email limit passes 80%.
+- **Home:** a link to finances for finance roles, how full the free plan's storage and database are, and, for owners, when the last nightly backup ran, the errors the site and portal ran into in the last 30 days, and a warning once either email limit passes 80%.
 - **Posts:** site editors write the heads-ups on Home and This Week, from a quick template or from scratch. Each one goes up now or at a set time and comes down on its own, and a pinned one leads on Home. Editors can end one early, keep a draft, or post an old one again.
 - **Events:** under Posts, site editors add one-off events with a day and time (or all day), a place, a cost, and details. Each one gets its own page, shows on This Week, and lands in calendars that subscribe. Editors can feature one, for a big card on This Week and a countdown on Home, cancel one with a reason, which keeps its page up with a banner, put it back on, or start a new one from a past one.
 - **Previews:** a Preview tab on each heads-up and event shows the draft the way the site will show it, in dark or light, before it goes up. A heads-up shows as its This Week card and as Home's lead, and an event shows as its This Week row and its own page.
@@ -95,6 +95,7 @@ The seed adds fake people for each kind of access. Its header comment lists them
 | `prune-messages` | 10:15 | Deletes form messages 12 months after they were handled, and spam after 30 days. Open messages stay |
 | `prune-form-rate-limits` | 10:20 | Deletes the forms' rate-limit rows after 24 hours |
 | `prune-removed-photos` | 10:25 | Deletes the record of a taken-down photo 2 years after it came down |
+| `prune-app-errors` | 10:30 | Deletes errors from the owners' error log after 30 days |
 
 When a change queues an email, the database asks the portal to send it right away through `pg_net`. That needs three Vault secrets on the hosted project: `email_drain_url` (`https://portal.sbcsouthyouth.com/api/email/drain`), `email_drain_secret` (the same value as the site's `EMAIL_DRAIN_SECRET`), and, only when the URL can't name the portal host, `email_drain_host`. Without them, emails wait in the queue.
 

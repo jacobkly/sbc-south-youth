@@ -287,6 +287,18 @@ select l.to_address, case l.status when 'complained' then 'complained' else 'bou
 from public.email_log l
 where l.resend_id in ('re_seed_bounce', 're_seed_spam');
 
+-- A few errors for the owner's Home: one that happened three times to the
+-- site editor, one from staging, and an older one from a public page.
+insert into public.app_errors (source, message, code, user_id, env, created_at)
+select 'Save a photo', 'fetch failed (connect ECONNREFUSED 127.0.0.1:54321)', 'ECONNREFUSED',
+  '00000000-0000-4000-8000-5eed0000a003'::uuid, 'production', now() - interval '2 hours' - g * interval '4 minutes'
+from generate_series(0, 2) as g
+union all
+select 'Email drain', 'The email outbox couldn''t be read.', null, null, 'staging', now() - interval '1 day 5 hours'
+union all
+select 'Site page /events/[slug]', 'An error occurred in the Server Components render.', '2417336940', null,
+  'production', now() - interval '8 days';
+
 -- Where the database pokes the email drain: the site's dev server, reached
 -- from the database container and answering as the portal. The secret is for
 -- local use only, and the site's drain checks for the same one.

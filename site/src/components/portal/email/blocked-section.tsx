@@ -1,6 +1,7 @@
 import { formatDayLabel, laDateOf } from "@/lib/dates";
 import { readPortalEnv } from "@/lib/env";
 import { loadSuppressions, type Suppression } from "@/lib/portal/email/queries";
+import { reportPortalError } from "@/lib/portal/errors";
 import { BlockedAddresses } from "./blocked-addresses";
 import { SectionError } from "./email-usage";
 
@@ -10,7 +11,7 @@ export async function BlockedSection() {
   try {
     suppressions = await loadSuppressions();
   } catch (error) {
-    console.error("[portal] Couldn't load blocked addresses", error);
+    await reportPortalError("Blocked addresses", error);
     return <SectionError text="Blocked addresses couldn't load. Refresh the page to try again." />;
   }
 

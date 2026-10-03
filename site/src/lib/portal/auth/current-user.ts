@@ -2,6 +2,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import type { Tables } from "@/lib/database.types";
+import { reportError } from "@/lib/errors/report";
 import { type AssuranceLevel, type MfaDevice, verifiedDevices } from "@/lib/portal/auth/mfa";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,7 +41,7 @@ export const getCurrentUser = cache(async (): Promise<PortalUser | null> => {
 
   if (error) throw error;
   // The client is made here because a page can't read cookies inside after().
-  if (user?.is_active) after(() => markSeen(supabase));
+  if (user?.is_active) after(() => markSeen(supabase, user.id));
   return user;
 });
 
@@ -49,15 +50,15 @@ export const getCurrentUser = cache(async (): Promise<PortalUser | null> => {
  * visit that does also accepts a pending invite, so the first one after
  * setup marks the invite accepted.
  */
-async function markSeen(supabase: Awaited<ReturnType<typeof createClient>>): Promise<void> {
+async function markSeen(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<void> {
   const { data: wrote, error } = await supabase.rpc("touch_last_seen");
   if (error) {
-    console.error("[portal] Couldn't record the visit", error);
+    reportError("Record a visit", error, { userId });
     return;
   }
   if (!wrote) return;
   const { error: acceptError } = await supabase.rpc("accept_invite");
-  if (acceptError) console.error("[portal] Couldn't accept the invite", acceptError);
+  if (acceptError) reportError("Accept an invite", acceptError, { userId });
 }
 
 /** "aal2" once this session has entered a code from an authenticator app. */

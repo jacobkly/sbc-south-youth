@@ -38,6 +38,7 @@ const person = {
 function fakes(overrides: Partial<SubmitDeps> = {}) {
   const saved: SaveInput[] = [];
   const verified: { token: string | null; ip: string | null; secret: string }[] = [];
+  const reports: { source: string; message: string }[] = [];
   let drains = 0;
   const deps: SubmitDeps = {
     env: () => READY,
@@ -53,9 +54,12 @@ function fakes(overrides: Partial<SubmitDeps> = {}) {
     sendAlerts: () => {
       drains++;
     },
+    report: (source, error) => {
+      reports.push({ source, message: error instanceof Error ? error.message : String(error) });
+    },
     ...overrides,
   };
-  return { deps, saved, verified, drains: () => drains };
+  return { deps, saved, verified, reports, drains: () => drains };
 }
 
 const hash = (ip: string, salt = READY.ipSalt!) => createHmac("sha256", salt).update(ip).digest("hex");
@@ -191,9 +195,8 @@ describe("handleMessage", () => {
     expect(drains()).toBe(0);
   });
 
-  it("says it didn't send when saving fails", async () => {
-    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { deps, drains } = fakes({
+  it("says it didn't send when saving fails, and reports it to the owners", async () => {
+    const { deps, drains, reports } = fakes({
       save: async () => {
         throw new Error("Couldn't save the message: connection refused");
       },
@@ -202,15 +205,16 @@ describe("handleMessage", () => {
     const reply = await handleMessage("contact", form(person), deps);
     expect(reply).toEqual({ status: "failed", message: failures.notSaved });
     expect(drains()).toBe(0);
-    expect(quiet).toHaveBeenCalled();
+    expect(reports).toEqual([
+      { source: "Contact form", message: "Couldn't save the message: connection refused" },
+    ]);
   });
 
   it.each([
     ["Turnstile", { turnstileSecret: null }],
     ["the address salt", { ipSalt: null }],
-  ])("saves nothing, and points to email, when %s isn't set up", async (_, missing) => {
-    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { deps, saved, verified } = fakes({ env: () => ({ ...READY, ...missing }) });
+  ])("saves nothing, points to email, and reports it when %s isn't set up", async (_, missing) => {
+    const { deps, saved, verified, reports } = fakes({ env: () => ({ ...READY, ...missing }) });
 
     expect(await handleMessage("contact", form(person), deps)).toEqual({
       status: "failed",
@@ -219,12 +223,16 @@ describe("handleMessage", () => {
     expect(failures.notSetUp).toContain(site.email);
     expect(saved).toEqual([]);
     expect(verified).toEqual([]);
-    expect(quiet).toHaveBeenCalled();
+    expect(reports).toEqual([
+      {
+        source: "Message forms",
+        message: "Set TURNSTILE_SECRET_KEY and FORM_IP_SALT before the forms can save messages.",
+      },
+    ]);
   });
 
-  it("saves nothing when a setting is wrong", async () => {
-    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { deps, saved } = fakes({
+  it("saves nothing, and reports it, when a setting is wrong", async () => {
+    const { deps, saved, reports } = fakes({
       env: () => {
         throw new Error("Invalid environment variables: FORM_IP_SALT must be at least 32 characters");
       },
@@ -235,7 +243,12 @@ describe("handleMessage", () => {
       message: failures.notSetUp,
     });
     expect(saved).toEqual([]);
-    expect(quiet).toHaveBeenCalled();
+    expect(reports).toEqual([
+      {
+        source: "Message forms",
+        message: "Invalid environment variables: FORM_IP_SALT must be at least 32 characters",
+      },
+    ]);
   });
 
   it("refuses a form that doesn't exist", async () => {

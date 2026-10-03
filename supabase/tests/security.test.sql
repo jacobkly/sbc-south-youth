@@ -5,12 +5,12 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(37);
+select plan(38);
 
 select tables_are(
   'public',
   array['users', 'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'receipts', 'request_lines', 'activity_log',
-        'email_log', 'email_suppressions', 'invites'],
+        'email_log', 'email_suppressions', 'invites', 'app_errors'],
   'public has only the known tables (add new ones here once they have RLS and tests)'
 );
 
@@ -199,6 +199,8 @@ values ('invitee@example.test', 'bounced', '00000000-0000-4000-8000-00000000e001
 insert into public.invites (user_id, email, full_name, roles)
 values ('00000000-0000-4000-8000-00000000a001', 'former@example.test', 'Former Admin', '{owner}');
 
+insert into public.app_errors (source, message) values ('Security test', 'A fake error');
+
 insert into site.posts (id, title, body, status)
 values ('00000000-0000-4000-8000-00000000a501', 'Test heads-up', 'Showing now.', 'published');
 
@@ -228,6 +230,7 @@ select ok(
   and exists (select 1 from public.email_log where id = '00000000-0000-4000-8000-00000000e001')
   and exists (select 1 from public.email_suppressions where address = 'invitee@example.test')
   and exists (select 1 from public.invites where user_id = '00000000-0000-4000-8000-00000000a001')
+  and exists (select 1 from public.app_errors where source = 'Security test')
   and exists (select 1 from site.posts where id = '00000000-0000-4000-8000-00000000a501')
   and exists (select 1 from site.events where id = '00000000-0000-4000-8000-00000000a502')
   and exists (select 1 from site.messages where id = '00000000-0000-4000-8000-00000000a503')

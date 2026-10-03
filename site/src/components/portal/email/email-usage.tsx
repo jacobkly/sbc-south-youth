@@ -2,6 +2,7 @@ import { CircleAlertIcon, MailCheckIcon, TriangleAlertIcon } from "lucide-react"
 import { cn } from "cn";
 import { Skeleton } from "@/components/portal/ui/skeleton";
 import { formatWeekdayDate, laDateOf } from "@/lib/dates";
+import { reportPortalError } from "@/lib/portal/errors";
 import type { UsageLevel } from "@/lib/portal/home/storage";
 import { loadEmailOverview } from "@/lib/portal/email/queries";
 import type { EmailOverview, EmailUsage, TemplateRow } from "@/lib/portal/email/summary";
@@ -186,7 +187,7 @@ export async function EmailUsageSections() {
   try {
     overview = await loadEmailOverview();
   } catch (error) {
-    console.error("[portal] Couldn't load the email summary", error);
+    await reportPortalError("Email use", error);
     return <SectionError text="Email use couldn't load. Refresh the page to try again." />;
   }
 

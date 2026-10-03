@@ -4,12 +4,12 @@ import { refresh } from "next/cache";
 import type { SendResult } from "@/lib/email/send";
 import { readPortalEnv } from "@/lib/env";
 import { createInvitedUser } from "@/lib/supabase/admin";
+import { actionError, reportPortalError } from "@/lib/portal/errors";
 import { createClient } from "@/lib/supabase/server";
 import {
   accountLinks,
   choosePayee,
   emailPattern,
-  friendlyError,
   planInvite,
   type InviteStatus,
   type PayeeRow,
@@ -43,6 +43,7 @@ export type InviteResult =
     };
 
 const FALLBACK = "Couldn't send the invite. Check your connection and try again.";
+const SOURCE = "Invite someone";
 
 function failed(message: string): InviteResult {
   return { status: "failed", message };
@@ -71,7 +72,7 @@ export async function invitePerson(values: InviteValues): Promise<InviteResult> 
     .from("users")
     .select("id, full_name, email, roles, is_active")
     .ilike("email", emailPattern(invite.email));
-  if (userError) return failed(friendlyError(userError, FALLBACK));
+  if (userError) return failed(await actionError(SOURCE, userError, FALLBACK));
   const existing = matches.find((user) => user.email.toLowerCase() === invite.email) ?? null;
 
   let inviteStatus: InviteStatus | null = null;
@@ -81,7 +82,8 @@ export async function invitePerson(values: InviteValues): Promise<InviteResult> 
       supabase.from("invites").select("status").eq("user_id", existing.id).maybeSingle(),
       supabase.from("payees").select("id").eq("user_id", existing.id).maybeSingle(),
     ]);
-    if (invites.error || payees.error) return failed(friendlyError(invites.error ?? payees.error, FALLBACK));
+    const error = invites.error ?? payees.error;
+    if (error) return failed(await actionError(SOURCE, error, FALLBACK));
     inviteStatus = (invites.data?.status as InviteStatus | undefined) ?? null;
     linked = payees.data?.id ?? null;
   }
@@ -98,14 +100,14 @@ export async function invitePerson(values: InviteValues): Promise<InviteResult> 
       .select("id, email, user_id")
       .eq("id", invite.payee.id)
       .maybeSingle();
-    if (error) return failed(friendlyError(error, FALLBACK));
+    if (error) return failed(await actionError(SOURCE, error, FALLBACK));
     picked = data;
   } else if (invite.payee?.kind === "new" && !linked) {
     const { data, error } = await supabase
       .from("payees")
       .select("id, email, user_id")
       .ilike("email", emailPattern(invite.email));
-    if (error) return failed(friendlyError(error, FALLBACK));
+    if (error) return failed(await actionError(SOURCE, error, FALLBACK));
     sameEmail = data.find((payee) => payee.email?.toLowerCase() === invite.email) ?? null;
   }
   const payee = choosePayee({ choice: invite.payee, userId: existing?.id ?? null, linked, picked, sameEmail });
@@ -128,20 +130,20 @@ export async function invitePerson(values: InviteValues): Promise<InviteResult> 
     try {
       userId = (await createInvitedUser({ email: invite.email, fullName: invite.fullName })).id;
     } catch (error) {
-      console.error("[people] Couldn't create the invited account", error);
+      await reportPortalError(SOURCE, error);
       return failed("Couldn't create their account. Try again in a minute.");
     }
   }
 
   if (plan.kind !== "unchanged") {
     const { error } = await supabase.rpc("set_roles", { p_user_id: userId, p_roles: plan.roles });
-    if (error) return failed(friendlyError(error, FALLBACK));
+    if (error) return failed(await actionError(SOURCE, error, FALLBACK));
   }
 
   let inviteId: string | null = null;
   if (plan.kind === "invite" || plan.kind === "resend") {
     const { data, error } = await supabase.rpc("record_invite", { p_user_id: userId });
-    if (error) return failed(friendlyError(error, FALLBACK));
+    if (error) return failed(await actionError(SOURCE, error, FALLBACK));
     inviteId = data.id;
   }
 

@@ -35,6 +35,7 @@ function fakes(overrides: Partial<EmailDeps> = {}) {
   const reserved: ReserveInput[] = [];
   const sent: OutgoingEmail[] = [];
   const marked: Parameters<EmailDeps["mark"]>[0][] = [];
+  const reports: { source: string; message: string }[] = [];
   const deps: EmailDeps = {
     env: PRODUCTION,
     reserve: async (input) => {
@@ -49,9 +50,12 @@ function fakes(overrides: Partial<EmailDeps> = {}) {
       marked.push(input);
     },
     render: async () => ({ html: "<p>Welcome</p>", text: "Welcome" }),
+    report: (source, error) => {
+      reports.push({ source, message: error instanceof Error ? error.message : String(error) });
+    },
     ...overrides,
   };
-  return { deps, reserved, sent, marked };
+  return { deps, reserved, sent, marked, reports };
 }
 
 describe("sendEmail", () => {
@@ -183,7 +187,7 @@ describe("sendEmail", () => {
   });
 
   it("reports a failure without throwing when the log can't be written", async () => {
-    const { deps, sent } = fakes({
+    const { deps, sent, reports } = fakes({
       reserve: async () => {
         throw new Error("connect ECONNREFUSED");
       },
@@ -193,6 +197,15 @@ describe("sendEmail", () => {
 
     expect(result).toEqual({ status: "failed", logId: null, error: "connect ECONNREFUSED" });
     expect(sent).toEqual([]);
+    // The email log never got a row, so the owners' error log is the only place it shows.
+    expect(reports).toEqual([{ source: "Send the invite email", message: "connect ECONNREFUSED" }]);
+  });
+
+  it("leaves a failed send to the email log, where owners already see it", async () => {
+    const { deps, reports } = fakes({ send: async () => ({ error: "The domain isn't verified" }) });
+
+    expect((await sendEmail(message, deps)).status).toBe("failed");
+    expect(reports).toEqual([]);
   });
 
   it("still reports a sent email as sent when marking it fails, since the webhook fills it in", async () => {

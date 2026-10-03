@@ -12,6 +12,7 @@ import {
 } from "@/lib/portal/activity/queries";
 import { getCurrentUser, getSessionAal } from "@/lib/portal/auth/current-user";
 import { mfaHref, ownerNeedsMfa } from "@/lib/portal/auth/mfa";
+import { reportPortalError } from "@/lib/portal/errors";
 import { canUsePortal, hasRole } from "@/lib/portal/roles";
 
 /** The most events one download holds. */
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
   try {
     await recordActivityExport(filename);
   } catch (error) {
-    console.error("[portal] Couldn't record the activity download", error);
+    await reportPortalError("Download activity", error);
     return new Response("Couldn't start the download. Try again in a minute.", { status: 500 });
   }
 

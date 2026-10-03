@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/lib/errors/report";
 
 /**
  * Cloudflare Turnstile, the check that a form came from a person. The
@@ -16,13 +17,29 @@ const TIMEOUT_MS = 8000;
 
 type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 
+/** Codes for a sender's own token, like one that expired. Any other refusal is ours to fix. */
+const TOKEN_CODES = new Set(["missing-input-response", "invalid-input-response", "timeout-or-duplicate"]);
+
+function refusalCodes(answer: unknown): string[] {
+  if (typeof answer !== "object" || answer === null || !("error-codes" in answer)) return [];
+  const codes = answer["error-codes"];
+  return Array.isArray(codes) ? codes.filter((code): code is string => typeof code === "string") : [];
+}
+
 /**
  * True only when Cloudflare says the token is good. Anything else, like an
- * error or no answer in time, is a no, so the forms fail closed.
+ * error or no answer in time, is a no, so the forms fail closed. When the
+ * fault is ours, like Cloudflare being down or refusing the secret, it
+ * goes to the owners' error log, since every form fails until it's fixed.
  */
 export async function verifyTurnstile(
   token: string | null,
-  { secret, ip, fetcher = fetch }: { secret: string; ip: string | null; fetcher?: Fetch },
+  {
+    secret,
+    ip,
+    fetcher = fetch,
+    report = (error) => reportError("Turnstile", error),
+  }: { secret: string; ip: string | null; fetcher?: Fetch; report?: (error: unknown) => void },
 ): Promise<boolean> {
   if (!token || token.length > MAX_TOKEN_LENGTH) return false;
 
@@ -37,13 +54,16 @@ export async function verifyTurnstile(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!response.ok) {
-      console.error(`[forms] Turnstile answered ${response.status}`);
+      report(new Error(`Turnstile answered ${response.status}`));
       return false;
     }
     const answer: unknown = await response.json();
-    return typeof answer === "object" && answer !== null && "success" in answer && answer.success === true;
+    if (typeof answer === "object" && answer !== null && "success" in answer && answer.success === true) return true;
+    const ours = refusalCodes(answer).filter((code) => !TOKEN_CODES.has(code));
+    if (ours.length > 0) report(new Error(`Turnstile refused the check: ${ours.join(", ")}`));
+    return false;
   } catch (error) {
-    console.error("[forms] Couldn't reach Turnstile", error);
+    report(error);
     return false;
   }
 }

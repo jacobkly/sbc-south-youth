@@ -103,6 +103,14 @@ Everything the apps send goes through `public.email_log`, which is also the outb
 - **Blocked addresses:** an address that bounced or was marked as spam gets nothing more. An owner can unblock one once it's fixed, which runs `email_unsuppress()` as them.
 - **Warnings:** an owner's Home shows a card once either limit passes 80%. Each morning, `public.queue_quota_warning()` emails every owner once the last 31 days pass 2,400, at most once a calendar month in Los Angeles time.
 
+### Errors
+
+Vercel's free plan keeps runtime logs for only a short time, so the server also writes each unexpected error to `public.app_errors`, and owners see the last 30 days on their Home, with repeats folded together.
+
+- **Reporting:** `reportError()` in `src/lib/errors/report.ts` writes an error to the console and the error log once the response has gone. Portal actions use `actionError()` from `src/lib/portal/errors.ts`, which shows the person the same message as before and reports only what isn't a refusal the form already explains. `src/instrumentation.ts` reports whatever a page, route, or action throws, named by its route's pattern, like "Portal page /events/[id]". Turnstile and the email code also report setup problems, like a refused secret or a missing inbox, since every form or digest fails until they're fixed. Redirects, 404s, and emails the email log already marks failed aren't errors.
+- **What's kept:** where it happened, one line of message, a code, who hit it, and whether it came from staging. Never a stack, and email addresses and phone numbers come out of the message first. A page error's message is hidden in production, so its code is the digest that matches Vercel's logs.
+- **Limits:** only the secret key can write, through `report_error()`, which keeps at most 100 an hour so a loop of failures can't fill the database. Only owners read it, and a nightly job deletes errors after 30 days.
+
 ### Run it locally
 
 1. From the repo root, start the local stack with `npx supabase start`, then load the fake data with `npx supabase db reset`.
@@ -139,7 +147,7 @@ The public site needs `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY` for h
 | `NEXT_PUBLIC_AUTH_COOKIE_NAME`, `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` | The sign-in cookie's name and domain. Leave both empty to keep it on the portal's own host |
 | `APP_ENV` | `production` or `staging`. Empty means production, except on Vercel previews, which are staging |
 | `FINANCES_URL`, `PORTAL_URL` | Where the portal links to finances and to itself. Default to the real addresses |
-| `SUPABASE_SECRET_KEY` | Server only. Reads the site's heads-ups, events, and photos, saves form messages, calls the email functions, and creates, bans, and unbans invited accounts. Never a `NEXT_PUBLIC_` variable |
+| `SUPABASE_SECRET_KEY` | Server only. Reads the site's heads-ups, events, and photos, saves form messages, calls the email functions, writes the error log, and creates, bans, and unbans invited accounts. Never a `NEXT_PUBLIC_` variable |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Sending email. Without both, email is off |
 | `OWNER_ALERT_EMAIL` | Owner alerts, and every email on staging, form alerts included |
 | `RESEND_WEBHOOK_SECRET` | Checks that webhook calls came from Resend |

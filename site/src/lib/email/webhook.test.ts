@@ -196,13 +196,19 @@ describe("handleResendWebhook", () => {
     expect(recorded).toEqual([]);
   });
 
-  it("answers 500 when the log can't be written, so Resend tries again", async () => {
+  it("answers 500 when the log can't be written, so Resend tries again, and reports it", async () => {
     const record = async () => {
       throw new Error("connect ECONNREFUSED");
     };
+    const reported: unknown[] = [];
 
-    const response = await handleResendWebhook(request(event("email.delivered")), { secret: SECRET, record });
+    const response = await handleResendWebhook(request(event("email.delivered")), {
+      secret: SECRET,
+      record,
+      report: (error) => reported.push(error),
+    });
 
     expect(response.status).toBe(500);
+    expect(reported).toEqual([new Error("connect ECONNREFUSED")]);
   });
 });

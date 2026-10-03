@@ -2,7 +2,7 @@
 
 import { refresh, updateTag } from "next/cache";
 import { requireRole } from "@/lib/portal/auth/require-role";
-import { friendlyError } from "@/lib/portal/people/invite";
+import { actionError } from "@/lib/portal/errors";
 import { createClient } from "@/lib/supabase/server";
 import { deleteFolder } from "./files";
 import {
@@ -46,7 +46,10 @@ export async function addPhoto(photo: NewPhoto): Promise<PhotoActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.schema("site").from("photos").insert(check.row);
   if (error?.code === "23503") return failed("The photo didn't finish uploading. Try again.");
-  if (error) return failed(friendlyError(error, "Couldn't add the photo. Check your connection and try again."));
+  if (error) {
+    const fallback = "Couldn't add the photo. Check your connection and try again.";
+    return failed(await actionError("Add a photo", error, fallback));
+  }
 
   refresh();
   return { status: "done", message: "Added to the library." };
@@ -72,7 +75,10 @@ export async function savePhoto(edit: PhotoEdit): Promise<PhotoActionResult> {
     .eq("id", check.id)
     .select("id");
   if (error?.code === "23503") return failed("That event isn't there anymore. Reload the page and pick another.");
-  if (error) return failed(friendlyError(error, "Couldn't save the photo. Check your connection and try again."));
+  if (error) {
+    const fallback = "Couldn't save the photo. Check your connection and try again.";
+    return failed(await actionError("Save a photo", error, fallback));
+  }
   // RLS skips a photo that's already down.
   if (data.length === 0) return failed("That photo was taken down. Reload the page to see the library.");
 
@@ -100,7 +106,8 @@ export async function removePhoto(removal: PhotoRemoval): Promise<RemovalResult>
     .schema("site")
     .rpc("remove_photo", { p_id: id, p_reason: reason, p_message_id: messageId ?? undefined });
   if (error && error.code !== "55000") {
-    return failed(friendlyError(error, "Couldn't take the photo down. Check your connection and try again."));
+    const fallback = "Couldn't take the photo down. Check your connection and try again.";
+    return failed(await actionError("Take a photo down", error, fallback));
   }
 
   updateTag(PHOTOS_TAG);

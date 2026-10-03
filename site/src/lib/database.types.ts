@@ -83,6 +83,44 @@ export type Database = {
           },
         ]
       }
+      app_errors: {
+        Row: {
+          code: string | null
+          created_at: string
+          env: string
+          id: string
+          message: string
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          env?: string
+          id?: string
+          message: string
+          source: string
+          user_id?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          env?: string
+          id?: string
+          message?: string
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_errors_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           allow_external_approval: boolean
@@ -1021,6 +1059,16 @@ export type Database = {
         Returns: undefined
       }
       remove_access: { Args: { p_user_id: string }; Returns: undefined }
+      report_error: {
+        Args: {
+          p_code?: string
+          p_env?: string
+          p_message: string
+          p_source: string
+          p_user_id?: string
+        }
+        Returns: boolean
+      }
       request_info: {
         Args: { p_note: string; p_request_id: string }
         Returns: undefined

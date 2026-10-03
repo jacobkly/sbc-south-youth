@@ -4,6 +4,7 @@ import { cn } from "cn";
 import { Button } from "@/components/portal/ui/button";
 import { loadEmailOverview } from "@/lib/portal/email/queries";
 import { emailAlert, type EmailAlert as Alert } from "@/lib/portal/email/summary";
+import { reportPortalError } from "@/lib/portal/errors";
 
 const TONES: Record<Alert["level"], { card: string; box: string; icon: string }> = {
   warning: {
@@ -51,7 +52,7 @@ export async function HomeEmailAlert() {
   try {
     alert = emailAlert(await loadEmailOverview());
   } catch (error) {
-    console.error("[portal] Couldn't load the email summary for Home", error);
+    await reportPortalError("Home email alert", error);
     return null;
   }
   return alert ? <EmailAlert alert={alert} /> : null;

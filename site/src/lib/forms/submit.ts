@@ -19,6 +19,8 @@ export type SubmitResult =
 
 export type SaveInput = MessageSave;
 
+const NOT_SET_UP = "Set TURNSTILE_SECRET_KEY and FORM_IP_SALT before the forms can save messages.";
+
 /** Everything handleMessage() talks to, so tests can swap in fakes. */
 export type SubmitDeps = {
   /** Read on each send, so a missing setting stops only the forms. */
@@ -29,6 +31,8 @@ export type SubmitDeps = {
   save: (input: SaveInput) => Promise<MessageSaved>;
   /** Sends the alert the save just queued, once the person has their answer. */
   sendAlerts: () => void;
+  /** Puts an error on the owners' error log, so a message that didn't save never goes unnoticed. */
+  report: (source: string, error: unknown) => void;
 };
 
 /**
@@ -63,12 +67,12 @@ export async function handleMessage(kind: MessageKind, data: FormData, deps: Sub
   try {
     env = deps.env();
   } catch (error) {
-    console.error("[forms] The form settings are wrong", error);
+    deps.report("Message forms", error);
     return { status: "failed", message: failures.notSetUp };
   }
   const { turnstileSecret, ipSalt } = env;
   if (!turnstileSecret || !ipSalt) {
-    console.error("[forms] Set TURNSTILE_SECRET_KEY and FORM_IP_SALT before the forms can save messages.");
+    deps.report("Message forms", new Error(NOT_SET_UP));
     return { status: "failed", message: failures.notSetUp };
   }
 
@@ -88,7 +92,7 @@ export async function handleMessage(kind: MessageKind, data: FormData, deps: Sub
       alertTo: env.alertTo,
     });
   } catch (error) {
-    console.error(`[forms] Couldn't save a ${kind} message`, error);
+    deps.report(`${kind[0].toUpperCase()}${kind.slice(1)} form`, error);
     return { status: "failed", message: failures.notSaved };
   }
   if (saved.status === "limited") return { status: "failed", message: saved.message };

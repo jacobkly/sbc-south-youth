@@ -3,9 +3,10 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { readPortalEnv } from "@/lib/env";
+import { actionError, reportPortalError } from "@/lib/portal/errors";
 import { banUser, unbanUser } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { accountLinks, choosePayee, emailPattern, emailProblem, friendlyError, type PayeeRow } from "./invite";
+import { accountLinks, choosePayee, emailPattern, emailProblem, type PayeeRow } from "./invite";
 import { planRoles } from "./person";
 import { loadPerson, type PersonDetails } from "./queries";
 import { emailInvite, linkPayee, requireOwner, type Supabase } from "./server";
@@ -65,7 +66,7 @@ export async function saveRoles(userId: string, roles: string[]): Promise<Person
   const fallback = "Couldn't save their roles. Check your connection and try again.";
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_roles", { p_user_id: person.id, p_roles: plan.roles });
-  if (error) return failed(friendlyError(error, fallback));
+  if (error) return failed(await actionError("Change roles", error, fallback));
 
   const warnings: string[] = [];
   if (plan.added.includes("finance_requester") && !person.payee) {
@@ -135,7 +136,10 @@ export async function resendInvite(userId: string): Promise<PersonResult> {
 
   const supabase = await createClient();
   const { data: invite, error } = await supabase.rpc("record_invite", { p_user_id: person.id });
-  if (error) return failed(friendlyError(error, "Couldn't send the invite. Check your connection and try again."));
+  if (error) {
+    const fallback = "Couldn't send the invite. Check your connection and try again.";
+    return failed(await actionError("Resend an invite", error, fallback));
+  }
 
   const sent = await emailInvite({
     kind: "invite",
@@ -167,12 +171,15 @@ export async function removeAccess(userId: string): Promise<PersonResult> {
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("remove_access", { p_user_id: person.id });
-  if (error) return failed(friendlyError(error, "Couldn't remove their access. Check your connection and try again."));
+  if (error) {
+    const fallback = "Couldn't remove their access. Check your connection and try again.";
+    return failed(await actionError("Remove access", error, fallback));
+  }
 
   try {
     await banUser(person.id);
   } catch (banError) {
-    console.error("[people] Couldn't ban the removed account", banError);
+    await reportPortalError("Remove access", banError);
     // No refresh: the dialog stays open, and trying again only repeats the ban.
     return failed(
       "Their access is removed, but they may stay signed in for up to an hour. Try again to sign them out now.",
@@ -196,12 +203,12 @@ export async function reinstatePerson(userId: string): Promise<PersonResult> {
   try {
     await unbanUser(person.id);
   } catch (unbanError) {
-    console.error("[people] Couldn't unban the reinstated account", unbanError);
+    await reportPortalError("Reinstate someone", unbanError);
     return failed(fallback);
   }
   const supabase = await createClient();
   const { error } = await supabase.rpc("reinstate", { p_user_id: person.id });
-  if (error) return failed(friendlyError(error, fallback));
+  if (error) return failed(await actionError("Reinstate someone", error, fallback));
 
   refresh();
   return done(`${firstName(person.name)} has their access back.`);

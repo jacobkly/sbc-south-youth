@@ -2,7 +2,7 @@
 
 import { refresh, updateTag } from "next/cache";
 import { requireRole } from "@/lib/portal/auth/require-role";
-import { friendlyError } from "@/lib/portal/people/invite";
+import { actionError } from "@/lib/portal/errors";
 import { createClient } from "@/lib/supabase/server";
 import { postState, type PostRow, type PostState } from "./list";
 import { loadPost } from "./queries";
@@ -55,7 +55,7 @@ export async function savePost(
   const { data, error } = existing
     ? await table.update(plan.row).eq("id", existing.id).select("id").single()
     : await table.insert(plan.row).select("id").single();
-  if (error) return failed(friendlyError(error, fallback));
+  if (error) return failed(await actionError("Save a heads-up", error, fallback));
 
   updateTag("posts");
   const posting = !existing || postState(existing, now) !== "live";
@@ -68,7 +68,12 @@ export async function endPost(id: string): Promise<PostActionResult> {
     const plan = planEnd(post, now);
     if (plan.kind === "refuse") return failed(plan.message);
     const { error } = await (await posts()).update(plan.row).eq("id", post.id);
-    return outcome(error, "Couldn't end the heads-up.", "It's down now, and Home no longer shows it.");
+    return outcome(
+      "End a heads-up",
+      error,
+      "Couldn't end the heads-up.",
+      "It's down now, and Home no longer shows it.",
+    );
   });
 }
 
@@ -78,7 +83,12 @@ export async function unschedulePost(id: string): Promise<PostActionResult> {
     const plan = planUnschedule(post, now);
     if (plan.kind === "refuse") return failed(plan.message);
     const { error } = await (await posts()).update(plan.row).eq("id", post.id);
-    return outcome(error, "Couldn't move it to drafts.", "Moved to drafts. It won't go up unless you publish it.");
+    return outcome(
+      "Unpublish a heads-up",
+      error,
+      "Couldn't move it to drafts.",
+      "Moved to drafts. It won't go up unless you publish it.",
+    );
   });
 }
 
@@ -93,7 +103,7 @@ export async function deletePost(id: string): Promise<PostActionResult> {
       const plan = planRemove(post, now);
       if (plan.kind === "refuse") return failed(plan.message);
       const { error } = await (await posts()).delete().eq("id", post.id);
-      return outcome(error, "Couldn't delete the draft.", "Deleted the draft.");
+      return outcome("Delete a heads-up", error, "Couldn't delete the draft.", "Deleted the draft.");
     },
     { refreshPage: false },
   );
@@ -103,8 +113,13 @@ async function posts() {
   return (await createClient()).schema("site").from("posts");
 }
 
-function outcome(error: { code?: string; message: string } | null, couldnt: string, message: string): PostActionResult {
-  if (error) return failed(friendlyError(error, `${couldnt} Check your connection and try again.`));
+async function outcome(
+  source: string,
+  error: { code?: string; message: string } | null,
+  couldnt: string,
+  message: string,
+): Promise<PostActionResult> {
+  if (error) return failed(await actionError(source, error, `${couldnt} Check your connection and try again.`));
   return { status: "done", message };
 }
 

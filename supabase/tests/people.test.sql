@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(62);
+select plan(63);
 
 -- Fake people. New auth users get a row with no roles from the signup trigger.
 insert into auth.users (id, email, raw_user_meta_data) values

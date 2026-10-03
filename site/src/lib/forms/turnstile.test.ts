@@ -54,15 +54,36 @@ describe("verifyTurnstile", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("fails when Cloudflare can't be reached or answers with an error", async () => {
-    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("fails and reports it when Cloudflare can't be reached or answers with an error", async () => {
+    const reports: string[] = [];
+    const report = (error: unknown) => reports.push(error instanceof Error ? error.message : String(error));
     const down = cloudflare(new TypeError("fetch failed"));
     const broken = cloudflare({ status: 500, body: { success: true } });
 
-    expect(await verifyTurnstile("a-token", { secret: SECRET, ip: null, fetcher: down.fetcher })).toBe(false);
-    expect(await verifyTurnstile("a-token", { secret: SECRET, ip: null, fetcher: broken.fetcher })).toBe(false);
-    expect(quiet).toHaveBeenCalledTimes(2);
+    expect(await verifyTurnstile("a-token", { secret: SECRET, ip: null, fetcher: down.fetcher, report })).toBe(false);
+    expect(await verifyTurnstile("a-token", { secret: SECRET, ip: null, fetcher: broken.fetcher, report })).toBe(false);
+    expect(reports).toEqual(["fetch failed", "Turnstile answered 500"]);
   });
+
+  it("reports a secret Cloudflare refuses, since every form fails until it's fixed", async () => {
+    const reports: string[] = [];
+    const report = (error: unknown) => reports.push(error instanceof Error ? error.message : String(error));
+    const { fetcher } = cloudflare({ body: { success: false, "error-codes": ["invalid-input-secret"] } });
+
+    expect(await verifyTurnstile("a-token", { secret: SECRET, ip: null, fetcher, report })).toBe(false);
+    expect(reports).toEqual(["Turnstile refused the check: invalid-input-secret"]);
+  });
+
+  it.each(["invalid-input-response", "timeout-or-duplicate", "missing-input-response"])(
+    "doesn't report a sender's own bad token (%s)",
+    async (code) => {
+      const report = vi.fn();
+      const { fetcher } = cloudflare({ body: { success: false, "error-codes": [code] } });
+
+      expect(await verifyTurnstile("a-token", { secret: SECRET, ip: null, fetcher, report })).toBe(false);
+      expect(report).not.toHaveBeenCalled();
+    },
+  );
 
   it("fails an answer that doesn't say success", async () => {
     const { fetcher } = cloudflare({ body: { "error-codes": [] } });

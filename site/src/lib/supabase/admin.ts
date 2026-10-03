@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { PhotoRow } from "@/lib/content/photos";
 import type { EventRow, PostRow } from "@/lib/content/rows";
 import type { Database, Json } from "@/lib/database.types";
+import type { AppEnv } from "@/lib/env";
 import type { Message } from "@/lib/forms/schemas";
 
 /**
@@ -210,6 +211,27 @@ export async function emailRecordWebhook(event: EmailWebhookEvent): Promise<void
     p_at: event.at ?? undefined,
   });
   if (error) throw failure("Couldn't record the webhook", error);
+}
+
+export type AppError = {
+  source: string;
+  message: string;
+  code: string | null;
+  userId: string | null;
+  env: AppEnv;
+};
+
+/** Adds one error to the owners' error log. False once the last hour already has 100. */
+export async function reportAppError(input: AppError): Promise<boolean> {
+  const { data, error } = await admin().rpc("report_error", {
+    p_source: input.source,
+    p_message: input.message,
+    p_code: input.code ?? undefined,
+    p_user_id: input.userId ?? undefined,
+    p_env: input.env,
+  });
+  if (error) throw failure("Couldn't log the error", error);
+  return data;
 }
 
 export type InvitedUser = { email: string; fullName: string };

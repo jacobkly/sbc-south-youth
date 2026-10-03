@@ -1,10 +1,11 @@
 import "server-only";
 import { EMAIL_PRIORITY, sendEmail, type SendResult } from "@/lib/email/send";
 import { getSessionAal, type PortalUser } from "@/lib/portal/auth/current-user";
+import { actionError } from "@/lib/portal/errors";
 import { requireRole } from "@/lib/portal/auth/require-role";
 import type { AppRole } from "@/lib/portal/roles";
 import { createClient } from "@/lib/supabase/server";
-import { friendlyError, type AccountLinks } from "./invite";
+import type { AccountLinks } from "./invite";
 import { inviteEmail } from "./invite-email";
 
 /**
@@ -44,11 +45,11 @@ export async function linkPayee(
       .insert({ full_name: fullName, email })
       .select("id")
       .single();
-    if (error) return friendlyError(error, fallback);
+    if (error) return actionError("Link a payee", error, fallback);
     payeeId = data.id;
   }
   const { error } = await supabase.rpc("link_payee", { p_payee_id: payeeId, p_user_id: userId });
-  return error ? friendlyError(error, fallback) : null;
+  return error ? actionError("Link a payee", error, fallback) : null;
 }
 
 /** Sends an invite, or a note about new access, logged against the invite or the person. */

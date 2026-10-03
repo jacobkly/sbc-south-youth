@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { drainEmails } from "@/lib/email/drain";
 import { readFormEnv } from "@/lib/env";
+import { reportError } from "@/lib/errors/report";
 import { saveMessage } from "@/lib/supabase/admin";
 import type { MessageKind } from "./schemas";
 import { handleMessage, type SubmitResult } from "./submit";
@@ -33,8 +34,9 @@ export async function submitMessage(kind: MessageKind, data: FormData): Promise<
         try {
           await drainEmails();
         } catch (error) {
-          console.error("[forms] Couldn't send the alert", error);
+          reportError("Form alert", error);
         }
       }),
+    report: reportError,
   });
 }

@@ -1,6 +1,7 @@
 import "server-only";
 import { Resend } from "resend";
 import { z } from "zod";
+import { reportError } from "@/lib/errors/report";
 import type { EmailWebhookEvent } from "@/lib/supabase/admin";
 
 export type WebhookRecord = EmailWebhookEvent;
@@ -62,7 +63,15 @@ function text(status: number, body: string): Response {
  */
 export async function handleResendWebhook(
   request: Request,
-  { secret, record }: { secret: string | null; record: (row: WebhookRecord) => Promise<void> },
+  {
+    secret,
+    record,
+    report = (error) => reportError("Resend webhook", error),
+  }: {
+    secret: string | null;
+    record: (row: WebhookRecord) => Promise<void>;
+    report?: (error: unknown) => void;
+  },
 ): Promise<Response> {
   if (!secret) return text(503, "Email webhooks aren't set up.");
 
@@ -117,7 +126,7 @@ export async function handleResendWebhook(
   try {
     await record(row);
   } catch (error) {
-    console.error("[email] Couldn't record a Resend webhook", error);
+    report(error);
     return text(500, "Couldn't record the event.");
   }
   return text(200, "Recorded.");

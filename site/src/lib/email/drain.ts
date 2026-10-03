@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { z } from "zod";
 import { Constants } from "@/lib/database.types";
 import { readEmailEnv, readFormEnv, readPortalEnv, type AppEnv, type EmailEnv } from "@/lib/env";
+import { reportError } from "@/lib/errors/report";
 import { answersOf, messageAnswers } from "@/lib/forms/answers";
 import {
   emailClaim,
@@ -52,6 +53,8 @@ export type DrainDeps = {
   queueDigest: (env: AppEnv, to: string) => Promise<number>;
   /** Where the digest goes, the same inbox as the form alerts. Null when email is off. */
   digestTo: () => string | null;
+  /** Puts an error on the owners' error log. A failed email is already on the Email screen, so it isn't one. */
+  report: (source: string, error: unknown) => void;
 };
 
 /** `digest` is how many messages the morning's digest lists, only when the poke asked for it. */
@@ -323,17 +326,24 @@ export async function drainEmails(
   return listed === null ? result : { ...result, digest: listed };
 }
 
-/** Queues the daily digest, or logs why not and returns 0. */
+/** Where the forms' inbox comes from, for when it's missing. */
+const NO_INBOX = {
+  production: "Set YOUTH_INBOX_EMAIL so form messages reach the youth inbox.",
+  staging: "Set OWNER_ALERT_EMAIL so staging's form messages reach the owner.",
+} as const;
+
+/** Queues the daily digest, or reports why not and returns 0. */
 async function queueDigest(deps: DrainDeps): Promise<number> {
   try {
     const to = deps.digestTo();
     if (!to) {
-      console.warn("[email] There's no inbox for the daily digest, so it was skipped");
+      // Form alerts skip it too, so this is the one place a missing inbox shows.
+      deps.report("Daily digest", new Error(NO_INBOX[deps.env.appEnv]));
       return 0;
     }
     return await deps.queueDigest(deps.env.appEnv, to);
   } catch (error) {
-    console.error("[email] Couldn't queue the daily digest", error);
+    deps.report("Daily digest", error);
     return 0;
   }
 }
@@ -355,7 +365,15 @@ function sameSecret(given: string, secret: string): boolean {
  */
 export async function handleDrainRequest(
   request: Request,
-  { secret, drain }: { secret: string | null; drain: (options: { digest: boolean }) => Promise<DrainResult> },
+  {
+    secret,
+    drain,
+    report = (error) => reportError("Email drain", error),
+  }: {
+    secret: string | null;
+    drain: (options: { digest: boolean }) => Promise<DrainResult>;
+    report?: (error: unknown) => void;
+  },
 ): Promise<Response> {
   if (!secret) return text(503, "The email drain isn't set up.");
 
@@ -366,7 +384,7 @@ export async function handleDrainRequest(
     const digest = new URL(request.url).searchParams.get("digest") === "1";
     return Response.json(await drain({ digest }));
   } catch (error) {
-    console.error("[email] The drain failed", error);
+    report(error);
     return text(500, "Couldn't drain the outbox.");
   }
 }
@@ -389,5 +407,6 @@ function defaultDrainDeps(): DrainDeps {
     queueDigest: queueMessageDigest,
     // Read only when the digest is asked for, so a missing form setting can't break an ordinary poke.
     digestTo: () => readFormEnv().alertTo,
+    report: reportError,
   };
 }

@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { Resend } from "resend";
 import type { Database } from "@/lib/database.types";
 import { readEmailEnv, type EmailEnv } from "@/lib/env";
+import { reportError } from "@/lib/errors/report";
 import { emailMark, emailReserve, type EmailMark, type EmailReserve } from "@/lib/supabase/admin";
 import { sendToLocalInbox } from "./local-inbox";
 import { renderEmail, type RenderedEmail } from "./render";
@@ -47,6 +48,8 @@ export type EmailDeps = {
   send: (email: OutgoingEmail) => Promise<{ id: string } | { error: string }>;
   mark: (input: EmailMark) => Promise<void>;
   render: (body: ReactElement) => Promise<RenderedEmail>;
+  /** The owners' error log, for a failure the email log can't hold. */
+  report: (source: string, error: unknown) => void;
 };
 
 export type SendResult =
@@ -98,7 +101,7 @@ export async function sendEmail(message: EmailMessage, deps: EmailDeps = default
       throw new Error(`The email log answered ${reserved.status} instead of sending`);
     }
   } catch (error) {
-    console.error(`[email] Couldn't log the ${message.template} email`, error);
+    deps.report(`Send the ${message.template} email`, error);
     return { status: "failed", logId: null, error: messageOf(error) };
   }
 
@@ -172,6 +175,7 @@ function defaultEmailDeps(): EmailDeps {
     reserve: emailReserve,
     mark: emailMark,
     render: renderEmail,
+    report: reportError,
     send: async (email) => (sending ? deliverEmail(sending, email) : { error: "Email isn't set up" }),
   };
 }

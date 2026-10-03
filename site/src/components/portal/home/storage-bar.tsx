@@ -1,6 +1,7 @@
 import { CircleAlertIcon, TriangleAlertIcon } from "lucide-react";
 import { cn } from "cn";
 import { Skeleton } from "@/components/portal/ui/skeleton";
+import { reportPortalError } from "@/lib/portal/errors";
 import { loadStorage } from "@/lib/portal/home/queries";
 import {
   formatBytes,
@@ -182,7 +183,7 @@ export async function HomeStorage() {
   try {
     overview = await loadStorage();
   } catch (error) {
-    console.error("[portal] Couldn't load storage", error);
+    await reportPortalError("Home storage", error);
     return <StorageBarError />;
   }
   return <StorageBar overview={overview} />;
