@@ -1296,6 +1296,7 @@ export type Database = {
           event_id: string | null
           height: number
           id: string
+          mime_type: string
           removed_at: string | null
           removed_by: string | null
           removed_reason: string | null
@@ -1313,6 +1314,7 @@ export type Database = {
           event_id?: string | null
           height: number
           id?: string
+          mime_type?: string
           removed_at?: string | null
           removed_by?: string | null
           removed_reason?: string | null
@@ -1330,6 +1332,7 @@ export type Database = {
           event_id?: string | null
           height?: number
           id?: string
+          mime_type?: string
           removed_at?: string | null
           removed_by?: string | null
           removed_reason?: string | null
@@ -1450,6 +1453,7 @@ export type Database = {
           event_id: string
           height: number
           id: string
+          mime_type: string
           spot: string
           width: number
         }[]

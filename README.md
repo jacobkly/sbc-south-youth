@@ -32,7 +32,7 @@ The portal is where leaders run the youth site and its people from a phone. It's
 - **Activity:** one timeline of changes across the site, finances, and people, showing each person only the apps their roles cover. Owners can download it as a CSV.
 - **Email:** finance and owner notices, and an email for each form message, go out through Resend, within the free plan's daily and monthly limits.
 
-The public site reads heads-ups and events from the database. Its Visit, Join, Serve, and Contact forms save messages there, checked by Cloudflare Turnstile and limited to 5 an hour from one address, and each one emails the youth inbox so a leader can reply to the sender. Leaders with the Messages role follow up on them in the portal's Messages screen. Site photos now have a place in the database and a public bucket only site editors can add to, and the portal's upload and photo library come next.
+The public site reads heads-ups and events from the database. Its Visit, Join, Serve, and Contact forms save messages there, checked by Cloudflare Turnstile and limited to 5 an hour from one address, and each one emails the youth inbox so a leader can reply to the sender. Leaders with the Messages role follow up on them in the portal's Messages screen. Site editors add photos on the portal's Photos screen, which shrinks them on the phone and leaves their location data behind before they go to a public bucket. Placing them on the site and taking them down come next.
 
 ### Roles
 

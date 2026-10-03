@@ -97,7 +97,7 @@ describe("splitForTabBar", () => {
 
 describe("comingSoonFor", () => {
   it("lists the sections a person's roles will get that aren't built yet", () => {
-    expect(labels(comingSoonFor(["owner"]))).toEqual(["Photos", "Email"]);
+    expect(labels(comingSoonFor(["owner"]))).toEqual(["Email"]);
   });
 
   it("lists nothing once all of a person's sections are built", () => {
@@ -110,10 +110,11 @@ describe("comingSoonFor", () => {
     expect(comingSoonFor(["owner"])).not.toContain(ACTIVITY);
     expect(comingSoonFor(["owner"])).not.toContain(POSTS);
     expect(comingSoonFor(["owner"])).not.toContain(MESSAGES);
+    expect(comingSoonFor(["owner"])).not.toContain(PHOTOS);
   });
 
-  it("still lists Photos for a site editor", () => {
-    expect(labels(comingSoonFor(["site_editor"]))).toEqual(["Photos"]);
+  it("lists nothing for a site editor once Photos is built", () => {
+    expect(comingSoonFor(["site_editor"])).toEqual([]);
   });
 });
 
@@ -122,17 +123,24 @@ describe("MAIN_ITEMS", () => {
     expect(labels(MAIN_ITEMS.filter(allowedFor(["owner"])))).toEqual([
       "Home",
       "Posts",
+      "Photos",
       "Messages",
       "Activity",
       "People",
     ]);
-    expect(labels(MAIN_ITEMS.filter(allowedFor(["site_editor"])))).toEqual(["Home", "Posts", "Activity"]);
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["site_editor"])))).toEqual(["Home", "Posts", "Photos", "Activity"]);
     expect(labels(MAIN_ITEMS.filter(allowedFor(["finance_viewer"])))).toEqual(["Home", "Activity"]);
   });
 
   it("has Posts for site editors and owners", () => {
     expect(MAIN_ITEMS.filter(allowedFor(["site_editor"]))).toContain(POSTS);
     expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_messages"]))).not.toContain(POSTS);
+  });
+
+  it("has Photos for site editors and owners", () => {
+    expect(MAIN_ITEMS.filter(allowedFor(["site_editor"]))).toContain(PHOTOS);
+    expect(MAIN_ITEMS.filter(allowedFor(["owner"]))).toContain(PHOTOS);
+    expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_messages"]))).not.toContain(PHOTOS);
   });
 
   it("has Messages for the Messages role and owners, and not for site editors without it", () => {

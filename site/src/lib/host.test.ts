@@ -223,6 +223,14 @@ describe("siteHeaders", () => {
     );
   });
 
+  it("lets only the portal's pages show Supabase Storage files and photos picked on the device", () => {
+    expect(directive(PORTAL, "/photos", "img-src")).toBe(`img-src 'self' data: blob: ${SUPABASE}`);
+    expect(directive(PORTAL, "/preview", "img-src")).toBe(`img-src 'self' data: blob: ${SUPABASE}`);
+    expect(directive(PUBLIC, "/", "img-src")).toBe("img-src 'self' data:");
+    const local = policies(headersFor("portal.localhost:3001", "/account", null))[0];
+    expect(local.split("; ").find((found) => found.startsWith("img-src "))).toBe("img-src 'self' data: blob:");
+  });
+
   it("lets every public page load Turnstile, since a link opens a form page without a reload", () => {
     const turnstile = "https://challenges.cloudflare.com";
     for (const host of [PUBLIC, "localhost:3001"]) {

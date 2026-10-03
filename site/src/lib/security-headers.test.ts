@@ -39,6 +39,14 @@ describe("contentSecurityPolicy", () => {
     expect(portal["script-src"]).toEqual(production["script-src"]);
   });
 
+  it("shows images from the page's own site unless it's given more sources", () => {
+    expect(production["img-src"]).toEqual(["'self'", "data:"]);
+    const portal = directives(
+      contentSecurityPolicy({ dev: false, https: true, images: ["blob:", "https://example-ref.supabase.co"] }),
+    );
+    expect(portal["img-src"]).toEqual(["'self'", "data:", "blob:", "https://example-ref.supabase.co"]);
+  });
+
   it("lets a page frame, or be framed by, its own site only when asked", () => {
     const portal = directives(contentSecurityPolicy({ dev: false, https: true, framesSelf: true }));
     expect(portal["frame-src"]).toEqual(["'self'"]);

@@ -1,5 +1,6 @@
 -- Site photos: the public site-photos bucket and the rows behind it. Site
--- editors upload and place photos, uploads stop when storage nears the free
+-- editors upload and place photos, as WebP or (from Safari) JPEG, uploads
+-- stop when storage nears the free
 -- plan's limit, a photo comes down only through site.remove_photo(), which
 -- keeps a tombstone, and the public site reads placed photos only through
 -- site.public_photos().
@@ -7,7 +8,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(52);
+select plan(57);
 
 -- Fake people, one per kind of access.
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -51,16 +52,16 @@ insert into storage.objects (bucket_id, name, metadata) values
   ('site-photos', '00000000-0000-4000-8000-00000000f004/sm.webp', '{"size": 50000}'),
   ('site-photos', '00000000-0000-4000-8000-00000000f006/lg.webp', '{"size": 250000}'),
   ('site-photos', '00000000-0000-4000-8000-00000000f006/sm.webp', '{"size": 50000}'),
-  ('site-photos', '00000000-0000-4000-8000-00000000f007/lg.webp', '{"size": 250000}'),
-  ('site-photos', '00000000-0000-4000-8000-00000000f007/sm.webp', '{"size": 50000}'),
+  ('site-photos', '00000000-0000-4000-8000-00000000f007/lg.jpg', '{"size": 250000}'),
+  ('site-photos', '00000000-0000-4000-8000-00000000f007/sm.jpg', '{"size": 50000}'),
   ('site-photos', '00000000-0000-4000-8000-00000000f008/lg.webp', '{"size": 250000}'),
   ('site-photos', '00000000-0000-4000-8000-00000000f008/sm.webp', '{"size": 50000}');
 
 -- 1. The bucket.
 select results_eq(
   $$ select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'site-photos' $$,
-  $$ values (true, 1048576::bigint, array['image/webp']) $$,
-  'site-photos is public, takes only WebP, and caps each file at 1 MB'
+  $$ values (true, 1048576::bigint, array['image/webp', 'image/jpeg']) $$,
+  'site-photos is public, takes only WebP and JPEG, and caps each file at 1 MB'
 );
 
 -- 2–3. As anon. Public files load by URL, but nobody signed out lists or adds them.
@@ -109,7 +110,7 @@ select throws_ok(
      values ('site-photos', '00000000-0000-4000-8000-00000000f001/original.jpg') $$,
   '42501',
   null,
-  'only the lg and sm WebP sizes go up'
+  'only the lg and sm sizes go up'
 );
 
 select lives_ok(
@@ -133,13 +134,53 @@ select lives_ok(
 );
 
 select results_eq(
-  $$ select status::text, spot, uploaded_by, bytes_total from site.photos
+  $$ select status::text, spot, uploaded_by, bytes_total, mime_type from site.photos
      where id = '00000000-0000-4000-8000-00000000f001' $$,
-  $$ values ('published', 'home-hero', '00000000-0000-4000-8000-00000000a002'::uuid, 360000) $$,
-  'a new photo is published, names who uploaded it, and counts its files'' bytes'
+  $$ values ('published', 'home-hero', '00000000-0000-4000-8000-00000000a002'::uuid, 360000, 'image/webp') $$,
+  'a new photo is published, names who uploaded it, and takes its bytes and type from its files'
 );
 
--- 12–13. What the browser can't set.
+-- 12–15. Safari can't make WebP, so its sizes go up as JPEG. Either way, a
+-- photo's folder holds just its two files, of one type.
+select lives_ok(
+  $$ insert into storage.objects (bucket_id, name, metadata) values
+       ('site-photos', '00000000-0000-4000-8000-00000000f00a/lg.jpg', '{"size": 230000}'),
+       ('site-photos', '00000000-0000-4000-8000-00000000f00a/sm.jpg', '{"size": 50000}');
+     insert into site.photos (id, alt, width, height)
+     values ('00000000-0000-4000-8000-00000000f00a', 'Sunset over a parking lot', 1600, 1200) $$,
+  'a site editor adds a photo whose sizes are JPEG'
+);
+
+select results_eq(
+  $$ select mime_type, bytes_total from site.photos where id = '00000000-0000-4000-8000-00000000f00a' $$,
+  $$ values ('image/jpeg', 280000) $$,
+  'a JPEG photo is marked as JPEG'
+);
+
+insert into storage.objects (bucket_id, name, metadata) values
+  ('site-photos', '00000000-0000-4000-8000-00000000f00b/lg.webp', '{"size": 300000}'),
+  ('site-photos', '00000000-0000-4000-8000-00000000f00b/sm.jpg', '{"size": 50000}');
+
+select throws_ok(
+  $$ insert into site.photos (id, alt, width, height)
+     values ('00000000-0000-4000-8000-00000000f00b', 'A band on a stage', 1600, 1067) $$,
+  '23503',
+  'Upload both sizes of the photo first.',
+  'a photo''s two sizes are the same type'
+);
+
+insert into storage.objects (bucket_id, name, metadata)
+values ('site-photos', '00000000-0000-4000-8000-00000000f00b/sm.webp', '{"size": 50000}');
+
+select throws_ok(
+  $$ insert into site.photos (id, alt, width, height)
+     values ('00000000-0000-4000-8000-00000000f00b', 'A band on a stage', 1600, 1067) $$,
+  '23503',
+  'Upload both sizes of the photo first.',
+  'a photo''s folder holds only its two files'
+);
+
+-- 16–18. What the browser can't set.
 select throws_ok(
   $$ insert into site.photos (id, alt, width, height, bytes_total, uploaded_by)
      values ('00000000-0000-4000-8000-00000000f003', 'Friends around a campfire', 1600, 1067, 1,
@@ -150,6 +191,14 @@ select throws_ok(
 );
 
 select throws_ok(
+  $$ insert into site.photos (id, alt, width, height, mime_type)
+     values ('00000000-0000-4000-8000-00000000f003', 'Friends around a campfire', 1600, 1067, 'image/jpeg') $$,
+  '42501',
+  null,
+  'the database sets the file type, not the browser'
+);
+
+select throws_ok(
   $$ insert into storage.objects (bucket_id, name)
      values ('site-photos', '00000000-0000-4000-8000-00000000f001/sm.webp') $$,
   '42501',
@@ -157,7 +206,7 @@ select throws_ok(
   'a photo''s files can''t be replaced once it''s added'
 );
 
--- 14–16. Alt text, spots, and covers.
+-- 19–21. Alt text, spots, and covers.
 select throws_ok(
   $$ insert into site.photos (id, alt, width, height)
      values ('00000000-0000-4000-8000-00000000f003', '   ', 1600, 1067) $$,
@@ -183,7 +232,7 @@ select throws_ok(
   'a spot is a short lowercase key'
 );
 
--- 17–20. One photo per spot and per event: a new one moves the old one out.
+-- 22–25. One photo per spot and per event: a new one moves the old one out.
 select lives_ok(
   $$ insert into site.photos (id, alt, event_id, width, height)
      values ('00000000-0000-4000-8000-00000000f003', 'Friends around a campfire',
@@ -212,7 +261,7 @@ select lives_ok(
   'a site editor moves a photo and fixes its alt text'
 );
 
--- 21–25. Placing the rest, then what an editor can't do.
+-- 26–30. Placing the rest, then what an editor can't do.
 select lives_ok(
   $$ insert into site.photos (id, alt, spot, width, height) values
        ('00000000-0000-4000-8000-00000000f007', 'A crowd under stage lights', 'home-hero', 1600, 900);
@@ -255,7 +304,7 @@ select results_eq(
   'a published photo''s files stay put'
 );
 
--- 26–28. Storage near the free plan's limit. Exactly 1 byte short of 95% of
+-- 31–33. Storage near the free plan's limit. Exactly 1 byte short of 95% of
 -- 1 GB, a file still goes up. At 95%, the next one doesn't.
 reset role;
 insert into storage.buckets (id, name, public) values ('test-filler', 'test-filler', false);
@@ -286,7 +335,7 @@ reset role;
 delete from storage.objects where bucket_id = 'test-filler';
 set local role authenticated;
 
--- 29–33. Other roles see and change nothing.
+-- 34–38. Other roles see and change nothing.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a004", "role": "authenticated"}', true);
 
 select is_empty($$ select 1 from site.photos $$, 'a finance viewer reads no photos');
@@ -318,7 +367,7 @@ select throws_ok(
   'the Messages role can''t take a photo down'
 );
 
--- 34–43. A site editor takes a photo down.
+-- 39–48. A site editor takes a photo down.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a002", "role": "authenticated"}', true);
 
 select throws_ok(
@@ -395,7 +444,7 @@ select throws_ok(
   'a removed photo''s files can''t come back'
 );
 
--- 44. The Messages role sees what came down for a request, to close it.
+-- 49. The Messages role sees what came down for a request, to close it.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000a003", "role": "authenticated"}', true);
 
 select results_eq(
@@ -404,7 +453,7 @@ select results_eq(
   'the Messages role sees only photos taken down for a request'
 );
 
--- 45–46. Activity, under the site scope.
+-- 50–51. Activity, under the site scope.
 reset role;
 
 select bag_eq(
@@ -426,7 +475,7 @@ select is(
   'Activity shows the photo coming down, the spot it left, and why'
 );
 
--- 47–49. The public site's read.
+-- 52–54. The public site's read.
 select results_eq(
   $$ select r.rolname
      from (values ('anon'), ('authenticated'), ('service_role')) as r (rolname)
@@ -445,14 +494,15 @@ select throws_ok(
 );
 
 select results_eq(
-  $$ select id, spot, event_id, alt, width, height from site.public_photos() $$,
-  $$ values ('00000000-0000-4000-8000-00000000f007'::uuid, 'home-hero', null::uuid, 'A crowd under stage lights', 1600, 900),
+  $$ select id, spot, event_id, alt, width, height, mime_type from site.public_photos() $$,
+  $$ values ('00000000-0000-4000-8000-00000000f007'::uuid, 'home-hero', null::uuid, 'A crowd under stage lights',
+             1600, 900, 'image/jpeg'),
             ('00000000-0000-4000-8000-00000000f003'::uuid, null, '00000000-0000-4000-8000-00000000e001'::uuid,
-             'Friends around a campfire', 1600, 1067) $$,
+             'Friends around a campfire', 1600, 1067, 'image/webp') $$,
   'the public site gets placed photos only: no tombstones, no library, no draft''s cover'
 );
 
--- 50–52. Tombstones go after 2 years.
+-- 55–57. Tombstones go after 2 years.
 reset role;
 
 update site.photos

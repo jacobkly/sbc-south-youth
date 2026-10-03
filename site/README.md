@@ -56,13 +56,15 @@ To try the forms locally, put Cloudflare's test keys from `.env.example` in `.en
 
 ## Photos
 
-Site photos live in Supabase, so site editors can change them from the portal without a deploy. Until the portal's upload screens are built, pages still show the hotlinked placeholders in `src/content/photos.ts`.
+Site photos live in Supabase, so site editors can change them from the portal without a deploy. They add them on the portal's Photos screen. Until public pages read them, pages still show the hotlinked placeholders in `src/content/photos.ts`.
 
-- **Files:** each photo has two WebP files in the public `site-photos` bucket, `<photo id>/lg.webp` and `sm.webp`. The id is random, so a file name never says who's in a photo. The bucket takes only WebP files up to 1 MB. Anyone can load a file by its URL, but only site editors list, add, or delete them.
+- **Files:** each photo has two files in the public `site-photos` bucket, `<photo id>/lg.webp` and `sm.webp`. Safari can't make WebP, so photos added from an iPhone are `lg.jpg` and `sm.jpg`, and the row's `mime_type` says which. The id is random, so a file name never says who's in a photo. The bucket takes only WebP and JPEG files up to 1 MB. Anyone can load a file by its URL, but only site editors list, add, or delete them. `src/lib/photo-files.ts` builds the paths and URLs for both the portal and the public pages.
 - **Records:** `site.photos` holds each photo's alt text, its size in pixels, and where it shows: one named spot on the site, like `home-hero`, or one event's cover. Putting a photo in a spot or on an event sends the one that was there back to the library.
-- **Uploading:** the files go up first and the row after, which checks both files are there and records their size. A photo's files can't be replaced once it's up, and uploads stop when storage reaches 95% of the free plan's 1 GB, so receipts always have room.
+- **Shrinking:** the portal shrinks each photo on the phone before it uploads: 1600 px on the long side for `lg`, aiming for about 300 KB, and 640 px for `sm`, about 60 KB. Only the quality steps down to fit, never the size. Drawing it on a canvas turns it upright and leaves its EXIF data, like GPS location, behind. A photo under 1000 px on its long side is turned away as too soft.
+- **Uploading:** the files go up first and the row after, which checks both files are there, of one type, and records their size and type. If adding the row fails, the portal deletes the files again. A photo's files can't be replaced once it's up, and uploads stop when storage reaches 95% of the free plan's 1 GB, so receipts always have room.
 - **Taking down:** `site.remove_photo()` takes a photo off the site and keeps a record of who took it down, when, and why, linked to the takedown request if there was one. Its files can be deleted after that, and the record goes 2 years later. Leaders with Messages see the photos that came down for a takedown request, so they can close it.
 - **Reading:** `site.public_photos()` returns only photos in a spot or on a published or cancelled event's page, and only the server's secret key can call it.
+- **Security headers:** the portal's policy lets images load from the Supabase project, for photos and profile pictures, and from `blob:`, for previews of a picked photo. The public site's still allows only its own images. The headers come from `next.config.ts`, so restart `npm run dev` after changing them.
 
 ## Launch gate
 

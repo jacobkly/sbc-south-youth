@@ -1,9 +1,10 @@
 -- Photos for the public site: a public site-photos bucket for the files and
 -- site.photos for what each one is and where it shows.
 --
--- The browser shrinks each photo to two WebP sizes and uploads them to
--- site-photos/<photo id>/lg.webp and sm.webp, then adds the row. The id is
--- random, so no file is ever named after a person. The bucket is public, so
+-- The browser shrinks each photo to two sizes and uploads them to
+-- site-photos/<photo id>/lg.webp and sm.webp, then adds the row. Safari can't
+-- make WebP, so from an iPhone they're lg.jpg and sm.jpg. The id is random,
+-- so no file is ever named after a person. The bucket is public, so
 -- pages load the files by URL, but only site editors list, add, or delete
 -- them, and new uploads stop at 95% of the free plan's 1 GB, so receipts
 -- always have room.
@@ -30,6 +31,8 @@ create table site.photos (
   height integer not null check (height between 1 and 4000),
   -- Both files together. Set from the files themselves when the row is added.
   bytes_total integer not null default 0 check (bytes_total >= 0),
+  -- Both files' type, also set from the files.
+  mime_type text not null default 'image/webp' check (mime_type in ('image/webp', 'image/jpeg')),
   status site.photo_status not null default 'published',
   uploaded_by uuid default auth.uid() references public.users (id) on delete set null,
   removed_by uuid references public.users (id) on delete set null,
@@ -82,8 +85,9 @@ create policy "Site editors change photos that are up"
   using ((select public.has_role('site_editor')) and status = 'published')
   with check ((select public.has_role('site_editor')) and status = 'published');
 
--- A new photo's row waits for both of its files, and its size comes from
--- them, so the storage numbers never trust the browser.
+-- A new photo's row waits for both of its files, and its size and type come
+-- from them, so the storage numbers never trust the browser. The folder must
+-- hold just the two sizes, of one type.
 create function site.count_photo_files()
 returns trigger
 language plpgsql
@@ -91,16 +95,21 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_files integer;
+  v_folder text := new.id::text || '/';
+  v_files text[];
   v_bytes bigint;
 begin
-  select count(*), coalesce(sum((o.metadata ->> 'size')::bigint), 0)
+  select array_agg(substr(o.name, char_length(v_folder) + 1) order by o.name),
+         coalesce(sum((o.metadata ->> 'size')::bigint), 0)
   into v_files, v_bytes
   from storage.objects o
-  where o.bucket_id = 'site-photos'
-    and o.name in (new.id::text || '/lg.webp', new.id::text || '/sm.webp');
+  where o.bucket_id = 'site-photos' and starts_with(o.name, v_folder);
 
-  if v_files <> 2 then
+  if v_files = array['lg.webp', 'sm.webp'] then
+    new.mime_type := 'image/webp';
+  elsif v_files = array['lg.jpg', 'sm.jpg'] then
+    new.mime_type := 'image/jpeg';
+  else
     raise exception 'Upload both sizes of the photo first.' using errcode = '23503';
   end if;
 
@@ -228,7 +237,8 @@ grant execute on function site.photo_uploads_open() to authenticated;
 
 -- Placed photos for the public pages: the ones in a spot, and covers of
 -- events that have a page. Only the site's server calls this, with the
--- secret key. Files are at site-photos/<id>/lg.webp and sm.webp.
+-- secret key. Files are at site-photos/<id>/lg.webp and sm.webp, or .jpg
+-- when the type is JPEG.
 create function site.public_photos()
 returns table (
   id uuid,
@@ -236,14 +246,15 @@ returns table (
   event_id uuid,
   alt text,
   width integer,
-  height integer
+  height integer,
+  mime_type text
 )
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select p.id, p.spot, p.event_id, p.alt, p.width, p.height
+  select p.id, p.spot, p.event_id, p.alt, p.width, p.height, p.mime_type
   from site.photos p
   left join site.events e on e.id = p.event_id
   where p.status = 'published'
@@ -262,7 +273,7 @@ values (
   'site-photos',
   true,
   1048576, -- 1 MB
-  array['image/webp']
+  array['image/webp', 'image/jpeg']
 );
 
 -- Site editors list the files, which deleting them needs.
@@ -280,7 +291,7 @@ create policy "Site editors upload new photo files while storage has room"
   with check (
     bucket_id = 'site-photos'
     and (select public.has_role('site_editor'))
-    and objects.name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(lg|sm)\.webp$'
+    and objects.name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(lg|sm)\.(webp|jpg)$'
     and not exists (
       select 1 from site.photos p where p.id::text = (storage.foldername(objects.name))[1]
     )

@@ -4,9 +4,10 @@
  * Pages are prerendered, so the policy can't use a fresh nonce per
  * request. Next's inline scripts are allowed instead, but almost nothing
  * loads from another site: fonts are self-hosted and photos come through
- * `/_next/image`. Blocking framing, other hosts, plugins, and `<base>`
- * tags still stops the common attacks. The frames are the portal's draft
- * preview, which only the portal itself may show, and Cloudflare
+ * `/_next/image`. The portal also shows files from Supabase Storage and
+ * photos picked on the device. Blocking framing, other hosts, plugins, and
+ * `<base>` tags still stops the common attacks. The frames are the portal's
+ * draft preview, which only the portal itself may show, and Cloudflare
  * Turnstile on the public site, for the message forms.
  */
 
@@ -20,6 +21,8 @@ export type HeaderMode = {
   https: boolean;
   /** Other origins the page's scripts may call. Only the portal has one: Supabase. */
   connect?: string[];
+  /** Other sources the page may show images from. Only the portal has them: Supabase Storage and local previews. */
+  images?: string[];
   /** The page may frame its own site. The portal's editors frame their draft preview. */
   framesSelf?: boolean;
   /** Only its own site may frame the page. Just the portal's draft preview. */
@@ -29,14 +32,14 @@ export type HeaderMode = {
 };
 
 export function contentSecurityPolicy(mode: HeaderMode): string {
-  const { dev, https, connect = [], framesSelf, framedBySelf, turnstile } = mode;
+  const { dev, https, connect = [], images = [], framesSelf, framedBySelf, turnstile } = mode;
   const frames = [...(framesSelf ? ["'self'"] : []), ...(turnstile ? [TURNSTILE_ORIGIN] : [])];
   const scripts = [...(dev ? ["'unsafe-eval'"] : []), ...(turnstile ? [TURNSTILE_ORIGIN] : [])];
   return [
     "default-src 'self'",
     ["script-src 'self' 'unsafe-inline'", ...scripts].join(" "),
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
+    ["img-src 'self' data:", ...images].join(" "),
     "font-src 'self'",
     ["connect-src 'self'", ...connect, ...(dev ? ["ws:"] : [])].join(" "),
     `frame-src ${frames.length > 0 ? frames.join(" ") : "'none'"}`,
