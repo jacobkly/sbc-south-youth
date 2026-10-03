@@ -4,9 +4,8 @@ import type { ReactNode } from "react";
 import { buttonClasses } from "@/components/button";
 import { SocialIcon } from "@/components/icons/social-icon";
 import { InlineScript } from "@/components/inline-script";
+import { AgendaDay } from "@/components/site/agenda-day";
 import { AnnouncementCard } from "@/components/site/announcement-card";
-import { DateBlock } from "@/components/site/date-block";
-import { EventCard } from "@/components/site/event-card";
 import { FeedGuard } from "@/components/site/feed-guard";
 import { FirstTimeBand } from "@/components/site/first-time-band";
 import { PageIntro } from "@/components/site/page-intro";
@@ -16,7 +15,7 @@ import { site } from "@/content/site";
 import { standingNotes } from "@/content/standing-notes";
 import { getAnnouncements, getEvents, getSchedule } from "@/lib/content/loaders";
 import type { Announcement, StandingNote } from "@/lib/content/types";
-import { addDays, formatDateRange, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
+import { formatDateRange, formatWeekdayDate, todayInLA, type IsoDate } from "@/lib/dates";
 import { groupAgenda, liveAnnouncements, upcomingItems, type AgendaGroup } from "@/lib/feed";
 import { FEED_ID, inlineCall, refreshFeed } from "@/lib/feed-dom";
 import { pageMetadata } from "@/lib/metadata";
@@ -112,8 +111,6 @@ const groupCaption: Record<AgendaGroup["id"], (group: AgendaGroup, today: IsoDat
 };
 
 function Agenda({ groups, today }: { groups: AgendaGroup[]; today: IsoDate }) {
-  const tomorrow = addDays(today, 1);
-
   return (
     <div
       data-scope
@@ -143,25 +140,7 @@ function Agenda({ groups, today }: { groups: AgendaGroup[]; today: IsoDate }) {
             </header>
             <ol className="mt-6 flex flex-col gap-8 lg:mt-8 lg:gap-10">
               {group.days.map((day) => (
-                <li
-                  key={day.date}
-                  data-box
-                  data-date={day.date}
-                  data-rel={day.date === today ? "today" : day.date === tomorrow ? "tomorrow" : ""}
-                  suppressHydrationWarning
-                  className="group/day grid grid-cols-[3.5rem_minmax(0,1fr)] gap-3.5 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-6 xl:grid-cols-[3.5rem_minmax(0,1fr)] xl:gap-4"
-                >
-                  <div className="sticky top-(--stick) self-start">
-                    <DateBlock date={day.date} />
-                  </div>
-                  <ul className="@container flex min-w-0 flex-col gap-3">
-                    {day.items.map((item) => (
-                      <li key={item.key} data-item data-until={Date.parse(item.endsAt)} suppressHydrationWarning>
-                        <EventCard item={item} />
-                      </li>
-                    ))}
-                  </ul>
-                </li>
+                <AgendaDay key={day.date} day={day} today={today} />
               ))}
             </ol>
           </section>

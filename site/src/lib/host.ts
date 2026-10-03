@@ -52,6 +52,13 @@ export const PAGE_PATH = String.raw`/:path((?!_next/|_vercel/)(?!.*\.[^/]+$).+)`
  */
 export const NO_PAGE_PATH = "/_no-page";
 
+/**
+ * The portal's draft preview, on the portal host. It renders a draft with
+ * the public site's own components and styles, so the editors show it in a
+ * frame, and it's the one page a frame may show.
+ */
+export const PREVIEW_PATH = "/preview";
+
 type HostCondition = (typeof ON_PORTAL_HOST)[number];
 type Rewrite = { source: string; destination: string; has?: HostCondition[]; missing?: HostCondition[] };
 
@@ -84,16 +91,20 @@ type HeaderRule = {
 /**
  * Headers for every response. Each host gets its own security policy,
  * since a browser enforces every policy it's sent: the portal's lets its
- * pages call Supabase, and the public site's never does.
+ * pages call Supabase and frame the draft preview, and the public site's
+ * does neither.
  */
 export function siteHeaders(mode: HeaderMode, supabaseUrl: string | undefined): HeaderRule[] {
   const connect = supabaseUrl ? [new URL(supabaseUrl).origin] : [];
+  const portal = { ...mode, connect, framesSelf: true };
   return [
     { source: "/:path*", missing: ON_PORTAL_HOST, headers: securityHeaders(mode) },
     {
       source: "/:path*",
       has: ON_PORTAL_HOST,
-      headers: [...securityHeaders({ ...mode, connect }), { key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      headers: [...securityHeaders(portal), { key: "X-Robots-Tag", value: "noindex, nofollow" }],
     },
+    // Comes last, so its framing headers replace the ones above. The editors frame it.
+    { source: PREVIEW_PATH, has: ON_PORTAL_HOST, headers: securityHeaders({ ...portal, framedBySelf: true }) },
   ];
 }

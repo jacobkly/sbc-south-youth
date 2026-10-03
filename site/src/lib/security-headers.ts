@@ -5,7 +5,8 @@
  * request. Next's inline scripts are allowed instead, but nothing loads
  * from another site: fonts are self-hosted and photos come through
  * `/_next/image`. Blocking framing, other hosts, plugins, and `<base>`
- * tags still stops the common attacks.
+ * tags still stops the common attacks. The one frame is the portal's
+ * draft preview, which only the portal itself may show.
  */
 
 export type HeaderMode = {
@@ -15,9 +16,13 @@ export type HeaderMode = {
   https: boolean;
   /** Other origins the page's scripts may call. Only the portal has one: Supabase. */
   connect?: string[];
+  /** The page may frame its own site. The portal's editors frame their draft preview. */
+  framesSelf?: boolean;
+  /** Only its own site may frame the page. Just the portal's draft preview. */
+  framedBySelf?: boolean;
 };
 
-export function contentSecurityPolicy({ dev, https, connect = [] }: HeaderMode): string {
+export function contentSecurityPolicy({ dev, https, connect = [], framesSelf, framedBySelf }: HeaderMode): string {
   return [
     "default-src 'self'",
     // TODO(wire-up): Turnstile needs https://challenges.cloudflare.com in script-src and frame-src.
@@ -26,11 +31,11 @@ export function contentSecurityPolicy({ dev, https, connect = [] }: HeaderMode):
     "img-src 'self' data:",
     "font-src 'self'",
     ["connect-src 'self'", ...connect, ...(dev ? ["ws:"] : [])].join(" "),
-    "frame-src 'none'",
+    `frame-src ${framesSelf ? "'self'" : "'none'"}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    `frame-ancestors ${framedBySelf ? "'self'" : "'none'"}`,
     ...(https ? ["upgrade-insecure-requests"] : []),
   ].join("; ");
 }
@@ -52,7 +57,7 @@ export function securityHeaders(mode: HeaderMode): { key: string; value: string 
   return [
     { key: "Content-Security-Policy", value: contentSecurityPolicy(mode) },
     // For browsers that predate frame-ancestors.
-    { key: "X-Frame-Options", value: "DENY" },
+    { key: "X-Frame-Options", value: mode.framedBySelf ? "SAMEORIGIN" : "DENY" },
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
     { key: "Permissions-Policy", value: PERMISSIONS_POLICY },

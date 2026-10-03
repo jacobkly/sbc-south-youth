@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { flushSync } from "react-dom";
 import {
   ArrowUpRightIcon,
   CalendarClockIcon,
@@ -11,12 +12,14 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import { describedBy, FormField } from "@/components/portal/form-field";
+import { PreviewPane } from "@/components/portal/preview/preview-pane";
 import { Alert, AlertDescription } from "@/components/portal/ui/alert";
 import { Button } from "@/components/portal/ui/button";
 import { Input } from "@/components/portal/ui/input";
 import { Label } from "@/components/portal/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/portal/ui/radio-group";
 import { Switch } from "@/components/portal/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/portal/ui/tabs";
 import { Textarea } from "@/components/portal/ui/textarea";
 import { savePost, type SaveResult } from "@/lib/portal/posts/actions";
 import { composerStart, matchingPreset, nextHour, primaryAction } from "@/lib/portal/posts/composer";
@@ -102,6 +105,9 @@ export function PostForm({
   const [saved, setSaved] = useState<Done | null>(null);
   const [done, setDone] = useState<Done | null>(null);
   const [doing, setDoing] = useState<SaveIntent | null>(null);
+  const [tab, setTab] = useState("edit");
+  // The preview loads the first time it's opened, then stays ready.
+  const [previewed, setPreviewed] = useState(false);
   const [pending, startTransition] = useTransition();
   const doneHeading = useRef<HTMLHeadingElement>(null);
   const startingOver = useRef(false);
@@ -149,7 +155,15 @@ export function PostForm({
   function showErrors(found: PostErrors) {
     setErrors(found);
     const first = FIELD_ORDER.find((field) => found[field]);
-    if (first) document.getElementById(FIELD_IDS[first])?.focus();
+    if (!first) return;
+    // The field has to be on screen to take focus.
+    flushSync(() => setTab("edit"));
+    document.getElementById(FIELD_IDS[first])?.focus();
+  }
+
+  function openTab(next: string) {
+    if (next === "preview") setPreviewed(true);
+    setTab(next);
   }
 
   /** Moves the start, and a quick end along with it, so "This week" stays the week it starts in. */
@@ -220,6 +234,8 @@ export function PostForm({
     setErrors({});
     setAlert(null);
     setApplied(null);
+    setTab("edit");
+    setPreviewed(false);
     setDone(null);
     startingOver.current = true;
     // Posting one again starts from its words, so a fresh one drops them from the address.
@@ -251,248 +267,266 @@ export function PostForm({
         </Alert>
       )}
 
-      {showTemplates && (
-        <div className="space-y-2">
-          <p id="post-templates-label" className="text-sm font-medium">
-            Start from
-          </p>
-          <div role="group" aria-labelledby="post-templates-label" className="flex flex-wrap gap-2">
-            {TEMPLATES.map((template) => (
-              <Button
-                key={template.id}
-                type="button"
-                variant="outline"
-                className="h-11 rounded-full px-4"
-                disabled={busy}
-                onClick={() => applyTemplate(template)}
-              >
-                {template.label}
-              </Button>
-            ))}
-          </div>
-          <p role="status" className="text-xs text-muted-foreground">
-            {applied
-              ? `Filled in from ${applied}. Change anything you like.`
-              : "Fills in the words and times. You can change all of it."}
-          </p>
-        </div>
-      )}
+      <form noValidate onSubmit={(event) => event.preventDefault()} className="space-y-6">
+        <Tabs value={tab} onValueChange={openTab} className="gap-6">
+          <TabsList className="w-full group-data-horizontal/tabs:h-11">
+            <TabsTrigger value="edit">Edit</TabsTrigger>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+          </TabsList>
 
-      <form noValidate onSubmit={(event) => event.preventDefault()}>
-        <fieldset disabled={busy} className="min-w-0 space-y-6">
-          <FormField
-            id={FIELD_IDS.title}
-            label="Title"
-            hint={`${values.title.length} of ${POST_LIMITS.title} characters.`}
-            error={errors.title}
-          >
-            <Input
-              id={FIELD_IDS.title}
-              autoComplete="off"
-              autoCapitalize="sentences"
-              maxLength={POST_LIMITS.title}
-              className="h-11"
-              value={values.title}
-              aria-invalid={errors.title ? true : undefined}
-              aria-describedby={describedBy(FIELD_IDS.title, errors.title, true)}
-              onChange={(event) => set("title", event.target.value)}
-            />
-          </FormField>
-
-          <FormField
-            id={FIELD_IDS.body}
-            label="Message"
-            optional
-            hint={`A sentence or two. ${values.body.length} of ${POST_LIMITS.body} characters.`}
-            error={errors.body}
-          >
-            <Textarea
-              id={FIELD_IDS.body}
-              rows={3}
-              autoCapitalize="sentences"
-              maxLength={POST_LIMITS.body}
-              className="min-h-24"
-              value={values.body}
-              aria-invalid={errors.body ? true : undefined}
-              aria-describedby={describedBy(FIELD_IDS.body, errors.body, true)}
-              onChange={(event) => set("body", event.target.value)}
-            />
-          </FormField>
-
-          <FormField id="post-tone" label="Kind" error={errors.tone} group>
-            <RadioGroup
-              value={values.tone}
-              onValueChange={(value) => set("tone", value)}
-              aria-labelledby="post-tone-label"
-              aria-describedby={describedBy("post-tone", errors.tone)}
-              className="gap-0 divide-y overflow-hidden rounded-xl border bg-card"
-            >
-              {TONES.map((tone) => {
-                const toneId = `post-tone-${tone.value}`;
-                return (
-                  <Label key={tone.value} htmlFor={toneId} className={OPTION_ROW}>
-                    <RadioGroupItem
-                      id={toneId}
-                      value={tone.value}
-                      className="mt-0.5"
-                      aria-invalid={errors.tone ? true : undefined}
-                      aria-labelledby={`${toneId}-title`}
-                      aria-describedby={`${toneId}-description`}
-                    />
-                    <span className="min-w-0 space-y-0.5">
-                      <span id={`${toneId}-title`} className="block text-base font-medium desktop:text-sm">
-                        {tone.title}
-                      </span>
-                      <span id={`${toneId}-description`} className="block text-sm text-muted-foreground">
-                        {tone.description}
-                      </span>
-                    </span>
-                  </Label>
-                );
-              })}
-            </RadioGroup>
-          </FormField>
-
-          <FormField
-            id={FIELD_IDS.linkUrl}
-            label="Link"
-            optional
-            hint="Adds a button. Use a page on the site like /events, or a full link."
-            error={errors.linkUrl}
-          >
-            <Input
-              id={FIELD_IDS.linkUrl}
-              inputMode="url"
-              autoComplete="off"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              maxLength={POST_LIMITS.link}
-              className="h-11"
-              value={values.linkUrl}
-              aria-invalid={errors.linkUrl ? true : undefined}
-              aria-describedby={describedBy(FIELD_IDS.linkUrl, errors.linkUrl, true)}
-              onChange={(event) => {
-                set("linkUrl", event.target.value);
-                clearError("linkLabel");
-              }}
-            />
-          </FormField>
-
-          {showLabel && (
-            <FormField
-              id={FIELD_IDS.linkLabel}
-              label="Button text"
-              optional
-              hint="Leave it blank for “Learn more”."
-              error={errors.linkLabel}
-            >
-              <Input
-                id={FIELD_IDS.linkLabel}
-                autoComplete="off"
-                maxLength={POST_LIMITS.linkLabel}
-                placeholder="Learn more"
-                className="h-11"
-                value={values.linkLabel}
-                aria-invalid={errors.linkLabel ? true : undefined}
-                aria-describedby={describedBy(FIELD_IDS.linkLabel, errors.linkLabel, true)}
-                onChange={(event) => set("linkLabel", event.target.value)}
-              />
-            </FormField>
-          )}
-
-          <Label htmlFor="post-pinned" className={`${OPTION_ROW} justify-between rounded-xl border bg-card`}>
-            <span className="min-w-0 space-y-0.5">
-              <span id="post-pinned-title" className="block text-base font-medium desktop:text-sm">
-                Pin it
-              </span>
-              <span id="post-pinned-description" className="block text-sm text-muted-foreground">
-                Pinned heads-ups come first, so the newest pinned one is the one on Home.
-              </span>
-            </span>
-            <Switch
-              id="post-pinned"
-              className="mt-0.5"
-              checked={values.pinned}
-              aria-labelledby="post-pinned-title"
-              aria-describedby="post-pinned-description"
-              onCheckedChange={(checked) => set("pinned", checked)}
-            />
-          </Label>
-
-          {liveStart ? (
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Goes up</p>
-              <p className="text-sm text-muted-foreground">
-                It&apos;s been up since {when(liveStart, now)}. To start it again later, end it and post it again.
-              </p>
-            </div>
-          ) : (
-            <FormField id="post-start" label="Goes up" error={errors.startsAt} group>
-              <RadioGroup
-                value={later ? "later" : "now"}
-                onValueChange={(value) => moveStart(value === "later", laterAt)}
-                aria-labelledby="post-start-label"
-                aria-describedby={describedBy("post-start", errors.startsAt)}
-                className="gap-0 divide-y overflow-hidden rounded-xl border bg-card"
-              >
-                <Label htmlFor="post-start-now" className={OPTION_ROW}>
-                  <RadioGroupItem id="post-start-now" value="now" className="mt-0.5" />
-                  <span className="text-base font-medium desktop:text-sm">As soon as it&apos;s published</span>
-                </Label>
-                <div className="space-y-3 px-4 py-3">
-                  <Label htmlFor="post-start-later" className="cursor-pointer items-start gap-3 font-normal">
-                    <RadioGroupItem id="post-start-later" value="later" className="mt-0.5" />
-                    <span className="text-base font-medium desktop:text-sm">At a set time</span>
-                  </Label>
-                  {later && (
-                    <Input
-                      id={FIELD_IDS.startsAt}
-                      type="datetime-local"
-                      aria-label="Start date and time"
-                      className="h-11"
-                      value={laterAt}
-                      aria-invalid={errors.startsAt ? true : undefined}
-                      aria-describedby={describedBy("post-start", errors.startsAt)}
-                      onChange={(event) => moveStart(true, event.target.value)}
-                    />
-                  )}
+          <TabsContent value="edit" forceMount className="space-y-6 text-base data-[state=inactive]:hidden">
+            {showTemplates && (
+              <div className="space-y-2">
+                <p id="post-templates-label" className="text-sm font-medium">
+                  Start from
+                </p>
+                <div role="group" aria-labelledby="post-templates-label" className="flex flex-wrap gap-2">
+                  {TEMPLATES.map((template) => (
+                    <Button
+                      key={template.id}
+                      type="button"
+                      variant="outline"
+                      className="h-11 rounded-full px-4"
+                      disabled={busy}
+                      onClick={() => applyTemplate(template)}
+                    >
+                      {template.label}
+                    </Button>
+                  ))}
                 </div>
-              </RadioGroup>
-            </FormField>
-          )}
+                <p role="status" className="text-xs text-muted-foreground">
+                  {applied
+                    ? `Filled in from ${applied}. Change anything you like.`
+                    : "Fills in the words and times. You can change all of it."}
+                </p>
+              </div>
+            )}
 
-          <FormField id={FIELD_IDS.endsAt} label="Comes down" error={errors.endsAt}>
-            <div role="group" aria-label="Quick end times" className="flex flex-wrap gap-2">
-              {PRESETS.map((option) => (
-                <Button
-                  key={option.id}
-                  type="button"
-                  variant={preset === option.id ? "default" : "outline"}
-                  className="h-11 rounded-full px-4"
-                  aria-pressed={preset === option.id}
-                  onClick={() => pickPreset(option.id)}
+            <fieldset disabled={busy} className="min-w-0 space-y-6">
+              <FormField
+                id={FIELD_IDS.title}
+                label="Title"
+                hint={`${values.title.length} of ${POST_LIMITS.title} characters.`}
+                error={errors.title}
+              >
+                <Input
+                  id={FIELD_IDS.title}
+                  autoComplete="off"
+                  autoCapitalize="sentences"
+                  maxLength={POST_LIMITS.title}
+                  className="h-11"
+                  value={values.title}
+                  aria-invalid={errors.title ? true : undefined}
+                  aria-describedby={describedBy(FIELD_IDS.title, errors.title, true)}
+                  onChange={(event) => set("title", event.target.value)}
+                />
+              </FormField>
+
+              <FormField
+                id={FIELD_IDS.body}
+                label="Message"
+                optional
+                hint={`A sentence or two. ${values.body.length} of ${POST_LIMITS.body} characters.`}
+                error={errors.body}
+              >
+                <Textarea
+                  id={FIELD_IDS.body}
+                  rows={3}
+                  autoCapitalize="sentences"
+                  maxLength={POST_LIMITS.body}
+                  className="min-h-24"
+                  value={values.body}
+                  aria-invalid={errors.body ? true : undefined}
+                  aria-describedby={describedBy(FIELD_IDS.body, errors.body, true)}
+                  onChange={(event) => set("body", event.target.value)}
+                />
+              </FormField>
+
+              <FormField id="post-tone" label="Kind" error={errors.tone} group>
+                <RadioGroup
+                  value={values.tone}
+                  onValueChange={(value) => set("tone", value)}
+                  aria-labelledby="post-tone-label"
+                  aria-describedby={describedBy("post-tone", errors.tone)}
+                  className="gap-0 divide-y overflow-hidden rounded-xl border bg-card"
                 >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-            <Input
-              id={FIELD_IDS.endsAt}
-              type="datetime-local"
-              className="h-11"
-              value={values.endsAt}
-              aria-invalid={errors.endsAt ? true : undefined}
-              aria-describedby={describedBy(FIELD_IDS.endsAt, errors.endsAt)}
-              onChange={(event) => set("endsAt", event.target.value)}
-            />
-          </FormField>
+                  {TONES.map((tone) => {
+                    const toneId = `post-tone-${tone.value}`;
+                    return (
+                      <Label key={tone.value} htmlFor={toneId} className={OPTION_ROW}>
+                        <RadioGroupItem
+                          id={toneId}
+                          value={tone.value}
+                          className="mt-0.5"
+                          aria-invalid={errors.tone ? true : undefined}
+                          aria-labelledby={`${toneId}-title`}
+                          aria-describedby={`${toneId}-description`}
+                        />
+                        <span className="min-w-0 space-y-0.5">
+                          <span id={`${toneId}-title`} className="block text-base font-medium desktop:text-sm">
+                            {tone.title}
+                          </span>
+                          <span id={`${toneId}-description`} className="block text-sm text-muted-foreground">
+                            {tone.description}
+                          </span>
+                        </span>
+                      </Label>
+                    );
+                  })}
+                </RadioGroup>
+              </FormField>
 
-          <p className="flex items-start gap-2 rounded-xl bg-muted/60 px-4 py-3 text-sm">
-            <CalendarClockIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-            {summary}
-          </p>
+              <FormField
+                id={FIELD_IDS.linkUrl}
+                label="Link"
+                optional
+                hint="Adds a button. Use a page on the site like /events, or a full link."
+                error={errors.linkUrl}
+              >
+                <Input
+                  id={FIELD_IDS.linkUrl}
+                  inputMode="url"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  maxLength={POST_LIMITS.link}
+                  className="h-11"
+                  value={values.linkUrl}
+                  aria-invalid={errors.linkUrl ? true : undefined}
+                  aria-describedby={describedBy(FIELD_IDS.linkUrl, errors.linkUrl, true)}
+                  onChange={(event) => {
+                    set("linkUrl", event.target.value);
+                    clearError("linkLabel");
+                  }}
+                />
+              </FormField>
 
+              {showLabel && (
+                <FormField
+                  id={FIELD_IDS.linkLabel}
+                  label="Button text"
+                  optional
+                  hint="Leave it blank for “Learn more”."
+                  error={errors.linkLabel}
+                >
+                  <Input
+                    id={FIELD_IDS.linkLabel}
+                    autoComplete="off"
+                    maxLength={POST_LIMITS.linkLabel}
+                    placeholder="Learn more"
+                    className="h-11"
+                    value={values.linkLabel}
+                    aria-invalid={errors.linkLabel ? true : undefined}
+                    aria-describedby={describedBy(FIELD_IDS.linkLabel, errors.linkLabel, true)}
+                    onChange={(event) => set("linkLabel", event.target.value)}
+                  />
+                </FormField>
+              )}
+
+              <Label htmlFor="post-pinned" className={`${OPTION_ROW} justify-between rounded-xl border bg-card`}>
+                <span className="min-w-0 space-y-0.5">
+                  <span id="post-pinned-title" className="block text-base font-medium desktop:text-sm">
+                    Pin it
+                  </span>
+                  <span id="post-pinned-description" className="block text-sm text-muted-foreground">
+                    Pinned heads-ups come first, so the newest pinned one is the one on Home.
+                  </span>
+                </span>
+                <Switch
+                  id="post-pinned"
+                  className="mt-0.5"
+                  checked={values.pinned}
+                  aria-labelledby="post-pinned-title"
+                  aria-describedby="post-pinned-description"
+                  onCheckedChange={(checked) => set("pinned", checked)}
+                />
+              </Label>
+
+              {liveStart ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Goes up</p>
+                  <p className="text-sm text-muted-foreground">
+                    It&apos;s been up since {when(liveStart, now)}. To start it again later, end it and post it again.
+                  </p>
+                </div>
+              ) : (
+                <FormField id="post-start" label="Goes up" error={errors.startsAt} group>
+                  <RadioGroup
+                    value={later ? "later" : "now"}
+                    onValueChange={(value) => moveStart(value === "later", laterAt)}
+                    aria-labelledby="post-start-label"
+                    aria-describedby={describedBy("post-start", errors.startsAt)}
+                    className="gap-0 divide-y overflow-hidden rounded-xl border bg-card"
+                  >
+                    <Label htmlFor="post-start-now" className={OPTION_ROW}>
+                      <RadioGroupItem id="post-start-now" value="now" className="mt-0.5" />
+                      <span className="text-base font-medium desktop:text-sm">As soon as it&apos;s published</span>
+                    </Label>
+                    <div className="space-y-3 px-4 py-3">
+                      <Label htmlFor="post-start-later" className="cursor-pointer items-start gap-3 font-normal">
+                        <RadioGroupItem id="post-start-later" value="later" className="mt-0.5" />
+                        <span className="text-base font-medium desktop:text-sm">At a set time</span>
+                      </Label>
+                      {later && (
+                        <Input
+                          id={FIELD_IDS.startsAt}
+                          type="datetime-local"
+                          aria-label="Start date and time"
+                          className="h-11"
+                          value={laterAt}
+                          aria-invalid={errors.startsAt ? true : undefined}
+                          aria-describedby={describedBy("post-start", errors.startsAt)}
+                          onChange={(event) => moveStart(true, event.target.value)}
+                        />
+                      )}
+                    </div>
+                  </RadioGroup>
+                </FormField>
+              )}
+
+              <FormField id={FIELD_IDS.endsAt} label="Comes down" error={errors.endsAt}>
+                <div role="group" aria-label="Quick end times" className="flex flex-wrap gap-2">
+                  {PRESETS.map((option) => (
+                    <Button
+                      key={option.id}
+                      type="button"
+                      variant={preset === option.id ? "default" : "outline"}
+                      className="h-11 rounded-full px-4"
+                      aria-pressed={preset === option.id}
+                      onClick={() => pickPreset(option.id)}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+                <Input
+                  id={FIELD_IDS.endsAt}
+                  type="datetime-local"
+                  className="h-11"
+                  value={values.endsAt}
+                  aria-invalid={errors.endsAt ? true : undefined}
+                  aria-describedby={describedBy(FIELD_IDS.endsAt, errors.endsAt)}
+                  onChange={(event) => set("endsAt", event.target.value)}
+                />
+              </FormField>
+
+              <p className="flex items-start gap-2 rounded-xl bg-muted/60 px-4 py-3 text-sm">
+                <CalendarClockIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                {summary}
+              </p>
+            </fieldset>
+          </TabsContent>
+
+          <TabsContent value="preview" forceMount className="text-base data-[state=inactive]:hidden">
+            {previewed && (
+              <PreviewPane request={{ kind: "post", values: { ...values, startsAt } }} active={tab === "preview"} />
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Saving works from either tab. */}
+        <fieldset disabled={busy} className="min-w-0 space-y-6">
           {alert && (
             <Alert variant="destructive">
               <CircleAlertIcon />

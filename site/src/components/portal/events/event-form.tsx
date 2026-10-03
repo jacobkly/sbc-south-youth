@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { flushSync } from "react-dom";
 import {
   ArrowUpRightIcon,
   CalendarClockIcon,
@@ -11,11 +12,13 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import { describedBy, FormField } from "@/components/portal/form-field";
+import { PreviewPane } from "@/components/portal/preview/preview-pane";
 import { Alert, AlertDescription } from "@/components/portal/ui/alert";
 import { Button } from "@/components/portal/ui/button";
 import { Input } from "@/components/portal/ui/input";
 import { Label } from "@/components/portal/ui/label";
 import { Switch } from "@/components/portal/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/portal/ui/tabs";
 import { Textarea } from "@/components/portal/ui/textarea";
 import { todayInLA } from "@/lib/dates";
 import { saveEvent, type SaveResult } from "@/lib/portal/events/actions";
@@ -96,6 +99,9 @@ export function EventForm({
   const [saved, setSaved] = useState<Done | null>(null);
   const [done, setDone] = useState<Done | null>(null);
   const [doing, setDoing] = useState<SaveIntent | null>(null);
+  const [tab, setTab] = useState("edit");
+  // The preview loads the first time it's opened, then stays ready.
+  const [previewed, setPreviewed] = useState(false);
   const [pending, startTransition] = useTransition();
   const doneHeading = useRef<HTMLHeadingElement>(null);
   const startingOver = useRef(false);
@@ -135,7 +141,15 @@ export function EventForm({
   function showErrors(found: EventErrors) {
     setErrors(found);
     const first = FIELD_ORDER.find((field) => found[field]);
-    if (first) document.getElementById(FIELD_IDS[first])?.focus();
+    if (!first) return;
+    // The field has to be on screen to take focus.
+    flushSync(() => setTab("edit"));
+    document.getElementById(FIELD_IDS[first])?.focus();
+  }
+
+  function openTab(next: string) {
+    if (next === "preview") setPreviewed(true);
+    setTab(next);
   }
 
   /** Moves the start, and the end along with it. */
@@ -181,6 +195,8 @@ export function EventForm({
     setValues(formValues(null));
     setErrors({});
     setAlert(null);
+    setTab("edit");
+    setPreviewed(false);
     setDone(null);
     startingOver.current = true;
     // A copy starts from another event, so a fresh one drops it from the address.
@@ -214,249 +230,267 @@ export function EventForm({
         </Alert>
       )}
 
-      <form noValidate onSubmit={(event) => event.preventDefault()}>
-        <fieldset disabled={busy} className="min-w-0 space-y-6">
-          <FormField
-            id={FIELD_IDS.title}
-            label="Title"
-            hint={characters(values.title, EVENT_LIMITS.title)}
-            error={errors.title}
-          >
-            <Input
-              id={FIELD_IDS.title}
-              autoComplete="off"
-              autoCapitalize="words"
-              maxLength={EVENT_LIMITS.title}
-              className="h-11"
-              value={values.title}
-              aria-invalid={errors.title ? true : undefined}
-              aria-describedby={describedBy(FIELD_IDS.title, errors.title, true)}
-              onChange={(event) => set("title", event.target.value)}
-            />
-          </FormField>
+      <form noValidate onSubmit={(event) => event.preventDefault()} className="space-y-6">
+        <Tabs value={tab} onValueChange={openTab} className="gap-6">
+          <TabsList className="w-full group-data-horizontal/tabs:h-11">
+            <TabsTrigger value="edit">Edit</TabsTrigger>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+          </TabsList>
 
-          <section aria-labelledby="event-when-heading" className="space-y-4">
-            <h2 id="event-when-heading" className="text-base font-semibold">
-              When
-            </h2>
-
-            <Label htmlFor="event-all-day" className={`${OPTION_ROW} font-normal leading-snug`}>
-              <span className="min-w-0 space-y-0.5">
-                <span id="event-all-day-title" className="block text-base font-medium desktop:text-sm">
-                  All day
-                </span>
-                <span id="event-all-day-description" className="block text-sm text-muted-foreground">
-                  For a retreat or a trip, where the times aren&apos;t set.
-                </span>
-              </span>
-              <Switch
-                id="event-all-day"
-                className="mt-0.5"
-                checked={values.allDay}
-                aria-labelledby="event-all-day-title"
-                aria-describedby="event-all-day-description"
-                onCheckedChange={(checked) => {
-                  set("allDay", checked);
-                  clearError("startDate", "startTime", "endDate", "endTime");
-                }}
-              />
-            </Label>
-
-            <FormField id="event-start" label={values.allDay ? "First day" : "Starts"} error={startError} group>
-              <div role="group" aria-labelledby="event-start-label" className="grid grid-cols-2 gap-3">
+          <TabsContent value="edit" forceMount className="text-base data-[state=inactive]:hidden">
+            <fieldset disabled={busy} className="min-w-0 space-y-6">
+              <FormField
+                id={FIELD_IDS.title}
+                label="Title"
+                hint={characters(values.title, EVENT_LIMITS.title)}
+                error={errors.title}
+              >
                 <Input
-                  id={FIELD_IDS.startDate}
-                  type="date"
-                  aria-label={values.allDay ? "First day" : "Start date"}
+                  id={FIELD_IDS.title}
+                  autoComplete="off"
+                  autoCapitalize="words"
+                  maxLength={EVENT_LIMITS.title}
                   className="h-11"
-                  value={values.startDate}
-                  aria-invalid={errors.startDate ? true : undefined}
-                  aria-describedby={describedBy("event-start", startError)}
-                  onChange={(event) => moveStart("startDate", event.target.value)}
+                  value={values.title}
+                  aria-invalid={errors.title ? true : undefined}
+                  aria-describedby={describedBy(FIELD_IDS.title, errors.title, true)}
+                  onChange={(event) => set("title", event.target.value)}
                 />
-                {!values.allDay && (
-                  <Input
-                    id={FIELD_IDS.startTime}
-                    type="time"
-                    aria-label="Start time"
-                    className="h-11"
-                    value={values.startTime}
-                    aria-invalid={errors.startTime ? true : undefined}
-                    aria-describedby={describedBy("event-start", startError)}
-                    onChange={(event) => moveStart("startTime", event.target.value)}
-                  />
-                )}
-              </div>
-            </FormField>
+              </FormField>
 
-            <FormField id="event-end" label={values.allDay ? "Last day" : "Ends"} error={endError} group>
-              <div role="group" aria-labelledby="event-end-label" className="grid grid-cols-2 gap-3">
-                <Input
-                  id={FIELD_IDS.endDate}
-                  type="date"
-                  aria-label={values.allDay ? "Last day" : "End date"}
-                  className="h-11"
-                  value={values.endDate}
-                  aria-invalid={errors.endDate ? true : undefined}
-                  aria-describedby={describedBy("event-end", endError)}
-                  onChange={(event) => set("endDate", event.target.value)}
-                />
-                {!values.allDay && (
-                  <Input
-                    id={FIELD_IDS.endTime}
-                    type="time"
-                    aria-label="End time"
-                    className="h-11"
-                    value={values.endTime}
-                    aria-invalid={errors.endTime ? true : undefined}
-                    aria-describedby={describedBy("event-end", endError)}
-                    onChange={(event) => set("endTime", event.target.value)}
-                  />
-                )}
-              </div>
-            </FormField>
+              <section aria-labelledby="event-when-heading" className="space-y-4">
+                <h2 id="event-when-heading" className="text-base font-semibold">
+                  When
+                </h2>
 
-            {when && (
-              <p className="flex items-start gap-2 rounded-xl bg-muted/60 px-4 py-3 text-sm">
-                <CalendarClockIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                {when}
-              </p>
+                <Label htmlFor="event-all-day" className={`${OPTION_ROW} font-normal leading-snug`}>
+                  <span className="min-w-0 space-y-0.5">
+                    <span id="event-all-day-title" className="block text-base font-medium desktop:text-sm">
+                      All day
+                    </span>
+                    <span id="event-all-day-description" className="block text-sm text-muted-foreground">
+                      For a retreat or a trip, where the times aren&apos;t set.
+                    </span>
+                  </span>
+                  <Switch
+                    id="event-all-day"
+                    className="mt-0.5"
+                    checked={values.allDay}
+                    aria-labelledby="event-all-day-title"
+                    aria-describedby="event-all-day-description"
+                    onCheckedChange={(checked) => {
+                      set("allDay", checked);
+                      clearError("startDate", "startTime", "endDate", "endTime");
+                    }}
+                  />
+                </Label>
+
+                <FormField id="event-start" label={values.allDay ? "First day" : "Starts"} error={startError} group>
+                  <div role="group" aria-labelledby="event-start-label" className="grid grid-cols-2 gap-3">
+                    <Input
+                      id={FIELD_IDS.startDate}
+                      type="date"
+                      aria-label={values.allDay ? "First day" : "Start date"}
+                      className="h-11"
+                      value={values.startDate}
+                      aria-invalid={errors.startDate ? true : undefined}
+                      aria-describedby={describedBy("event-start", startError)}
+                      onChange={(event) => moveStart("startDate", event.target.value)}
+                    />
+                    {!values.allDay && (
+                      <Input
+                        id={FIELD_IDS.startTime}
+                        type="time"
+                        aria-label="Start time"
+                        className="h-11"
+                        value={values.startTime}
+                        aria-invalid={errors.startTime ? true : undefined}
+                        aria-describedby={describedBy("event-start", startError)}
+                        onChange={(event) => moveStart("startTime", event.target.value)}
+                      />
+                    )}
+                  </div>
+                </FormField>
+
+                <FormField id="event-end" label={values.allDay ? "Last day" : "Ends"} error={endError} group>
+                  <div role="group" aria-labelledby="event-end-label" className="grid grid-cols-2 gap-3">
+                    <Input
+                      id={FIELD_IDS.endDate}
+                      type="date"
+                      aria-label={values.allDay ? "Last day" : "End date"}
+                      className="h-11"
+                      value={values.endDate}
+                      aria-invalid={errors.endDate ? true : undefined}
+                      aria-describedby={describedBy("event-end", endError)}
+                      onChange={(event) => set("endDate", event.target.value)}
+                    />
+                    {!values.allDay && (
+                      <Input
+                        id={FIELD_IDS.endTime}
+                        type="time"
+                        aria-label="End time"
+                        className="h-11"
+                        value={values.endTime}
+                        aria-invalid={errors.endTime ? true : undefined}
+                        aria-describedby={describedBy("event-end", endError)}
+                        onChange={(event) => set("endTime", event.target.value)}
+                      />
+                    )}
+                  </div>
+                </FormField>
+
+                {when && (
+                  <p className="flex items-start gap-2 rounded-xl bg-muted/60 px-4 py-3 text-sm">
+                    <CalendarClockIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    {when}
+                  </p>
+                )}
+              </section>
+
+              <section aria-labelledby="event-where-heading" className="space-y-4">
+                <h2 id="event-where-heading" className="text-base font-semibold">
+                  Where and how much
+                </h2>
+
+                <FormField
+                  id={FIELD_IDS.locationName}
+                  label="Place"
+                  optional
+                  hint="Where to meet, like the youth room."
+                  error={errors.locationName}
+                >
+                  <Input
+                    id={FIELD_IDS.locationName}
+                    autoComplete="off"
+                    autoCapitalize="words"
+                    maxLength={EVENT_LIMITS.locationName}
+                    className="h-11"
+                    value={values.locationName}
+                    aria-invalid={errors.locationName ? true : undefined}
+                    aria-describedby={describedBy(FIELD_IDS.locationName, errors.locationName, true)}
+                    onChange={(event) => set("locationName", event.target.value)}
+                  />
+                </FormField>
+
+                <FormField
+                  id={FIELD_IDS.address}
+                  label="Address"
+                  optional
+                  hint="Leave it blank if it's at the church. Maps and calendars use it."
+                  error={errors.address}
+                >
+                  <Input
+                    id={FIELD_IDS.address}
+                    autoComplete="off"
+                    autoCapitalize="words"
+                    maxLength={EVENT_LIMITS.address}
+                    className="h-11"
+                    value={values.address}
+                    aria-invalid={errors.address ? true : undefined}
+                    aria-describedby={describedBy(FIELD_IDS.address, errors.address, true)}
+                    onChange={(event) => set("address", event.target.value)}
+                  />
+                </FormField>
+
+                <FormField
+                  id={FIELD_IDS.costNote}
+                  label="Cost"
+                  optional
+                  hint="Like “Free” or “$40, due Nov 1”."
+                  error={errors.costNote}
+                >
+                  <Input
+                    id={FIELD_IDS.costNote}
+                    autoComplete="off"
+                    maxLength={EVENT_LIMITS.costNote}
+                    className="h-11"
+                    value={values.costNote}
+                    aria-invalid={errors.costNote ? true : undefined}
+                    aria-describedby={describedBy(FIELD_IDS.costNote, errors.costNote, true)}
+                    onChange={(event) => set("costNote", event.target.value)}
+                  />
+                </FormField>
+              </section>
+
+              <section aria-labelledby="event-about-heading" className="space-y-4">
+                <h2 id="event-about-heading" className="text-base font-semibold">
+                  About it
+                </h2>
+
+                <FormField
+                  id={FIELD_IDS.summary}
+                  label="Short description"
+                  optional
+                  hint={`For link previews and search results. ${characters(values.summary, EVENT_LIMITS.summary)}`}
+                  error={errors.summary}
+                >
+                  <Input
+                    id={FIELD_IDS.summary}
+                    autoComplete="off"
+                    autoCapitalize="sentences"
+                    maxLength={EVENT_LIMITS.summary}
+                    className="h-11"
+                    value={values.summary}
+                    aria-invalid={errors.summary ? true : undefined}
+                    aria-describedby={describedBy(FIELD_IDS.summary, errors.summary, true)}
+                    onChange={(event) => set("summary", event.target.value)}
+                  />
+                </FormField>
+
+                <FormField
+                  id={FIELD_IDS.body}
+                  label="Details"
+                  optional
+                  hint={`What to bring and what to know. Leave a blank line between paragraphs. ${characters(
+                    values.body,
+                    EVENT_LIMITS.body,
+                  )}`}
+                  error={errors.body}
+                >
+                  <Textarea
+                    id={FIELD_IDS.body}
+                    rows={5}
+                    autoCapitalize="sentences"
+                    maxLength={EVENT_LIMITS.body}
+                    className="min-h-32"
+                    value={values.body}
+                    aria-invalid={errors.body ? true : undefined}
+                    aria-describedby={describedBy(FIELD_IDS.body, errors.body, true)}
+                    onChange={(event) => set("body", event.target.value)}
+                  />
+                </FormField>
+
+                <Label htmlFor="event-featured" className={`${OPTION_ROW} font-normal leading-snug`}>
+                  <span className="min-w-0 space-y-0.5">
+                    <span id="event-featured-title" className="block text-base font-medium desktop:text-sm">
+                      Feature it
+                    </span>
+                    <span id="event-featured-description" className="block text-sm text-muted-foreground">
+                      A big card on This Week, and Home counts down to it.
+                    </span>
+                  </span>
+                  <Switch
+                    id="event-featured"
+                    className="mt-0.5"
+                    checked={values.featured}
+                    aria-labelledby="event-featured-title"
+                    aria-describedby="event-featured-description"
+                    onCheckedChange={(checked) => set("featured", checked)}
+                  />
+                </Label>
+              </section>
+            </fieldset>
+          </TabsContent>
+
+          <TabsContent value="preview" forceMount className="text-base data-[state=inactive]:hidden">
+            {previewed && (
+              <PreviewPane request={{ kind: "event", values, id, slug }} active={tab === "preview"} />
             )}
-          </section>
+          </TabsContent>
+        </Tabs>
 
-          <section aria-labelledby="event-where-heading" className="space-y-4">
-            <h2 id="event-where-heading" className="text-base font-semibold">
-              Where and how much
-            </h2>
-
-            <FormField
-              id={FIELD_IDS.locationName}
-              label="Place"
-              optional
-              hint="Where to meet, like the youth room."
-              error={errors.locationName}
-            >
-              <Input
-                id={FIELD_IDS.locationName}
-                autoComplete="off"
-                autoCapitalize="words"
-                maxLength={EVENT_LIMITS.locationName}
-                className="h-11"
-                value={values.locationName}
-                aria-invalid={errors.locationName ? true : undefined}
-                aria-describedby={describedBy(FIELD_IDS.locationName, errors.locationName, true)}
-                onChange={(event) => set("locationName", event.target.value)}
-              />
-            </FormField>
-
-            <FormField
-              id={FIELD_IDS.address}
-              label="Address"
-              optional
-              hint="Leave it blank if it's at the church. Maps and calendars use it."
-              error={errors.address}
-            >
-              <Input
-                id={FIELD_IDS.address}
-                autoComplete="off"
-                autoCapitalize="words"
-                maxLength={EVENT_LIMITS.address}
-                className="h-11"
-                value={values.address}
-                aria-invalid={errors.address ? true : undefined}
-                aria-describedby={describedBy(FIELD_IDS.address, errors.address, true)}
-                onChange={(event) => set("address", event.target.value)}
-              />
-            </FormField>
-
-            <FormField
-              id={FIELD_IDS.costNote}
-              label="Cost"
-              optional
-              hint="Like “Free” or “$40, due Nov 1”."
-              error={errors.costNote}
-            >
-              <Input
-                id={FIELD_IDS.costNote}
-                autoComplete="off"
-                maxLength={EVENT_LIMITS.costNote}
-                className="h-11"
-                value={values.costNote}
-                aria-invalid={errors.costNote ? true : undefined}
-                aria-describedby={describedBy(FIELD_IDS.costNote, errors.costNote, true)}
-                onChange={(event) => set("costNote", event.target.value)}
-              />
-            </FormField>
-          </section>
-
-          <section aria-labelledby="event-about-heading" className="space-y-4">
-            <h2 id="event-about-heading" className="text-base font-semibold">
-              About it
-            </h2>
-
-            <FormField
-              id={FIELD_IDS.summary}
-              label="Short description"
-              optional
-              hint={`For link previews and search results. ${characters(values.summary, EVENT_LIMITS.summary)}`}
-              error={errors.summary}
-            >
-              <Input
-                id={FIELD_IDS.summary}
-                autoComplete="off"
-                autoCapitalize="sentences"
-                maxLength={EVENT_LIMITS.summary}
-                className="h-11"
-                value={values.summary}
-                aria-invalid={errors.summary ? true : undefined}
-                aria-describedby={describedBy(FIELD_IDS.summary, errors.summary, true)}
-                onChange={(event) => set("summary", event.target.value)}
-              />
-            </FormField>
-
-            <FormField
-              id={FIELD_IDS.body}
-              label="Details"
-              optional
-              hint={`What to bring and what to know. Leave a blank line between paragraphs. ${characters(
-                values.body,
-                EVENT_LIMITS.body,
-              )}`}
-              error={errors.body}
-            >
-              <Textarea
-                id={FIELD_IDS.body}
-                rows={5}
-                autoCapitalize="sentences"
-                maxLength={EVENT_LIMITS.body}
-                className="min-h-32"
-                value={values.body}
-                aria-invalid={errors.body ? true : undefined}
-                aria-describedby={describedBy(FIELD_IDS.body, errors.body, true)}
-                onChange={(event) => set("body", event.target.value)}
-              />
-            </FormField>
-
-            <Label htmlFor="event-featured" className={`${OPTION_ROW} font-normal leading-snug`}>
-              <span className="min-w-0 space-y-0.5">
-                <span id="event-featured-title" className="block text-base font-medium desktop:text-sm">
-                  Feature it
-                </span>
-                <span id="event-featured-description" className="block text-sm text-muted-foreground">
-                  A big card on This Week, and Home counts down to it.
-                </span>
-              </span>
-              <Switch
-                id="event-featured"
-                className="mt-0.5"
-                checked={values.featured}
-                aria-labelledby="event-featured-title"
-                aria-describedby="event-featured-description"
-                onCheckedChange={(checked) => set("featured", checked)}
-              />
-            </Label>
-          </section>
-
+        {/* Saving works from either tab. */}
+        <fieldset disabled={busy} className="min-w-0 space-y-6">
           <p className="text-sm break-words text-muted-foreground">
             {published ? "Its page stays at " : "Its page will be "}
             <span className="font-medium text-foreground">{link}</span>

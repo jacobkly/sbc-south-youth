@@ -30,5 +30,6 @@ describe("the portal fence", () => {
     ].join("\n");
     expect(await importErrors(code, "src/components/portal/fake.tsx")).toEqual([]);
     expect(await importErrors(code, "src/app/(portal)/portal/fake/page.tsx")).toEqual([]);
+    expect(await importErrors(code, "src/app/(portal-preview)/portal/preview/page.tsx")).toEqual([]);
   }, 30_000);
 });

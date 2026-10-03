@@ -52,6 +52,15 @@ The portal's pages live in `src/app/(portal)/portal/`, with their own root layou
 
 Portal changes run in server actions as the signed-in person, so row-level security checks each one. Actions that need a role start with `requireRole()` in `src/lib/portal/auth/require-role.ts`, which refuses anyone without it, and every change on staging, in words the form can show.
 
+### Draft previews
+
+The Preview tab on a heads-up or event shows the draft with the public site's own components and styles, in a frame, so the site's stylesheet never reaches the portal's pages.
+
+- The frame loads `/preview` on the portal host. Its page lives in `src/app/(portal-preview)/portal/preview/`, outside the portal's folders, because the public stylesheet doesn't scan them. The ESLint rule lets this one folder import portal code.
+- The editor sends the draft to the frame with `postMessage`, and each side only listens to the other's window on the same origin. The messages are in `src/lib/portal/preview/messages.ts`.
+- The frame's server action sits beside its page and renders the draft with `src/lib/portal/preview/preview.ts`. It checks for a site editor, takes only the form's own fields, and never saves anything.
+- Portal pages may frame only the portal's own pages (`frame-src 'self'`), only `/preview` lets them (`frame-ancestors 'self'`), and every other page refuses to be framed.
+
 ### Run it locally
 
 1. From the repo root, start the local stack with `npx supabase start`, then load the fake data with `npx supabase db reset`.
@@ -68,6 +77,7 @@ For local email, set `EMAIL_FROM` and `EMAIL_LOCAL_INBOX=http://127.0.0.1:54324`
 | `/api/webhooks/resend` | Resend, with delivery, bounce, and complaint updates. It checks the signature with `RESEND_WEBHOOK_SECRET` |
 | `/auth/callback` | Sign-in links in Supabase's own emails, if a template uses one |
 | `/activity/export` | An owner's Download button on Activity |
+| `/preview` | The Preview tab's frame on a heads-up or event. Only portal pages can frame it |
 
 ### Staging
 

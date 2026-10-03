@@ -24,7 +24,10 @@ export const siteViewport: Viewport = {
   colorScheme: "dark light",
 };
 
-/** The public site's `<html>` and `<body>`, for its root layout and the 404 for unknown URLs. */
+/**
+ * The public site's `<html>` and `<body>`, for its root layout, the
+ * portal's draft preview, and the 404 for unknown URLs.
+ */
 export function SiteDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geist.variable} ${bricolage.variable}`}>

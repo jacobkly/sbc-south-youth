@@ -3,7 +3,7 @@
 /* Dev-only pages aren't in git, and Tailwind skips ignored files unless told. */
 @source "./(public)/dev";
 
-/* The portal has its own styles in (portal)/portal.css. */
+/* The portal has its own styles in (portal)/portal.css. Its draft preview, in (portal-preview), uses these. */
 @source not "./(portal)";
 @source not "../components/portal";
 @source not "../lib/portal";

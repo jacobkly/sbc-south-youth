@@ -2,14 +2,15 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
-const PORTAL_ONLY = "Only the portal (app/(portal), components/portal, lib/portal) may import this, so it stays out of the public site's bundle.";
+const PORTAL_ONLY =
+  "Only the portal (app/(portal), app/(portal-preview), components/portal, lib/portal) may import this, so it stays out of the public site's bundle.";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/app/(portal)/**", "src/components/portal/**", "src/lib/portal/**"],
+    ignores: ["src/app/(portal)/**", "src/app/(portal-preview)/**", "src/components/portal/**", "src/lib/portal/**"],
     rules: {
       "no-restricted-imports": [
         "error",

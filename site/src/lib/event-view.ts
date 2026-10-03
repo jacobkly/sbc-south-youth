@@ -1,7 +1,7 @@
 import { cacheLife } from "next/cache";
 import { formatAddress } from "@/content/site";
 import { getBySlug } from "./content/loaders";
-import type { Photo } from "./content/types";
+import type { Photo, SiteEvent } from "./content/types";
 import { todayInLA, type IsoDate } from "./dates";
 import { eventItem, itemAddress, itemDateLabel, itemTimeLabel, upcomingItems, type FeedItem } from "./feed";
 import { eventEntry, gatheringEntry, googleCalendarUrl } from "./ics";
@@ -85,19 +85,26 @@ export async function eventView(slug: string): Promise<EventView | null> {
     };
   }
 
-  const { event } = content;
+  return oneOffEventView(content.event, now, church);
+}
+
+/**
+ * A one-off event's page as of `now`. The portal's preview shows an
+ * unsaved event with it too, so the preview matches the real page.
+ */
+export function oneOffEventView(event: SiteEvent, now: Date, church: string): EventView {
   const item = eventItem(event);
   const endsAt = Date.parse(event.endsAt);
   const address = itemAddress(item, church);
   return {
-    slug,
+    slug: event.slug,
     title: event.title,
     summary: event.summary,
     description: event.description,
     photo: event.photo,
     featured: event.featured,
     weekly: false,
-    date: itemDateLabel(item, today),
+    date: itemDateLabel(item, todayInLA(now)),
     time: itemTimeLabel(item),
     locationName: event.locationName,
     address,
@@ -107,7 +114,7 @@ export async function eventView(slug: string): Promise<EventView | null> {
     ended: endsAt <= now.getTime(),
     googleCalendar: googleCalendarUrl(eventEntry(event, church)),
     nights: [],
-    today,
+    today: todayInLA(now),
     jsonLd: eventJsonLd(item, { description: event.description, address, cancelled: Boolean(event.cancelled) }),
   };
 }

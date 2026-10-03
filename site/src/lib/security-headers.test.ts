@@ -39,6 +39,15 @@ describe("contentSecurityPolicy", () => {
     expect(portal["script-src"]).toEqual(production["script-src"]);
   });
 
+  it("lets a page frame, or be framed by, its own site only when asked", () => {
+    const portal = directives(contentSecurityPolicy({ dev: false, https: true, framesSelf: true }));
+    expect(portal["frame-src"]).toEqual(["'self'"]);
+    expect(portal["frame-ancestors"]).toEqual(["'none'"]);
+    const preview = directives(contentSecurityPolicy({ dev: false, https: true, framedBySelf: true }));
+    expect(preview["frame-ancestors"]).toEqual(["'self'"]);
+    expect(preview["frame-src"]).toEqual(["'none'"]);
+  });
+
   it("lets the dev server eval and open its reload socket", () => {
     const dev = directives(contentSecurityPolicy({ dev: true, https: false }));
     expect(dev["script-src"]).toContain("'unsafe-eval'");
@@ -56,6 +65,14 @@ describe("securityHeaders", () => {
       "Referrer-Policy",
       "Permissions-Policy",
     ]);
+  });
+
+  it("matches the old framing header to the policy", () => {
+    const frameOptions = (mode: Parameters<typeof securityHeaders>[0]) =>
+      securityHeaders(mode).find((header) => header.key === "X-Frame-Options")?.value;
+    expect(frameOptions({ dev: false, https: true })).toBe("DENY");
+    expect(frameOptions({ dev: false, https: true, framesSelf: true })).toBe("DENY");
+    expect(frameOptions({ dev: false, https: true, framedBySelf: true })).toBe("SAMEORIGIN");
   });
 
   it("keeps sharing and copying available for the share buttons", () => {

@@ -160,10 +160,22 @@ describe("NO_PAGE_PATH", () => {
 describe("siteHeaders", () => {
   const mode = { dev: false, https: true };
   const SUPABASE = "https://example-ref.supabase.co";
-  const headersFor = (host: string, pathname: string, supabaseUrl: string | null = SUPABASE) =>
-    siteHeaders(mode, supabaseUrl ?? undefined)
-      .filter((rule) => matches(rule, host, pathname) !== false)
-      .flatMap((rule) => rule.headers);
+  const rulesFor = (host: string, pathname: string, supabaseUrl: string | null = SUPABASE) =>
+    siteHeaders(mode, supabaseUrl ?? undefined).filter((rule) => matches(rule, host, pathname) !== false);
+  // Like Next, a later rule's header replaces an earlier one's with the same key.
+  const headersFor = (host: string, pathname: string, supabaseUrl: string | null = SUPABASE) => [
+    ...new Map(
+      rulesFor(host, pathname, supabaseUrl)
+        .flatMap((rule) => rule.headers)
+        .map((header) => [header.key, header]),
+    ).values(),
+  ];
+  const header = (host: string, pathname: string, key: string) =>
+    headersFor(host, pathname).find((found) => found.key === key)?.value;
+  const directive = (host: string, pathname: string, name: string) =>
+    header(host, pathname, "Content-Security-Policy")
+      ?.split("; ")
+      .find((found) => found.startsWith(`${name} `));
   const policies = (headers: { key: string; value: string }[]) =>
     headers.filter((header) => header.key === "Content-Security-Policy").map((header) => header.value);
   const connectSrc = (policy: string) => policy.split("; ").find((directive) => directive.startsWith("connect-src "));
@@ -182,7 +194,24 @@ describe("siteHeaders", () => {
 
   it("sends each response exactly one policy, since browsers enforce every one they get", () => {
     for (const host of [PORTAL, "portal.localhost:3001", PUBLIC, "localhost:3001"]) {
-      expect(policies(headersFor(host, "/"))).toHaveLength(1);
+      expect(policies(rulesFor(host, "/").flatMap((rule) => rule.headers))).toHaveLength(1);
+    }
+  });
+
+  it("lets the portal frame only its own preview page", () => {
+    expect(directive(PORTAL, "/posts/new", "frame-src")).toBe("frame-src 'self'");
+    expect(directive(PORTAL, "/posts/new", "frame-ancestors")).toBe("frame-ancestors 'none'");
+    expect(header(PORTAL, "/posts/new", "X-Frame-Options")).toBe("DENY");
+    expect(directive(PORTAL, "/preview", "frame-ancestors")).toBe("frame-ancestors 'self'");
+    expect(header(PORTAL, "/preview", "X-Frame-Options")).toBe("SAMEORIGIN");
+    expect(header(PORTAL, "/preview", "X-Robots-Tag")).toBe("noindex, nofollow");
+  });
+
+  it("never lets the public site frame or be framed", () => {
+    for (const pathname of ["/", "/preview", "/events/beach-day"]) {
+      expect(directive(PUBLIC, pathname, "frame-src")).toBe("frame-src 'none'");
+      expect(directive(PUBLIC, pathname, "frame-ancestors")).toBe("frame-ancestors 'none'");
+      expect(header(PUBLIC, pathname, "X-Frame-Options")).toBe("DENY");
     }
   });
 
