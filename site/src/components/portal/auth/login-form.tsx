@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/portal/ui/alert";
 import { Button } from "@/components/portal/ui/button";
 import { Input } from "@/components/portal/ui/input";
 import { Label } from "@/components/portal/ui/label";
+import { afterSignInPath } from "@/lib/portal/auth/mfa";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -24,7 +25,8 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
   async function signIn() {
     setPending(true);
     setError(null);
-    const { error } = await createClient().auth.signInWithPassword({ email: email.trim(), password });
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
     if (error) {
       setPending(false);
@@ -38,10 +40,13 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
       return;
     }
 
+    // Someone with two-step sign-in enters a code next. This reads the new
+    // session in the browser, so it's instant.
+    const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     // A full page load, not a client navigation. The router keeps recent
     // pages alive in the background, and the typed password shouldn't
     // stay in one of them.
-    window.location.replace(next);
+    window.location.replace(afterSignInPath(next, level));
   }
 
   return (

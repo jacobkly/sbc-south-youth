@@ -5,7 +5,7 @@ import { describedBy, FormField } from "@/components/portal/form-field";
 import { Button } from "@/components/portal/ui/button";
 import { Input } from "@/components/portal/ui/input";
 import { MIN_PASSWORD_LENGTH, newPasswordErrors } from "@/lib/portal/password";
-import { createClient } from "@/lib/supabase/client";
+import { checkPassword, createClient } from "@/lib/supabase/client";
 
 const FIELDS = { current: "current-password", next: "new-password", confirm: "confirm-password" } as const;
 
@@ -14,7 +14,7 @@ type Errors = Partial<Record<Field, string>>;
 
 /**
  * Changes the password. The current password is checked by signing in with
- * it, and afterward every other device is signed out.
+ * it on the side, and afterward every other device is signed out.
  */
 export function PasswordForm({ email }: { email: string }) {
   const [values, setValues] = useState<Record<Field, string>>({ current: "", next: "", confirm: "" });
@@ -49,12 +49,12 @@ export function PasswordForm({ email }: { email: string }) {
 
     setPending(true);
     const supabase = createClient();
-    const check = await supabase.auth.signInWithPassword({ email, password: values.current });
-    if (check.error) {
+    const checkError = await checkPassword(email, values.current);
+    if (checkError) {
       setPending(false);
-      if (check.error.code === "invalid_credentials") {
+      if (checkError.code === "invalid_credentials") {
         showErrors({ current: "That isn't your current password." });
-      } else if (check.error.status === 429) {
+      } else if (checkError.status === 429) {
         setMessage({ kind: "error", text: "Too many attempts. Wait a few minutes, then try again." });
       } else {
         setMessage({ kind: "error", text: "Couldn't change your password. Try again." });
@@ -69,6 +69,8 @@ export function PasswordForm({ email }: { email: string }) {
         showErrors({ next: "That password is too weak. Try a longer one." });
       } else if (error.code === "same_password") {
         showErrors({ next: "That's already your password." });
+      } else if (error.code === "insufficient_aal") {
+        setMessage({ kind: "error", text: "Enter a code from your authenticator app first, under Two-step sign-in." });
       } else {
         setMessage({ kind: "error", text: "Couldn't change your password. Try again." });
       }

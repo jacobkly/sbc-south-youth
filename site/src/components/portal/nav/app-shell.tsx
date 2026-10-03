@@ -6,7 +6,8 @@ import { AccountTheme } from "@/components/portal/account-theme";
 import { PortalNav } from "@/components/portal/nav/portal-nav";
 import { RefreshOnHistory } from "@/components/portal/nav/refresh-on-history";
 import { readPortalEnv } from "@/lib/env";
-import { getCurrentUser } from "@/lib/portal/auth/current-user";
+import { getCurrentUser, getSessionAal } from "@/lib/portal/auth/current-user";
+import { ownerNeedsMfa } from "@/lib/portal/auth/mfa";
 import type { NavUser } from "@/lib/portal/nav-items";
 import { canUseFinances, canUsePortal } from "@/lib/portal/roles";
 import { parseSavedTheme } from "@/lib/portal/theme";
@@ -20,6 +21,9 @@ export async function AppShell({ children }: { children: ReactNode }) {
   // Someone without a portal role gets a page of their own, so no portal
   // page ever renders for them.
   if (!user || !canUsePortal(user)) redirect("/no-access");
+  // Owners enter a code from their phone first, or set one up. Signing in
+  // usually goes there directly; this catches anyone who skipped ahead.
+  if (ownerNeedsMfa(user.roles, await getSessionAal())) redirect("/mfa");
 
   const { appEnv, financesUrl } = readPortalEnv();
   // Only people who can use finances get a link there.

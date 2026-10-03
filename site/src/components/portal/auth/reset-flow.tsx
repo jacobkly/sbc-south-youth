@@ -6,27 +6,49 @@ import { describedBy, FormField } from "@/components/portal/form-field";
 import { Alert, AlertDescription } from "@/components/portal/ui/alert";
 import { Button } from "@/components/portal/ui/button";
 import { Input } from "@/components/portal/ui/input";
+import { MFA_CODE_ID, MfaChallengeForm } from "@/components/portal/account/mfa-challenge-form";
+import { type MfaDevice, verifiedDevices } from "@/lib/portal/auth/mfa";
 import { cleanCode, CODE_LENGTH, MIN_PASSWORD_LENGTH, newPasswordErrors } from "@/lib/portal/password";
 import { createClient } from "@/lib/supabase/client";
 
-type Step = "email" | "code" | "password";
+type Step = "email" | "code" | "device" | "password";
 type Errors = { code?: string; password?: string; confirm?: string };
 
 // The input each step starts on.
-const FIRST_FIELD: Record<Step, string> = { email: "email", code: "code", password: "new-password" };
+const FIRST_FIELD: Record<Step, string> = {
+  email: "email",
+  code: "code",
+  device: MFA_CODE_ID,
+  password: "new-password",
+};
 
 const TOO_MANY = "Too many attempts. Wait a few minutes, then try again.";
 
 /**
+ * The authenticator apps to ask for a code before the password changes. An
+ * emailed code proves the email, not the phone, and Supabase won't change
+ * the password of someone with two-step sign-in until they've entered both.
+ */
+async function devicesToCheck(): Promise<MfaDevice[]> {
+  const supabase = createClient();
+  const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (level?.nextLevel !== "aal2" || level.currentLevel === "aal2") return [];
+  const { data } = await supabase.auth.mfa.listFactors();
+  return verifiedDevices(data?.all ?? []);
+}
+
+/**
  * Forgot password, and the first password for an invited person: email a
- * 6-digit code, check it, then save a new password. Every email gets the
- * same answer, so nobody can use this to learn who has an account.
- * Nothing personal goes in a URL, and the code works in any browser.
+ * 6-digit code, check it, then save a new password. Someone with two-step
+ * sign-in also enters a code from their authenticator app in between. Every
+ * email gets the same answer, so nobody can use this to learn who has an
+ * account. Nothing personal goes in a URL, and the code works in any browser.
  */
 export function ResetFlow({ mode, next }: { mode: "forgot" | "setup"; next: string }) {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [devices, setDevices] = useState<MfaDevice[]>([]);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [errors, setErrors] = useState<Errors>({});
@@ -91,16 +113,19 @@ export function ResetFlow({ mode, next }: { mode: "forgot" | "setup"; next: stri
 
     setPending(true);
     const { error } = await createClient().auth.verifyOtp({ email: email.trim(), token, type: "recovery" });
-    setPending(false);
 
     if (error) {
+      setPending(false);
       if (error.status === 429) setAlert(TOO_MANY);
       else if (!error.status || error.status >= 500) setAlert("Couldn't check the code. Check your connection and try again.");
       else showErrors({ code: "That code is wrong or has expired. Check the newest email, or send a new code." });
       return;
     }
 
-    goTo("password");
+    const found = await devicesToCheck();
+    setPending(false);
+    setDevices(found);
+    goTo(found.length > 0 ? "device" : "password");
   }
 
   async function savePassword() {
@@ -120,6 +145,12 @@ export function ResetFlow({ mode, next }: { mode: "forgot" | "setup"; next: stri
         showErrors({ password: "That password is too weak. Try a longer one." });
       } else if (error.code === "same_password") {
         showErrors({ password: "That's already your password. Use a different one." });
+      } else if (error.code === "insufficient_aal") {
+        // Only if looking up their devices failed after the emailed code.
+        const found = await devicesToCheck();
+        setDevices(found);
+        if (found.length > 0) goTo("device");
+        setAlert("Enter the code from your authenticator app first.");
       } else if (error.status === 401 || error.status === 403) {
         setPassword("");
         setConfirm("");
@@ -224,6 +255,15 @@ export function ResetFlow({ mode, next }: { mode: "forgot" | "setup"; next: stri
               Use a different email
             </Button>
           </div>
+        </>
+      )}
+
+      {step === "device" && (
+        <>
+          <p className="text-sm text-muted-foreground">
+            You use two-step sign-in, so enter the code from your authenticator app too.
+          </p>
+          <MfaChallengeForm devices={devices} onVerified={() => goTo("password")} />
         </>
       )}
 

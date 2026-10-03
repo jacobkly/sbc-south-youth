@@ -31,6 +31,11 @@ describe("safeNextPath", () => {
     expect(safeNextPath("/auth/callback")).toBe("/");
     expect(safeNextPath("/./login")).toBe("/");
   });
+
+  it("never loops back into the code step", () => {
+    expect(safeNextPath("/mfa")).toBe("/");
+    expect(safeNextPath("/mfa?next=/people")).toBe("/");
+  });
 });
 
 describe("isSignInPath", () => {
