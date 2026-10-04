@@ -591,6 +591,55 @@ export type Database = {
         Returns: undefined
       }
       cancel_request: { Args: { p_request_id: string }; Returns: undefined }
+      correct_request: {
+        Args: {
+          p_description: string
+          p_event_name: string
+          p_lines: Json
+          p_no_receipt: boolean
+          p_no_receipt_reason: string
+          p_paid_at: string
+          p_payment_method: Database["public"]["Enums"]["payment_method"]
+          p_payment_reference: string
+          p_purchase_date: string
+          p_reason: string
+          p_request_id: string
+          p_type: Database["public"]["Enums"]["reimbursement_type"]
+        }
+        Returns: {
+          admin_note: string | null
+          amount_cents: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          event_name: string | null
+          external_approver: string | null
+          id: string
+          no_receipt: boolean
+          no_receipt_reason: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payee_id: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference: string | null
+          purchase_date: string
+          request_number: number
+          sort_at: string
+          status: Database["public"]["Enums"]["request_status"]
+          submitted_at: string | null
+          type: Database["public"]["Enums"]["reimbursement_type"]
+          updated_at: string
+          vendor: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reimbursement_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_app_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]

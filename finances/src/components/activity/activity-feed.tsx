@@ -5,6 +5,7 @@ import {
   ChevronDownIcon,
   CircleCheckIcon,
   CircleXIcon,
+  FilePenLineIcon,
   FilePlusIcon,
   FileSpreadsheetIcon,
   MessageCircleQuestionMarkIcon,
@@ -38,6 +39,7 @@ const ACTION_ICONS: Record<EventAction, LucideIcon> = {
   unpaid: Undo2Icon,
   receipt_added: PaperclipIcon,
   receipt_removed: PaperclipIcon,
+  corrected: FilePenLineIcon,
 };
 
 function ItemIcon({ icon: Icon }: { icon: LucideIcon }) {

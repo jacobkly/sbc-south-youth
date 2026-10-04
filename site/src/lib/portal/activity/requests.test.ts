@@ -28,6 +28,10 @@ describe("requestEventTitle", () => {
     expect(requestEventTitle({ action: "submitted", from_status: "needs_info" })).toBe("Resubmitted");
   });
 
+  it("calls a fix to an approved or paid request a correction", () => {
+    expect(requestEventTitle({ action: "corrected", from_status: "paid" })).toBe("Corrected");
+  });
+
   it("shows an unknown action as is", () => {
     expect(requestEventTitle({ action: "archived", from_status: null })).toBe("archived");
   });
@@ -56,6 +60,22 @@ describe("describeRequestChanges", () => {
       { field: "amount_cents", label: "Amount", from: "$40.00", to: "$42.10" },
       { field: "purchase_date", label: "Purchase date", from: "Sep 20, 2026", to: "Sep 21, 2026" },
       { field: "vendor", label: "Vendor", from: "Test Market", to: "Test Grocer" },
+    ]);
+  });
+
+  it("shows a corrected payment by its date, method, and reference", () => {
+    const changes = {
+      payment_reference: { from: "Envelope 3", to: null },
+      paid_at: { from: "2026-01-15T20:00:00+00:00", to: "2026-01-17T07:30:00.000Z" },
+      payment_method: { from: "cash", to: "check" },
+      amount_cents: { from: 1000, to: 1750 },
+    };
+    expect(describeRequestChanges({ action: "corrected", changes })).toEqual([
+      { field: "amount_cents", label: "Amount", from: "$10.00", to: "$17.50" },
+      { field: "payment_method", label: "Paid with", from: "Cash", to: "Check" },
+      // 7:30 a.m. UTC is still the night before in Los Angeles.
+      { field: "paid_at", label: "Date paid", from: "Jan 15, 2026", to: "Jan 16, 2026" },
+      { field: "payment_reference", label: "Reference", from: "Envelope 3", to: "None" },
     ]);
   });
 

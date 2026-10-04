@@ -1,13 +1,14 @@
 import type { EditableRequest } from "@/components/requests/edit-request-form";
 import { centsToDecimal } from "@/lib/money";
 import type { SignedReceiptUrls } from "@/lib/receipts/signed-urls";
-import type { RequestStatus } from "@/lib/requests/format";
+import type { PaymentMethod } from "@/lib/requests/actions";
+import { isCorrectable, type RequestStatus } from "@/lib/requests/format";
 import type { RequestType } from "@/lib/requests/schema";
 
 /** What the edit pages read to open a request in the form. */
 export const EDIT_REQUEST_COLUMNS = `
   request_number, status, created_by, payee_id, type, amount_cents, purchase_date, description,
-  event_name, no_receipt, no_receipt_reason,
+  event_name, no_receipt, no_receipt_reason, paid_at, payment_method, payment_reference,
   lines:request_lines(id, amount_cents, vendor),
   receipts(id, line_id, storage_path, original_filename, mime_type, width, height)
 ` as const;
@@ -23,6 +24,9 @@ type EditRow = {
   event_name: string | null;
   no_receipt: boolean;
   no_receipt_reason: string | null;
+  paid_at: string | null;
+  payment_method: PaymentMethod | null;
+  payment_reference: string | null;
   lines: { id: string; amount_cents: number; vendor: string | null }[];
   receipts: {
     id: string;
@@ -72,5 +76,19 @@ export function toEditableRequest(
       height: receipt.height,
     })),
     signed,
+    correction: isCorrectable(row.status)
+      ? {
+          type: row.type,
+          purchase_date: row.purchase_date,
+          description: row.description,
+          event_name: row.event_name,
+          no_receipt: row.no_receipt,
+          no_receipt_reason: row.no_receipt_reason,
+          lines: row.lines.map((line) => ({ amount_cents: line.amount_cents, vendor: line.vendor })),
+          paid_at: row.paid_at,
+          payment_method: row.payment_method,
+          payment_reference: row.payment_reference,
+        }
+      : null,
   };
 }

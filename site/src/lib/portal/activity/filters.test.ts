@@ -138,6 +138,15 @@ describe("activityQuery", () => {
     });
   });
 
+  it("counts corrections as request edits", () => {
+    const filters = { ...DEFAULT_ACTIVITY_FILTERS, kind: "requests" } as const;
+    expect(activityQuery(filters, scopesFor(["owner"])).actions).toEqual([
+      "request.created",
+      "request.updated",
+      "request.corrected",
+    ]);
+  });
+
   it("finds downloads in both apps that have them", () => {
     const filters = { ...DEFAULT_ACTIVITY_FILTERS, kind: "downloads" } as const;
     expect(activityQuery(filters, scopesFor(["owner"])).actions).toEqual(["export.downloaded", "activity.exported"]);

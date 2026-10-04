@@ -185,6 +185,17 @@ function checkPayment(
   };
 }
 
+/** Checks a paid request's payment on its own, for a correction, which changes no status. */
+export function validatePayment(
+  values: PaymentValues,
+  context: Pick<SaveContext, "today" | "purchaseDate">,
+):
+  | { success: true; data: Payment }
+  | { success: false; errors: Partial<Record<"paid_date" | "payment_reference", string>> } {
+  const { payment, errors } = checkPayment(values, context);
+  return Object.keys(errors).length > 0 ? { success: false, errors } : { success: true, data: payment };
+}
+
 /**
  * Checks the chosen save option against the rest of the form. These mirror the
  * database rules, so mistakes show up next to the fields before anything is

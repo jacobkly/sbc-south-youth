@@ -27,6 +27,16 @@ export function isEditable(status: RequestStatus): boolean {
 }
 
 /**
+ * An owner can still fix an approved or paid request's details, receipts,
+ * and payment, as a correction with a reason. Its status stays.
+ */
+export const CORRECTABLE_STATUSES = ["approved", "paid"] as const satisfies readonly RequestStatus[];
+
+export function isCorrectable(status: RequestStatus): boolean {
+  return (CORRECTABLE_STATUSES as readonly RequestStatus[]).includes(status);
+}
+
+/**
  * A requester edits their draft, or answers a question about it. Once it's
  * waiting on review it's locked, so it can't change while being checked.
  */

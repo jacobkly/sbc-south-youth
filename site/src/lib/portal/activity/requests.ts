@@ -1,5 +1,5 @@
 import type { Enums, Json } from "@/lib/database.types";
-import { formatDate, isIsoDate } from "@/lib/dates";
+import { formatDate, isIsoDate, laDateOf } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 
 /**
@@ -13,6 +13,16 @@ export type RequestType = Enums<"reimbursement_type">;
 export const REQUEST_TYPE_LABELS: Record<RequestType, string> = {
   cafe: "Cafe",
   youth: "Youth",
+};
+
+export type PaymentMethod = Enums<"payment_method">;
+
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash_app: "Cash App",
+  bank_transfer: "Bank transfer",
+  check: "Check",
+  cash: "Cash",
+  other: "Other",
 };
 
 /** What a request's history records. Matches the check on `request_events.action`. */
@@ -29,7 +39,8 @@ export type RequestAction =
   | "paid"
   | "unpaid"
   | "receipt_added"
-  | "receipt_removed";
+  | "receipt_removed"
+  | "corrected";
 
 export const REQUEST_ACTION_LABELS: Record<RequestAction, string> = {
   created: "Created",
@@ -45,6 +56,7 @@ export const REQUEST_ACTION_LABELS: Record<RequestAction, string> = {
   unpaid: "Payment undone",
   receipt_added: "File added",
   receipt_removed: "File removed",
+  corrected: "Corrected",
 };
 
 /** One request event, as its wording needs it. `action` is without the feed's "request." prefix. */
@@ -88,6 +100,10 @@ const CHANGE_FIELDS = [
   ["event_name", "Event"],
   ["no_receipt", "No receipt on file"],
   ["no_receipt_reason", "Why there's no receipt"],
+  // A correction to a paid request can change its payment too.
+  ["payment_method", "Paid with"],
+  ["paid_at", "Date paid"],
+  ["payment_reference", "Reference"],
 ] as const;
 
 type ChangeField = (typeof CHANGE_FIELDS)[number][0];
@@ -125,6 +141,12 @@ function formatValue(field: ChangeField, value: Json | undefined, payeeNames: Re
       return typeof value === "string" && isIsoDate(value) ? formatDate(value) : String(value);
     case "no_receipt":
       return value === true ? "On" : "Off";
+    case "payment_method":
+      return typeof value === "string" && Object.hasOwn(PAYMENT_METHOD_LABELS, value)
+        ? PAYMENT_METHOD_LABELS[value as PaymentMethod]
+        : String(value);
+    case "paid_at":
+      return typeof value === "string" && !Number.isNaN(Date.parse(value)) ? formatDate(laDateOf(value)) : String(value);
     case "lines":
       return Array.isArray(value) && value.length > 0 ? value.map(formatLine).join(", ") : "None";
     default:

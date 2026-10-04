@@ -8,7 +8,7 @@ import { PAYEE_COLUMNS } from "@/lib/payees/columns";
 import { signReceiptUrls } from "@/lib/receipts/signed-urls";
 import { EDIT_REQUEST_COLUMNS, toEditableRequest } from "@/lib/requests/edit";
 import { recentEventNames } from "@/lib/requests/event-names";
-import { isEditable } from "@/lib/requests/format";
+import { isCorrectable, isEditable } from "@/lib/requests/format";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/utils";
 
@@ -47,8 +47,8 @@ export default async function EditRequestPage({ params }: PageProps<"/admin/requ
   if (error) throw error;
   if (events.error) throw events.error;
   if (!request) notFound();
-  // Approved and closed requests change only through their actions.
-  if (!isEditable(request.status)) redirect(detailHref);
+  // An approved or paid request can still be corrected. Closed ones change only through their actions.
+  if (!isEditable(request.status) && !isCorrectable(request.status)) redirect(detailHref);
 
   const [payees, signed] = await Promise.all([
     // Its payee stays pickable even if they've been deactivated since.

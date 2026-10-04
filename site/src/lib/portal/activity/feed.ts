@@ -531,6 +531,7 @@ export type ActivityIcon =
 const ACTION_ICONS: Partial<Record<string, ActivityIcon>> = {
   "request.created": "created",
   "request.updated": "edited",
+  "request.corrected": "edited",
   "request.submitted": "submitted",
   "request.approved": "approved",
   "request.recorded_paid": "paid",

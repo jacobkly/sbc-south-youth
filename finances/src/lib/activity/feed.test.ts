@@ -31,6 +31,7 @@ describe("kindOf", () => {
     expect(kindOf("unpaid")).toBe("payments");
     expect(kindOf("rejected")).toBe("status");
     expect(kindOf("updated")).toBe("edits");
+    expect(kindOf("corrected")).toBe("edits");
   });
 });
 

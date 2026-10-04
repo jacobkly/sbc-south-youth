@@ -1,6 +1,7 @@
 import { formatDate, isIsoDate, laDateOf, type IsoDate } from "@/lib/dates";
 import type { Json } from "@/lib/database.types";
 import { formatCents } from "@/lib/money";
+import { PAYMENT_METHOD_LABELS } from "./actions";
 import { REQUEST_TYPE_LABELS, type RequestStatus } from "./format";
 
 /** What the audit log records. Matches the check on `request_events.action`. */
@@ -17,7 +18,8 @@ export type EventAction =
   | "paid"
   | "unpaid"
   | "receipt_added"
-  | "receipt_removed";
+  | "receipt_removed"
+  | "corrected";
 
 export const EVENT_ACTION_LABELS: Record<EventAction, string> = {
   created: "Created",
@@ -33,6 +35,7 @@ export const EVENT_ACTION_LABELS: Record<EventAction, string> = {
   unpaid: "Payment undone",
   receipt_added: "File added",
   receipt_removed: "File removed",
+  corrected: "Corrected",
 };
 
 /** One row of the audit log, as the timeline needs it. */
@@ -78,6 +81,10 @@ const CHANGE_FIELDS = [
   ["event_name", "Event"],
   ["no_receipt", "No receipt on file"],
   ["no_receipt_reason", "Why there's no receipt"],
+  // A correction to a paid request can change its payment too.
+  ["payment_method", "Paid with"],
+  ["paid_at", "Date paid"],
+  ["payment_reference", "Reference"],
 ] as const;
 
 type ChangeField = (typeof CHANGE_FIELDS)[number][0];
@@ -115,6 +122,12 @@ function formatValue(field: ChangeField, value: Json | undefined, payeeNames: Re
       return typeof value === "string" && isIsoDate(value) ? formatDate(value) : String(value);
     case "no_receipt":
       return value === true ? "On" : "Off";
+    case "payment_method":
+      return typeof value === "string" && Object.hasOwn(PAYMENT_METHOD_LABELS, value)
+        ? PAYMENT_METHOD_LABELS[value as keyof typeof PAYMENT_METHOD_LABELS]
+        : String(value);
+    case "paid_at":
+      return typeof value === "string" && !Number.isNaN(Date.parse(value)) ? formatDate(laDateOf(value)) : String(value);
     case "lines":
       return Array.isArray(value) && value.length > 0 ? value.map(formatLine).join(", ") : "None";
     default:

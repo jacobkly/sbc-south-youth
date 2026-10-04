@@ -44,7 +44,7 @@ const KINDS = {
   requests: {
     label: "Request edits",
     scopes: ["finances"],
-    actions: ["request.created", "request.updated"],
+    actions: ["request.created", "request.updated", "request.corrected"],
   },
   status: {
     label: "Status changes",

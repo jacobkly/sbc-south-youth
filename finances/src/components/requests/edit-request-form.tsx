@@ -3,18 +3,29 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CircleAlertIcon } from "lucide-react";
+import { CircleAlertIcon, InfoIcon } from "lucide-react";
 import { ReceiptGallery, type GalleryReceipt } from "@/components/receipts/receipt-gallery";
 import { usePendingReceipts } from "@/components/receipts/use-pending-receipts";
+import { CorrectionSheet, type PendingCorrection } from "@/components/requests/correction-sheet";
 import { DeleteDraft } from "@/components/requests/delete-draft";
+import { paymentFieldId, PaymentFields } from "@/components/requests/payment-fields";
 import { requestErrorIds, RequestFields, type RequestFormErrors } from "@/components/requests/request-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { todayInLA, type IsoDate } from "@/lib/dates";
+import { laDateOf, todayInLA, type IsoDate } from "@/lib/dates";
 import type { PayeeRow } from "@/lib/payees/columns";
 import type { SignedReceiptUrls } from "@/lib/receipts/signed-urls";
 import { MAX_RECEIPTS, removeReceipt, uploadReceipt } from "@/lib/receipts/upload";
-import { editReceiptError, requesterReceiptError } from "@/lib/requests/actions";
+import { editReceiptError, requesterReceiptError, validatePayment, type PaymentValues } from "@/lib/requests/actions";
+import {
+  correctedPaidAt,
+  correctionChanges,
+  correctionSnapshot,
+  correctRequestArgs,
+  filesSummary,
+  type CorrectedPayment,
+  type CorrectionSnapshot,
+} from "@/lib/requests/corrections";
 import { formatRequestNumber, type RequestStatus } from "@/lib/requests/format";
 import {
   errorsAfterChange,
@@ -24,6 +35,7 @@ import {
   requestSchema,
   saveRequestArgs,
   type RequestFormValues,
+  type RequestInput,
 } from "@/lib/requests/schema";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -43,6 +55,8 @@ export type EditableRequest = {
   receipts: SavedFile[];
   /** Links for the receipts, signed while the page rendered. */
   signed: SignedReceiptUrls | null;
+  /** An approved or paid request as it's saved, which an owner's edits correct. Null while it's open. */
+  correction: CorrectionSnapshot | null;
 };
 
 const CLOSED_MESSAGE = "You can't edit it anymore. Someone may have approved or closed it since this page loaded.";
@@ -57,6 +71,21 @@ function isClosedError(error: { code?: string; message?: string }): boolean {
   return error.code === "55000" && CLOSED_ERRORS.has(error.message ?? "");
 }
 
+const UNCORRECTABLE_MESSAGE =
+  "It can't be corrected anymore. Someone may have undone its approval or payment since this page loaded.";
+
+/** The database turned a correction down because the request isn't approved or paid anymore. */
+function isUncorrectableError(error: { code?: string; message?: string }): boolean {
+  return error.code === "55000" && error.message === "Only an approved or paid request can be corrected.";
+}
+
+const PAYMENT_PREFIX = "correction";
+const PAYMENT_ERROR_FIELDS = ["paid_date", "payment_reference"] as const;
+type PaymentErrors = Partial<Record<(typeof PAYMENT_ERROR_FIELDS)[number], string>>;
+
+/** The form's values, checked and ready to save. */
+type Checked = { input: RequestInput; payment: CorrectedPayment | null };
+
 function count(n: number, one: string, many: string): string {
   return n === 1 ? `1 file ${one}` : `${n} files ${many}`;
 }
@@ -68,6 +97,10 @@ function count(n: number, one: string, many: string): string {
  *
  * A requester edits their own: there's no payee to pick or no-receipt
  * exception to turn on, and anything past a draft needs a receipt photo.
+ *
+ * An owner can still fix an approved or paid request, including its payment
+ * once it's paid. That's a correction: they confirm what changes and say what
+ * was wrong, and its status stays. Who it's paid to can't change.
  */
 export function EditRequestForm({
   request,
@@ -92,6 +125,8 @@ export function EditRequestForm({
 }) {
   const router = useRouter();
   const requester = initialPayees === null;
+  const correcting = !requester && request.correction !== null;
+  const paid = correcting && request.status === "paid";
   const [payees, setPayees] = useState(initialPayees ?? []);
   const [values, setValues] = useState(request.values);
   const [errors, setErrors] = useState<RequestFormErrors>({});
@@ -100,6 +135,18 @@ export function EditRequestForm({
   // Saved files still on the request, and the ones marked to remove on save.
   const [saved, setSaved] = useState(request.receipts);
   const [marked, setMarked] = useState<ReadonlySet<string>>(() => new Set());
+  // A correction compares with the request as it's saved, which moves on once one is saved.
+  const [baseline, setBaseline] = useState(correcting ? request.correction : null);
+  const [payment, setPayment] = useState<PaymentValues>(() => ({
+    payment_method: request.correction?.payment_method ?? "cash_app",
+    payment_reference: request.correction?.payment_reference ?? "",
+    paid_date: request.correction?.paid_at ? laDateOf(request.correction.paid_at) : today,
+  }));
+  const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
+  const [reason, setReason] = useState("");
+  const [confirming, setConfirming] = useState<PendingCorrection | null>(null);
+  // Once a correction is saved, retrying files that didn't upload doesn't record it again.
+  const [recorded, setRecorded] = useState(false);
 
   // Taking off a receipt takes its saved files with it.
   const lineIds = new Set(values.lines.map((line) => line.id));
@@ -109,10 +156,18 @@ export function EditRequestForm({
   const { receipts } = pendingReceipts;
   const receiptCount = kept + receipts.length;
   const preparing = receipts.some((receipt) => receipt.status === "processing");
+  const toUpload = receipts.filter(
+    (receipt) => receipt.prepared && (receipt.status === "ready" || receipt.status === "failed"),
+  );
 
   function set<K extends keyof RequestFormValues>(key: K, value: RequestFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
     setErrors((current) => errorsAfterChange(current, key, values[key], value));
+  }
+
+  function setPaymentValue<K extends keyof PaymentValues>(key: K, value: PaymentValues[K]) {
+    setPayment((current) => ({ ...current, [key]: value }));
+    if (key in paymentErrors) setPaymentErrors((current) => ({ ...current, [key]: undefined }));
   }
 
   function toggleRemove(id: string) {
@@ -129,28 +184,79 @@ export function EditRequestForm({
     pendingReceipts.add(files, lineId);
   }
 
-  function showFieldErrors(next: RequestFormErrors) {
+  function showFieldErrors(next: RequestFormErrors, nextPayment: PaymentErrors = {}) {
     setErrors(next);
-    const [first] = requestErrorIds(next, values.lines);
+    setPaymentErrors(nextPayment);
+    const paymentIds = PAYMENT_ERROR_FIELDS.filter((field) => nextPayment[field]).map((field) =>
+      paymentFieldId(PAYMENT_PREFIX, field),
+    );
+    const [first] = [...requestErrorIds(next, values.lines), ...paymentIds];
     if (first) document.getElementById(first)?.focus();
   }
 
-  async function save() {
-    if (preparing) return;
-    const parsed = requestSchema(todayInLA()).safeParse(values);
+  /** Checks the form and shows what's wrong. Null when something is. */
+  function check(): Checked | null {
+    const now = todayInLA();
+    const parsed = requestSchema(now).safeParse(values);
     const next: RequestFormErrors = parsed.success ? {} : requestFieldErrors(parsed.error, values.lines);
     const receiptContext = { receiptCount, noReceipt: values.no_receipt };
     const receiptError = requester
       ? requesterReceiptError(request.status !== "draft", receiptContext)
       : editReceiptError(request.status, receiptContext);
     if (receiptError) next.receipts = receiptError;
-    if (!parsed.success || receiptError) {
-      showFieldErrors(next);
-      return;
+    const checkedPayment = paid ? validatePayment(payment, { today: now, purchaseDate: values.purchase_date }) : null;
+    if (!parsed.success || receiptError || checkedPayment?.success === false) {
+      showFieldErrors(next, checkedPayment?.success === false ? checkedPayment.errors : {});
+      return null;
     }
 
     setErrors({});
+    setPaymentErrors({});
+    const paidAt = baseline?.paid_at;
+    return {
+      input: parsed.data,
+      payment:
+        checkedPayment && paidAt
+          ? {
+              paid_at: correctedPaidAt(paidAt, checkedPayment.data.paid_date),
+              payment_method: checkedPayment.data.payment_method,
+              payment_reference: checkedPayment.data.payment_reference,
+            }
+          : null,
+    };
+  }
+
+  function save() {
+    if (preparing) return;
+    const checked = check();
+    if (!checked) return;
     setFormError(null);
+    if (!baseline) {
+      void commit(checked, "save");
+      return;
+    }
+
+    const changes = correctionChanges(baseline, correctionSnapshot(checked.input, checked.payment));
+    if (!changes && removing.length === 0 && (recorded || toUpload.length === 0)) {
+      // Nothing to correct. Retry the files that didn't upload, if any.
+      if (toUpload.length > 0) void commit(checked, "files");
+      else router.replace(detailHref);
+      return;
+    }
+    setConfirming({ changes, files: filesSummary(toUpload.length, removing.length) });
+  }
+
+  function confirmCorrection() {
+    setConfirming(null);
+    const checked = check();
+    if (checked) void commit(checked, "correct");
+  }
+
+  /**
+   * Removes files, saves the fields, then uploads new files. A correction
+   * saves the fields with its reason, and a retry after one only has files left.
+   */
+  async function commit({ input, payment: correctedPayment }: Checked, step: "save" | "correct" | "files") {
     setPending(true);
     const supabase = createClient();
 
@@ -175,19 +281,29 @@ export function EditRequestForm({
       return;
     }
 
-    const { error } = await supabase.rpc("save_request", saveRequestArgs(request.id, parsed.data));
-    if (error) {
-      setPending(false);
-      if (isClosedError(error)) setFormError(CLOSED_MESSAGE);
-      else if (isFutureDateError(error)) showFieldErrors({ purchase_date: requestSaveErrorMessage(error) });
-      else setFormError(requestSaveErrorMessage(error));
-      return;
+    if (step !== "files") {
+      const { error } = await (step === "correct"
+        ? supabase.rpc("correct_request", correctRequestArgs(request.id, input, correctedPayment, reason.trim()))
+        : supabase.rpc("save_request", saveRequestArgs(request.id, input)));
+      if (error) {
+        setPending(false);
+        if (isClosedError(error)) setFormError(CLOSED_MESSAGE);
+        else if (isUncorrectableError(error)) setFormError(UNCORRECTABLE_MESSAGE);
+        else if (isFutureDateError(error)) showFieldErrors({ purchase_date: requestSaveErrorMessage(error) });
+        else setFormError(requestSaveErrorMessage(error));
+        return;
+      }
+      if (step === "correct") {
+        setBaseline(correctionSnapshot(input, correctedPayment));
+        setRecorded(true);
+        setReason("");
+      }
     }
 
     // One at a time, to go easy on a phone's connection.
     let notUploaded = 0;
-    for (const receipt of receipts) {
-      if (!receipt.prepared || (receipt.status !== "ready" && receipt.status !== "failed")) continue;
+    for (const receipt of toUpload) {
+      if (!receipt.prepared) continue;
       pendingReceipts.setStatus(receipt.key, "uploading");
       try {
         await uploadReceipt(supabase, request.id, receipt.line, receipt.prepared);
@@ -237,17 +353,39 @@ export function EditRequestForm({
         className="space-y-5"
         onSubmit={(event) => {
           event.preventDefault();
-          void save();
+          save();
         }}
       >
-        <h1 className="text-2xl font-semibold tracking-tight">Edit {formatRequestNumber(request.requestNumber)}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {correcting ? "Correct" : "Edit"} {formatRequestNumber(request.requestNumber)}
+        </h1>
+
+        {correcting && (
+          <>
+            <Alert role="note">
+              <InfoIcon />
+              <AlertDescription>
+                This request is {paid ? "paid" : "approved"}. Your changes are saved as a correction and show in its
+                history.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <p className="text-sm leading-none font-medium">Payee</p>
+              <p className="text-base break-words">{request.payeeName}</p>
+              <p className="text-xs text-muted-foreground">
+                To change who it&apos;s paid to, undo the {paid ? "payment and approval" : "approval"} first.
+              </p>
+            </div>
+          </>
+        )}
 
         <RequestFields
           values={values}
           errors={errors}
           onChange={set}
           payeePicker={
-            requester
+            requester || correcting
               ? undefined
               : {
                   payees,
@@ -264,6 +402,18 @@ export function EditRequestForm({
           onAddReceipts={addReceipts}
           locked={pending}
         />
+
+        {paid && (
+          <PaymentFields
+            idPrefix={PAYMENT_PREFIX}
+            values={payment}
+            onChange={setPaymentValue}
+            errors={paymentErrors}
+            purchaseDate={values.purchase_date}
+            today={today}
+            disabled={pending}
+          />
+        )}
 
         {formError && (
           <Alert variant="destructive">
@@ -290,6 +440,18 @@ export function EditRequestForm({
       </form>
 
       {/* Outside the form: the sheet's events would bubble up to it through the portal. */}
+      {correcting && (
+        <CorrectionSheet
+          opened={confirming}
+          requestNumber={request.requestNumber}
+          paid={paid}
+          reason={reason}
+          onReasonChange={setReason}
+          onConfirm={confirmCorrection}
+          onClose={() => setConfirming(null)}
+        />
+      )}
+
       {deletableBy && (
         <div className="border-t pt-5">
           <DeleteDraft

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatRequestNumber, isEditable, isEditableByRequester, listedDate, requestTitle } from "./format";
+import { formatRequestNumber, isCorrectable, isEditable, isEditableByRequester, listedDate, requestTitle } from "./format";
 
 describe("requestTitle", () => {
   it("uses the vendor first", () => {
@@ -32,6 +32,19 @@ describe("isEditable", () => {
     expect(isEditable("paid")).toBe(false);
     expect(isEditable("rejected")).toBe(false);
     expect(isEditable("cancelled")).toBe(false);
+  });
+});
+
+describe("isCorrectable", () => {
+  it("lets an owner correct a request once it's approved or paid", () => {
+    expect(isCorrectable("approved")).toBe(true);
+    expect(isCorrectable("paid")).toBe(true);
+  });
+
+  it("leaves open requests to a plain edit, and closed ones alone", () => {
+    for (const status of ["draft", "submitted", "needs_info", "rejected", "cancelled"] as const) {
+      expect(isCorrectable(status)).toBe(false);
+    }
   });
 });
 

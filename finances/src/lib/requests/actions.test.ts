@@ -17,6 +17,7 @@ import {
   paidAtFor,
   saveActionErrorMessage,
   validateRequestAction,
+  validatePayment,
   validateSaveOption,
   type RequestActionContext,
   type RequestActionValues,
@@ -159,6 +160,40 @@ describe("validateSaveOption", () => {
     expect(result.success ? {} : result.errors).toEqual({
       payment_reference: "Keep the reference to 200 characters or fewer.",
       external_approver: "Keep the name to 100 characters or fewer.",
+    });
+  });
+});
+
+describe("validatePayment", () => {
+  const context = { today: "2026-09-20", purchaseDate: "2026-09-10" };
+  const payment = { payment_method: "check" as const, payment_reference: "  Check 1042  ", paid_date: "2026-09-12" };
+
+  it("returns the payment with the reference trimmed, or null when blank", () => {
+    expect(validatePayment(payment, context)).toEqual({
+      success: true,
+      data: { payment_method: "check", payment_reference: "Check 1042", paid_date: "2026-09-12" },
+    });
+    expect(validatePayment({ ...payment, payment_reference: " " }, context)).toEqual({
+      success: true,
+      data: { payment_method: "check", payment_reference: null, paid_date: "2026-09-12" },
+    });
+  });
+
+  it("turns down a paid date in the future or before the purchase", () => {
+    expect(validatePayment({ ...payment, paid_date: "2026-09-21" }, context)).toEqual({
+      success: false,
+      errors: { paid_date: "The paid date can't be in the future." },
+    });
+    expect(validatePayment({ ...payment, paid_date: "2026-09-09" }, context)).toEqual({
+      success: false,
+      errors: { paid_date: "The paid date can't be before the purchase date." },
+    });
+  });
+
+  it("turns down a reference that's too long", () => {
+    expect(validatePayment({ ...payment, payment_reference: "x".repeat(201) }, context)).toEqual({
+      success: false,
+      errors: { payment_reference: "Keep the reference to 200 characters or fewer." },
     });
   });
 });

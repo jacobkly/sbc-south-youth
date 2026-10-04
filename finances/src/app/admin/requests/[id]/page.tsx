@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { todayInLA } from "@/lib/dates";
 import { signReceiptUrls } from "@/lib/receipts/signed-urls";
 import { lateSubmissionDays } from "@/lib/requests/actions";
-import { isEditable } from "@/lib/requests/format";
+import { isCorrectable, isEditable } from "@/lib/requests/format";
 import { loadPayeeNames } from "@/lib/requests/queries";
 import { changedPayeeIds, lateCheckDate } from "@/lib/requests/status";
 import { createClient } from "@/lib/supabase/server";
@@ -93,7 +93,11 @@ export default async function RequestPage({ params }: PageProps<"/admin/requests
       signed={signed}
       late={lateCheck && lateDays !== null ? { days: lateDays, limitDays, sent: lateCheck.sent } : null}
       actions={actions}
-      editHref={isAdmin && isEditable(details.status) ? `/admin/requests/${id}/edit` : undefined}
+      editHref={
+        isAdmin && (isEditable(details.status) || isCorrectable(details.status))
+          ? `/admin/requests/${id}/edit`
+          : undefined
+      }
     />
   );
 }
