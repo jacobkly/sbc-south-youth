@@ -158,7 +158,7 @@ The public site needs `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY` for h
 | `FINANCES_URL`, `PORTAL_URL` | Where the portal links to finances and to itself. Default to the real addresses |
 | `SUPABASE_SECRET_KEY` | Server only. Reads the site's heads-ups, events, and photos, saves form messages, calls the email functions, writes the error log, and creates, bans, and unbans invited accounts. Never a `NEXT_PUBLIC_` variable |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Sending email. Without both, email is off |
-| `OWNER_ALERT_EMAIL` | Owner alerts, and every email on staging, form alerts included |
+| `OWNER_ALERT_EMAIL` | Staging only: every email staging sends, form alerts included. Production's owner alerts go to each owner's sign-in email |
 | `RESEND_WEBHOOK_SECRET` | Checks that webhook calls came from Resend |
 | `EMAIL_DRAIN_SECRET` | Checks that drain calls came from the database. Must match `email_drain_secret` in Supabase Vault |
 | `EMAIL_LOCAL_INBOX` | Local only: send email to Mailpit instead of Resend |
