@@ -20,21 +20,21 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
   const user = await getCurrentUser();
   if (user?.role !== "admin") redirect("/admin");
 
-  const filters = parseActivityFilters(await searchParams);
+  const today = todayInLA();
+  const filters = parseActivityFilters(await searchParams, today);
   const supabase = await createClient();
   // Each throws on failure, and admin/error.tsx handles it.
-  const { events, income, hasMore, capped } = await loadActivity(supabase, filters);
+  const { events, income, older, capped } = await loadActivity(supabase, filters, today);
   const [payeeNames, currentIncome] = await Promise.all([
     loadPayeeNames(supabase, changedPayeeIds(events)),
     loadCurrentIncome(supabase, income),
   ]);
-  const today = todayInLA();
   const days = groupByDay(mergeIncome(groupBursts(events), income), today);
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold tracking-tight">Activity</h1>
-      <ActivityView filters={filters} hasMore={hasMore} capped={capped}>
+      <ActivityView filters={filters} older={older} capped={capped}>
         {days.length === 0 ? (
           <EmptyActivity kind={filters.kind} />
         ) : (

@@ -12,21 +12,23 @@ import {
   type ActivityFilters,
   type ActivityKind,
 } from "@/lib/activity/feed";
+import type { IsoDate } from "@/lib/dates";
 
 /**
- * The activity page's kind tabs and "Load more". The kind lives in the URL,
- * and the server renders the feed as `children`. This shows each change
- * right away while the next feed loads.
+ * The activity page's kind tabs and "Load more". The kind and how far back
+ * the feed goes live in the URL, and the server renders the feed as
+ * `children`. This shows each change right away while the next feed loads.
  */
 export function ActivityView({
   filters,
-  hasMore,
+  older,
   capped,
   children,
 }: {
   filters: ActivityFilters;
-  hasMore: boolean;
-  /** The newest events filled every page there is, so older ones can't be shown. */
+  /** Where "Load more" reaches back to, or null when there's nothing older. */
+  older: IsoDate | null;
+  /** There's more activity than the page loads, so older activity can't be shown. */
   capped: boolean;
   children: ReactNode;
 }) {
@@ -42,10 +44,10 @@ export function ActivityView({
   }
 
   const switchingKind = shown.kind !== filters.kind;
-  const loadingMore = pending && !switchingKind && shown.pages > filters.pages;
+  const loadingMore = pending && !switchingKind && shown.since !== filters.since;
 
   return (
-    <Tabs value={shown.kind} onValueChange={(value) => navigate({ kind: value as ActivityKind, pages: 1 })}>
+    <Tabs value={shown.kind} onValueChange={(value) => navigate({ kind: value as ActivityKind, since: null })}>
       {/* Wraps onto more rows instead of scrolling sideways, so every tab stays in reach on a phone. */}
       <TabsList className="w-full flex-wrap justify-start gap-2 bg-transparent p-0 group-data-horizontal/tabs:h-auto">
         {ACTIVITY_KINDS.map((kind) => (
@@ -71,12 +73,12 @@ export function ActivityView({
                   {shown.kind !== "income" && " Older activity is on each request's page."}
                 </p>
               )}
-              {hasMore && (
+              {older && (
                 <Button
                   variant="outline"
                   className="h-11 w-full @4xl/main:mx-auto @4xl/main:flex @4xl/main:w-auto @4xl/main:px-8"
                   disabled={loadingMore}
-                  onClick={() => navigate({ ...shown, pages: shown.pages + 1 })}
+                  onClick={() => navigate({ ...shown, since: older })}
                 >
                   {loadingMore ? "Loading…" : "Load more"}
                 </Button>
