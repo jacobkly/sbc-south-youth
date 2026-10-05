@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSignInPath, safeNextPath, withNext } from "./next-path";
+import { isSignInPath, portalSignInUrl, safeNextPath, withNext } from "./next-path";
 
 describe("safeNextPath", () => {
   it("keeps same-site paths", () => {
@@ -59,5 +59,36 @@ describe("withNext", () => {
 
   it("keeps anywhere else", () => {
     expect(withNext("/forgot", "/admin/requests?tab=paid")).toBe("/forgot?next=%2Fadmin%2Frequests%3Ftab%3Dpaid");
+  });
+});
+
+describe("portalSignInUrl", () => {
+  const portal = "https://portal.sbcsouthyouth.com";
+  const finances = "https://finances.sbcsouthyouth.com";
+
+  it("sends the page someone was headed to along as a full address", () => {
+    expect(portalSignInUrl(portal, "/login", "/admin/requests?tab=paid", finances)).toBe(
+      "https://portal.sbcsouthyouth.com/login?next=https%3A%2F%2Ffinances.sbcsouthyouth.com%2Fadmin%2Frequests%3Ftab%3Dpaid",
+    );
+    expect(portalSignInUrl(portal, "/setup", "/my", finances)).toBe(
+      "https://portal.sbcsouthyouth.com/setup?next=https%3A%2F%2Ffinances.sbcsouthyouth.com%2Fmy",
+    );
+  });
+
+  it("leaves the next page out when there isn't a real one", () => {
+    expect(portalSignInUrl(portal, "/login", null, finances)).toBe("https://portal.sbcsouthyouth.com/login");
+    expect(portalSignInUrl(portal, "/login", "/", finances)).toBe("https://portal.sbcsouthyouth.com/login");
+    expect(portalSignInUrl(portal, "/forgot", "/mfa?next=/admin", finances)).toBe(
+      "https://portal.sbcsouthyouth.com/forgot",
+    );
+  });
+
+  it("never passes along another site", () => {
+    expect(portalSignInUrl(portal, "/login", "https://evil.example", finances)).toBe(
+      "https://portal.sbcsouthyouth.com/login",
+    );
+    expect(portalSignInUrl(portal, "/login", "//evil.example/admin", finances)).toBe(
+      "https://portal.sbcsouthyouth.com/login",
+    );
   });
 });

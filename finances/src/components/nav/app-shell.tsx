@@ -9,6 +9,7 @@ import { RefreshOnHistory } from "@/components/nav/refresh-on-history";
 import { getCurrentUser, getSessionAal } from "@/lib/auth/current-user";
 import { ownerNeedsMfa } from "@/lib/auth/mfa";
 import { type AppArea, canUseArea, financeRoleLabel } from "@/lib/auth/roles";
+import { destinationsFor, destinationUrls } from "@/lib/destinations";
 import { parseSavedTheme } from "@/lib/theme";
 
 /**
@@ -19,9 +20,17 @@ import { parseSavedTheme } from "@/lib/theme";
 export async function AppShell({ area, children }: { area: AppArea; children: ReactNode }) {
   const user = await getCurrentUser();
   if (!user || !canUseArea(user, area)) {
-    // Someone with another part of the app gets a way back to it.
+    // Someone with another part of the app gets a way back to it, and
+    // someone who only uses the portal gets a way there.
     const home = user && canUseArea(user, "account") ? navFor(navUserFrom(user)).home : null;
-    return <NoAccess email={user?.email ?? null} home={home && { href: home.href, label: home.label }} />;
+    const portal = user && !home ? destinationsFor(user, destinationUrls()).find((d) => d.key === "portal") : null;
+    return (
+      <NoAccess
+        email={user?.email ?? null}
+        home={home && { href: home.href, label: home.label }}
+        portalUrl={portal?.href ?? null}
+      />
+    );
   }
   // Owners enter a code from their phone first, or set one up. Signing in
   // usually goes there directly; this catches anyone who skipped ahead.
@@ -43,6 +52,7 @@ function navUserFrom(user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>
     roleLabel: financeRoleLabel(user.roles),
     name: user.full_name,
     avatarPath: user.avatar_path,
+    destinations: destinationsFor(user, destinationUrls()),
   };
 }
 

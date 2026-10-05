@@ -10,6 +10,7 @@ import {
   UsersIcon,
   type LucideIcon,
 } from "lucide-react";
+import type { Destination } from "@/lib/destinations";
 import type { Enums } from "@/lib/database.types";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon; adminOnly?: boolean };
@@ -24,6 +25,8 @@ export type NavUser = {
   roleLabel: string;
   name: string;
   avatarPath: string | null;
+  /** The places the app switcher offers, finances among them. */
+  destinations: Destination[];
 };
 
 export const DASHBOARD: NavItem = { href: "/admin", label: "Dashboard", icon: LayoutDashboardIcon };

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { EllipsisIcon } from "lucide-react";
 import { cn } from "cn";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { AppTile, DestinationLink, DestinationMark } from "@/components/nav/app-switcher";
 import { isActive, navFor, type NavUser } from "@/components/nav/nav-items";
 import { UserAvatar } from "@/components/nav/user-avatar";
 import { ResponsiveSheetContent } from "@/components/ui/responsive-sheet";
@@ -20,6 +21,8 @@ import {
 const TAB_CLASSES =
   "flex h-14 w-full flex-col items-center justify-center gap-0.5 rounded-full text-[0.6875rem] font-medium text-muted-foreground outline-none transition-[color,background-color,scale] focus-visible:ring-2 focus-visible:ring-ring active:scale-95 motion-reduce:active:scale-100";
 const ACTIVE_TAB_CLASSES = "bg-foreground/[0.07] text-foreground";
+const SHEET_LINK_CLASSES =
+  "flex h-12 items-center gap-3 rounded-lg px-2 text-base outline-none hover:bg-muted focus-visible:bg-muted aria-[current=page]:bg-muted aria-[current=page]:font-semibold";
 
 /**
  * Navigation on phones and upright tablets: a floating frosted bar, like iOS.
@@ -27,10 +30,11 @@ const ACTIVE_TAB_CLASSES = "bg-foreground/[0.07] text-foreground";
  * steps aside while the keyboard is up, so the field being typed in has the
  * little room that's left, and comes back after.
  */
-export function TabBar({ role, requester, name, avatarPath }: NavUser) {
+export function TabBar({ role, requester, name, avatarPath, destinations }: NavUser) {
   const pathname = usePathname();
   const nav = navFor({ role, requester });
   const moreActive = nav.more.some((item) => isActive(pathname, item.href));
+  const elsewhere = destinations.filter((destination) => destination.key !== "finances");
 
   return (
     <nav
@@ -84,7 +88,7 @@ export function TabBar({ role, requester, name, avatarPath }: NavUser) {
                       <Link
                         href={item.href}
                         aria-current={isActive(pathname, item.href) ? "page" : undefined}
-                        className="flex h-12 items-center gap-3 rounded-lg px-2 text-base outline-none hover:bg-muted focus-visible:bg-muted aria-[current=page]:bg-muted aria-[current=page]:font-semibold"
+                        className={SHEET_LINK_CLASSES}
                       >
                         <item.icon className="size-5 text-muted-foreground" aria-hidden />
                         {item.label}
@@ -93,6 +97,29 @@ export function TabBar({ role, requester, name, avatarPath }: NavUser) {
                   </li>
                 ))}
               </ul>
+              {elsewhere.length > 0 && (
+                <section aria-labelledby="switch-to" className="px-4">
+                  <h3 id="switch-to" className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+                    Switch to
+                  </h3>
+                  <ul>
+                    {elsewhere.map((destination) => (
+                      <li key={destination.key}>
+                        <DestinationLink destination={destination} className={cn(SHEET_LINK_CLASSES, "h-14")}>
+                          <AppTile app={destination.key} />
+                          <span className="min-w-0 flex-1 leading-tight">
+                            <span className="block">{destination.name}</span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {destination.description}
+                            </span>
+                          </span>
+                          <DestinationMark app={destination.key} />
+                        </DestinationLink>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
               <div className="px-4">
                 <SignOutButton variant="outline" className="h-11 w-full" />
               </div>

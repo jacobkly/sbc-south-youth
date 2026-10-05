@@ -5,8 +5,8 @@ import { supabaseEnv } from "@/lib/supabase/env";
 
 /** Supabase client for Client Components. */
 export function createClient() {
-  const { url, key } = supabaseEnv();
-  return createBrowserClient<Database>(url, key);
+  const { url, key, cookieOptions } = supabaseEnv();
+  return createBrowserClient<Database>(url, key, { cookieOptions });
 }
 
 /**

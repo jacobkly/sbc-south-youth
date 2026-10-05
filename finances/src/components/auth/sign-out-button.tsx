@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, type ComponentProps } from "react";
-import { useRouter } from "next/navigation";
 import { LogOutIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
 /** Signs out on this device and goes to the sign-in page. */
 export function useSignOut() {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function signOut() {
     setPending(true);
     // Local scope: signing out here shouldn't sign out other devices.
     await createClient().auth.signOut({ scope: "local" });
-    router.replace("/login");
-    router.refresh();
+    // A full page load, not a client navigation. The router keeps recent
+    // pages alive in the background, and the next person on this device
+    // shouldn't find the last one's pages there. With a shared sign-in,
+    // /login sends them on to the portal's.
+    window.location.replace("/login");
   }
 
   return { pending, signOut };

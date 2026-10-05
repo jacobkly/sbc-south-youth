@@ -38,3 +38,15 @@ export function safeNextPath(value: string | null | undefined, fallback = "/"): 
 export function withNext(path: string, next: string): string {
   return next === safeNextPath(null) ? path : `${path}?next=${encodeURIComponent(next)}`;
 }
+
+/**
+ * A sign-in page on the portal, once finances shares its sign-in. The page
+ * someone was headed to comes along as a full address on this app's own
+ * address, which the portal checks before sending them back.
+ */
+export function portalSignInUrl(portalUrl: string, page: string, next: string | null, financesUrl: string): string {
+  const url = new URL(page, `${portalUrl}/`);
+  const path = safeNextPath(next);
+  if (path !== "/") url.searchParams.set("next", financesUrl + path);
+  return url.href;
+}

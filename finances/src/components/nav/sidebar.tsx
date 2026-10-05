@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronsUpDownIcon, LogOutIcon, PlusIcon, UserRoundIcon } from "lucide-react";
 import { cn } from "cn";
 import { useSignOut } from "@/components/auth/sign-out-button";
-import { LogoMark } from "@/components/nav/logo-mark";
+import { AppSwitcher } from "@/components/nav/app-switcher";
 import { ACCOUNT, isActive, navFor, type NavItem, type NavUser } from "@/components/nav/nav-items";
 import { UserAvatar } from "@/components/nav/user-avatar";
 import { Button } from "@/components/ui/button";
@@ -112,16 +112,9 @@ export function Sidebar(user: NavUser) {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground wide:flex">
-      <Link
-        href={nav.home.href}
-        className="m-2 flex items-center gap-3 rounded-lg p-2 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-      >
-        <LogoMark className="size-9" />
-        <span className="min-w-0 leading-tight">
-          <span className="block truncate text-sm font-semibold">SBC South Youth</span>
-          <span className="block text-xs text-muted-foreground">Finances</span>
-        </span>
-      </Link>
+      <div className="m-2">
+        <AppSwitcher destinations={user.destinations} />
+      </div>
 
       {nav.create && (
         <div className="px-3 pb-4">

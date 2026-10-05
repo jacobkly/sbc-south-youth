@@ -27,6 +27,10 @@ The local stack loads [`supabase/seed.sql`](../supabase/seed.sql) on `npx supaba
 
 People and roles are managed in the leader portal. Owners invite people there, and a requester or finance viewer then signs in here with the password they chose.
 
+### One sign-in
+
+Set `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` to the same value as the portal's, and finances shares the portal's sign-in. Its sign-in, forgot password, and setup pages then send people to the portal's, which sends them back here afterward. `PORTAL_URL` and `FINANCES_URL` must match the portal's own. The name at the top of the sidebar, the logo at the top of the rail, and Switch to in the More sheet move to the portal or the public site. `src/lib/destinations.ts` lists the portal's sections by role, written out to match the portal's navigation, so change it when the portal's change. The site's [README](../site/README.md#one-sign-in) has the details and the local setup.
+
 ## Preview on a phone
 
 The dev server also listens on your network, so a phone on the same Wi-Fi can open it.

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
-import { LogoMark } from "@/components/nav/logo-mark";
+import { AppSwitcher } from "@/components/nav/app-switcher";
 import { isActive, navFor, type NavItem, type NavUser } from "@/components/nav/nav-items";
 import { AccountMenu, NAV_LINK_STATES } from "@/components/nav/sidebar";
 
@@ -44,13 +44,9 @@ export function Rail(user: NavUser) {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-18 flex-col items-center border-r border-sidebar-border bg-sidebar text-sidebar-foreground rail:flex">
-      <Link
-        href={nav.home.href}
-        aria-label={`SBC South Youth Finances, ${nav.home.label.toLowerCase()}`}
-        className="my-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-      >
-        <LogoMark className="size-10" />
-      </Link>
+      <div className="my-2">
+        <AppSwitcher destinations={user.destinations} compact />
+      </div>
 
       <nav aria-label="Main" className="flex w-full flex-1 flex-col items-center overflow-y-auto">
         <ul className="flex flex-col items-center gap-1">

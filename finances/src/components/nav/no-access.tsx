@@ -4,14 +4,17 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Shown on a page someone's roles don't cover. Anyone with another part of
- * the app, like a requester on the dashboard, gets a link back to it.
+ * the app, like a requester on the dashboard, gets a link back to it, and
+ * someone who only uses the portal gets a link there.
  */
 export function NoAccess({
   email,
   home = null,
+  portalUrl = null,
 }: {
   email: string | null;
   home?: { href: string; label: string } | null;
+  portalUrl?: string | null;
 }) {
   const what = home ? "can't open this page" : "can't use the finance app";
   return (
@@ -32,6 +35,11 @@ export function NoAccess({
         {home && (
           <Button asChild className="h-11 w-full">
             <Link href={home.href}>Go to {home.label}</Link>
+          </Button>
+        )}
+        {portalUrl && (
+          <Button asChild className="h-11 w-full">
+            <a href={portalUrl}>Go to the portal</a>
           </Button>
         )}
         <SignOutButton variant="outline" className="h-11 w-full" />
