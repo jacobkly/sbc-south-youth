@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ReportView } from "@/components/reports/report-view";
-import { todayInLA } from "@/lib/dates";
+import { periodRange, todayInLA } from "@/lib/dates";
+import { loadIncomeIn } from "@/lib/income/queries";
 import { comparisonPeriod } from "@/lib/reports/comparison";
 import { parseReportFilters, parseReportPage, parseReportTab } from "@/lib/reports/filters";
 import { loadReport, loadReportAmounts, loadReturningPayees } from "@/lib/requests/queries";
@@ -17,10 +18,12 @@ export default async function ReportsPage({ searchParams }: PageProps<"/admin/re
   const beforePeriod = comparisonPeriod(filters.period, today);
   const supabase = await createClient();
   // Each throws on failure, and admin/error.tsx handles it.
-  const [rows, beforeRows, returning] = await Promise.all([
+  const [rows, beforeRows, returning, income, beforeIncome] = await Promise.all([
     loadReport(supabase, filters),
     loadReportAmounts(supabase, { ...filters, period: beforePeriod }),
     loadReturningPayees(supabase, filters),
+    loadIncomeIn(supabase, periodRange(filters.period)),
+    loadIncomeIn(supabase, periodRange(beforePeriod)),
   ]);
 
   return (
@@ -30,7 +33,8 @@ export default async function ReportsPage({ searchParams }: PageProps<"/admin/re
       page={parseReportPage(params)}
       today={today}
       rows={rows}
-      before={{ period: beforePeriod, rows: beforeRows }}
+      income={income}
+      before={{ period: beforePeriod, rows: beforeRows, income: beforeIncome }}
       returning={returning}
     />
   );

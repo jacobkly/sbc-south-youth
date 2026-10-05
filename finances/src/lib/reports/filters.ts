@@ -118,7 +118,7 @@ function reportParams(filters: ReportFilters): URLSearchParams {
 }
 
 /** The report's tabs, in order. The first opens by default. */
-export const REPORT_TABS = ["overview", "requests", "payees", "timing"] as const;
+export const REPORT_TABS = ["overview", "requests", "payees", "timing", "income"] as const;
 
 export type ReportTab = (typeof REPORT_TABS)[number];
 
@@ -127,6 +127,7 @@ export const REPORT_TAB_LABELS: Record<ReportTab, string> = {
   requests: "Requests",
   payees: "Payees",
   timing: "Timing",
+  income: "Income",
 };
 
 /**
@@ -158,13 +159,16 @@ export function reportHref(filters: ReportFilters, { tab, page = 1 }: ReportPlac
   return `/admin/reports?${params}`;
 }
 
-/** The files a report downloads as: one line per request, or the totals. */
-export type ReportFile = "requests" | "summary";
+/** The files a report downloads as: one line per request, the totals, or one line per income entry. */
+export type ReportFile = "requests" | "summary" | "income";
 
-/** Where to download the report as a CSV. */
+/**
+ * Where to download the report as a CSV. Income needs only the period, since
+ * the basis and statuses only change which requests count.
+ */
 export function reportExportHref(filters: ReportFilters, file: ReportFile = "requests"): string {
-  const params = reportParams(filters);
-  if (file === "summary") params.set("file", "summary");
+  const params = file === "income" ? new URLSearchParams({ period: periodSlug(filters.period) }) : reportParams(filters);
+  if (file !== "requests") params.set("file", file);
   return `/admin/reports/export?${params}`;
 }
 

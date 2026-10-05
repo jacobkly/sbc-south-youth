@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronDownIcon, DownloadIcon, FileArchiveIcon, SheetIcon, SigmaIcon } from "lucide-react";
+import { ChevronDownIcon, DownloadIcon, FileArchiveIcon, HandCoinsIcon, SheetIcon, SigmaIcon } from "lucide-react";
 import { ReceiptsZipSheet, type ZipReport } from "@/components/reports/receipts-zip-sheet";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +56,15 @@ export function ExportMenu({
               <span>
                 <span className="block">Summary CSV</span>
                 <span className="block text-xs text-muted-foreground">Totals by payee and type</span>
+              </span>
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="min-h-11 items-start py-2">
+            <a href={reportExportHref(filters, "income")} download>
+              <HandCoinsIcon aria-hidden className="mt-0.5" />
+              <span>
+                <span className="block">Income CSV</span>
+                <span className="block text-xs text-muted-foreground">One line per tithe, event, and cafe week</span>
               </span>
             </a>
           </DropdownMenuItem>

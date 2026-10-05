@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { IsoDate } from "@/lib/dates";
+import type { DateRange, IsoDate } from "@/lib/dates";
 import type { Database } from "@/lib/database.types";
 import { REPORT_STATUSES } from "@/lib/reports/filters";
 import { fetchAll } from "@/lib/supabase/fetch-all";
@@ -28,6 +28,40 @@ export function loadCafeWeeks(supabase: SupabaseClient<Database>): Promise<CafeW
   return fetchAll((from, to) =>
     supabase.from("cafe_weeks").select(CAFE_WEEK_COLUMNS).order("week_ending", { ascending: false }).range(from, to),
   );
+}
+
+/**
+ * The youth entries and cafe weeks that count in a range, oldest first: an
+ * entry by the day it came in, and a week by the Sunday it ends. Throws on
+ * failure.
+ */
+export async function loadIncomeIn(
+  supabase: SupabaseClient<Database>,
+  { start, end }: DateRange,
+): Promise<{ youth: YouthEntry[]; weeks: CafeWeek[] }> {
+  const [youth, weeks] = await Promise.all([
+    fetchAll((from, to) =>
+      supabase
+        .from("youth_income")
+        .select(YOUTH_ENTRY_COLUMNS)
+        .gte("received_on", start)
+        .lte("received_on", end)
+        .order("received_on")
+        .order("created_at")
+        .order("id")
+        .range(from, to),
+    ),
+    fetchAll((from, to) =>
+      supabase
+        .from("cafe_weeks")
+        .select(CAFE_WEEK_COLUMNS)
+        .gte("week_ending", start)
+        .lte("week_ending", end)
+        .order("week_ending")
+        .range(from, to),
+    ),
+  ]);
+  return { youth, weeks };
 }
 
 /**

@@ -198,10 +198,10 @@ export async function loadReport(supabase: SupabaseClient<Database>, filters: Re
   return fetchAll((from, to) => reportQuery(supabase, filters, REPORT_COLUMNS).range(from, to));
 }
 
-/** The amounts and dates in a report, to compare another report with. Throws if a query fails. */
+/** The amounts, dates, and statuses in a report, to compare another report with. Throws if a query fails. */
 export async function loadReportAmounts(supabase: SupabaseClient<Database>, filters: ReportFilters) {
   return fetchAll((from, to) =>
-    reportQuery(supabase, filters, "type, amount_cents, purchase_date, paid_at").range(from, to),
+    reportQuery(supabase, filters, "type, amount_cents, purchase_date, paid_at, status").range(from, to),
   );
 }
 

@@ -99,6 +99,11 @@ describe("parseReportFilters", () => {
     expect(reportExportHref(filters)).toBe("/admin/reports/export?period=2026-09&status=all");
     expect(reportExportHref(filters, "summary")).toBe("/admin/reports/export?period=2026-09&status=all&file=summary");
   });
+
+  it("exports income for the period alone, since the basis and statuses only change the requests", () => {
+    const filters = parseReportFilters({ period: "2026-Q3", basis: "paid", status: "all" }, TODAY);
+    expect(reportExportHref(filters, "income")).toBe("/admin/reports/export?period=2026-Q3&file=income");
+  });
 });
 
 describe("report tabs and pages", () => {
@@ -107,6 +112,7 @@ describe("report tabs and pages", () => {
     expect(parseReportTab({ tab: "requests" })).toBe("requests");
     expect(parseReportTab({ tab: "payees" })).toBe("payees");
     expect(parseReportTab({ tab: "timing" })).toBe("timing");
+    expect(parseReportTab({ tab: "income" })).toBe("income");
     expect(parseReportTab({ tab: ["payees", "requests"] })).toBe("payees");
     for (const tab of ["", "Overview", "charts"]) expect(parseReportTab({ tab })).toBe("overview");
   });

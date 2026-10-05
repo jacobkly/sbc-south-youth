@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "cn";
 import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
-import { TrendIcon } from "@/components/dashboard/stat-cards";
+import { ChangeLine } from "@/components/reports/change-line";
 import { ExportMenu } from "@/components/reports/export-menu";
+import { IncomeReport } from "@/components/reports/income-report";
 import { PayeeBreakdowns } from "@/components/reports/payee-breakdowns";
 import { PeriodPicker } from "@/components/reports/period-picker";
 import { ReportChart } from "@/components/reports/report-chart";
@@ -22,9 +23,10 @@ import { periodLabel, periodRange, type IsoDate, type Period } from "@/lib/dates
 import { formatCents } from "@/lib/money";
 import { pageCount, pageItems, pageSlice } from "@/lib/pagination";
 import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
+import type { RequestStatus } from "@/lib/requests/format";
 import type { ReportRow } from "@/lib/requests/queries";
 import { REQUEST_TYPES } from "@/lib/requests/schema";
-import { changeSentence, compareAmounts, comparisonLabel, formatChange } from "@/lib/reports/comparison";
+import { comparisonLabel } from "@/lib/reports/comparison";
 import {
   REPORT_BASES,
   REPORT_BASIS_LABELS,
@@ -39,6 +41,7 @@ import {
   type ReportTab,
   type ReportTotals,
 } from "@/lib/reports/filters";
+import type { ReportIncome } from "@/lib/reports/income";
 import { reportTimeline, timelineBefore, type TimelineRow } from "@/lib/reports/timeline";
 
 const SELECTED = "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:data-[state=on]:bg-primary/90";
@@ -62,8 +65,12 @@ function emptyMessage(filters: ReportFilters): string {
   return `No ${filters.allStatuses ? "" : "approved or paid "}purchases ${when}.`;
 }
 
-/** The period a report compares with, and its requests. */
-export type ReportBefore = { period: Period; rows: TimelineRow[] };
+/** The period a report compares with, its requests, and its money in. */
+export type ReportBefore = {
+  period: Period;
+  rows: (TimelineRow & { status: RequestStatus })[];
+  income: ReportIncome;
+};
 
 /** The period before's name and totals, for the changes under each total. */
 type Comparison = { label: string; totals: ReportTotals };
@@ -79,6 +86,7 @@ export function ReportView({
   page,
   today,
   rows,
+  income,
   before,
   returning,
 }: {
@@ -88,6 +96,8 @@ export function ReportView({
   page: number;
   today: IsoDate;
   rows: ReportRow[];
+  /** Tithes, events, and cafe weeks in the period, for the Income tab. */
+  income: ReportIncome;
   before: ReportBefore;
   /** Payees with a request the report would count from before its period. */
   returning: string[];
@@ -246,6 +256,9 @@ export function ReportView({
               <EmptyReport filters={filters} />
             )}
           </TabsContent>
+          <TabsContent value="income" className="text-base">
+            <IncomeReport filters={filters} income={income} rows={rows} before={before} />
+          </TabsContent>
         </div>
       </Tabs>
 
@@ -261,26 +274,6 @@ function EmptyReport({ filters }: { filters: ReportFilters }) {
     <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
       {emptyMessage(filters)}
     </p>
-  );
-}
-
-/** How an amount changed from the period before, with an arrow and, for screen readers, in words. */
-function ChangeLine({ current, before, label }: { current: number; before: number; label: string }) {
-  const change = compareAmounts(current, before);
-  const { amount, percent } = formatChange(change);
-  return (
-    <span className="flex flex-wrap items-center justify-end gap-x-1 text-sm text-muted-foreground @md:justify-start">
-      <span aria-hidden className="flex items-center gap-1 whitespace-nowrap">
-        <TrendIcon direction={change.direction} />
-        {amount}
-      </span>
-      {percent && (
-        <span aria-hidden className="whitespace-nowrap">
-          {percent}
-        </span>
-      )}
-      <span className="sr-only">{changeSentence(current, before, label)}</span>
-    </span>
   );
 }
 
