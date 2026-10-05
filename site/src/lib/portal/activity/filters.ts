@@ -1,3 +1,4 @@
+import { addDays, addMonths, daysBetween, isIsoDate, type IsoDate } from "@/lib/dates";
 import { hasRole, type AppRole } from "@/lib/portal/roles";
 
 /**
@@ -120,16 +121,39 @@ export type ActivityFilters = {
   /** Only what this person did. */
   person: string | null;
   kind: ActivityKind | "all";
-  /** How many pages are showing, so "Load more" survives a reload. */
-  pages: number;
+  /** The oldest day "Load more" has reached, or null for the past week. */
+  since: IsoDate | null;
 };
 
-export const DEFAULT_ACTIVITY_FILTERS: ActivityFilters = { scope: "all", person: null, kind: "all", pages: 1 };
+export const DEFAULT_ACTIVITY_FILTERS: ActivityFilters = { scope: "all", person: null, kind: "all", since: null };
 
-export const ACTIVITY_PAGE_SIZE = 25;
+/**
+ * The most events the screen loads, enough for the biggest import (2,000
+ * requests with two events each) and then some. The download has the rest.
+ */
+export const MAX_ACTIVITY_EVENTS = 5000;
 
-/** Past this many pages the download has the rest. */
-export const MAX_ACTIVITY_PAGES = 40;
+/** The first day the feed shows before "Load more": the past week, today included. */
+export function firstSince(today: IsoDate): IsoDate {
+  return addDays(today, -6);
+}
+
+/** Back a week while the feed covers less than two, then a month at a time. */
+function stepBack(since: IsoDate, today: IsoDate): IsoDate {
+  return daysBetween(since, today) < 13 ? addDays(since, -7) : addMonths(since, -1);
+}
+
+/**
+ * Where "Load more" reaches back to from `since`, given `olderOn`, the day
+ * of the newest activity before it. The feed always covers whole days, so
+ * an import never comes in pieces. When nothing happened in the next
+ * stretch, it skips to the stretch that ends with `olderOn`, so every press
+ * shows something.
+ */
+export function olderSince(since: IsoDate, olderOn: IsoDate, today: IsoDate): IsoDate {
+  const next = stepBack(since, today);
+  return olderOn < next ? stepBack(addDays(olderOn, 1), today) : next;
+}
 
 /** The kinds worth offering for the apps shown, in menu order. */
 export function kindsFor(visible: readonly ActivityScope[], scope: ActivityFilters["scope"]): ActivityKind[] {
@@ -149,7 +173,11 @@ function first(value: string | string[] | undefined): string | undefined {
  * Reads the filters from the URL. Anything unknown, or outside what
  * someone can see, falls back to showing everything.
  */
-export function parseActivityFilters(params: SearchParams, visible: readonly ActivityScope[]): ActivityFilters {
+export function parseActivityFilters(
+  params: SearchParams,
+  visible: readonly ActivityScope[],
+  today: IsoDate,
+): ActivityFilters {
   const app = first(params.app);
   const scope = visible.find((s) => s === app) ?? "all";
 
@@ -157,23 +185,23 @@ export function parseActivityFilters(params: SearchParams, visible: readonly Act
   const kind = kindsFor(visible, scope).find((k) => k === action) ?? "all";
 
   const person = first(params.person);
-  const pages = Number(first(params.pages));
+  const since = first(params.since);
 
   return {
     scope,
     person: person && UUID.test(person) ? person.toLowerCase() : null,
     kind,
-    pages: Number.isInteger(pages) ? Math.min(Math.max(pages, 1), MAX_ACTIVITY_PAGES) : 1,
+    since: since && isIsoDate(since) && since < firstSince(today) ? since : null,
   };
 }
 
-/** The URL for these filters, leaving out defaults. Downloads ignore the page count. */
+/** The URL for these filters, leaving out defaults. Downloads have every date. */
 export function activityHref(filters: ActivityFilters, path = "/activity"): string {
   const params = new URLSearchParams();
   if (filters.scope !== "all") params.set("app", filters.scope);
   if (filters.person) params.set("person", filters.person);
   if (filters.kind !== "all") params.set("action", filters.kind);
-  if (filters.pages > 1 && path === "/activity") params.set("pages", String(filters.pages));
+  if (filters.since && path === "/activity") params.set("since", filters.since);
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
@@ -181,7 +209,7 @@ export function activityHref(filters: ActivityFilters, path = "/activity"): stri
 /** Switches app, keeping the action when the new app has it. */
 export function withScope(filters: ActivityFilters, scope: ActivityFilters["scope"]): ActivityFilters {
   const keep = filters.kind !== "all" && KINDS[filters.kind].scopes.some((s) => scope === "all" || s === scope);
-  return { ...filters, scope, kind: keep ? filters.kind : "all", pages: 1 };
+  return { ...filters, scope, kind: keep ? filters.kind : "all", since: null };
 }
 
 export type ActivityQuery = {

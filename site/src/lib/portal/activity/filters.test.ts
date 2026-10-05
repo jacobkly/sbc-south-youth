@@ -1,17 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
-  ACTIVITY_PAGE_SIZE,
   activityHref,
   activityQuery,
   DEFAULT_ACTIVITY_FILTERS,
+  firstSince,
   kindsFor,
-  MAX_ACTIVITY_PAGES,
+  olderSince,
   parseActivityFilters,
   scopesFor,
   withScope,
 } from "./filters";
 
 const PERSON = "00000000-0000-4000-8000-0000000000a1";
+const TODAY = "2026-10-05";
 
 describe("scopesFor", () => {
   it("gives site roles the site, finance viewers finances, and owners everything", () => {
@@ -58,66 +59,97 @@ describe("kindsFor", () => {
 describe("parseActivityFilters", () => {
   const owner = scopesFor(["owner"]);
 
-  it("starts with everything, newest page first", () => {
-    expect(parseActivityFilters({}, owner)).toEqual(DEFAULT_ACTIVITY_FILTERS);
-    expect(DEFAULT_ACTIVITY_FILTERS).toEqual({ scope: "all", person: null, kind: "all", pages: 1 });
+  it("starts with everything from the past week", () => {
+    expect(parseActivityFilters({}, owner, TODAY)).toEqual(DEFAULT_ACTIVITY_FILTERS);
+    expect(DEFAULT_ACTIVITY_FILTERS).toEqual({ scope: "all", person: null, kind: "all", since: null });
   });
 
-  it("reads the app, person, action, and pages from the URL", () => {
-    const params = { app: "finances", person: PERSON, action: "payments", pages: "3" };
-    const filters = { scope: "finances", person: PERSON, kind: "payments", pages: 3 };
-    expect(parseActivityFilters(params, owner)).toEqual(filters);
+  it("reads the app, person, action, and how far back from the URL", () => {
+    const params = { app: "finances", person: PERSON, action: "payments", since: "2026-08-22" };
+    const filters = { scope: "finances", person: PERSON, kind: "payments", since: "2026-08-22" };
+    expect(parseActivityFilters(params, owner, TODAY)).toEqual(filters);
   });
 
   it("ignores an app the person can't see, so a site editor gets no finance filter", () => {
-    expect(parseActivityFilters({ app: "finances" }, ["site"]).scope).toBe("all");
-    expect(parseActivityFilters({ app: "platform" }, ["site", "finances"]).scope).toBe("all");
-    expect(parseActivityFilters({ app: "nope" }, owner).scope).toBe("all");
+    expect(parseActivityFilters({ app: "finances" }, ["site"], TODAY).scope).toBe("all");
+    expect(parseActivityFilters({ app: "platform" }, ["site", "finances"], TODAY).scope).toBe("all");
+    expect(parseActivityFilters({ app: "nope" }, owner, TODAY).scope).toBe("all");
   });
 
   it("ignores an action outside the apps shown", () => {
-    expect(parseActivityFilters({ action: "payments" }, ["site"]).kind).toBe("all");
-    expect(parseActivityFilters({ app: "platform", action: "payments" }, owner).kind).toBe("all");
-    expect(parseActivityFilters({ action: "everything" }, owner).kind).toBe("all");
+    expect(parseActivityFilters({ action: "payments" }, ["site"], TODAY).kind).toBe("all");
+    expect(parseActivityFilters({ app: "platform", action: "payments" }, owner, TODAY).kind).toBe("all");
+    expect(parseActivityFilters({ action: "everything" }, owner, TODAY).kind).toBe("all");
   });
 
   it("takes only a real ID for the person", () => {
-    expect(parseActivityFilters({ person: "alex" }, owner).person).toBeNull();
-    expect(parseActivityFilters({ person: [PERSON, "x"] }, owner).person).toBe(PERSON);
+    expect(parseActivityFilters({ person: "alex" }, owner, TODAY).person).toBeNull();
+    expect(parseActivityFilters({ person: [PERSON, "x"] }, owner, TODAY).person).toBe(PERSON);
   });
 
-  it("keeps pages between 1 and the most there can be", () => {
-    expect(parseActivityFilters({ pages: "0" }, owner).pages).toBe(1);
-    expect(parseActivityFilters({ pages: "2.5" }, owner).pages).toBe(1);
-    expect(parseActivityFilters({ pages: "999" }, owner).pages).toBe(MAX_ACTIVITY_PAGES);
-    expect(MAX_ACTIVITY_PAGES * ACTIVITY_PAGE_SIZE).toBe(1000);
+  it("takes only a real date before the past week for how far back", () => {
+    expect(parseActivityFilters({ since: "last week" }, owner, TODAY).since).toBeNull();
+    expect(parseActivityFilters({ since: "2026-02-30" }, owner, TODAY).since).toBeNull();
+    expect(parseActivityFilters({ since: "2026-09-29" }, owner, TODAY).since).toBeNull();
+    expect(parseActivityFilters({ since: "2026-11-01" }, owner, TODAY).since).toBeNull();
+    expect(parseActivityFilters({ since: "2026-09-28" }, owner, TODAY).since).toBe("2026-09-28");
   });
 });
 
 describe("activityHref", () => {
   it("leaves out the defaults", () => {
     expect(activityHref(DEFAULT_ACTIVITY_FILTERS)).toBe("/activity");
-    expect(activityHref({ scope: "finances", person: PERSON, kind: "payments", pages: 2 })).toBe(
-      `/activity?app=finances&person=${PERSON}&action=payments&pages=2`,
+    expect(activityHref({ scope: "finances", person: PERSON, kind: "payments", since: "2026-09-22" })).toBe(
+      `/activity?app=finances&person=${PERSON}&action=payments&since=2026-09-22`,
     );
   });
 
-  it("can point at the download instead", () => {
-    expect(activityHref({ ...DEFAULT_ACTIVITY_FILTERS, kind: "sign_ins", pages: 4 }, "/activity/export")).toBe(
-      "/activity/export?action=sign_ins",
-    );
+  it("can point at the download instead, which has every date", () => {
+    expect(
+      activityHref({ ...DEFAULT_ACTIVITY_FILTERS, kind: "sign_ins", since: "2026-08-22" }, "/activity/export"),
+    ).toBe("/activity/export?action=sign_ins");
   });
 });
 
 describe("withScope", () => {
-  it("keeps the action when it's in the new app, and starts over at the first page", () => {
-    const filters = { scope: "all", person: PERSON, kind: "downloads", pages: 3 } as const;
-    expect(withScope(filters, "platform")).toEqual({ scope: "platform", person: PERSON, kind: "downloads", pages: 1 });
+  it("keeps the action when it's in the new app, and starts over at the past week", () => {
+    const filters = { scope: "all", person: PERSON, kind: "downloads", since: "2026-08-22" } as const;
+    expect(withScope(filters, "platform")).toEqual({
+      scope: "platform",
+      person: PERSON,
+      kind: "downloads",
+      since: null,
+    });
   });
 
   it("drops an action the new app doesn't have", () => {
-    const filters = { scope: "all", person: null, kind: "payments", pages: 1 } as const;
+    const filters = { scope: "all", person: null, kind: "payments", since: null } as const;
     expect(withScope(filters, "platform").kind).toBe("all");
+  });
+});
+
+describe("firstSince", () => {
+  it("shows the past week, today included", () => {
+    expect(firstSince(TODAY)).toBe("2026-09-29");
+  });
+});
+
+describe("olderSince", () => {
+  it("reaches back another week, then a month at a time", () => {
+    expect(olderSince("2026-09-29", "2026-09-28", TODAY)).toBe("2026-09-22");
+    expect(olderSince("2026-09-22", "2026-09-21", TODAY)).toBe("2026-08-22");
+    expect(olderSince("2026-08-22", "2026-08-21", TODAY)).toBe("2026-07-22");
+  });
+
+  it("covers the newest activity it's reaching for", () => {
+    expect(olderSince("2026-09-29", "2026-09-22", TODAY)).toBe("2026-09-22");
+    expect(olderSince("2026-09-22", "2026-08-22", TODAY)).toBe("2026-08-22");
+  });
+
+  it("skips a stretch with nothing in it, to the stretch that ends with the next activity", () => {
+    expect(olderSince("2026-09-29", "2026-09-20", TODAY)).toBe("2026-08-21");
+    expect(olderSince("2026-09-29", "2026-06-10", TODAY)).toBe("2026-05-11");
+    expect(olderSince("2026-08-22", "2025-12-31", TODAY)).toBe("2025-12-01");
   });
 });
 
@@ -131,7 +163,7 @@ describe("activityQuery", () => {
   });
 
   it("narrows to the app, the actions in a kind, and the person", () => {
-    const filters = { scope: "finances", person: PERSON, kind: "payments", pages: 1 } as const;
+    const filters = { scope: "finances", person: PERSON, kind: "payments", since: null } as const;
     expect(activityQuery(filters, scopesFor(["owner"]))).toEqual({
       scopes: ["finances"],
       actions: ["request.paid", "request.recorded_paid", "request.unpaid"],

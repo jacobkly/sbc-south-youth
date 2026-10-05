@@ -22,10 +22,11 @@ export default async function ActivityPage({ searchParams }: PageProps<"/portal/
   const visible = me ? scopesFor(me.roles) : [];
   if (!me || visible.length === 0) notFound();
 
-  const filters = parseActivityFilters(await searchParams, visible);
+  const today = todayInLA();
+  const filters = parseActivityFilters(await searchParams, visible, today);
   // Each throws on failure, and the error page handles it.
-  const [{ rows, hasMore, capped }, names] = await Promise.all([
-    loadActivity(activityQuery(filters, visible), filters.pages),
+  const [{ rows, older, capped }, names] = await Promise.all([
+    loadActivity(activityQuery(filters, visible), filters.since, today),
     loadPeopleNames(),
   ]);
   const lookups = await loadFeedLookups(rows);
@@ -36,7 +37,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/portal/
     ...lookups,
     financesUrl: canUseFinances(me.roles) ? readPortalEnv().financesUrl : null,
     canOpenPeople: owner,
-    today: todayInLA(),
+    today,
   });
 
   const others = [...names].filter(([id]) => id !== me.id).sort(([, a], [, b]) => a.localeCompare(b));
@@ -66,7 +67,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/portal/
         visible={visible}
         people={people}
         days={days}
-        hasMore={hasMore}
+        older={older}
         capped={capped}
       />
     </NarrowPage>

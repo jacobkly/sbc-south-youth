@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   addDays,
+  addMonths,
   daysBetween,
   formatDate,
   formatDateRange,
@@ -155,6 +156,21 @@ describe("addDays and daysBetween", () => {
     expect(daysBetween("2026-09-25", "2026-09-20")).toBe(-5);
     expect(daysBetween("2026-03-07", "2026-03-09")).toBe(2);
     expect(daysBetween("2026-10-31", "2026-11-02")).toBe(2);
+  });
+});
+
+describe("addMonths", () => {
+  it("moves to the same day of another month", () => {
+    expect(addMonths("2026-09-22", -1)).toBe("2026-08-22");
+    expect(addMonths("2026-01-15", -1)).toBe("2025-12-15");
+    expect(addMonths("2026-11-30", 2)).toBe("2027-01-30");
+    expect(addMonths("2026-09-22", -12)).toBe("2025-09-22");
+  });
+
+  it("stops at the end of a shorter month", () => {
+    expect(addMonths("2026-03-31", -1)).toBe("2026-02-28");
+    expect(addMonths("2028-03-31", -1)).toBe("2028-02-29");
+    expect(addMonths("2026-05-31", -1)).toBe("2026-04-30");
   });
 });
 
