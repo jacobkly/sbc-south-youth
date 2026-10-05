@@ -260,10 +260,12 @@ with removed as (
 )
 select is(count(*)::int, 1, 'an owner deletes a week') from removed;
 
--- History.
+-- History. The local database may hold other income history, so these look
+-- only at this test's rows.
 select results_eq(
   $$ select action, count(*)::int from public.activity_log
      where entity_type in ('youth_income', 'cafe_week')
+       and entity_id::text similar to '00000000-0000-4000-8000-00000000(e|f)%'
      group by action order by action $$,
   $$ values
        ('cafe_week.created', 3), ('cafe_week.deleted', 1), ('cafe_week.updated', 1),
@@ -274,18 +276,21 @@ select results_eq(
 select is_empty(
   $$ select 1 from public.activity_log
      where entity_type in ('youth_income', 'cafe_week')
+       and entity_id::text similar to '00000000-0000-4000-8000-00000000(e|f)%'
        and (scope <> 'finances' or actor_id is distinct from '00000000-0000-4000-8000-00000000a001') $$,
   'as finance activity, by the owner'
 );
 
 select is(
-  (select changes from public.activity_log where action = 'youth_income.updated'),
+  (select changes from public.activity_log where action = 'youth_income.updated'
+     and entity_id = '00000000-0000-4000-8000-00000000e001'),
   '{"amount_cents": {"from": 2500, "to": 3000}}'::jsonb,
   'a change logs what changed'
 );
 
 select is(
-  (select changes from public.activity_log where action = 'youth_income.deleted'),
+  (select changes from public.activity_log where action = 'youth_income.deleted'
+     and entity_id = '00000000-0000-4000-8000-00000000e003'),
   jsonb_build_object(
     'kind', jsonb_build_object('from', 'event', 'to', null),
     'received_on', jsonb_build_object('from', '2026-01-11', 'to', null),
@@ -351,7 +356,8 @@ select is(
 );
 
 select is(
-  (select count(*)::int from public.activity_log where entity_type in ('youth_income', 'cafe_week')),
+  (select count(*)::int from public.activity_log where entity_type in ('youth_income', 'cafe_week')
+     and entity_id::text similar to '00000000-0000-4000-8000-00000000(e|f)%'),
   11,
   'and their history'
 );
