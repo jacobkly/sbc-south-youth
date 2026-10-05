@@ -63,18 +63,21 @@ function amountError(input: string): string {
   return "Enter a dollar amount, like 12.34.";
 }
 
+/** A typed dollar amount, saved as cents: more than $0 and no more than the cap. Income uses it too. */
+export const amountSchema = z.string().transform((value, ctx) => {
+  const trimmed = value.trim();
+  const cents = trimmed ? parseAmountToCents(trimmed) : null;
+  if (cents === null || cents > MAX_REQUEST_CENTS) {
+    const message = !trimmed ? "Enter an amount." : cents === null ? amountError(trimmed) : TOO_LARGE;
+    ctx.addIssue({ code: "custom", message });
+    return z.NEVER;
+  }
+  return cents;
+});
+
 const lineSchema = z.object({
   id: z.string(),
-  amount: z.string().transform((value, ctx) => {
-    const trimmed = value.trim();
-    const cents = trimmed ? parseAmountToCents(trimmed) : null;
-    if (cents === null || cents > MAX_REQUEST_CENTS) {
-      const message = !trimmed ? "Enter an amount." : cents === null ? amountError(trimmed) : TOO_LARGE;
-      ctx.addIssue({ code: "custom", message });
-      return z.NEVER;
-    }
-    return cents;
-  }),
+  amount: amountSchema,
   // Recommended, not required: older payments often don't have them.
   vendor: z
     .string()

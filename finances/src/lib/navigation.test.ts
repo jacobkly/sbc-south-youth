@@ -55,6 +55,7 @@ describe("pageLabel", () => {
     expect(pageLabel("/admin")).toBe("Dashboard");
     expect(pageLabel("/admin/requests")).toBe("Requests");
     expect(pageLabel("/admin/requests/new")).toBe("New request");
+    expect(pageLabel("/admin/income")).toBe("Income");
     expect(pageLabel("/admin/payees")).toBe("Payees");
     expect(pageLabel("/admin/reports")).toBe("Reports");
     expect(pageLabel("/admin/settings")).toBe("Settings");

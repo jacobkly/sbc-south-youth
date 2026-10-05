@@ -142,6 +142,44 @@ export type Database = {
         }
         Relationships: []
       }
+      cafe_weeks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          sales_cents: number
+          updated_at: string
+          week_ending: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          sales_cents: number
+          updated_at?: string
+          week_ending: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          sales_cents?: number
+          updated_at?: string
+          week_ending?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_weeks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_log: {
         Row: {
           attempts: number
@@ -708,6 +746,50 @@ export type Database = {
           },
         ]
       }
+      youth_income: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          created_by: string | null
+          event_name: string | null
+          id: string
+          kind: Database["public"]["Enums"]["youth_income_kind"]
+          method: Database["public"]["Enums"]["income_method"] | null
+          received_on: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          created_by?: string | null
+          event_name?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["youth_income_kind"]
+          method?: Database["public"]["Enums"]["income_method"] | null
+          received_on: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          event_name?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["youth_income_kind"]
+          method?: Database["public"]["Enums"]["income_method"] | null
+          received_on?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "youth_income_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       activity_feed: {
@@ -1222,6 +1304,7 @@ export type Database = {
         | "delivered"
         | "bounced"
         | "complained"
+      income_method: "cash_app" | "zelle" | "cash"
       payment_method: "cash_app" | "bank_transfer" | "check" | "cash" | "other"
       reimbursement_type: "cafe" | "youth"
       request_status:
@@ -1233,6 +1316,7 @@ export type Database = {
         | "rejected"
         | "cancelled"
       user_role: "member" | "admin" | "viewer"
+      youth_income_kind: "tithe" | "event"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1757,6 +1841,7 @@ export const Constants = {
         "bounced",
         "complained",
       ],
+      income_method: ["cash_app", "zelle", "cash"],
       payment_method: ["cash_app", "bank_transfer", "check", "cash", "other"],
       reimbursement_type: ["cafe", "youth"],
       request_status: [
@@ -1769,6 +1854,7 @@ export const Constants = {
         "cancelled",
       ],
       user_role: ["member", "admin", "viewer"],
+      youth_income_kind: ["tithe", "event"],
     },
   },
   site: {
