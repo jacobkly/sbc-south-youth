@@ -67,7 +67,8 @@ export function ActivityView({
               {children}
               {capped && (
                 <p className="text-center text-sm text-muted-foreground">
-                  Showing the newest activity only. Older activity is on each request&apos;s page.
+                  Showing the newest activity only.
+                  {shown.kind !== "income" && " Older activity is on each request's page."}
                 </p>
               )}
               {hasMore && (

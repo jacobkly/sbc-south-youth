@@ -68,6 +68,18 @@ const KINDS = {
     scopes: ["finances"],
     actions: ["request.receipt_added", "request.receipt_removed"],
   },
+  income: {
+    label: "Income",
+    scopes: ["finances"],
+    actions: [
+      "youth_income.created",
+      "youth_income.updated",
+      "youth_income.deleted",
+      "cafe_week.created",
+      "cafe_week.updated",
+      "cafe_week.deleted",
+    ],
+  },
   access: {
     label: "Roles and access",
     scopes: ["platform"],

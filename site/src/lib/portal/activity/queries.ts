@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { FeedContext, FeedRequest, FeedRow } from "./feed";
 import { toFeedRow } from "./feed";
 import { ACTIVITY_PAGE_SIZE, MAX_ACTIVITY_PAGES, type ActivityQuery } from "./filters";
+import { currentIncome, incomeSubjects, type IncomeSubject } from "./income";
 import { changedPayeeIds } from "./requests";
 
 /**
@@ -110,6 +111,33 @@ async function loadInviteUsers(supabase: Supabase, ids: string[]): Promise<Map<s
   return users;
 }
 
+/**
+ * The tithes, event income, and cafe weeks the rows mention: each as it is
+ * now, or as the log last recorded it once deleted.
+ */
+async function loadIncome(supabase: Supabase, rows: readonly FeedRow[]): Promise<Map<string, IncomeSubject>> {
+  const [entries, weeks] = await Promise.all([
+    Promise.all(
+      chunks(entityIds(rows, (row) => row.entity_type === "youth_income")).map((group) =>
+        supabase.from("youth_income").select("id, kind, received_on, amount_cents, method, event_name").in("id", group),
+      ),
+    ),
+    Promise.all(
+      chunks(entityIds(rows, (row) => row.entity_type === "cafe_week")).map((group) =>
+        supabase.from("cafe_weeks").select("id, week_ending, sales_cents, note").in("id", group),
+      ),
+    ),
+  ]);
+  for (const { error } of [...entries, ...weeks]) if (error) throw error;
+  return incomeSubjects(
+    rows,
+    currentIncome(
+      entries.flatMap(({ data }) => data ?? []),
+      weeks.flatMap(({ data }) => data ?? []),
+    ),
+  );
+}
+
 /** Everyone's name, for bylines, the person filter, and who an event is about. */
 export async function loadPeopleNames(): Promise<Map<string, string>> {
   const supabase = await createClient();
@@ -125,20 +153,21 @@ function entityIds(rows: readonly FeedRow[], test: (row: FeedRow) => boolean): s
   return [...new Set(rows.filter(test).flatMap((row) => (row.entity_id ? [row.entity_id] : [])))];
 }
 
-/** The requests, payees, and invites the rows mention, for wording them. */
+/** The requests, payees, invites, and income the rows mention, for wording them. */
 export async function loadFeedLookups(
   rows: readonly FeedRow[],
-): Promise<Pick<FeedContext, "requests" | "payeeNames" | "inviteUsers">> {
+): Promise<Pick<FeedContext, "requests" | "payeeNames" | "inviteUsers" | "income">> {
   const supabase = await createClient();
   const isRequest = (row: FeedRow) => row.entity_type === "request";
   // Finances' wording takes the action without the feed's "request." prefix.
   const edits = rows.filter(isRequest).map((row) => ({ ...row, action: row.action.replace(/^request\./, "") }));
-  const [requests, payeeNames, inviteUsers] = await Promise.all([
+  const [requests, payeeNames, inviteUsers, income] = await Promise.all([
     loadRequests(supabase, entityIds(rows, isRequest)),
     loadPayeeNames(supabase, changedPayeeIds(edits)),
     loadInviteUsers(supabase, entityIds(rows, (row) => row.entity_type === "invite")),
+    loadIncome(supabase, rows),
   ]);
-  return { requests, payeeNames, inviteUsers };
+  return { requests, payeeNames, inviteUsers, income };
 }
 
 /** Records that someone downloaded the feed. Throws if it can't, so nothing goes out unrecorded. */

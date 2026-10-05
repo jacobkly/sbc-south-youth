@@ -2,9 +2,10 @@ import { addDays, formatWeekdayDate, laDateOf, type IsoDate } from "@/lib/dates"
 import { EVENT_ACTION_LABELS, eventTitle, type EventAction, type RequestEvent } from "@/lib/requests/status";
 
 /** In the order the filter shows them. */
-export const ACTIVITY_KINDS = ["all", "receipts", "payments", "status", "edits"] as const;
+export const ACTIVITY_KINDS = ["all", "receipts", "payments", "status", "edits", "income"] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
-export type EventKind = Exclude<ActivityKind, "all">;
+/** The kinds of request events. Income changes come from the activity log instead. */
+export type EventKind = Exclude<ActivityKind, "all" | "income">;
 
 export const ACTIVITY_KIND_LABELS: Record<ActivityKind, string> = {
   all: "All",
@@ -12,9 +13,10 @@ export const ACTIVITY_KIND_LABELS: Record<ActivityKind, string> = {
   payments: "Payments",
   status: "Status",
   edits: "Edits",
+  income: "Income",
 };
 
-/** The actions in each kind. Every action is in exactly one. */
+/** The request actions in each kind. Every action is in exactly one. */
 export const ACTIVITY_KIND_ACTIONS: Record<EventKind, readonly EventAction[]> = {
   receipts: ["receipt_added", "receipt_removed"],
   payments: ["paid", "recorded_paid", "unpaid"],

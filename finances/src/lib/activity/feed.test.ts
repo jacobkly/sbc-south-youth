@@ -46,6 +46,11 @@ describe("parseActivityFilters", () => {
     expect(parseActivityFilters({ kind: ["edits", "status"], pages: "1.5" })).toEqual({ kind: "edits", pages: 1 });
   });
 
+  it("reads the income kind", () => {
+    expect(parseActivityFilters({ kind: "income" })).toEqual({ kind: "income", pages: 1 });
+    expect(activityHref({ kind: "income", pages: 1 })).toBe("/admin/activity?kind=income");
+  });
+
   it("caps the pages", () => {
     expect(parseActivityFilters({ pages: "9999" }).pages).toBe(MAX_ACTIVITY_PAGES);
   });

@@ -30,7 +30,7 @@ describe("scopesFor", () => {
 
 describe("kindsFor", () => {
   it("offers only the actions in the apps someone can see", () => {
-    expect(kindsFor(["finances"], "all")).toEqual(["requests", "status", "payments", "receipts", "downloads"]);
+    expect(kindsFor(["finances"], "all")).toEqual(["requests", "status", "payments", "receipts", "income", "downloads"]);
     expect(kindsFor(["site"], "all")).toEqual(["posts", "events"]);
   });
 
@@ -43,6 +43,7 @@ describe("kindsFor", () => {
       "status",
       "payments",
       "receipts",
+      "income",
       "access",
       "invites",
       "sign_ins",
@@ -144,6 +145,18 @@ describe("activityQuery", () => {
       "request.created",
       "request.updated",
       "request.corrected",
+    ]);
+  });
+
+  it("finds every tithe, event income, and cafe week change under Income", () => {
+    const filters = { ...DEFAULT_ACTIVITY_FILTERS, kind: "income" } as const;
+    expect(activityQuery(filters, scopesFor(["finance_viewer"])).actions).toEqual([
+      "youth_income.created",
+      "youth_income.updated",
+      "youth_income.deleted",
+      "cafe_week.created",
+      "cafe_week.updated",
+      "cafe_week.deleted",
     ]);
   });
 
