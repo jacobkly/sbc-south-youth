@@ -25,6 +25,7 @@ See [`finances/README.md`](finances/README.md) for local setup.
 The portal is where leaders run the youth site and its people from a phone. It's invite-only and lives inside the site app, on its own host. Added to a phone's home screen, it opens full screen as "Youth Portal", with its own icon.
 
 - **People:** owners invite leaders by email, give them roles, and remove or restore access. Invited people pick their own password with a 6-digit emailed code.
+- **One sign-in:** once both apps share a sign-in cookie, everyone signs in on the portal, even for finances. Someone with both apps then picks where to go, and a switcher in each app's navigation moves between the portal, finances, and the public site, listing only what that person can use.
 - **Home:** a link to finances for finance roles, how full the free plan's storage and database are, and, for owners, when the last nightly backup ran, the errors the site and portal ran into in the last 30 days, and a warning once either email limit passes 80%.
 - **Posts:** site editors write the heads-ups on Home and This Week, from a quick template or from scratch. Each one goes up now or at a set time and comes down on its own, and a pinned one leads on Home. Editors can end one early, keep a draft, or post an old one again.
 - **Events:** under Posts, site editors add one-off events with a day and time (or all day), a place, a cost, and details. Each one gets its own page, shows on This Week, and lands in calendars that subscribe. Editors can feature one, for a big card on This Week and a countdown on Home, cancel one with a reason, which keeps its page up with a banner, put it back on, or start a new one from a past one.
@@ -122,6 +123,7 @@ Each app is its own Vercel project connected to this repo, with its **Root Direc
 - `dev` deploys to `staging.sbcsouthyouth.com`, behind Vercel Authentication. Staging shares production's data, so its portal is read-only and sends email only to the owner alert address. Its forms still save, marked as staging tests.
 - The staging portal is another domain on the site project, assigned to `dev`, whose name starts with `portal-`, like `portal-staging.sbcsouthyouth.com`. The site treats any host named like that as a portal, and links it to `staging.sbcsouthyouth.com`.
 - Site changes go to `dev` first. Finances changes go to `main`, and `dev` merges `main` afterward.
+- One sign-in for both apps needs `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=sbcsouthyouth.com` in Production on both Vercel projects, then a redeploy of both. Leave it unset on Preview, so staging keeps its own sign-in. The cookie then reaches every `sbcsouthyouth.com` host, so the public site keeps its outside scripts to Turnstile alone.
 - The site's forms need a Cloudflare Turnstile widget with `sbcsouthyouth.com` and `staging.sbcsouthyouth.com` as its hostnames. Its site key and secret go on the site's Vercel project, with `FORM_IP_SALT` and `YOUTH_INBOX_EMAIL`.
 
 ## License

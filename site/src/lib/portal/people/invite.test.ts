@@ -156,7 +156,11 @@ describe("choosePayee", () => {
 });
 
 describe("accountLinks", () => {
-  const urls = { portalUrl: "https://portal.example.test", financesUrl: "https://finances.example.test" };
+  const urls = {
+    portalUrl: "https://portal.example.test",
+    financesUrl: "https://finances.example.test",
+    sharedSignIn: false,
+  };
 
   it("sends requesters to finances, the only app they use", () => {
     expect(accountLinks(["finance_requester"], urls)).toEqual({
@@ -175,6 +179,15 @@ describe("accountLinks", () => {
       signInUrl: "https://portal.example.test/login",
     });
     expect(accountLinks(["finance_viewer"], urls).app).toBe("portal");
+  });
+
+  it("signs everyone in on the portal once finances shares its sign-in", () => {
+    expect(accountLinks(["finance_requester"], { ...urls, sharedSignIn: true })).toEqual({
+      app: "finances",
+      appName: "SBC South Youth Finances",
+      setupUrl: "https://portal.example.test/setup",
+      signInUrl: "https://portal.example.test/login",
+    });
   });
 });
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AuthPage, signInHref } from "@/components/portal/auth/auth-page";
 import { ResetFlow } from "@/components/portal/auth/reset-flow";
-import { safeNextPath } from "@/lib/auth/next-path";
+import { nextAfterSignIn } from "@/lib/auth/after-sign-in";
 
 export const metadata: Metadata = {
   title: "Reset your password",
@@ -12,7 +12,7 @@ export const instant = false;
 
 export default async function ForgotPage({ searchParams }: PageProps<"/portal/forgot">) {
   const params = await searchParams;
-  const next = safeNextPath(typeof params.next === "string" ? params.next : null);
+  const next = nextAfterSignIn(typeof params.next === "string" ? params.next : null);
 
   return (
     <AuthPage

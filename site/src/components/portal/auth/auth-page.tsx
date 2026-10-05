@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { LogoMark } from "@/components/portal/logo-mark";
+import { withNext } from "@/lib/auth/next-path";
 
 /** The centered, single-column layout every sign-in page shares. */
 export function AuthPage({
@@ -39,5 +40,5 @@ export function AuthPage({
 
 /** The sign-in page's URL, keeping where to go after. */
 export function signInHref(next: string): string {
-  return next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`;
+  return withNext("/login", next);
 }

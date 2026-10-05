@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { cashtagPattern } from "./cash-app";
+import { cookieOptionsFrom } from "./supabase/env";
 
 /**
  * Server environment variables. They're read at build time for static
@@ -58,6 +59,11 @@ export type PortalEnv = {
   financesUrl: string;
   /** The portal's own address, for links in emails. */
   portalUrl: string;
+  /**
+   * Whether finances shares the portal's sign-in. It does once the sign-in
+   * cookie has a domain, and then the portal is where everyone signs in.
+   */
+  sharedSignIn: boolean;
 };
 
 const blankAsMissing = z
@@ -91,6 +97,7 @@ export function readPortalEnv(source: Record<string, string | undefined> = proce
     appEnv: APP_ENV ?? (VERCEL_ENV === "preview" ? "staging" : "production"),
     financesUrl: (FINANCES_URL ?? "https://finances.sbcsouthyouth.com").replace(/\/+$/, ""),
     portalUrl: (PORTAL_URL ?? "https://portal.sbcsouthyouth.com").replace(/\/+$/, ""),
+    sharedSignIn: Boolean(cookieOptionsFrom({ domain: source.NEXT_PUBLIC_AUTH_COOKIE_DOMAIN }).domain),
   };
 }
 

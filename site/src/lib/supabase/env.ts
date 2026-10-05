@@ -24,15 +24,19 @@ const COOKIE_NAME = /^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/;
 // A bare domain like `sbcsouthyouth.com`, with an optional leading dot.
 const COOKIE_DOMAIN = /^\.?(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
 
+/** The shared cookie's name when none is set. */
+const SHARED_COOKIE_NAME = "sbc-auth";
+
 /**
  * The sign-in cookie's name and domain. Unset, the cookie stays on this
  * host with Supabase's own name, so the portal and finances each keep
- * their own sign-in. Setting the domain later shares one sign-in across
- * the subdomains, and a different name keeps staging's apart.
+ * their own sign-in. With the domain, one sign-in covers every subdomain.
+ * The shared cookie gets a name of its own, so the host-only cookies each
+ * app set before can't be mistaken for it.
  */
 export function cookieOptionsFrom(values: { name?: string; domain?: string }): AuthCookieOptions {
-  const name = values.name?.trim();
   const domain = values.domain?.trim();
+  const name = values.name?.trim() || (domain ? SHARED_COOKIE_NAME : "");
   const options: AuthCookieOptions = {};
 
   if (name) {
@@ -46,6 +50,11 @@ export function cookieOptionsFrom(values: { name?: string; domain?: string }): A
     options.domain = domain;
   }
   return options;
+}
+
+/** The name Supabase gives the sign-in cookie when none is set, from the project's address. */
+export function supabaseCookieName(supabaseUrl: string): string {
+  return `sb-${new URL(supabaseUrl).hostname.split(".")[0]}-auth-token`;
 }
 
 function authCookieOptions(): AuthCookieOptions {

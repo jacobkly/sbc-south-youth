@@ -1,8 +1,8 @@
-import { createServerClient } from "@supabase/ssr";
+import { clearAuthCookiesAtScopes, createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isApiPath, isSignInPath, safeNextPath } from "@/lib/auth/next-path";
+import { isApiPath, isSignInPath, signedInLoginPath, START_PATH } from "@/lib/auth/next-path";
 import type { Database } from "@/lib/database.types";
-import { supabaseEnv } from "@/lib/supabase/env";
+import { supabaseCookieName, supabaseEnv } from "@/lib/supabase/env";
 
 function isDevToolPath(pathname: string) {
   return pathname === "/dev" || pathname.startsWith("/dev/");
@@ -52,6 +52,21 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const signedIn = Boolean(data?.claims);
 
+  // A sign-in cookie with its own name replaced Supabase's host-only one,
+  // which nothing reads anymore. Left alone, it would sit there until it
+  // expired, still holding a session.
+  const oldCookie = supabaseCookieName(url);
+  if (cookieOptions.name && cookieOptions.name !== oldCookie) {
+    await clearAuthCookiesAtScopes({
+      getAll: () => request.cookies.getAll(),
+      setAll(cookiesToSet) {
+        for (const { name, value, options } of cookiesToSet) response.cookies.set(name, value, options);
+      },
+      storageKey: oldCookie,
+      scopes: [{}],
+    });
+  }
+
   function redirectTo(target: URL) {
     const redirect = NextResponse.redirect(target);
     for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
@@ -61,12 +76,12 @@ export async function updateSession(request: NextRequest) {
 
   if (!signedIn && !isSignInPath(pathname)) {
     const login = new URL("/login", request.url);
-    if (pathname !== "/") login.searchParams.set("next", pathname + search);
+    if (pathname !== "/" && pathname !== START_PATH) login.searchParams.set("next", pathname + search);
     return redirectTo(login);
   }
 
   if (signedIn && pathname === "/login") {
-    return redirectTo(new URL(safeNextPath(request.nextUrl.searchParams.get("next")), request.url));
+    return redirectTo(new URL(signedInLoginPath(request.nextUrl.searchParams.get("next")), request.url));
   }
 
   return response;

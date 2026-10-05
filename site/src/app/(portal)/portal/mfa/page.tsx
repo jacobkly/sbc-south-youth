@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { AuthPage } from "@/components/portal/auth/auth-page";
 import { MfaStep } from "@/components/portal/auth/mfa-step";
 import { SignOutButton } from "@/components/portal/auth/sign-out-button";
-import { safeNextPath } from "@/lib/auth/next-path";
+import { nextAfterSignIn } from "@/lib/auth/after-sign-in";
 import { getCurrentUser, getMfaDevices, getSessionAal } from "@/lib/portal/auth/current-user";
-import { canUsePortal } from "@/lib/portal/roles";
+import { canUseFinances, canUsePortal } from "@/lib/portal/roles";
 
 export const metadata: Metadata = {
   title: "Two-step sign-in",
@@ -20,10 +20,11 @@ export const instant = false;
  */
 export default async function MfaPage({ searchParams }: PageProps<"/portal/mfa">) {
   const params = await searchParams;
-  const next = safeNextPath(typeof params.next === "string" ? params.next : null);
+  const next = nextAfterSignIn(typeof params.next === "string" ? params.next : null);
 
   const user = await getCurrentUser();
-  if (!user || !canUsePortal(user)) redirect("/no-access");
+  // Finances asks for the same code, so its people sign in here too.
+  if (!user?.is_active || !(canUsePortal(user) || canUseFinances(user.roles))) redirect("/no-access");
   if ((await getSessionAal()) === "aal2") redirect(next);
 
   const devices = await getMfaDevices();

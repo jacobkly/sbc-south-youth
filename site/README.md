@@ -81,9 +81,21 @@ Until launch, production shows the coming-soon page for every page. Previews and
 
 ## Leader portal
 
-The portal's pages live in `src/app/(portal)/portal/`, with their own root layout, styles, and components. Rewrites in `src/lib/host.ts` serve that folder at the root of any host whose name starts with `portal` and return 404 for it everywhere else. The public site never loads portal code, Supabase, or a sign-in cookie, and an ESLint rule keeps portal imports out of public pages.
+The portal's pages live in `src/app/(portal)/portal/`, with their own root layout, styles, and components. Rewrites in `src/lib/host.ts` serve that folder at the root of any host whose name starts with `portal` and return 404 for it everywhere else. The public site never loads portal code or Supabase and never reads a sign-in cookie, and an ESLint rule keeps portal imports out of public pages.
 
 Portal changes run in server actions as the signed-in person, so row-level security checks each one. Actions that need a role start with `requireRole()` in `src/lib/portal/auth/require-role.ts`, which refuses anyone without it, and every change on staging, in words the form can show.
+
+### One sign-in
+
+With `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` set to the domain both apps are under, the same in both, the portal and finances share one sign-in cookie, named `sbc-auth` unless `NEXT_PUBLIC_AUTH_COOKIE_NAME` says otherwise. Left empty, each app keeps its own sign-in on its own host.
+
+- **Signing in:** finances sends its sign-in, forgot password, and first-time setup pages to the portal's, with a `next` back to the finances page someone was headed to. The portal follows a `next` only to its own paths or to `FINANCES_URL` (`src/lib/auth/next-path.ts`). Owners enter their code on the portal, and finances still checks for it.
+- **Where to?:** signing in with no `next` ends on `/start`. Someone with only one app goes straight there, and anyone else picks the portal, finances, or the public site. When someone already signed in reaches `/login` with a `next` the portal won't follow, as when finances can't see the cookie because its settings differ, they land on `/start?choose`, which always shows the choices, so the two apps never send them back and forth.
+- **App switcher:** the name at the top of the sidebar, or the logo at the top of the rail, opens a menu of the places a person can use, and the tab bar's More sheet lists them under Switch to. `src/lib/portal/destinations.ts` decides what's on it. Finances has its own copy, with the portal's sections written out, so a change to who sees a portal section changes both.
+- **Signing out** in either app ends the shared sign-in for both and lands on the portal's sign-in page.
+- **Old cookies:** each app's proxy clears Supabase's old host-only cookie once the shared one replaces it, so it can't sit there holding a session.
+- **Reach:** a cookie on `sbcsouthyouth.com` goes to every host under it, the public site and staging included, and scripts on those pages can read it. The public site ignores it, and its pages load no outside script but Turnstile.
+- **Locally:** set the domain to `sbc.localhost` in both apps, open the portal at `http://portal.sbc.localhost:3001` and finances at `http://finances.sbc.localhost:3000`, and point `PORTAL_URL` and `FINANCES_URL` in both apps at those two.
 
 ### Draft previews
 
@@ -153,9 +165,9 @@ The public site needs `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY` for h
 | `CHURCH_TEXT_NUMBER` | A church-owned number that takes texts, for "let us know you're coming". Never a leader's personal cell |
 | `NEXT_PUBLIC_SUPABASE_URL` | The Supabase project's URL (heads-ups, events, photos, and the portal) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The publishable key. Safe in the browser, since row-level security decides access |
-| `NEXT_PUBLIC_AUTH_COOKIE_NAME`, `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` | The sign-in cookie's name and domain. Leave both empty to keep it on the portal's own host |
+| `NEXT_PUBLIC_AUTH_COOKIE_NAME`, `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` | The sign-in cookie's name and domain. Leave both empty to keep it on the portal's own host. Set the domain the same in both apps to share one sign-in |
 | `APP_ENV` | `production` or `staging`. Empty means production, except on Vercel previews, which are staging |
-| `FINANCES_URL`, `PORTAL_URL` | Where the portal links to finances and to itself. Default to the real addresses |
+| `FINANCES_URL`, `PORTAL_URL` | Where the portal links to finances and to itself. Default to the real addresses. With one sign-in, finances' copies must match |
 | `SUPABASE_SECRET_KEY` | Server only. Reads the site's heads-ups, events, and photos, saves form messages, calls the email functions, writes the error log, and creates, bans, and unbans invited accounts. Never a `NEXT_PUBLIC_` variable |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Sending email. Without both, email is off |
 | `OWNER_ALERT_EMAIL` | Staging only: every email staging sends, form alerts included. Production's owner alerts go to each owner's sign-in email |

@@ -40,7 +40,15 @@ describe("readPortalEnv", () => {
       appEnv: "production",
       financesUrl: "https://finances.sbcsouthyouth.com",
       portalUrl: "https://portal.sbcsouthyouth.com",
+      sharedSignIn: false,
     });
+  });
+
+  it("shares the sign-in with finances once the sign-in cookie has a domain", () => {
+    expect(readPortalEnv({ NEXT_PUBLIC_AUTH_COOKIE_DOMAIN: "sbcsouthyouth.com" }).sharedSignIn).toBe(true);
+    expect(readPortalEnv({ NEXT_PUBLIC_AUTH_COOKIE_DOMAIN: " " }).sharedSignIn).toBe(false);
+    expect(readPortalEnv({ NEXT_PUBLIC_AUTH_COOKIE_NAME: "sbc-staging-auth" }).sharedSignIn).toBe(false);
+    expect(() => readPortalEnv({ NEXT_PUBLIC_AUTH_COOKIE_DOMAIN: "https://x.test" })).toThrow(/COOKIE_DOMAIN/);
   });
 
   it("treats a Vercel preview as staging when APP_ENV is unset, so a forgotten variable stays safe", () => {

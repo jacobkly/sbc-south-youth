@@ -34,8 +34,8 @@ describe("mfaHref", () => {
     expect(mfaHref("/people?tab=active")).toBe("/mfa?next=%2Fpeople%3Ftab%3Dactive");
   });
 
-  it("leaves out the portal home", () => {
-    expect(mfaHref("/")).toBe("/mfa");
+  it("leaves out the Where to? page, where signing in ends anyway", () => {
+    expect(mfaHref("/start")).toBe("/mfa");
   });
 });
 

@@ -8,8 +8,9 @@ import { RefreshOnHistory } from "@/components/portal/nav/refresh-on-history";
 import { readPortalEnv } from "@/lib/env";
 import { getCurrentUser, getSessionAal } from "@/lib/portal/auth/current-user";
 import { ownerNeedsMfa } from "@/lib/portal/auth/mfa";
+import { destinationsFor, destinationUrls } from "@/lib/portal/destinations";
 import type { NavUser } from "@/lib/portal/nav-items";
-import { canUseFinances, canUsePortal } from "@/lib/portal/roles";
+import { canUsePortal } from "@/lib/portal/roles";
 import { parseSavedTheme } from "@/lib/portal/theme";
 
 /**
@@ -25,16 +26,15 @@ export async function AppShell({ children }: { children: ReactNode }) {
   // usually goes there directly; this catches anyone who skipped ahead.
   if (ownerNeedsMfa(user.roles, await getSessionAal())) redirect("/mfa");
 
-  const { appEnv, financesUrl } = readPortalEnv();
-  // Only people who can use finances get a link there.
-  const financesLink = canUseFinances(user.roles) ? financesUrl : null;
-  const staging = appEnv === "staging";
+  const staging = readPortalEnv().appEnv === "staging";
+  // Finances shows up in the app switcher only for people who can use it.
+  const destinations = destinationsFor(user, destinationUrls(), "portal");
   return (
     <>
       {/* First, so its script applies the account's theme before the page paints. */}
       <AccountTheme userId={user.id} theme={parseSavedTheme(user.theme)} readOnly={staging} />
       <ShellLayout
-        user={{ roles: user.roles, name: user.full_name, avatarPath: user.avatar_path, financesUrl: financesLink }}
+        user={{ roles: user.roles, name: user.full_name, avatarPath: user.avatar_path, destinations }}
         staging={staging}
       >
         {children}

@@ -1,4 +1,5 @@
 import type { AuthenticatorAssuranceLevels, Factor } from "@supabase/supabase-js";
+import { withNext } from "@/lib/auth/next-path";
 import type { AppRole } from "@/lib/portal/roles";
 
 /**
@@ -22,7 +23,7 @@ export function ownerNeedsMfa(roles: readonly AppRole[], aal: AssuranceLevel): b
 
 /** The code step's URL, keeping where to go after. */
 export function mfaHref(next: string): string {
-  return next === "/" ? "/mfa" : `/mfa?next=${encodeURIComponent(next)}`;
+  return withNext("/mfa", next);
 }
 
 /**

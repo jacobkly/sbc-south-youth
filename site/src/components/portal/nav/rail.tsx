@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ReceiptTextIcon } from "lucide-react";
 import { cn } from "cn";
-import { LogoMark } from "@/components/portal/logo-mark";
+import { AppSwitcher } from "@/components/portal/nav/app-switcher";
 import { AccountMenu, NAV_LINK_STATES } from "@/components/portal/nav/sidebar";
-import { allowedFor, HOME, isActive, MAIN_ITEMS, type NavUser } from "@/lib/portal/nav-items";
+import { allowedFor, isActive, MAIN_ITEMS, type NavUser } from "@/lib/portal/nav-items";
 
 const RAIL_LINK_CLASSES =
   "group flex w-15 flex-col items-center gap-1 rounded-lg pt-2 pb-1.5 text-[0.6875rem] leading-none font-medium";
@@ -22,13 +21,9 @@ export function Rail(user: NavUser) {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-18 flex-col items-center border-r border-sidebar-border bg-sidebar text-sidebar-foreground rail:flex">
-      <Link
-        href={HOME.href}
-        aria-label="SBC South Youth Portal, home"
-        className="my-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-      >
-        <LogoMark className="size-10" />
-      </Link>
+      <div className="my-2">
+        <AppSwitcher destinations={user.destinations} compact />
+      </div>
 
       <nav aria-label="Main" className="flex w-full flex-1 flex-col items-center overflow-y-auto">
         <ul className="flex flex-col items-center gap-1">
@@ -47,18 +42,6 @@ export function Rail(user: NavUser) {
             </li>
           ))}
         </ul>
-        {user.financesUrl && (
-          <ul className="mt-auto flex flex-col items-center gap-1 pt-4 pb-2">
-            <li>
-              <a href={user.financesUrl} className={cn(RAIL_LINK_CLASSES, NAV_LINK_STATES)}>
-                <span className="flex size-7 items-center justify-center">
-                  <ReceiptTextIcon className={RAIL_ICON_CLASSES} aria-hidden />
-                </span>
-                Finances
-              </a>
-            </li>
-          </ul>
-        )}
       </nav>
 
       <div className="flex w-full justify-center border-t border-sidebar-border py-2">

@@ -9,6 +9,7 @@ import {
   UsersIcon,
   type LucideIcon,
 } from "lucide-react";
+import type { Destination } from "./destinations";
 import { hasRole, type AppRole } from "./roles";
 
 /**
@@ -22,8 +23,8 @@ export type NavUser = {
   roles: AppRole[];
   name: string;
   avatarPath: string | null;
-  /** Finances' address for people who use it, or null. */
-  financesUrl: string | null;
+  /** The places the app switcher offers, this app first. */
+  destinations: Destination[];
 };
 
 export const HOME: NavItem = { href: "/", label: "Home", icon: HouseIcon };

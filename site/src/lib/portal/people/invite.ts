@@ -98,13 +98,17 @@ export type AccountLinks = {
   signInUrl: string;
 };
 
-/** Where an invite or access email sends someone: requesters only use finances. */
+/**
+ * Where an invite or access email sends someone. Requesters only use
+ * finances. Once the two share a sign-in, everyone signs in on the portal,
+ * which sends a requester on to finances.
+ */
 export function accountLinks(
   roles: readonly AppRole[],
-  urls: { portalUrl: string; financesUrl: string },
+  urls: { portalUrl: string; financesUrl: string; sharedSignIn: boolean },
 ): AccountLinks {
   const portal = canUsePortal({ is_active: true, roles });
-  const base = portal ? urls.portalUrl : urls.financesUrl;
+  const base = portal || urls.sharedSignIn ? urls.portalUrl : urls.financesUrl;
   return {
     app: portal ? "portal" : "finances",
     appName: portal ? "SBC South Youth Portal" : "SBC South Youth Finances",

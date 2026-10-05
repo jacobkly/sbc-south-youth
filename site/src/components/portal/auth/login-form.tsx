@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/portal/ui/alert";
 import { Button } from "@/components/portal/ui/button";
 import { Input } from "@/components/portal/ui/input";
 import { Label } from "@/components/portal/ui/label";
+import { withNext } from "@/lib/auth/next-path";
 import { afterSignInPath } from "@/lib/portal/auth/mfa";
 import { createClient } from "@/lib/supabase/client";
 
@@ -84,7 +85,7 @@ export function LoginForm({ next, linkFailed }: { next: string; linkFailed: bool
           <div className="flex items-center justify-between gap-2">
             <Label htmlFor="password">Password</Label>
             <Link
-              href={next === "/" ? "/forgot" : `/forgot?next=${encodeURIComponent(next)}`}
+              href={withNext("/forgot", next)}
               className="-my-2 py-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             >
               Forgot password?

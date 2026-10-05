@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { EllipsisIcon, ReceiptTextIcon } from "lucide-react";
+import { EllipsisIcon } from "lucide-react";
 import { cn } from "cn";
 import { SignOutButton } from "@/components/portal/auth/sign-out-button";
+import { AppTile, DestinationLink, DestinationMark } from "@/components/portal/nav/app-switcher";
 import { UserAvatar } from "@/components/portal/nav/user-avatar";
 import { ResponsiveSheetContent } from "@/components/portal/ui/responsive-sheet";
 import {
@@ -29,10 +30,12 @@ const SHEET_LINK_CLASSES =
  * steps aside while the keyboard is up, so the field being typed in has the
  * little room that's left, and comes back after.
  */
-export function TabBar({ roles, name, avatarPath, financesUrl }: NavUser) {
+export function TabBar({ roles, name, avatarPath, destinations }: NavUser) {
   const pathname = usePathname();
   const { tabs, more } = splitForTabBar(MAIN_ITEMS.filter(allowedFor(roles)));
   const moreActive = more.some((item) => isActive(pathname, item));
+  // The other places, since a phone has no sidebar to switch from.
+  const elsewhere = destinations.filter((destination) => destination.key !== "portal");
 
   return (
     <nav
@@ -88,15 +91,30 @@ export function TabBar({ roles, name, avatarPath, financesUrl }: NavUser) {
                     </SheetClose>
                   </li>
                 ))}
-                {financesUrl && (
-                  <li>
-                    <a href={financesUrl} className={SHEET_LINK_CLASSES}>
-                      <ReceiptTextIcon className="size-5 text-muted-foreground" aria-hidden />
-                      Finances
-                    </a>
-                  </li>
-                )}
               </ul>
+              {elsewhere.length > 0 && (
+                <section aria-labelledby="switch-to" className="px-4">
+                  <h3 id="switch-to" className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+                    Switch to
+                  </h3>
+                  <ul>
+                    {elsewhere.map((destination) => (
+                      <li key={destination.key}>
+                        <DestinationLink destination={destination} className={cn(SHEET_LINK_CLASSES, "h-14")}>
+                          <AppTile app={destination.key} />
+                          <span className="min-w-0 flex-1 leading-tight">
+                            <span className="block">{destination.name}</span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {destination.description}
+                            </span>
+                          </span>
+                          <DestinationMark app={destination.key} />
+                        </DestinationLink>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
               <div className="px-4">
                 <SignOutButton variant="outline" className="h-11 w-full" />
               </div>
