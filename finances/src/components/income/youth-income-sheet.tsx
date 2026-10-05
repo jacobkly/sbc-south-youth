@@ -4,7 +4,8 @@ import { useRef, useState, type ChangeEvent, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { CircleAlertIcon, Trash2Icon } from "lucide-react";
 import { describedBy, FormField } from "@/components/form-field";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DeleteConfirm } from "@/components/income/delete-confirm";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,6 @@ import { formatDate, todayInLA } from "@/lib/dates";
 import {
   INCOME_METHOD_LABELS,
   INCOME_METHODS,
-  incomeDeleteErrorMessage,
   incomeSaveErrorMessage,
   isAlreadySavedError,
   isIncomeDateError,
@@ -67,9 +67,16 @@ export function YouthIncomeSheet({ entry, onClose }: { entry: YouthEntry | "new"
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // Keep showing the last entry while the sheet animates closed.
   const [lastEntry, setLastEntry] = useState(entry);
-  if (entry !== null && entry !== lastEntry) {
-    setLastEntry(entry);
-    setConfirmingDelete(false);
+  // Counts openings, so each one starts fresh even if the last is still animating closed.
+  const [opening, setOpening] = useState(0);
+  const [wasOpen, setWasOpen] = useState(false);
+  if ((entry !== null) !== wasOpen) {
+    setWasOpen(entry !== null);
+    if (entry !== null) {
+      setLastEntry(entry);
+      setConfirmingDelete(false);
+      setOpening((count) => count + 1);
+    }
   }
   const current = entry ?? lastEntry;
   const existing = current === "new" ? null : current;
@@ -82,6 +89,7 @@ export function YouthIncomeSheet({ entry, onClose }: { entry: YouthEntry | "new"
   return (
     <Sheet open={entry !== null} onOpenChange={(open) => !open && onClose()}>
       <ResponsiveSheetContent
+        key={opening}
         onOpenAutoFocus={(event) => {
           // Amount is the one thing to type, so it's ready on open.
           event.preventDefault();
@@ -110,7 +118,12 @@ export function YouthIncomeSheet({ entry, onClose }: { entry: YouthEntry | "new"
           />
         )}
         {existing && confirmingDelete && (
-          <DeleteConfirm entry={existing} onBack={() => setConfirmingDelete(false)} onDeleted={done} />
+          <DeleteConfirm
+            table="youth_income"
+            id={existing.id}
+            onBack={() => setConfirmingDelete(false)}
+            onDeleted={done}
+          />
         )}
       </ResponsiveSheetContent>
     </Sheet>
@@ -327,58 +340,5 @@ function YouthIncomeForm({
         </Button>
       )}
     </form>
-  );
-}
-
-function DeleteConfirm({ entry, onBack, onDeleted }: { entry: YouthEntry; onBack: () => void; onDeleted: () => void }) {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function remove() {
-    setError(null);
-    setPending(true);
-    // An entry someone else already deleted is gone either way, so no rows back isn't an error.
-    const { error: deleteError } = await createClient().from("youth_income").delete().eq("id", entry.id);
-    if (deleteError) {
-      setPending(false);
-      setError(incomeDeleteErrorMessage(deleteError));
-      return;
-    }
-    onDeleted();
-  }
-
-  return (
-    <div className="space-y-4 px-4">
-      {error && (
-        <Alert variant="destructive">
-          <CircleAlertIcon />
-          <AlertTitle>Couldn&apos;t delete it</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* "Go back" comes first so it gets focus, but it shows below on phones. */}
-      <div className="flex flex-col-reverse gap-2 pt-2 desktop:flex-row desktop:justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 desktop:min-w-28"
-          disabled={pending}
-          onClick={onBack}
-          autoFocus
-        >
-          Go back
-        </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          className="h-11 desktop:min-w-28"
-          disabled={pending}
-          onClick={() => void remove()}
-        >
-          {pending ? "Deleting…" : "Delete"}
-        </Button>
-      </div>
-    </div>
   );
 }

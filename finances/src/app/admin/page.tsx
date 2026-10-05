@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getCurrentUser, getCurrentUserId } from "@/lib/auth/current-user";
 import { loadDashboard } from "@/lib/dashboard/summary";
 import { todayInLA } from "@/lib/dates";
+import { loadCafeWeeks } from "@/lib/income/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -21,8 +22,16 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const [supabase, userId] = await Promise.all([createClient(), getCurrentUserId()]);
-  // loadDashboard throws on failure, and admin/error.tsx handles it.
-  const [user, summary] = await Promise.all([getCurrentUser(), loadDashboard(supabase, todayInLA(), userId)]);
+  const today = todayInLA();
+  // The loaders throw on failure, and admin/error.tsx handles it.
+  const [{ user, cafeWeeks }, summary] = await Promise.all([
+    // Only owners add cafe weeks, and the sheet needs the ones already in to step through them.
+    getCurrentUser().then(async (user) => ({
+      user,
+      cafeWeeks: user?.role === "admin" ? await loadCafeWeeks(supabase) : [],
+    })),
+    loadDashboard(supabase, today, userId),
+  ]);
   const canEdit = user?.role === "admin";
   const firstName = user?.full_name.trim().split(/\s+/)[0];
 
@@ -35,7 +44,7 @@ export default async function DashboardPage() {
             {firstName ? `Welcome, ${firstName}. ` : ""}Here&apos;s where things stand.
           </p>
         </div>
-        <QuickActions canEdit={canEdit} />
+        <QuickActions canEdit={canEdit} today={today} cafeWeeks={cafeWeeks} />
       </div>
 
       {summary.hasRequests ? (

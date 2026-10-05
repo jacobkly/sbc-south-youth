@@ -1,26 +1,12 @@
 import { ChevronRightIcon, PlusIcon } from "lucide-react";
+import { plural, Stat } from "@/components/income/stat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatListDate, periodLabel, type IsoDate, type MonthPeriod } from "@/lib/dates";
 import { incomeMethodLabel, YOUTH_INCOME_KIND_LABELS } from "@/lib/income/schema";
 import { groupByMonth, type YouthEntry, type YouthSummary } from "@/lib/income/stats";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
-
-const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
-
-function Stat({ label, value, note }: { label: string; value: string; note: string }) {
-  return (
-    <Card size="sm" className="min-w-0 gap-2">
-      <CardHeader>
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className="truncate text-xl font-semibold tabular-nums">{value}</CardTitle>
-      </CardHeader>
-      <CardContent className="truncate text-xs text-muted-foreground">{note}</CardContent>
-    </Card>
-  );
-}
 
 /** This month's tithes, average tithe, events, and the youth total. */
 export function YouthMonthSummary({ month, summary }: { month: MonthPeriod; summary: YouthSummary }) {
