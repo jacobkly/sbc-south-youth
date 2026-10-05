@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { IncomePage } from "@/components/income/income-page";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { periodContaining, periodRange, todayInLA, type MonthPeriod } from "@/lib/dates";
-import { cafeMonthTotals } from "@/lib/income/cafe";
+import { cafeTotalsIn } from "@/lib/income/cafe";
 import { loadCafeCosts, loadCafeWeeks, loadYouthEntries } from "@/lib/income/queries";
 import { youthSummary } from "@/lib/income/stats";
 import { parseIncomeTab } from "@/lib/income/view";
@@ -39,7 +39,7 @@ export default async function IncomeRoute({ searchParams }: PageProps<"/admin/in
       youthMonth={youthSummary(youthEntries.filter((entry) => entry.received_on >= start && entry.received_on <= end))}
       cafeWeeks={cafe.weeks}
       cafeCosts={cafe.costs}
-      cafeMonth={cafeMonthTotals(cafe.weeks, cafe.costs, month)}
+      cafeMonth={cafeTotalsIn(cafe.weeks, cafe.costs, month)}
     />
   );
 }

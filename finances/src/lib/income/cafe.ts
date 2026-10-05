@@ -1,7 +1,10 @@
-import { periodContaining, periodRange, type IsoDate, type MonthPeriod } from "@/lib/dates";
+import { periodContaining, periodRange, type IsoDate, type MonthPeriod, type Period } from "@/lib/dates";
 import type { Tables } from "@/lib/database.types";
 
 export type CafeWeek = Pick<Tables<"cafe_weeks">, "id" | "week_ending" | "sales_cents" | "note">;
+
+/** What totals need from a week. */
+export type CafeSales = Pick<CafeWeek, "week_ending" | "sales_cents">;
 
 /** A cafe request Reports counts: approved or paid, by its purchase date. */
 export type CafeCost = { purchase_date: IsoDate | null; amount_cents: number | null };
@@ -16,7 +19,7 @@ export type CafeTotals = {
   average: number | null;
 };
 
-function totals(weeks: readonly CafeWeek[], costs: number): CafeTotals {
+function totals(weeks: readonly CafeSales[], costs: number): CafeTotals {
   const sales = weeks.reduce((total, week) => total + week.sales_cents, 0);
   return {
     sales,
@@ -27,8 +30,8 @@ function totals(weeks: readonly CafeWeek[], costs: number): CafeTotals {
   };
 }
 
-function costsIn(costs: readonly CafeCost[], month: MonthPeriod): number {
-  const { start, end } = periodRange(month);
+function costsIn(costs: readonly CafeCost[], period: Period): number {
+  const { start, end } = periodRange(period);
   return costs.reduce(
     (total, cost) =>
       cost.purchase_date && cost.purchase_date >= start && cost.purchase_date <= end
@@ -39,13 +42,13 @@ function costsIn(costs: readonly CafeCost[], month: MonthPeriod): number {
 }
 
 /**
- * A month's cafe sales, costs, and profit. A week counts in the month it
- * ends, and a cost in the month it was bought.
+ * A period's cafe sales, costs, and profit. A week counts in the period it
+ * ends in, and a cost in the period it was bought.
  */
-export function cafeMonthTotals(weeks: readonly CafeWeek[], costs: readonly CafeCost[], month: MonthPeriod): CafeTotals {
-  const { start, end } = periodRange(month);
-  const inMonth = weeks.filter((week) => week.week_ending >= start && week.week_ending <= end);
-  return totals(inMonth, costsIn(costs, month));
+export function cafeTotalsIn(weeks: readonly CafeSales[], costs: readonly CafeCost[], period: Period): CafeTotals {
+  const { start, end } = periodRange(period);
+  const inPeriod = weeks.filter((week) => week.week_ending >= start && week.week_ending <= end);
+  return totals(inPeriod, costsIn(costs, period));
 }
 
 export type CafeMonthGroup = { period: MonthPeriod; totals: CafeTotals; weeks: CafeWeek[] };

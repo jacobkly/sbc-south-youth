@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cafeMonthTotals, groupWeeksByMonth, type CafeCost, type CafeWeek } from "./cafe";
+import { cafeTotalsIn, groupWeeksByMonth, type CafeCost, type CafeWeek } from "./cafe";
 
 const OCTOBER = { kind: "month", year: 2026, month: 10 } as const;
 
@@ -14,20 +14,20 @@ function cost(purchase_date: string, amount_cents: number): CafeCost {
   return { purchase_date, amount_cents };
 }
 
-describe("cafeMonthTotals", () => {
+describe("cafeTotalsIn", () => {
   it("has nothing for a month with no weeks or costs", () => {
-    expect(cafeMonthTotals([], [], OCTOBER)).toEqual({ sales: 0, costs: 0, profit: 0, weeks: 0, average: null });
+    expect(cafeTotalsIn([], [], OCTOBER)).toEqual({ sales: 0, costs: 0, profit: 0, weeks: 0, average: null });
   });
 
   it("counts a week in the month it ends", () => {
     // September 28 to October 4 counts in October, and September 21 to 27 doesn't.
-    const totals = cafeMonthTotals([week("2026-10-04", 60000), week("2026-09-27", 50000)], [], OCTOBER);
+    const totals = cafeTotalsIn([week("2026-10-04", 60000), week("2026-09-27", 50000)], [], OCTOBER);
     expect(totals).toMatchObject({ sales: 60000, weeks: 1 });
   });
 
   it("takes away the month's cafe costs by purchase date", () => {
     const costs = [cost("2026-10-01", 12000), cost("2026-10-31", 3000), cost("2026-09-30", 99900)];
-    expect(cafeMonthTotals([week("2026-10-04", 60000)], costs, OCTOBER)).toMatchObject({
+    expect(cafeTotalsIn([week("2026-10-04", 60000)], costs, OCTOBER)).toMatchObject({
       sales: 60000,
       costs: 15000,
       profit: 45000,
@@ -35,11 +35,11 @@ describe("cafeMonthTotals", () => {
   });
 
   it("shows a loss when costs are more than sales", () => {
-    expect(cafeMonthTotals([week("2026-10-04", 5000)], [cost("2026-10-02", 20000)], OCTOBER).profit).toBe(-15000);
+    expect(cafeTotalsIn([week("2026-10-04", 5000)], [cost("2026-10-02", 20000)], OCTOBER).profit).toBe(-15000);
   });
 
   it("counts a $0 week in the average", () => {
-    const totals = cafeMonthTotals([week("2026-10-11", 0), week("2026-10-04", 60001)], [], OCTOBER);
+    const totals = cafeTotalsIn([week("2026-10-11", 0), week("2026-10-04", 60001)], [], OCTOBER);
     expect(totals).toMatchObject({ weeks: 2, average: 30001 });
   });
 
@@ -48,7 +48,19 @@ describe("cafeMonthTotals", () => {
       { purchase_date: null, amount_cents: 5000 },
       { purchase_date: "2026-10-02", amount_cents: null },
     ];
-    expect(cafeMonthTotals([], costs, OCTOBER).costs).toBe(0);
+    expect(cafeTotalsIn([], costs, OCTOBER).costs).toBe(0);
+  });
+
+  it("covers a whole quarter or year", () => {
+    const weeks = [week("2026-10-04", 60000), week("2026-09-27", 50000), week("2026-07-05", 40000)];
+    const costs = [cost("2026-09-29", 15000), cost("2026-07-01", 10000), cost("2026-06-30", 99900)];
+    expect(cafeTotalsIn(weeks, costs, { kind: "quarter", year: 2026, quarter: 3 })).toMatchObject({
+      sales: 90000,
+      costs: 25000,
+      profit: 65000,
+      weeks: 2,
+    });
+    expect(cafeTotalsIn(weeks, costs, { kind: "year", year: 2026 })).toMatchObject({ sales: 150000, weeks: 3 });
   });
 });
 
