@@ -120,6 +120,7 @@ Each app is its own Vercel project connected to this repo, with its **Root Direc
 
 - `main` is production. The site project serves both `sbcsouthyouth.com` and `portal.sbcsouthyouth.com`.
 - `dev` deploys to `staging.sbcsouthyouth.com`, behind Vercel Authentication. Staging shares production's data, so its portal is read-only and sends email only to the owner alert address. Its forms still save, marked as staging tests.
+- The staging portal is another domain on the site project, assigned to `dev`, whose name starts with `portal-`, like `portal-staging.sbcsouthyouth.com`. The site treats any host named like that as a portal, and links it to `staging.sbcsouthyouth.com`.
 - Site changes go to `dev` first. Finances changes go to `main`, and `dev` merges `main` afterward.
 - The site's forms need a Cloudflare Turnstile widget with `sbcsouthyouth.com` and `staging.sbcsouthyouth.com` as its hostnames. Its site key and secret go on the site's Vercel project, with `FORM_IP_SALT` and `YOUTH_INBOX_EMAIL`.
 
