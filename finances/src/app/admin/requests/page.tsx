@@ -4,6 +4,7 @@ import { getCurrentUser, getCurrentUserId } from "@/lib/auth/current-user";
 import { loadQueue } from "@/lib/requests/queries";
 import { parseQueueFilters } from "@/lib/requests/queue";
 import { createClient } from "@/lib/supabase/server";
+import { sortTags, TAG_COLUMNS } from "@/lib/tags/tags";
 
 export const metadata: Metadata = {
   title: "Requests",
@@ -12,12 +13,15 @@ export const metadata: Metadata = {
 export default async function RequestsPage({ searchParams }: PageProps<"/admin/requests">) {
   const filters = parseQueueFilters(await searchParams);
   const supabase = await createClient();
-  const [user, userId, payees] = await Promise.all([
+  const [user, userId, payees, tags] = await Promise.all([
     getCurrentUser(),
     getCurrentUserId(),
     supabase.from("payees").select("id, full_name, is_active").order("full_name"),
+    supabase.from("tags").select(TAG_COLUMNS),
   ]);
-  if (payees.error) throw payees.error; // handled by admin/error.tsx
+  // handled by admin/error.tsx
+  if (payees.error) throw payees.error;
+  if (tags.error) throw tags.error;
 
   // Payee names are matched here, since one PostgREST `or` can't span a request and its payee.
   const needle = filters.q.toLowerCase();
@@ -31,6 +35,7 @@ export default async function RequestsPage({ searchParams }: PageProps<"/admin/r
       filters={{ ...filters, tab }}
       {...queue}
       payees={payees.data}
+      tags={sortTags(tags.data)}
       canCreate={user?.role === "admin"}
     />
   );

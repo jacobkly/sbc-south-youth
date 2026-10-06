@@ -3,12 +3,14 @@ import { ChevronDownIcon, CircleAlertIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { TagList } from "@/components/tags/tag-list";
 import { formatDate, monthShortName } from "@/lib/dates";
 import type { ImportProblem, ImportRow } from "@/lib/import/parse";
 import type { MonthTotal } from "@/lib/import/plan";
 import { formatCents } from "@/lib/money";
 import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
 import { REQUEST_TYPES } from "@/lib/requests/schema";
+import { findTag, sortTags, type TagRow } from "@/lib/tags/tags";
 
 function plural(count: number, one: string, many: string): string {
   return `${count.toLocaleString("en-US")} ${count === 1 ? one : many}`;
@@ -24,6 +26,16 @@ export function requestCount(count: number): string {
 
 export function newPayeeCount(count: number): string {
   return plural(count, "new payee", "new payees");
+}
+
+export function newTagCount(count: number): string {
+  return plural(count, "new tag", "new tags");
+}
+
+/** "2 new payees and 1 new tag", leaving out what there's none of. Empty when there's nothing new. */
+export function addedList(payees: number, tags: number): string {
+  const added = [payees > 0 ? newPayeeCount(payees) : "", tags > 0 ? newTagCount(tags) : ""].filter(Boolean);
+  return new Intl.ListFormat("en-US").format(added);
 }
 
 /** One number in the summary grid. */
@@ -144,14 +156,20 @@ export function Disclosure({ summary, children }: { summary: string; children: R
   );
 }
 
-/** Every row as it will be saved, under the payee it goes to. Rows already in the app are marked when they'll be skipped. */
+/**
+ * Every row as it will be saved, under the payee it goes to, with its tags
+ * spelled as they're saved. Rows already in the app are marked when they'll
+ * be skipped.
+ */
 export function RowList({
   rows,
   payeeNames,
+  tags,
   skipped,
 }: {
   rows: ImportRow[];
   payeeNames: Map<number, string>;
+  tags: TagRow[];
   skipped: Set<number>;
 }) {
   return (
@@ -169,6 +187,7 @@ export function RowList({
             {skipped.has(row.line) && <Badge variant="outline">Skipped</Badge>}
           </div>
           {row.notes && <p className="text-sm break-words text-muted-foreground">{row.notes}</p>}
+          <TagList tags={sortTags(row.tags.map((name) => findTag(tags, name) ?? { id: name.toLowerCase(), name }))} />
         </li>
       ))}
     </ul>

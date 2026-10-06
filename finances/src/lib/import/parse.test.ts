@@ -84,13 +84,23 @@ describe("normalizeName and nameKey", () => {
 });
 
 describe("parseImport", () => {
-  it("reads rows in Date, Name, Amount, Type, Notes order without a header", () => {
-    const result = parseImport("1/5/2026\tAlex Example\t$12.50\tYouth\tPizza\n", TODAY);
+  it("reads rows in Date, Name, Amount, Type, Notes, Tags order without a header", () => {
+    const result = parseImport("1/5/2026\tAlex Example\t$12.50\tYouth\tPizza\tGame night\n", TODAY);
     expect(result).toEqual({
       ok: true,
       hasHeader: false,
       problems: [],
-      rows: [{ line: 1, date: "2026-01-05", name: "Alex Example", amount_cents: 1250, type: "youth", notes: "Pizza" }],
+      rows: [
+        {
+          line: 1,
+          date: "2026-01-05",
+          name: "Alex Example",
+          amount_cents: 1250,
+          type: "youth",
+          notes: "Pizza",
+          tags: ["Game night"],
+        },
+      ],
     });
   });
 
@@ -101,8 +111,24 @@ describe("parseImport", () => {
       ok: true,
       hasHeader: true,
       problems: [],
-      rows: [{ line: 2, date: "2026-02-01", name: "Sam Sample", amount_cents: 120000, type: "cafe", notes: "" }],
+      rows: [{ line: 2, date: "2026-02-01", name: "Sam Sample", amount_cents: 120000, type: "cafe", notes: "", tags: [] }],
     });
+  });
+
+  it("splits tags on commas and semicolons, tidied, each once", () => {
+    const csv = 'Date,Name,Amount,Type,Tag\n1/5/2026,Pat Example,5,Youth,"Fall  retreat, Van; fall retreat,, "\n';
+    const result = parseImport(csv, TODAY);
+    expect(result.ok && result.rows[0].tags).toEqual(["Fall retreat", "Van"]);
+  });
+
+  it("reports tags that are too long or too many", () => {
+    const long = "x".repeat(51);
+    const many = Array.from({ length: 11 }, (_, i) => `Tag ${i + 1}`).join("; ");
+    const result = parseImport(`1/5/2026\tA\t1\tCafe\t\t${long}\n1/5/2026\tB\t1\tCafe\t\t${many}\n`, TODAY);
+    expect(result.ok && result.problems).toEqual([
+      { line: 1, messages: ["Keep each tag to 50 characters or fewer."] },
+      { line: 2, messages: ["A request can have at most 10 tags."] },
+    ]);
   });
 
   it("skips blank rows but keeps spreadsheet row numbers", () => {

@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Json } from "@/lib/database.types";
 import { todayInLA } from "@/lib/dates";
 import { parseImport, type ImportProblem, type ImportRow } from "@/lib/import/parse";
-import { loadImportContext, monthTotals, planImport, type ImportPlan } from "@/lib/import/plan";
+import { loadImportContext, monthTotals, newTagNames, planImport, type ImportPlan } from "@/lib/import/plan";
 import { formatCents } from "@/lib/money";
 import {
   appErrorMessage,
@@ -29,10 +29,11 @@ import {
 } from "@/lib/requests/actions";
 import { DEFAULT_QUEUE_FILTERS, queueHref } from "@/lib/requests/queue";
 import { createClient } from "@/lib/supabase/client";
+import type { TagRow } from "@/lib/tags/tags";
 import {
+  addedList,
   Disclosure,
   MonthTotals,
-  newPayeeCount,
   ProblemList,
   requestCount,
   rowCount,
@@ -44,14 +45,14 @@ const TEXT_ID = "import-rows";
 const METHOD_ID = "import-method";
 const ID_PREFIX = "import";
 
-// Plenty for a few thousand rows. Anything bigger isn't a five-column spreadsheet.
+// Plenty for a few thousand rows. Anything bigger isn't a six-column spreadsheet.
 const MAX_FILE_BYTES = 2_000_000;
 
 const SPREADSHEET_FILE = /\.(xlsx|xls|numbers|ods)$/i;
 
-export type ImportPreviewData = { rows: ImportRow[]; problems: ImportProblem[]; plan: ImportPlan };
+export type ImportPreviewData = { rows: ImportRow[]; problems: ImportProblem[]; plan: ImportPlan; tags: TagRow[] };
 
-export type ImportResult = { requests: number; payees: number };
+export type ImportResult = { requests: number; payees: number; tags: number };
 
 function sumCents(rows: readonly ImportRow[]): number {
   return rows.reduce((total, row) => total + row.amount_cents, 0);
@@ -96,6 +97,7 @@ export function ImportFlow({
         rows: parsed.rows,
         problems: parsed.problems,
         plan: planImport(parsed.rows, context.payees, context.existing, currentUserId),
+        tags: context.tags,
       });
       window.scrollTo({ top: 0 });
     } catch {
@@ -112,7 +114,7 @@ export function ImportFlow({
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
-      setError("That file is too big. Choose a CSV with just the Date, Name, Amount, Type, and Notes columns.");
+      setError("That file is too big. Choose a CSV with just the Date, Name, Amount, Type, Notes, and Tags columns.");
       return;
     }
     try {
@@ -163,8 +165,9 @@ export function ImportFlow({
       <div className="space-y-2 text-sm text-muted-foreground">
         <p>
           Add requests that were already paid from a spreadsheet with the columns{" "}
-          <span className="font-medium text-foreground">Date, Name, Amount, Type, Notes</span>. A header row is
-          optional. Type is Cafe or Youth, and Notes can be blank.
+          <span className="font-medium text-foreground">Date, Name, Amount, Type, Notes, Tags</span>. A header row
+          is optional. Type is Cafe or Youth. Notes and Tags can be blank, and commas separate tags, like “Fall
+          retreat, Van”.
         </p>
         <p>You&apos;ll see a preview with totals by month before anything is saved.</p>
       </div>
@@ -243,7 +246,7 @@ export function ImportPreview({
   onBack: () => void;
   onImported: (result: ImportResult) => void;
 }) {
-  const { rows, problems, plan } = preview;
+  const { rows, problems, plan, tags } = preview;
   const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [method, setMethod] = useState<PaymentMethod>("cash_app");
   const [approver, setApprover] = useState("");
@@ -258,6 +261,9 @@ export function ImportPreview({
   const selfBlocked = selfCount > 0 && !allowExternalApproval;
   const blocked = problems.length > 0 || selfBlocked || toImport.length === 0;
   const total = sumCents(toImport);
+  // A tag only on skipped rows isn't added.
+  const newTags = newTagNames(toImport, tags);
+  const added = addedList(plan.newPayees.length, newTags.length);
 
   function confirm() {
     if (selfCount > 0) {
@@ -292,7 +298,11 @@ export function ImportPreview({
       window.scrollTo({ top: 0 });
       return;
     }
-    onImported({ requests: readCount(data, "requests"), payees: readCount(data, "payees") });
+    onImported({
+      requests: readCount(data, "requests"),
+      payees: readCount(data, "payees"),
+      tags: readCount(data, "tags"),
+    });
   }
 
   return (
@@ -395,16 +405,27 @@ export function ImportPreview({
             </ul>
           </Disclosure>
         )}
+        {newTags.length > 0 && (
+          <Disclosure summary={`New tags (${newTags.length.toLocaleString("en-US")})`}>
+            <ul className="divide-y">
+              {newTags.map((name) => (
+                <li key={name} className="px-4 py-2.5 break-words">
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </Disclosure>
+        )}
         {rows.length > 0 && (
           <Disclosure summary={`All rows (${rows.length.toLocaleString("en-US")})`}>
-            <RowList rows={rows} payeeNames={plan.payeeNames} skipped={skipped} />
+            <RowList rows={rows} payeeNames={plan.payeeNames} tags={tags} skipped={skipped} />
           </Disclosure>
         )}
       </div>
 
       <p className="text-sm text-muted-foreground">
         Each row is saved as paid on its date, with no vendor or receipt, and “Imported from spreadsheet” as the
-        reason. Notes become the description.
+        reason. Notes become the description, and tags that aren&apos;t in the app yet are added.
       </p>
 
       <div className="flex flex-col gap-2 desktop:flex-row">
@@ -422,8 +443,7 @@ export function ImportPreview({
             <SheetTitle>Import {requestCount(toImport.length)}?</SheetTitle>
             <SheetDescription>
               This adds {requestCount(toImport.length)} totaling {formatCents(total)}
-              {plan.newPayees.length > 0 ? ` and ${newPayeeCount(plan.newPayees.length)}` : ""}. To undo it later,
-              you&apos;d undo each request one at a time.
+              {added ? `, plus ${added}` : ""}. To undo it later, you&apos;d undo each request one at a time.
             </SheetDescription>
           </SheetHeader>
           <div className="flex flex-col-reverse gap-2 px-4 pt-2 desktop:flex-row desktop:justify-end">
@@ -455,7 +475,9 @@ export function ImportDone({ result, onImportMore }: { result: ImportResult; onI
         <div className="space-y-1" role="status">
           <h2 className="font-semibold">Imported {requestCount(result.requests)}</h2>
           <p className="text-sm text-muted-foreground">
-            {result.payees > 0 ? `Added ${newPayeeCount(result.payees)}.` : "No new payees were needed."}
+            {result.payees > 0 || result.tags > 0
+              ? `Added ${addedList(result.payees, result.tags)}.`
+              : "No new payees were needed."}
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 desktop:w-auto desktop:flex-row">

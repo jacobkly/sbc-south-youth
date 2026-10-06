@@ -43,13 +43,15 @@ const MAX_SEARCH = 100;
 export type QueueFilters = {
   /** Null when the URL doesn't name one, until `defaultTab` picks it. */
   tab: QueueTab | null;
-  /** Searches vendor, description, event, payee, and R-number. */
+  /** Searches vendor, description, payee, and R-number. */
   q: string;
   /** Purchase date range, inclusive. */
   from: IsoDate | null;
   to: IsoDate | null;
   type: RequestType | null;
   payee: string | null;
+  /** Requests with this tag, over all time and every status. */
+  tag: string | null;
   /** "No receipt on file" is on, or a receipt has no file. */
   missingReceipt: boolean;
   /** How many pages have been loaded with "Load more". */
@@ -66,6 +68,7 @@ export const DEFAULT_QUEUE_FILTERS: QueueFilters = {
   to: null,
   type: null,
   payee: null,
+  tag: null,
   missingReceipt: false,
   pages: 1,
 };
@@ -84,6 +87,7 @@ export function parseQueueFilters(params: SearchParams): QueueFilters {
   const from = single(params, "from");
   const to = single(params, "to");
   const payee = single(params, "payee");
+  const tag = single(params, "tag");
   const pages = Number(single(params, "pages"));
 
   return {
@@ -93,6 +97,7 @@ export function parseQueueFilters(params: SearchParams): QueueFilters {
     to: to && isIsoDate(to) ? to : null,
     type: REQUEST_TYPES.find((candidate) => candidate === type) ?? null,
     payee: payee && isUuid(payee) ? payee.toLowerCase() : null,
+    tag: tag && isUuid(tag) ? tag.toLowerCase() : null,
     missingReceipt: single(params, "missing") === "1",
     pages: Number.isInteger(pages) && pages > 1 ? Math.min(pages, MAX_QUEUE_PAGES) : 1,
   };
@@ -107,6 +112,7 @@ export function queueHref(filters: QueueFilters): string {
   if (filters.to) params.set("to", filters.to);
   if (filters.type) params.set("type", filters.type);
   if (filters.payee) params.set("payee", filters.payee);
+  if (filters.tag) params.set("tag", filters.tag);
   if (filters.missingReceipt) params.set("missing", "1");
   if (filters.pages > 1) params.set("pages", String(filters.pages));
   const query = params.toString();
@@ -115,7 +121,8 @@ export function queueHref(filters: QueueFilters): string {
 
 /** How many filters are on, not counting the tab and search. */
 export function activeFilterCount(filters: QueueFilters): number {
-  return [filters.from || filters.to, filters.type, filters.payee, filters.missingReceipt].filter(Boolean).length;
+  return [filters.from || filters.to, filters.type, filters.payee, filters.tag, filters.missingReceipt].filter(Boolean)
+    .length;
 }
 
 /** Whether anything narrows the results beyond the tab. */

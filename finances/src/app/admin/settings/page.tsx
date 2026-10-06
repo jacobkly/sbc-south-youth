@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileSpreadsheetIcon } from "lucide-react";
+import { FileSpreadsheetIcon, TagsIcon } from "lucide-react";
 import { NarrowPage } from "@/components/nav/app-shell";
 import { SettingsForm, SettingsSummary } from "@/components/settings/settings-form";
 import { ThemePicker } from "@/components/settings/theme-picker";
@@ -31,14 +31,34 @@ export default async function SettingsPage() {
 
       <ThemePicker userId={user?.id ?? null} className="border-t pt-6" />
 
+      {/* Requesters never see tags. */}
+      {user && user.role !== "member" && (
+        <section aria-labelledby="settings-tags-heading" className="space-y-3 border-t pt-6">
+          <h2 id="settings-tags-heading" className="text-lg font-semibold">
+            Tags
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {user.role === "admin"
+              ? "See how many requests each tag is on and what they add up to, and rename or delete tags."
+              : "See how many requests each tag is on and what they add up to."}
+          </p>
+          <Button variant="outline" className="h-11 px-5" asChild>
+            <Link href="/admin/settings/tags">
+              <TagsIcon aria-hidden />
+              {user.role === "admin" ? "Manage tags" : "See tags"}
+            </Link>
+          </Button>
+        </section>
+      )}
+
       {user?.role === "admin" && (
         <section aria-labelledby="settings-import-heading" className="space-y-3 border-t pt-6">
           <h2 id="settings-import-heading" className="text-lg font-semibold">
             Import
           </h2>
           <p className="text-sm text-muted-foreground">
-            Add requests that were already paid from a spreadsheet with Date, Name, Amount, Type, and Notes
-            columns, or tithes from one with Date and Amount columns.
+            Add requests that were already paid from a spreadsheet with Date, Name, Amount, Type, Notes, and
+            Tags columns, or tithes from one with Date and Amount columns.
           </p>
           <div className="flex flex-col gap-2 desktop:flex-row">
             <Button variant="outline" className="h-11 px-5" asChild>

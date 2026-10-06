@@ -1,9 +1,10 @@
 import { isIsoDate, type IsoDate } from "@/lib/dates";
 import { formatCents, parseAmountToCents } from "@/lib/money";
 import { MAX_REQUEST_CENTS, MIN_PURCHASE_DATE, type RequestType } from "@/lib/requests/schema";
+import { MAX_TAG_NAME, MAX_TAGS, tidyTagName } from "@/lib/tags/tags";
 
 /** The spreadsheet's columns, in the order they're read when there's no header row. */
-export const IMPORT_COLUMNS = ["date", "name", "amount", "type", "notes"] as const;
+export const IMPORT_COLUMNS = ["date", "name", "amount", "type", "notes", "tags"] as const;
 
 export type ImportColumn = (typeof IMPORT_COLUMNS)[number];
 
@@ -13,15 +14,17 @@ export const IMPORT_COLUMN_LABELS: Record<ImportColumn, string> = {
   amount: "Amount",
   type: "Type",
   notes: "Notes",
+  tags: "Tags",
 };
 
-/** Header names each column goes by. Notes can be left out. */
+/** Header names each column goes by. Notes and Tags can be left out. */
 const HEADER_NAMES: Record<ImportColumn, readonly string[]> = {
   date: ["date"],
   name: ["name", "payee"],
   amount: ["amount"],
   type: ["type"],
   notes: ["notes", "note"],
+  tags: ["tags", "tag"],
 };
 
 const REQUIRED_COLUMNS = ["date", "name", "amount", "type"] as const satisfies readonly ImportColumn[];
@@ -39,6 +42,8 @@ export type ImportRow = {
   amount_cents: number;
   type: RequestType;
   notes: string;
+  /** Tag names, tidied, each once. Ones not in the app yet are added. */
+  tags: string[];
 };
 
 /** What's wrong with one spreadsheet row. */
@@ -187,6 +192,25 @@ function typeProblem(text: string): { type?: RequestType; message?: string } {
   return type ? { type } : { message: `The type “${text.trim()}” isn't Cafe or Youth.` };
 }
 
+/**
+ * What the import makes of a tags cell: the names, split on commas or
+ * semicolons, or what's wrong with them. Names that differ only in case or
+ * spacing are one tag, spelled as first seen.
+ */
+export function tagsProblem(text: string): { tags: string[]; message?: string } {
+  const tags = new Map<string, string>();
+  for (const part of text.split(/[,;]/)) {
+    const name = tidyTagName(part);
+    if (name && !tags.has(name.toLowerCase())) tags.set(name.toLowerCase(), name);
+  }
+  const names = [...tags.values()];
+  if (names.some((name) => name.length > MAX_TAG_NAME)) {
+    return { tags: names, message: `Keep each tag to ${MAX_TAG_NAME} characters or fewer.` };
+  }
+  if (names.length > MAX_TAGS) return { tags: names, message: `A request can have at most ${MAX_TAGS} tags.` };
+  return { tags: names };
+}
+
 /** Finds each column by its header, or null when the first row isn't a header. */
 function headerColumns(first: string[]): Partial<Record<ImportColumn, number>> | null {
   const cells = first.map((cell) => cell.trim().toLowerCase());
@@ -201,7 +225,7 @@ function headerColumns(first: string[]): Partial<Record<ImportColumn, number>> |
 
 /**
  * Reads and checks every row of a spreadsheet with the columns Date, Name,
- * Amount, Type, and Notes. With a header row, the columns can be in any
+ * Amount, Type, Notes, and Tags. With a header row, the columns can be in any
  * order and extra ones are ignored. Without one, they're read in that
  * order. Blank rows are skipped. Each row either comes back ready to import
  * or with everything wrong with it.
@@ -253,11 +277,14 @@ export function parseImport(text: string, today: IsoDate): ParsedImport {
       messages.push(`Keep the notes to ${MAX_NOTES.toLocaleString("en-US")} characters or fewer.`);
     }
 
+    const { tags, message: tagsMessage } = tagsProblem(cell("tags"));
+    if (tagsMessage) messages.push(tagsMessage);
+
     if (messages.length > 0 || !date || cents === undefined || !type) {
       problems.push({ line, messages });
       return;
     }
-    rows.push({ line, date, name, amount_cents: cents, type, notes });
+    rows.push({ line, date, name, amount_cents: cents, type, notes, tags });
   });
 
   const count = rows.length + problems.length;

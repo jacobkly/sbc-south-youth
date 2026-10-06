@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(44);
+select plan(47);
 
 -- Start with no tags, so the seed's don't count.
 delete from public.tags;
@@ -93,8 +93,8 @@ select results_eq(
 
 select throws_ok(
   $$ insert into public.tags (name) values ('fall RETREAT') $$,
-  '23505', 'There''s already a tag called fall RETREAT.',
-  'a name that differs only in case is taken'
+  '23505', 'There''s already a tag called Fall retreat.',
+  'a name that differs only in case is taken, and the error names the tag that has it'
 );
 
 select throws_ok(
@@ -291,6 +291,23 @@ select results_eq(
   'the correction saves and keeps its tags'
 );
 
+-- Van is on c001 and c004 now.
+select lives_ok(
+  $$ update public.tags set name = 'Church van' where id = '00000000-0000-4000-8000-00000000e002';
+     update public.tags set name = 'Church van' where id = '00000000-0000-4000-8000-00000000e002' $$,
+  'an owner renames a tag that''s on requests, then saves the same name again'
+);
+
+select results_eq(
+  $$ select actor_id, changes from public.activity_log
+     where entity_id = '00000000-0000-4000-8000-00000000e002' and action = 'tag.updated' $$,
+  $$ values (
+       '00000000-0000-4000-8000-00000000a001'::uuid,
+       '{"name": {"from": "Van", "to": "Church van"}, "requests": {"from": 2, "to": 2}}'::jsonb
+     ) $$,
+  'the rename logs one row that says how many requests it''s on, and the same name logs nothing'
+);
+
 -- As the finance viewer.
 select set_config(
   'request.jwt.claims',
@@ -412,10 +429,21 @@ select is_empty(
   'which takes it off every request'
 );
 
-select isnt_empty(
-  $$ select 1 from public.activity_log
+-- It was on c001, the requester's draft c003, and the request saved with it.
+select results_eq(
+  $$ select actor_id, scope, entity_name, changes from public.activity_log
      where entity_id = '00000000-0000-4000-8000-00000000e001' and action = 'tag.deleted' $$,
-  'and is finance activity'
+  $$ values (
+       '00000000-0000-4000-8000-00000000a001'::uuid, 'finances', 'Fall retreat',
+       '{"name": {"from": "Fall retreat", "to": null}, "requests": {"from": 3, "to": 0}}'::jsonb
+     ) $$,
+  'and logs one finance activity row that says how many requests it was on, drafts too'
+);
+
+select is(
+  (select count(*) from public.request_events where action = 'tagged'),
+  5::bigint,
+  'rather than a row in each request''s history'
 );
 
 reset role;

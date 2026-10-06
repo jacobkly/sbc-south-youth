@@ -360,8 +360,17 @@ const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
     incomeField("sales_cents", "Sales", formatAmount),
     incomeField("note", "Note", formatText),
   ],
-  // The line names the tag, so its name shows only when it's renamed.
-  tag: [{ field: "name", label: "Name", format: formatText, isStartingValue: () => true }],
+  // The line names the tag, so its name shows only when it's renamed. A
+  // rename or delete also says how many requests the tag was on.
+  tag: [
+    { field: "name", label: "Name", format: formatText, isStartingValue: () => true },
+    {
+      field: "requests",
+      label: "Requests",
+      format: (value) => (typeof value === "number" ? value.toLocaleString("en-US") : "None"),
+      isStartingValue: (value) => value === 0,
+    },
+  ],
 };
 
 function describeLogChanges(
@@ -377,6 +386,10 @@ function describeLogChanges(
     }
     if (verb === "deleted") {
       return isStartingValue(change.from) ? [] : [{ label, from: format(change.from, names), to: null }];
+    }
+    // Logged alongside the change rather than changed, like a renamed tag's request count.
+    if (change.from === change.to) {
+      return isStartingValue(change.to) ? [] : [{ label, from: null, to: format(change.to, names) }];
     }
     return [{ label, from: format(change.from, names), to: format(change.to, names) }];
   });

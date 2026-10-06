@@ -390,6 +390,37 @@ describe("tags", () => {
 
     expect(eventTitle(tag({ action: "tag.deleted" }))).toBe("Tag removed");
   });
+
+  it("says how many requests a renamed or deleted tag was on", () => {
+    const renamed = tag({
+      action: "tag.updated",
+      changes: { name: { from: "Fall retreat", to: "Winter retreat" }, requests: { from: 1200, to: 1200 } },
+    });
+    expect(eventChanges(renamed)).toEqual([
+      { label: "Name", from: "Fall retreat", to: "Winter retreat" },
+      { label: "Requests", from: null, to: "1,200" },
+    ]);
+
+    const deleted = tag({
+      action: "tag.deleted",
+      changes: { name: { from: "Fall retreat", to: null }, requests: { from: 12, to: 0 } },
+    });
+    expect(eventChanges(deleted)).toEqual([{ label: "Requests", from: "12", to: null }]);
+  });
+
+  it("leaves the count out when the tag was on no requests", () => {
+    const renamed = tag({
+      action: "tag.updated",
+      changes: { name: { from: "Fall retreat", to: "Winter retreat" }, requests: { from: 0, to: 0 } },
+    });
+    expect(eventChanges(renamed)).toEqual([{ label: "Name", from: "Fall retreat", to: "Winter retreat" }]);
+
+    const deleted = tag({
+      action: "tag.deleted",
+      changes: { name: { from: "Fall retreat", to: null }, requests: { from: 0, to: 0 } },
+    });
+    expect(eventChanges(deleted)).toEqual([]);
+  });
 });
 
 describe("income", () => {

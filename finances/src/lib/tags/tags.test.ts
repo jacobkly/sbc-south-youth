@@ -5,6 +5,7 @@ import {
   requestTagsErrorMessage,
   sameTagIds,
   sortTags,
+  tagDeleteErrorMessage,
   tagMatches,
   tagNameError,
   tagSaveErrorMessage,
@@ -110,11 +111,31 @@ describe("tagSaveErrorMessage", () => {
     );
   });
 
+  it("says when a renamed tag was deleted first", () => {
+    expect(tagSaveErrorMessage({ code: "PGRST116", message: "Cannot coerce the result to a single JSON object" })).toBe(
+      "That tag was deleted.",
+    );
+  });
+
   it("never shows a raw database error", () => {
     expect(tagSaveErrorMessage({ code: "XX000", message: "internal error" })).toBe(
       "Couldn't save the tag. Check your connection and try again.",
     );
     expect(tagSaveErrorMessage(null)).toBe("Couldn't save the tag. Check your connection and try again.");
+  });
+});
+
+describe("tagDeleteErrorMessage", () => {
+  it("explains a missing permission", () => {
+    expect(tagDeleteErrorMessage({ code: "42501", message: "permission denied for table tags" })).toBe(
+      "Only an owner can change tags.",
+    );
+  });
+
+  it("never shows a raw database error", () => {
+    expect(tagDeleteErrorMessage({ code: "XX000", message: "internal error" })).toBe(
+      "Couldn't delete the tag. Check your connection and try again.",
+    );
   });
 });
 

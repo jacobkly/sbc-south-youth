@@ -83,7 +83,14 @@ function errorMessage(error: SaveError, failed: string): string {
 
 /** A plain message for a tag that didn't save. Raw database errors never reach the screen. */
 export function tagSaveErrorMessage(error: SaveError): string {
+  // A rename finds no row once someone else has deleted the tag.
+  if (error?.code === "PGRST116") return "That tag was deleted.";
   return errorMessage(error, "Couldn't save the tag.");
+}
+
+/** A plain message for a tag that didn't delete. */
+export function tagDeleteErrorMessage(error: SaveError): string {
+  return errorMessage(error, "Couldn't delete the tag.");
 }
 
 /** A plain message for a request's tags that didn't save. */
