@@ -23,7 +23,6 @@ const valid: RequestFormValues = {
   purchase_date: "2026-09-20",
   lines: [{ id: LINE_A, amount: "12.50", vendor: "Test Market" }],
   description: "Snacks for small group.",
-  event_name: "",
   no_receipt: false,
   no_receipt_reason: "",
 };
@@ -40,7 +39,7 @@ function errorsFor(values: Partial<RequestFormValues>) {
 }
 
 describe("requestSchema", () => {
-  it("converts the amount to cents and stores a blank event as null", () => {
+  it("converts the amount to cents", () => {
     expect(schema.parse(valid)).toEqual({
       payee_id: valid.payee_id,
       type: "youth",
@@ -48,7 +47,6 @@ describe("requestSchema", () => {
       lines: [{ id: LINE_A, amount_cents: 1250, vendor: "Test Market" }],
       amount_cents: 1250,
       description: "Snacks for small group.",
-      event_name: null,
       no_receipt: false,
       no_receipt_reason: null,
     });
@@ -76,13 +74,11 @@ describe("requestSchema", () => {
       ...valid,
       ...withLine({ amount: " $1,234.5 ", vendor: "  Test Market " }),
       description: " Supplies. ",
-      event_name: "  Test Retreat ",
     });
     expect(result).toMatchObject({
       lines: [{ id: LINE_A, amount_cents: 123450, vendor: "Test Market" }],
       amount_cents: 123450,
       description: "Supplies.",
-      event_name: "Test Retreat",
     });
   });
 
@@ -234,14 +230,12 @@ describe("requestSchema", () => {
       errorsFor({
         ...withLine({ vendor: "v".repeat(101) }),
         description: "d".repeat(1001),
-        event_name: "e".repeat(101),
         no_receipt: true,
         no_receipt_reason: "r".repeat(501),
       }),
     ).toEqual({
       lines: { [LINE_A]: { vendor: "Keep the vendor to 100 characters or fewer." } },
       description: "Keep the description to 1,000 characters or fewer.",
-      event_name: "Keep the event name to 100 characters or fewer.",
       no_receipt_reason: "Keep the reason to 500 characters or fewer.",
     });
   });
@@ -251,7 +245,6 @@ describe("requestSchema", () => {
       ...valid,
       ...withLine({ vendor: "v".repeat(100) }),
       description: "d".repeat(1000),
-      event_name: "e".repeat(100),
       no_receipt: true,
       no_receipt_reason: "r".repeat(500),
     });
@@ -335,7 +328,6 @@ describe("saveRequestArgs", () => {
       p_type: "youth",
       p_purchase_date: "2026-09-20",
       p_description: "Snacks for small group.",
-      p_event_name: null,
       p_no_receipt: false,
       p_no_receipt_reason: null,
       p_lines: [
@@ -349,6 +341,14 @@ describe("saveRequestArgs", () => {
     const input = schema.parse(valid);
     const id = "00000000-0000-4000-8000-00000000c001";
     expect(saveRequestArgs(id, input).p_request_id).toBe(id);
+  });
+
+  it("passes the tags only when given, so leaving them out keeps the saved ones", () => {
+    const input = schema.parse(valid);
+    expect(saveRequestArgs(null, input)).not.toHaveProperty("p_tag_ids");
+    expect(saveRequestArgs(null, input, ["t1", "t2"]).p_tag_ids).toEqual(["t1", "t2"]);
+    // No tags is a choice too: it takes them all off.
+    expect(saveRequestArgs(null, input, []).p_tag_ids).toEqual([]);
   });
 });
 

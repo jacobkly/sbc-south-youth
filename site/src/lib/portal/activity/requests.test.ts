@@ -92,6 +92,13 @@ describe("describeRequestChanges", () => {
     ]);
   });
 
+  it("lists tags by name, and none when there were none", () => {
+    const changes = { tags: { from: [], to: ["Fall retreat", "Snacks"] } };
+    expect(describeRequestChanges({ action: "tagged", changes })).toEqual([
+      { field: "tags", label: "Tags", from: "None", to: "Fall retreat, Snacks" },
+    ]);
+  });
+
   it("lists each receipt's amount and vendor, after the total", () => {
     const changes = {
       lines: {

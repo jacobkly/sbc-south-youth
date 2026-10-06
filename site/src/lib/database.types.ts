@@ -683,6 +683,78 @@ export type Database = {
           },
         ]
       }
+      request_tags: {
+        Row: {
+          created_at: string
+          request_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          request_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          request_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_tags_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "reimbursement_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_tags_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "request_report"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tags: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           avatar_path: string | null
@@ -831,6 +903,7 @@ export type Database = {
           request_number: number | null
           status: Database["public"]["Enums"]["request_status"] | null
           submitted_at: string | null
+          tag_ids: string[] | null
           type: Database["public"]["Enums"]["reimbursement_type"] | null
           vendor: string | null
         }
@@ -855,6 +928,7 @@ export type Database = {
           request_number?: number | null
           status?: Database["public"]["Enums"]["request_status"] | null
           submitted_at?: string | null
+          tag_ids?: never
           type?: Database["public"]["Enums"]["reimbursement_type"] | null
           vendor?: string | null
         }
@@ -879,6 +953,7 @@ export type Database = {
           request_number?: number | null
           status?: Database["public"]["Enums"]["request_status"] | null
           submitted_at?: string | null
+          tag_ids?: never
           type?: Database["public"]["Enums"]["reimbursement_type"] | null
           vendor?: string | null
         }
@@ -928,15 +1003,15 @@ export type Database = {
       correct_request: {
         Args: {
           p_description: string
-          p_event_name: string
-          p_lines: Json
-          p_no_receipt: boolean
-          p_no_receipt_reason: string
-          p_paid_at: string
-          p_payment_method: Database["public"]["Enums"]["payment_method"]
-          p_payment_reference: string
+          p_event_name?: string
+          p_lines?: Json
+          p_no_receipt?: boolean
+          p_no_receipt_reason?: string
+          p_paid_at?: string
+          p_payment_method?: Database["public"]["Enums"]["payment_method"]
+          p_payment_reference?: string
           p_purchase_date: string
-          p_reason: string
+          p_reason?: string
           p_request_id: string
           p_type: Database["public"]["Enums"]["reimbursement_type"]
         }
@@ -1218,13 +1293,14 @@ export type Database = {
       save_request: {
         Args: {
           p_description: string
-          p_event_name: string
-          p_lines: Json
-          p_no_receipt: boolean
-          p_no_receipt_reason: string
+          p_event_name?: string
+          p_lines?: Json
+          p_no_receipt?: boolean
+          p_no_receipt_reason?: string
           p_payee_id: string
           p_purchase_date: string
           p_request_id: string
+          p_tag_ids?: string[]
           p_type: Database["public"]["Enums"]["reimbursement_type"]
         }
         Returns: {
@@ -1272,6 +1348,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_request_tags: {
+        Args: { p_request_id: string; p_tag_ids: string[] }
+        Returns: undefined
+      }
       set_roles: {
         Args: {
           p_roles: Database["public"]["Enums"]["app_role"][]
@@ -1293,6 +1373,10 @@ export type Database = {
         Returns: undefined
       }
       vendor_list: { Args: { p_vendors: string[] }; Returns: string }
+      write_request_tags: {
+        Args: { p_log: boolean; p_request_id: string; p_tag_ids: string[] }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:

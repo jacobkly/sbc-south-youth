@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/lib/database.types";
 import { reportBounds, type ReportFilters } from "@/lib/reports/filters";
 import { fetchAll } from "@/lib/supabase/fetch-all";
+import { REQUEST_TAGS_EMBED, type RequestTagLinks } from "@/lib/tags/tags";
 import {
   defaultTab,
   MAX_QUEUE_PAGES,
@@ -15,19 +16,20 @@ import {
   type QueueTab,
 } from "./queue";
 
+// A requester can't read tags, so for them the embed comes back empty.
 const QUEUE_COLUMNS =
-  "id, request_number, status, type, amount_cents, purchase_date, paid_at, sort_at, vendor, description, missing_receipt, payee:payees(full_name)";
+  `id, request_number, status, type, amount_cents, purchase_date, paid_at, sort_at, vendor, description, missing_receipt, payee:payees(full_name), ${REQUEST_TAGS_EMBED}` as const;
 const REPORT_COLUMNS =
-  `${QUEUE_COLUMNS}, payee_id, event_name, submitted_at, approved_at, payment_method, no_receipt_reason, lines:request_lines(vendor, amount_cents)` as const;
+  `${QUEUE_COLUMNS}, payee_id, submitted_at, approved_at, payment_method, no_receipt_reason, lines:request_lines(vendor, amount_cents)` as const;
 const EXPORT_COLUMNS = `
-  request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
+  request_number, status, type, amount_cents, purchase_date, vendor, description, ${REQUEST_TAGS_EMBED},
   submitted_at, external_approver, approved_at, paid_at, payment_method, payment_reference, no_receipt, no_receipt_reason,
   payee:payees(full_name),
   entered_by:users!reimbursement_requests_created_by_fkey(full_name),
   approver:users!reimbursement_requests_approved_by_fkey(full_name),
   payer:users!reimbursement_requests_paid_by_fkey(full_name),
   receipts(count)
-`;
+` as const;
 
 /** A request as the queue lists it. */
 export type QueueRow = Pick<
@@ -43,7 +45,7 @@ export type QueueRow = Pick<
   | "vendor"
   | "description"
   | "missing_receipt"
-> & { payee: { full_name: string } | null };
+> & { payee: { full_name: string } | null; tags: RequestTagLinks };
 
 export type QueuePage = {
   /** The tab shown: the one in the URL, or the one picked for it. */
@@ -178,7 +180,7 @@ export async function loadPayeeRequests(
 export type ReportRow = QueueRow &
   Pick<
     Tables<"reimbursement_requests">,
-    "payee_id" | "event_name" | "submitted_at" | "approved_at" | "payment_method" | "no_receipt_reason"
+    "payee_id" | "submitted_at" | "approved_at" | "payment_method" | "no_receipt_reason"
   > & { lines: Pick<Tables<"request_lines">, "vendor" | "amount_cents">[] };
 
 /** The requests in a report with the given columns, newest first by the report's date. */

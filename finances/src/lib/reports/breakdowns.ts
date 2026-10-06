@@ -1,6 +1,7 @@
 import type { Tables } from "@/lib/database.types";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/requests/actions";
 import type { RequestStatus } from "@/lib/requests/format";
+import { tagsOf, type RequestTagLinks } from "@/lib/tags/tags";
 
 /** What the Requests tab's breakdowns read from each request. */
 export type BreakdownRow = Pick<
@@ -148,11 +149,18 @@ export function vendorBreakdown(rows: readonly VendorRow[], limit = TOP_NAMES): 
   return byName(amounts, { none: "No vendor", others: (count) => `${count.toLocaleString()} other vendors` }, limit);
 }
 
-/** Spending on each event. */
-export function eventBreakdown(
-  rows: readonly Pick<Tables<"reimbursement_requests">, "event_name" | "amount_cents">[],
-  limit = TOP_NAMES,
-): NamedSlice[] {
-  const amounts = rows.map((row) => ({ name: row.event_name, cents: row.amount_cents }));
-  return byName(amounts, { none: "No event", others: (count) => `${count.toLocaleString()} other events` }, limit);
+/** What tagBreakdown reads from each request: its total and its tags. */
+export type TagBreakdownRow = Pick<Tables<"reimbursement_requests">, "amount_cents"> & { tags: RequestTagLinks };
+
+/**
+ * Spending under each tag. A request with two tags counts under both, so
+ * the tags can add up to more than the total.
+ */
+export function tagBreakdown(rows: readonly TagBreakdownRow[], limit = TOP_NAMES): NamedSlice[] {
+  const amounts = rows.flatMap((row): NamedAmount[] => {
+    const tags = tagsOf(row.tags);
+    if (tags.length === 0) return [{ name: null, cents: row.amount_cents }];
+    return tags.map((tag) => ({ name: tag.name, cents: row.amount_cents }));
+  });
+  return byName(amounts, { none: "No tag", others: (count) => `${count.toLocaleString()} other tags` }, limit);
 }

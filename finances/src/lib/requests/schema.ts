@@ -20,7 +20,6 @@ export const REQUEST_FIELDS = [
   "type",
   "purchase_date",
   "description",
-  "event_name",
   "no_receipt_reason",
 ] as const;
 
@@ -34,7 +33,6 @@ export type RequestFormValues = {
   /** The receipts, in order. There's always at least one. */
   lines: RequestLineValues[];
   description: string;
-  event_name: string;
   /** "No receipt on file", for backfilled history and lost receipts. */
   no_receipt: boolean;
   no_receipt_reason: string;
@@ -124,11 +122,6 @@ export function requestSchema(today: IsoDate = todayInLA()) {
         .trim()
         .max(1000, "Keep the description to 1,000 characters or fewer.")
         .transform((value) => value || null),
-      event_name: z
-        .string()
-        .trim()
-        .max(100, "Keep the event name to 100 characters or fewer.")
-        .transform((value) => value || null),
       no_receipt: z.boolean(),
       no_receipt_reason: z
         .string()
@@ -208,8 +201,15 @@ export function errorsAfterChange<E extends RequestFieldErrors & { receipts?: st
 
 type SaveRequestArgs = Database["public"]["Functions"]["save_request"]["Args"];
 
-/** The `save_request` call for checked values. Leave out `requestId` to create a draft. */
-export function saveRequestArgs(requestId: string | null, input: RequestInput): SaveRequestArgs {
+/**
+ * The `save_request` call for checked values. Leave out `requestId` to create
+ * a draft. Only an owner passes `tagIds`. Left out, the tags stay as they are.
+ */
+export function saveRequestArgs(
+  requestId: string | null,
+  input: RequestInput,
+  tagIds?: readonly string[],
+): SaveRequestArgs {
   // The generated types don't know these arguments can be null. The function handles it.
   return {
     p_request_id: requestId,
@@ -217,10 +217,10 @@ export function saveRequestArgs(requestId: string | null, input: RequestInput): 
     p_type: input.type,
     p_purchase_date: input.purchase_date,
     p_description: input.description,
-    p_event_name: input.event_name,
     p_no_receipt: input.no_receipt,
     p_no_receipt_reason: input.no_receipt_reason,
     p_lines: input.lines,
+    ...(tagIds && { p_tag_ids: [...tagIds] }),
   } as SaveRequestArgs;
 }
 

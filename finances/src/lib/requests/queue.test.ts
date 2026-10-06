@@ -179,15 +179,12 @@ describe("containsPattern", () => {
 
 describe("searchFilter", () => {
   it("searches the text columns", () => {
-    expect(searchFilter("pizza", [])).toBe(
-      'vendor.ilike."%pizza%",description.ilike."%pizza%",event_name.ilike."%pizza%"',
-    );
+    expect(searchFilter("pizza", [])).toBe('vendor.ilike."%pizza%",description.ilike."%pizza%"');
   });
 
   it("adds matching payees and the request number", () => {
     expect(searchFilter("12", [PAYEE])).toBe(
-      'vendor.ilike."%12%",description.ilike."%12%",event_name.ilike."%12%",' +
-        `payee_id.in.(${PAYEE}),request_number.eq.12`,
+      `vendor.ilike."%12%",description.ilike."%12%",payee_id.in.(${PAYEE}),request_number.eq.12`,
     );
   });
 
@@ -196,7 +193,6 @@ describe("searchFilter", () => {
       [
         'vendor.ilike."%Joe\'s, \\"Inc.\\" (east)%"',
         'description.ilike."%Joe\'s, \\"Inc.\\" (east)%"',
-        'event_name.ilike."%Joe\'s, \\"Inc.\\" (east)%"',
       ].join(","),
     );
   });

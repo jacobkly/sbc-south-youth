@@ -21,7 +21,7 @@ export const ACTIVITY_KIND_ACTIONS: Record<EventKind, readonly EventAction[]> = 
   receipts: ["receipt_added", "receipt_removed"],
   payments: ["paid", "recorded_paid", "unpaid"],
   status: ["submitted", "approved", "unapproved", "info_requested", "rejected", "cancelled"],
-  edits: ["created", "updated", "corrected"],
+  edits: ["created", "updated", "corrected", "tagged"],
 };
 
 const KIND_OF = new Map(

@@ -158,13 +158,12 @@ function quoted(value: string): string {
 }
 
 /**
- * The PostgREST `or` filter for a search: the text anywhere in the vendor,
- * description, or event, one of the payees whose name matched, or the
- * request number.
+ * The PostgREST `or` filter for a search: the text anywhere in the vendor or
+ * description, one of the payees whose name matched, or the request number.
  */
 export function searchFilter(term: string, payeeIds: readonly string[]): string {
   const pattern = quoted(containsPattern(term.trim()));
-  const clauses = ["vendor", "description", "event_name"].map((column) => `${column}.ilike.${pattern}`);
+  const clauses = ["vendor", "description"].map((column) => `${column}.ilike.${pattern}`);
   if (payeeIds.length > 0) clauses.push(`payee_id.in.(${payeeIds.join(",")})`);
   const number = requestNumberIn(term);
   if (number !== null) clauses.push(`request_number.eq.${number}`);

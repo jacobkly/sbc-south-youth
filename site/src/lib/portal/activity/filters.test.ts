@@ -171,12 +171,16 @@ describe("activityQuery", () => {
     });
   });
 
-  it("counts corrections as request edits", () => {
+  it("counts corrections and tag changes as request edits", () => {
     const filters = { ...DEFAULT_ACTIVITY_FILTERS, kind: "requests" } as const;
     expect(activityQuery(filters, scopesFor(["owner"])).actions).toEqual([
       "request.created",
       "request.updated",
       "request.corrected",
+      "request.tagged",
+      "tag.created",
+      "tag.updated",
+      "tag.deleted",
     ]);
   });
 

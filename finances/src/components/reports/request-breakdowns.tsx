@@ -4,13 +4,13 @@ import { PAYMENT_METHOD_LABELS } from "@/lib/requests/actions";
 import { REQUEST_STATUS_LABELS } from "@/lib/requests/format";
 import type { ReportRow } from "@/lib/requests/queries";
 import {
-  eventBreakdown,
   paymentMethodBreakdown,
   RECEIPT_GROUP_LABELS,
   receiptBreakdown,
   SIZE_BAND_LABELS,
   sizeBreakdown,
   statusBreakdown,
+  tagBreakdown,
   vendorBreakdown,
 } from "@/lib/reports/breakdowns";
 import type { ReportFilters } from "@/lib/reports/filters";
@@ -28,10 +28,10 @@ function Cell({ children }: { children: ReactNode }) {
 
 /**
  * The Requests tab's breakdowns: by status, size, receipts, how they were
- * paid, vendor, and event. By paid date every request is paid, so status is
+ * paid, vendor, and tag. By paid date every request is paid, so status is
  * left out. On a wide screen they flow down two columns that the browser
  * balances by height, so neither side is left with a gap however long the
- * vendor and event lists get.
+ * vendor and tag lists get.
  */
 export function RequestBreakdowns({ rows, filters }: { rows: ReportRow[]; filters: ReportFilters }) {
   const byPaidDate = filters.basis === "paid";
@@ -85,11 +85,11 @@ export function RequestBreakdowns({ rows, filters }: { rows: ReportRow[]; filter
       </Cell>
       <Cell>
         <Breakdown
-          id="report-events"
-          title="By event"
-          description="What each event cost"
-          items={eventBreakdown(rows)}
-          empty="No request in this report is for an event."
+          id="report-tags"
+          title="By tag"
+          description="A request with two tags counts under both"
+          items={tagBreakdown(rows)}
+          empty="No request in this report has a tag."
         />
       </Cell>
     </div>

@@ -16,7 +16,6 @@ const before: CorrectionSnapshot = {
   type: "youth",
   purchase_date: "2026-01-10",
   description: "Request c001",
-  event_name: null,
   no_receipt: false,
   no_receipt_reason: null,
   lines: [{ amount_cents: 1000, vendor: "Fake Store" }],
@@ -131,7 +130,6 @@ describe("correctionSnapshot", () => {
       lines: [{ id: "00000000-0000-4000-8000-00000000f001", amount_cents: 1000, vendor: "Fake Store" }],
       amount_cents: 1000,
       description: "Request c001",
-      event_name: null,
       no_receipt: false,
       no_receipt_reason: null,
     };
@@ -149,7 +147,6 @@ describe("correctRequestArgs", () => {
     lines: [{ id: "00000000-0000-4000-8000-00000000f001", amount_cents: 1250, vendor: "Fake Store" }],
     amount_cents: 1250,
     description: "Pizza for the lock-in",
-    event_name: null,
     no_receipt: false,
     no_receipt_reason: null,
   };
@@ -162,7 +159,6 @@ describe("correctRequestArgs", () => {
       p_type: "youth",
       p_purchase_date: "2026-01-09",
       p_description: "Pizza for the lock-in",
-      p_event_name: null,
       p_no_receipt: false,
       p_no_receipt_reason: null,
       p_lines: input.lines,

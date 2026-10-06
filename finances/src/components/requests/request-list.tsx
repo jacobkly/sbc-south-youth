@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 import { cn } from "cn";
 import { StatusBadge } from "@/components/requests/status-badge";
+import { TagList } from "@/components/tags/tag-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +12,7 @@ import { formatCents } from "@/lib/money";
 import { formatRequestNumber, listedDate, REQUEST_TYPE_LABELS, requestTitle } from "@/lib/requests/format";
 import type { QueueRow } from "@/lib/requests/queries";
 import type { QueueTab } from "@/lib/requests/queue";
+import { tagsOf } from "@/lib/tags/tags";
 
 /** "No receipt on file" is on, or one of its receipts has no file. */
 export function MissingReceiptBadge() {
@@ -115,10 +117,13 @@ export function RequestRow({
           </span>
           <span className="text-muted-foreground tabular-nums">{formatRequestNumber(row.request_number)}</span>
           {showPayee && <span className="truncate font-medium">{row.payee?.full_name ?? "Unknown payee"}</span>}
-          <span className="flex min-w-0 items-center gap-2">
-            <span className={cn("truncate", !showPayee && "font-medium")}>{requestTitle(row)}</span>
-            {row.missing_receipt && <MissingReceiptBadge />}
-          </span>
+          <div className="min-w-0 space-y-1">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className={cn("truncate", !showPayee && "font-medium")}>{requestTitle(row)}</span>
+              {row.missing_receipt && <MissingReceiptBadge />}
+            </span>
+            <TagList tags={tagsOf(row.tags)} />
+          </div>
           <span className="text-muted-foreground">{REQUEST_TYPE_LABELS[row.type]}</span>
           {showStatus && (
             <span className="flex">
@@ -185,6 +190,7 @@ export function RequestList({
               <p className="text-sm text-muted-foreground tabular-nums">
                 {formatRequestNumber(row.request_number)} · {label ? `${label} ${formatListDate(date)}` : formatListDate(date)}
               </p>
+              <TagList tags={tagsOf(row.tags)} className="mt-1.5" />
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="font-medium tabular-nums">{formatCents(row.amount_cents)}</span>

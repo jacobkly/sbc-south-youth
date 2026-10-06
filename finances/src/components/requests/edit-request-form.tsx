@@ -105,7 +105,6 @@ function count(n: number, one: string, many: string): string {
 export function EditRequestForm({
   request,
   payees: initialPayees = null,
-  eventNames,
   today,
   deletableBy,
   detailHref,
@@ -114,7 +113,6 @@ export function EditRequestForm({
   request: EditableRequest;
   /** Active payees plus the request's own, sorted by name. Null for a requester, who can't change who's paid. */
   payees?: PayeeRow[] | null;
-  eventNames: string[];
   today: IsoDate;
   /** The signed-in person, when they entered this draft and can delete it. */
   deletableBy: string | null;
@@ -394,7 +392,6 @@ export function EditRequestForm({
                 }
           }
           allowNoReceipt={!requester}
-          eventNames={eventNames}
           today={today}
           pendingReceipts={pendingReceipts}
           savedReceipts={savedFiles}

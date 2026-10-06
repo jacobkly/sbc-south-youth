@@ -6,6 +6,7 @@ import { PAYMENT_METHOD_LABELS } from "@/lib/requests/actions";
 import { formatRequestNumber, REQUEST_STATUS_LABELS, REQUEST_TYPE_LABELS } from "@/lib/requests/format";
 import type { ReportExportRow } from "@/lib/requests/queries";
 import { REQUEST_TYPES } from "@/lib/requests/schema";
+import { tagsOf } from "@/lib/tags/tags";
 import {
   periodSlug,
   reportPayeeTotals,
@@ -25,7 +26,7 @@ export const REPORT_CSV_HEADER = [
   "vendor",
   "type",
   "description",
-  "event",
+  "tags",
   "amount",
   "submitted_at",
   "approved_by",
@@ -44,7 +45,10 @@ function instant(value: string | null): string | null {
   return value && laDateTime(value);
 }
 
-/** One request as a CSV line, in header order. Amounts are dollars and times are LA. */
+/**
+ * One request as a CSV line, in header order. Amounts are dollars, times are
+ * LA, and tags are split by semicolons, since a tag's name can have a comma.
+ */
 export function reportCsvRow(row: ReportExportRow): CsvValue[] {
   return [
     formatRequestNumber(row.request_number),
@@ -55,7 +59,9 @@ export function reportCsvRow(row: ReportExportRow): CsvValue[] {
     row.vendor,
     REQUEST_TYPE_LABELS[row.type],
     row.description,
-    row.event_name,
+    tagsOf(row.tags)
+      .map((tag) => tag.name)
+      .join("; ") || null,
     centsToDecimal(row.amount_cents),
     instant(row.submitted_at),
     row.approver?.full_name,

@@ -22,7 +22,10 @@ const PAID: ReportExportRow = {
   purchase_date: "2026-08-14",
   vendor: "Example Mart",
   description: "Snacks, drinks, and plates",
-  event_name: "Summer kickoff",
+  tags: [
+    { tag: { id: "00000000-0000-4000-8000-0000000000a1", name: "Summer kickoff" } },
+    { tag: { id: "00000000-0000-4000-8000-0000000000a2", name: "Snacks" } },
+  ],
   submitted_at: "2026-08-15T17:00:00+00:00",
   external_approver: null,
   approved_at: "2026-08-16T19:30:00+00:00",
@@ -45,7 +48,7 @@ const DRAFT: ReportExportRow = {
   type: "cafe",
   amount_cents: 500,
   description: "Coffee",
-  event_name: null,
+  tags: [],
   submitted_at: null,
   approved_at: null,
   paid_at: null,
@@ -71,7 +74,7 @@ describe("reportCsvRow", () => {
       vendor: "Example Mart",
       type: "Youth",
       description: "Snacks, drinks, and plates",
-      event: "Summer kickoff",
+      tags: "Snacks; Summer kickoff",
       amount: "45.99",
       submitted_at: "2026-08-15 10:00",
       approved_by: "Test Admin",
@@ -93,7 +96,7 @@ describe("reportCsvRow", () => {
       status: "Draft",
       type: "Cafe",
       amount: "5.00",
-      event: null,
+      tags: null,
       submitted_at: null,
       approved_by: undefined,
       paid_by: undefined,
@@ -120,7 +123,7 @@ describe("reportCsv", () => {
     const lines = reportCsv([PAID, DRAFT]).split("\r\n");
     expect(lines[0]).toBe(`﻿${REPORT_CSV_HEADER.join(",")}`);
     expect(lines[1]).toBe(
-      'R-0012,Paid,Test Payee,Test Admin,2026-08-14,Example Mart,Youth,"Snacks, drinks, and plates",Summer kickoff,45.99,2026-08-15 10:00,Test Admin,,2026-08-16 12:30,Test Admin,2026-09-25 23:30,Bank transfer,TEST-001,2,No,',
+      'R-0012,Paid,Test Payee,Test Admin,2026-08-14,Example Mart,Youth,"Snacks, drinks, and plates",Snacks; Summer kickoff,45.99,2026-08-15 10:00,Test Admin,,2026-08-16 12:30,Test Admin,2026-09-25 23:30,Bank transfer,TEST-001,2,No,',
     );
     expect(lines[2]).toBe("R-0003,Draft,Test Payee,Test Admin,2026-08-14,Example Mart,Cafe,Coffee,,5.00,,,,,,,,,0,Yes,Lost it");
     expect(lines).toHaveLength(4);

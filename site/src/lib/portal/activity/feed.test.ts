@@ -356,6 +356,42 @@ describe("eventChanges for site content", () => {
   });
 });
 
+describe("tags", () => {
+  const at = "2026-10-02T17:00:00Z";
+  const tag = (fields: Partial<FeedRow> & Pick<FeedRow, "action">) =>
+    row({
+      scope: "finances",
+      entity_type: "tag",
+      entity_id: "00000000-0000-4000-8000-00000000f300",
+      entity_name: "Fall retreat",
+      created_at: at,
+      ...fields,
+    });
+
+  it("words a request's tag change the way finances does", () => {
+    const changes = { tags: { from: ["Snacks"], to: ["Fall retreat", "Snacks"] } };
+    const tagged = row({ action: "request.tagged", entity_id: REQUEST, changes, created_at: at });
+    expect(eventTitle(tagged)).toBe("Tags changed");
+    expect(eventChanges(tagged)).toEqual([{ label: "Tags", from: "Snacks", to: "Fall retreat, Snacks" }]);
+  });
+
+  it("names a tag by its name, showing the old and new name only when renamed", () => {
+    const added = tag({ action: "tag.created", changes: { name: { from: null, to: "Fall retreat" } } });
+    expect(buildActivityDays([added], context())[0].entries[0]).toMatchObject({
+      title: "Tag added",
+      subject: "Fall retreat",
+      icon: "created",
+    });
+    expect(eventChanges(added)).toEqual([]);
+
+    const renamed = tag({ action: "tag.updated", changes: { name: { from: "Fall retreat", to: "Winter retreat" } } });
+    expect(eventTitle(renamed)).toBe("Tag changed");
+    expect(eventChanges(renamed)).toEqual([{ label: "Name", from: "Fall retreat", to: "Winter retreat" }]);
+
+    expect(eventTitle(tag({ action: "tag.deleted" }))).toBe("Tag removed");
+  });
+});
+
 describe("income", () => {
   const at = "2026-10-02T17:00:00Z";
   const income = (fields: Partial<FeedRow> & Pick<FeedRow, "action">) =>

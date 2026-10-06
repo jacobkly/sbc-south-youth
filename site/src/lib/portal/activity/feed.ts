@@ -360,6 +360,8 @@ const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
     incomeField("sales_cents", "Sales", formatAmount),
     incomeField("note", "Note", formatText),
   ],
+  // The line names the tag, so its name shows only when it's renamed.
+  tag: [{ field: "name", label: "Name", format: formatText, isStartingValue: () => true }],
 };
 
 function describeLogChanges(
@@ -605,6 +607,7 @@ const ACTION_ICONS: Partial<Record<string, ActivityIcon>> = {
   "request.created": "created",
   "request.updated": "edited",
   "request.corrected": "edited",
+  "request.tagged": "edited",
   "request.submitted": "submitted",
   "request.approved": "approved",
   "request.recorded_paid": "paid",
@@ -800,6 +803,7 @@ const COUNT_NOUNS: Partial<Record<string, readonly [string, string]>> = {
   message: ["message", "messages"],
   youth_income: ["youth entry", "youth entries"],
   cafe_week: ["cafe week", "cafe weeks"],
+  tag: ["tag", "tags"],
 };
 
 /** Counts an item's things by kind, most first. */

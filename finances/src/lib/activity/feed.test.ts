@@ -33,6 +33,7 @@ describe("kindOf", () => {
     expect(kindOf("rejected")).toBe("status");
     expect(kindOf("updated")).toBe("edits");
     expect(kindOf("corrected")).toBe("edits");
+    expect(kindOf("tagged")).toBe("edits");
   });
 });
 

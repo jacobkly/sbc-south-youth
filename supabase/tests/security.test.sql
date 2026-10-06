@@ -5,12 +5,12 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(42);
+select plan(46);
 
 select tables_are(
   'public',
   array['users', 'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'receipts', 'request_lines', 'activity_log',
-        'email_log', 'email_suppressions', 'invites', 'app_errors', 'youth_income', 'cafe_weeks'],
+        'email_log', 'email_suppressions', 'invites', 'app_errors', 'youth_income', 'cafe_weeks', 'tags', 'request_tags'],
   'public has only the known tables (add new ones here once they have RLS and tests)'
 );
 
@@ -101,6 +101,7 @@ select set_eq(
     'import_tithes',
     'save_request',
     'correct_request',
+    'set_request_tags',
     'missing_receipt',
     'triage_message',
     'message_assignees',
@@ -209,6 +210,11 @@ insert into public.youth_income (received_on, amount_cents, method) values ('202
 
 insert into public.cafe_weeks (week_ending, sales_cents) values ('2026-01-04', 45000);
 
+insert into public.tags (id, name) values ('00000000-0000-4000-8000-00000000e101', 'Test tag');
+
+insert into public.request_tags (request_id, tag_id)
+values ('00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000e101');
+
 insert into site.posts (id, title, body, status)
 values ('00000000-0000-4000-8000-00000000a501', 'Test heads-up', 'Showing now.', 'published');
 
@@ -241,6 +247,8 @@ select ok(
   and exists (select 1 from public.app_errors where source = 'Security test')
   and exists (select 1 from public.youth_income where received_on = '2026-01-04')
   and exists (select 1 from public.cafe_weeks where week_ending = '2026-01-04')
+  and exists (select 1 from public.tags where id = '00000000-0000-4000-8000-00000000e101')
+  and exists (select 1 from public.request_tags where tag_id = '00000000-0000-4000-8000-00000000e101')
   and exists (select 1 from site.posts where id = '00000000-0000-4000-8000-00000000a501')
   and exists (select 1 from site.events where id = '00000000-0000-4000-8000-00000000a502')
   and exists (select 1 from site.messages where id = '00000000-0000-4000-8000-00000000a503')
@@ -275,7 +283,7 @@ select is_empty(
 )
 from unnest(array[
   'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'request_lines', 'receipts', 'request_report',
-  'youth_income', 'cafe_weeks'
+  'youth_income', 'cafe_weeks', 'tags', 'request_tags'
 ]) as t (name);
 
 select is_empty(

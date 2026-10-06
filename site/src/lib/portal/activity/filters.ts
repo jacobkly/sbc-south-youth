@@ -45,7 +45,16 @@ const KINDS = {
   requests: {
     label: "Request edits",
     scopes: ["finances"],
-    actions: ["request.created", "request.updated", "request.corrected"],
+    // Tags only label requests, so adding, renaming, or deleting one counts too.
+    actions: [
+      "request.created",
+      "request.updated",
+      "request.corrected",
+      "request.tagged",
+      "tag.created",
+      "tag.updated",
+      "tag.deleted",
+    ],
   },
   status: {
     label: "Status changes",

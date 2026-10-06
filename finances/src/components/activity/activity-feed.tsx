@@ -14,6 +14,7 @@ import {
   PaperclipIcon,
   PencilIcon,
   SendIcon,
+  TagIcon,
   Undo2Icon,
   type LucideIcon,
 } from "lucide-react";
@@ -52,6 +53,7 @@ const ACTION_ICONS: Record<EventAction, LucideIcon> = {
   receipt_added: PaperclipIcon,
   receipt_removed: PaperclipIcon,
   corrected: FilePenLineIcon,
+  tagged: TagIcon,
 };
 
 function ItemIcon({ icon: Icon }: { icon: LucideIcon }) {

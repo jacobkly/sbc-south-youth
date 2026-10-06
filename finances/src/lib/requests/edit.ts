@@ -8,7 +8,7 @@ import type { RequestType } from "@/lib/requests/schema";
 /** What the edit pages read to open a request in the form. */
 export const EDIT_REQUEST_COLUMNS = `
   request_number, status, created_by, payee_id, type, amount_cents, purchase_date, description,
-  event_name, no_receipt, no_receipt_reason, paid_at, payment_method, payment_reference,
+  no_receipt, no_receipt_reason, paid_at, payment_method, payment_reference,
   lines:request_lines(id, amount_cents, vendor),
   receipts(id, line_id, storage_path, original_filename, mime_type, width, height)
 ` as const;
@@ -21,7 +21,6 @@ type EditRow = {
   amount_cents: number;
   purchase_date: string;
   description: string | null;
-  event_name: string | null;
   no_receipt: boolean;
   no_receipt_reason: string | null;
   paid_at: string | null;
@@ -60,7 +59,6 @@ export function toEditableRequest(
         vendor: line.vendor ?? "",
       })),
       description: row.description ?? "",
-      event_name: row.event_name ?? "",
       no_receipt: row.no_receipt,
       no_receipt_reason: row.no_receipt_reason ?? "",
     },
@@ -81,7 +79,6 @@ export function toEditableRequest(
           type: row.type,
           purchase_date: row.purchase_date,
           description: row.description,
-          event_name: row.event_name,
           no_receipt: row.no_receipt,
           no_receipt_reason: row.no_receipt_reason,
           lines: row.lines.map((line) => ({ amount_cents: line.amount_cents, vendor: line.vendor })),
