@@ -42,6 +42,8 @@ export function PreviewPane({ request, active }: { request: PreviewRequest; acti
   const [status, setStatus] = useState<Status>({ state: "loading" });
   const [everShown, setEverShown] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
+  /** Goes up with Try again, which loads a new frame, since a home screen app has no reload. */
+  const [attempt, setAttempt] = useState(0);
   const sent = useRef({ id: 0, key: "" });
   const key = JSON.stringify(request);
 
@@ -73,7 +75,7 @@ export function PreviewPane({ request, active }: { request: PreviewRequest; acti
     if (ready > 0 || !active) return;
     const timer = setTimeout(() => setTimedOut(true), FRAME_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [ready, active]);
+  }, [ready, active, attempt]);
 
   // The theme goes first, so the first preview already has it.
   useEffect(() => {
@@ -88,7 +90,7 @@ export function PreviewPane({ request, active }: { request: PreviewRequest; acti
     tell(frame.current, { type: "preview:show", id, request: JSON.parse(key) });
   }, [ready, active, key]);
 
-  const problem = timedOut ? "The preview didn't load. Reload the page and try again." : null;
+  const problem = timedOut ? "The preview didn't load. Check your connection and try again." : null;
   const shownProblem = problem ?? (status.state === "problem" ? status.problem : null);
   const loading = !shownProblem && status.state === "loading";
 
@@ -119,7 +121,24 @@ export function PreviewPane({ request, active }: { request: PreviewRequest; acti
         <Alert>
           <CircleAlertIcon />
           <AlertTitle>Can&apos;t preview it yet</AlertTitle>
-          <AlertDescription>{shownProblem}</AlertDescription>
+          <AlertDescription>
+            {shownProblem}
+            {timedOut && (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 px-5"
+                  onClick={() => {
+                    setTimedOut(false);
+                    setAttempt((count) => count + 1);
+                  }}
+                >
+                  Try again
+                </Button>
+              </div>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -142,6 +161,7 @@ export function PreviewPane({ request, active }: { request: PreviewRequest; acti
         )}
       >
         <iframe
+          key={attempt}
           ref={frame}
           src={PREVIEW_PATH}
           title="Preview on the site"

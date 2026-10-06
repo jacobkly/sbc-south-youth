@@ -24,7 +24,7 @@ export async function requireOwner(refusal: string): Promise<{ me: PortalUser } 
   const owner = await requireRole("owner", refusal);
   if ("refused" in owner) return owner;
   if ((await getSessionAal()) !== "aal2") {
-    return { refused: "Enter a code from your authenticator app first. Reload the page to get asked for one." };
+    return { refused: "Enter a code from your authenticator app first, under Account." };
   }
   return owner;
 }

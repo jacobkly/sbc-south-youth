@@ -24,7 +24,7 @@ import { createClient } from "@/lib/supabase/server";
  * public stylesheet looks for classes, since it lays out site markup.
  */
 
-const SIGNED_OUT = "Your sign-in ran out. Reload the page and sign in again to see the preview.";
+const SIGNED_OUT = "Your sign-in ran out. Copy what you've written, then open another screen to sign in again.";
 const REFUSAL = "Only site editors can preview heads-ups and events.";
 
 export async function renderPreview(raw: unknown): Promise<PreviewResult> {

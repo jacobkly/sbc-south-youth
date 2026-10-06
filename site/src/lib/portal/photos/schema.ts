@@ -9,6 +9,9 @@ const SIDE_MAX = 4000;
 /** The database's limit on why a photo came down. */
 export const REASON_MAX = 200;
 
+/** For a request that arrives malformed. Opening the photo again starts from the screen's own values. */
+const GARBLED = "That didn't come through right. Close this and open the photo again.";
+
 /**
  * An id, lowercase like `crypto.randomUUID()` and Postgres. A photo's is
  * also its folder name, which is what the storage rules allow.
@@ -78,9 +81,7 @@ export function checkPhotoEdit(
   const alt = checkAlt(edit.alt);
   if (!alt.ok) return { ok: false, message: alt.error };
   const placement = parsePlacement(edit.placement);
-  if (!isId(edit.id) || !placement) {
-    return { ok: false, message: "That didn't come through right. Reload the page and try again." };
-  }
+  if (!isId(edit.id) || !placement) return { ok: false, message: GARBLED };
   return { ok: true, id: edit.id, changes: { alt: alt.alt, spot: placement.spot, event_id: placement.eventId } };
 }
 
@@ -107,7 +108,7 @@ export function checkRemoval(
   const reason = checkReason(removal.reason);
   if (!reason.ok) return { ok: false, message: reason.error };
   if (!isId(removal.id) || (removal.messageId !== null && !isId(removal.messageId))) {
-    return { ok: false, message: "That didn't come through right. Reload the page and try again." };
+    return { ok: false, message: GARBLED };
   }
   return { ok: true, removal: { id: removal.id, reason: reason.reason, messageId: removal.messageId } };
 }

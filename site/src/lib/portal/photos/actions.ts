@@ -74,13 +74,20 @@ export async function savePhoto(edit: PhotoEdit): Promise<PhotoActionResult> {
     .update(check.changes)
     .eq("id", check.id)
     .select("id");
-  if (error?.code === "23503") return failed("That event isn't there anymore. Reload the page and pick another.");
+  // Both refresh the screen, so its list of events and photos is current.
+  if (error?.code === "23503") {
+    refresh();
+    return failed("That event isn't there anymore. Pick another place for the photo.");
+  }
   if (error) {
     const fallback = "Couldn't save the photo. Check your connection and try again.";
     return failed(await actionError("Save a photo", error, fallback));
   }
   // RLS skips a photo that's already down.
-  if (data.length === 0) return failed("That photo was taken down. Reload the page to see the library.");
+  if (data.length === 0) {
+    refresh();
+    return failed("This photo was already taken down, so it's out of the library.");
+  }
 
   updateTag(PHOTOS_TAG);
   refresh();
@@ -123,7 +130,7 @@ export async function removePhoto(removal: PhotoRemoval): Promise<RemovalResult>
 export async function deletePhotoFiles(id: string): Promise<PhotoActionResult> {
   const editor = await requireRole("site_editor", REFUSAL);
   if ("refused" in editor) return failed(editor.refused);
-  if (!checkPhotoId(id)) return failed("That didn't come through right. Reload the page and try again.");
+  if (!checkPhotoId(id)) return failed("That didn't come through right. Try again.");
 
   // The storage rules keep the files of a photo that's up.
   const supabase = await createClient();

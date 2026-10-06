@@ -49,6 +49,17 @@ describe("site copy", () => {
     expect(files.filter(({ text }) => /\bpizza\b/i.test(text)).map(({ path }) => path)).toEqual([]);
   });
 
+  it("never asks anyone to reload the page, which the portal on a home screen can't do", () => {
+    // Comments can still talk about reloads.
+    const told = files.flatMap(({ path, text }) =>
+      text
+        .split("\n")
+        .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line) && /\b(reload|refresh) the page\b/i.test(line))
+        .map((line) => `${path}: ${line.trim()}`),
+    );
+    expect(told).toEqual([]);
+  });
+
   it("puts the real Friday start time in the home headline", () => {
     const friday = gatherings.find((gathering) => gathering.weekday === 5);
     const [hours, minutes] = (friday?.startTime ?? "").split(":").map(Number);
