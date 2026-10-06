@@ -472,6 +472,20 @@ describe("income", () => {
     expect(entry.relatedSummary).toBe("3 youth entries, 1 cafe week");
   });
 
+  it("shows a tithe import as one item, with its total and dates, opening the Income page", () => {
+    const changes = { count: 48, total_cents: 120000, method: "cash_app", first_on: "2026-01-04", last_on: "2026-09-27" };
+    const rows = [income({ action: "youth_income.imported", entity_id: null, changes })];
+    const [entry] = buildActivityDays(rows, context())[0].entries;
+    expect(entry).toMatchObject({
+      title: "Imported 48 tithes",
+      subject: "$1,200.00 · Cash App · Jan 4 – Sep 27, 2026",
+      icon: "bulk",
+      link: { href: "https://finances.example.test/admin/income", label: "Open in Finances" },
+    });
+    expect(entry.events[0].changes).toEqual([]);
+    expect(buildActivityDays(rows, context({ financesUrl: null }))[0].entries[0].link).toBeNull();
+  });
+
   it("writes income to the download with its line and changes", () => {
     const changes = { amount_cents: { from: 2500, to: 4000 } };
     const lines = activityCsv([income({ action: "youth_income.updated", changes })], context()).split("\r\n");

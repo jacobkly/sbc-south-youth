@@ -38,14 +38,22 @@ export default async function SettingsPage() {
           </h2>
           <p className="text-sm text-muted-foreground">
             Add requests that were already paid from a spreadsheet with Date, Name, Amount, Type, and Notes
-            columns.
+            columns, or tithes from one with Date and Amount columns.
           </p>
-          <Button variant="outline" className="h-11 px-5" asChild>
-            <Link href="/admin/settings/import">
-              <FileSpreadsheetIcon aria-hidden />
-              Import from a spreadsheet
-            </Link>
-          </Button>
+          <div className="flex flex-col gap-2 desktop:flex-row">
+            <Button variant="outline" className="h-11 px-5" asChild>
+              <Link href="/admin/settings/import">
+                <FileSpreadsheetIcon aria-hidden />
+                Import paid requests
+              </Link>
+            </Button>
+            <Button variant="outline" className="h-11 px-5" asChild>
+              <Link href="/admin/settings/import/tithes">
+                <FileSpreadsheetIcon aria-hidden />
+                Import tithes
+              </Link>
+            </Button>
+          </div>
         </section>
       )}
     </NarrowPage>

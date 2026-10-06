@@ -11,6 +11,7 @@ import {
 import type { YouthEntry } from "@/lib/income/stats";
 import { weekLabel } from "@/lib/income/weeks";
 import { formatCents } from "@/lib/money";
+import { rangeLabel } from "@/lib/reports/comparison";
 
 /** The income tables whose changes the feed shows, as the activity log names them. */
 export const INCOME_ENTITY_TYPES = ["youth_income", "cafe_week"] as const;
@@ -49,15 +50,45 @@ function isDate(value: Json | undefined): value is IsoDate {
   return typeof value === "string" && isIsoDate(value);
 }
 
-/** "created", "updated", or "deleted". */
+/** "created", "updated", "deleted", or "imported". */
 function verbOf(action: string): string {
   return action.slice(action.indexOf(".") + 1);
 }
 
 const VERB_WORDS: Partial<Record<string, string>> = { created: "added", updated: "edited", deleted: "deleted" };
 
-/** "Tithe added", "Event income edited", or "Cafe week deleted". */
-export function incomeTitle(change: Pick<IncomeChange, "action" | "entity_type">, subject: IncomeSubject | undefined): string {
+/** What a tithe import recorded: one entry for every tithe it added. */
+export type TitheImport = { count: number; totalCents: number; method: IncomeMethod; firstOn: IsoDate; lastOn: IsoDate };
+
+/** What a tithe import recorded, or null for any other change. */
+export function titheImportOf(change: Pick<IncomeChange, "action" | "changes">): TitheImport | null {
+  const { changes } = change;
+  if (verbOf(change.action) !== "imported" || !isRecord(changes)) return null;
+  const { count, total_cents: totalCents, method, first_on: firstOn, last_on: lastOn } = changes;
+  if (typeof count !== "number" || typeof totalCents !== "number") return null;
+  if (!isIncomeMethod(method) || !isDate(firstOn) || !isDate(lastOn)) return null;
+  return { count, totalCents, method, firstOn, lastOn };
+}
+
+/** "$1,234.00 · Cash App · Jan 4 – Feb 1, 2026" */
+export function titheImportLine(imported: TitheImport): string {
+  return [
+    formatCents(imported.totalCents),
+    INCOME_METHOD_LABELS[imported.method],
+    rangeLabel({ start: imported.firstOn, end: imported.lastOn }),
+  ].join(" · ");
+}
+
+/** "Tithe added", "Event income edited", "Cafe week deleted", or "Imported 48 tithes". */
+export function incomeTitle(
+  change: Pick<IncomeChange, "action" | "entity_type" | "changes">,
+  subject: IncomeSubject | undefined,
+): string {
+  if (verbOf(change.action) === "imported") {
+    const imported = titheImportOf(change);
+    if (!imported) return "Tithes imported";
+    return `Imported ${imported.count.toLocaleString("en-US")} ${imported.count === 1 ? "tithe" : "tithes"}`;
+  }
   const noun =
     change.entity_type === "cafe_week"
       ? "Cafe week"

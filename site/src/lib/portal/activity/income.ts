@@ -88,6 +88,36 @@ export function incomeLine(subject: IncomeSubject | undefined, today: IsoDate): 
     .join(" · ");
 }
 
+/** What a tithe import recorded: one entry for every tithe it added. */
+export type TitheImport = { count: number; totalCents: number; method: IncomeMethod; firstOn: IsoDate; lastOn: IsoDate };
+
+/** What a tithe import recorded, or null for any other row. */
+export function titheImportOf(row: Pick<IncomeRow, "action" | "changes">): TitheImport | null {
+  const { changes } = row;
+  if (row.action !== "youth_income.imported" || !isRecord(changes)) return null;
+  const { count, total_cents: totalCents, method, first_on: firstOn, last_on: lastOn } = changes;
+  if (typeof count !== "number" || typeof totalCents !== "number") return null;
+  if (!isIncomeMethod(method) || !isDate(firstOn) || !isDate(lastOn)) return null;
+  return { count, totalCents, method, firstOn, lastOn };
+}
+
+/** "Imported 48 tithes", or "Tithes imported" when the row doesn't say how many. */
+export function titheImportTitle(imported: TitheImport | null): string {
+  if (!imported) return "Tithes imported";
+  return `Imported ${imported.count.toLocaleString("en-US")} ${imported.count === 1 ? "tithe" : "tithes"}`;
+}
+
+/** "$1,234.00 · Cash App · Jan 4 – Feb 1, 2026", always with the year, like finances. */
+export function titheImportLine(imported: TitheImport): string {
+  const { firstOn, lastOn } = imported;
+  const year = lastOn.slice(0, 4);
+  const dates =
+    firstOn.slice(0, 4) === year
+      ? `${formatDateRange(firstOn, lastOn)}, ${year}`
+      : `${formatDate(firstOn)} – ${formatDate(lastOn)}`;
+  return [formatCents(imported.totalCents), INCOME_METHOD_LABELS[imported.method], dates].join(" · ");
+}
+
 /** The whole entry an add or delete recorded, or null for an edit, which has only what changed. */
 function snapshotOf(row: IncomeRow): IncomeSubject | null {
   const verb = row.action.slice(row.action.indexOf(".") + 1);

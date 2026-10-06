@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { currentIncome, incomeLine, incomeSubjects, weekLabel, type IncomeRow, type IncomeSubject } from "./income";
+import {
+  currentIncome,
+  incomeLine,
+  incomeSubjects,
+  titheImportLine,
+  titheImportOf,
+  titheImportTitle,
+  weekLabel,
+  type IncomeRow,
+  type IncomeSubject,
+} from "./income";
 
 const TODAY = "2026-10-05";
 
@@ -58,6 +68,43 @@ describe("incomeLine", () => {
 
   it("says when the entry can't be found", () => {
     expect(incomeLine(undefined, TODAY)).toBe("An entry that's gone");
+  });
+});
+
+describe("tithe imports", () => {
+  const importChanges = { count: 3, total_cents: 6000, method: "cash_app", first_on: "2026-01-07", last_on: "2026-02-04" };
+  const titheImport = incomeRow({ action: "youth_income.imported", entity_id: null, changes: importChanges });
+
+  it("reads how many tithes an import added, their total, how they came in, and the dates they cover", () => {
+    expect(titheImportOf(titheImport)).toEqual({
+      count: 3,
+      totalCents: 6000,
+      method: "cash_app",
+      firstOn: "2026-01-07",
+      lastOn: "2026-02-04",
+    });
+  });
+
+  it("is null for any other row, or an import it can't read", () => {
+    expect(titheImportOf(incomeRow({ changes: importChanges }))).toBeNull();
+    expect(titheImportOf({ ...titheImport, changes: { ...importChanges, last_on: "someday" } })).toBeNull();
+    expect(titheImportOf({ ...titheImport, changes: { ...importChanges, method: "venmo" } })).toBeNull();
+  });
+
+  it("counts the tithes, even when the row can't say how many", () => {
+    expect(titheImportTitle(titheImportOf(titheImport))).toBe("Imported 3 tithes");
+    expect(titheImportTitle(titheImportOf({ ...titheImport, changes: { ...importChanges, count: 1 } }))).toBe(
+      "Imported 1 tithe",
+    );
+    expect(titheImportTitle(null)).toBe("Tithes imported");
+  });
+
+  it("shows the total, how they came in, and the dates with their year, like finances", () => {
+    expect(titheImportLine(titheImportOf(titheImport)!)).toBe("$60.00 · Cash App · Jan 7 – Feb 4, 2026");
+    const oneDay = titheImportOf({ ...titheImport, changes: { ...importChanges, last_on: "2026-01-07" } })!;
+    expect(titheImportLine(oneDay)).toBe("$60.00 · Cash App · Jan 7, 2026");
+    const newYear = titheImportOf({ ...titheImport, changes: { ...importChanges, first_on: "2025-12-28" } })!;
+    expect(titheImportLine(newYear)).toBe("$60.00 · Cash App · Dec 28, 2025 – Feb 4, 2026");
   });
 });
 

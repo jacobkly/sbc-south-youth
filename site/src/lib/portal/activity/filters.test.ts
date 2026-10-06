@@ -186,6 +186,7 @@ describe("activityQuery", () => {
       "youth_income.created",
       "youth_income.updated",
       "youth_income.deleted",
+      "youth_income.imported",
       "cafe_week.created",
       "cafe_week.updated",
       "cafe_week.deleted",

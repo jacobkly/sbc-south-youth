@@ -7,6 +7,8 @@ import {
   incomeTitle,
   mergeIncome,
   takeNewest,
+  titheImportLine,
+  titheImportOf,
   type IncomeChange,
   type IncomeSubject,
 } from "./income";
@@ -35,6 +37,15 @@ function change(overrides: Partial<IncomeChange>): IncomeChange {
   };
 }
 
+const importChanges = {
+  count: 3,
+  total_cents: 6000,
+  method: "cash_app",
+  first_on: "2026-01-07",
+  last_on: "2026-02-04",
+};
+const titheImport = change({ action: "youth_income.imported", entity_id: null, changes: importChanges });
+
 describe("incomeTitle", () => {
   it("names a tithe, an event's income, and a cafe week, with what happened", () => {
     expect(incomeTitle(change({ action: "youth_income.created" }), tithe)).toBe("Tithe added");
@@ -46,6 +57,46 @@ describe("incomeTitle", () => {
 
   it("falls back to youth income when it can't tell a tithe from an event", () => {
     expect(incomeTitle(change({ action: "youth_income.updated" }), undefined)).toBe("Youth income edited");
+  });
+
+  it("counts the tithes an import added", () => {
+    expect(incomeTitle(titheImport, undefined)).toBe("Imported 3 tithes");
+    expect(incomeTitle({ ...titheImport, changes: { ...importChanges, count: 1 } }, undefined)).toBe(
+      "Imported 1 tithe",
+    );
+  });
+
+  it("still names an import whose details it can't read", () => {
+    expect(incomeTitle({ ...titheImport, changes: null }, undefined)).toBe("Tithes imported");
+  });
+});
+
+describe("titheImportOf", () => {
+  it("reads how many tithes an import added, their total, how they came in, and the dates they cover", () => {
+    expect(titheImportOf(titheImport)).toEqual({
+      count: 3,
+      totalCents: 6000,
+      method: "cash_app",
+      firstOn: "2026-01-07",
+      lastOn: "2026-02-04",
+    });
+  });
+
+  it("is null for any other change, or an import it can't read", () => {
+    expect(titheImportOf(change({ action: "youth_income.created" }))).toBeNull();
+    expect(titheImportOf({ ...titheImport, changes: { ...importChanges, first_on: "someday" } })).toBeNull();
+    expect(titheImportOf({ ...titheImport, changes: { ...importChanges, method: "venmo" } })).toBeNull();
+  });
+});
+
+describe("titheImportLine", () => {
+  it("shows the total, how they came in, and the dates they cover", () => {
+    expect(titheImportLine(titheImportOf(titheImport)!)).toBe("$60.00 · Cash App · Jan 7 – Feb 4, 2026");
+  });
+
+  it("shows one date when every tithe is from the same day", () => {
+    const oneDay = titheImportOf({ ...titheImport, changes: { ...importChanges, last_on: "2026-01-07" } })!;
+    expect(titheImportLine(oneDay)).toBe("$60.00 · Cash App · Jan 7, 2026");
   });
 });
 

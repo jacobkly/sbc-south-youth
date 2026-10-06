@@ -1081,6 +1081,13 @@ export type Database = {
         }
         Returns: Json
       }
+      import_tithes: {
+        Args: {
+          p_method: Database["public"]["Enums"]["income_method"]
+          p_rows: Json
+        }
+        Returns: Json
+      }
       link_payee: {
         Args: { p_payee_id: string; p_user_id: string }
         Returns: undefined

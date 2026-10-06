@@ -59,7 +59,8 @@ export function ProblemList({ problems }: { problems: ImportProblem[] }) {
   );
 }
 
-function monthLabel(month: string): string {
+/** "Jan 2026" for "2026-01". */
+export function monthLabel(month: string): string {
   const [year, number] = month.split("-").map(Number);
   return `${monthShortName({ kind: "month", year, month: number })} ${year}`;
 }

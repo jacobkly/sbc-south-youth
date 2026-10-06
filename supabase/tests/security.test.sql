@@ -98,6 +98,7 @@ select set_eq(
     'reject_request',
     'cancel_request',
     'import_paid_requests',
+    'import_tithes',
     'save_request',
     'correct_request',
     'missing_receipt',

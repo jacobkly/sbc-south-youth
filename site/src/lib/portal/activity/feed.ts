@@ -11,6 +11,9 @@ import {
   incomeLine,
   isIncomeType,
   MIXED_LABEL,
+  titheImportLine,
+  titheImportOf,
+  titheImportTitle,
   weekLabel,
   YOUTH_KIND_LABELS,
   type IncomeSubject,
@@ -194,6 +197,7 @@ export function eventTitle(
     return "Invite changed";
   }
   if (row.action === "message.updated") return messageTitle(row);
+  if (row.action === "youth_income.imported") return titheImportTitle(titheImportOf(row));
 
   const [type, verb] = row.action.split(".");
   const word = verb ? VERB_WORDS[verb] : undefined;
@@ -641,6 +645,7 @@ function iconOf(row: FeedRow): ActivityIcon {
     if (title === "Access restored") return "access_restored";
     return "roles";
   }
+  if (row.action === "youth_income.imported") return "bulk";
   if (row.entity_type === "youth_income") return "income";
   if (row.entity_type === "cafe_week") return "cafe";
   const status = contentStatusChange(row);
@@ -680,6 +685,10 @@ function subjectOf(row: FeedRow, ctx: FeedContext): string | null {
     const person = personOf(row, ctx);
     return (person && ctx.names.get(person)) || row.entity_name || "Someone";
   }
+  if (row.action === "youth_income.imported") {
+    const imported = titheImportOf(row);
+    return imported ? titheImportLine(imported) : null;
+  }
   if (isIncomeType(row.entity_type)) {
     return incomeLine(row.entity_id ? ctx.income.get(row.entity_id) : undefined, ctx.today);
   }
@@ -701,6 +710,10 @@ function linkOf(row: FeedRow, ctx: FeedContext): ItemLink | null {
   if (isRequestRow(row)) {
     if (!ctx.financesUrl || !row.entity_id || !ctx.requests.has(row.entity_id)) return null;
     return { href: `${ctx.financesUrl}/admin/requests/${row.entity_id}`, label: "Open in Finances" };
+  }
+  // An import's tithes are on the Income page, still there or not.
+  if (row.action === "youth_income.imported") {
+    return ctx.financesUrl ? { href: `${ctx.financesUrl}/admin/income`, label: "Open in Finances" } : null;
   }
   if (isIncomeType(row.entity_type)) {
     const subject = row.entity_id ? ctx.income.get(row.entity_id) : undefined;

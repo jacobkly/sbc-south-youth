@@ -162,7 +162,8 @@ export function parseSheetType(text: string): RequestType | null {
   return value === "cafe" || value === "youth" ? value : null;
 }
 
-function dateProblem(text: string, today: IsoDate): { date?: IsoDate; message?: string } {
+/** What the import makes of a date cell: the date, or what's wrong with it. */
+export function dateProblem(text: string, today: IsoDate): { date?: IsoDate; message?: string } {
   if (!text.trim()) return { message: "The date is blank." };
   const date = parseSheetDate(text);
   if (!date) return { message: `The date “${text.trim()}” isn't a date. Use a format like 1/15/2026.` };
@@ -171,7 +172,8 @@ function dateProblem(text: string, today: IsoDate): { date?: IsoDate; message?: 
   return { date };
 }
 
-function amountProblem(text: string): { cents?: number; message?: string } {
+/** What the import makes of an amount cell: the cents, or what's wrong with it. */
+export function amountProblem(text: string): { cents?: number; message?: string } {
   if (!text.trim()) return { message: "The amount is blank." };
   const cents = parseAmountToCents(text);
   if (cents === null) return { message: `The amount “${text.trim()}” isn't a dollar amount above $0.` };

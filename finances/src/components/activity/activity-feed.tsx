@@ -25,6 +25,8 @@ import {
   describeIncomeChanges,
   incomeLine,
   incomeTitle,
+  titheImportLine,
+  titheImportOf,
   type IncomeItem as IncomeFeedItem,
   type IncomeSubject,
 } from "@/lib/activity/income";
@@ -167,8 +169,9 @@ function BulkItem({ item, currentUserId }: { item: ActivityItem<ActivityEvent>; 
 }
 
 /**
- * A tithe, an event's income, or a cafe week added, edited, or deleted,
- * linking to its tab on the Income page while the entry is still there.
+ * A tithe, an event's income, or a cafe week added, edited, or deleted, or
+ * tithes imported, linking to its tab on the Income page while the entry is
+ * still there.
  */
 function IncomeItem({
   item,
@@ -183,12 +186,15 @@ function IncomeItem({
 }) {
   const { change } = item;
   const cafe = change.entity_type === "cafe_week";
+  const imported = titheImportOf(change);
   const body = (
     <>
-      <ItemIcon icon={cafe ? CoffeeIcon : HandCoinsIcon} />
+      <ItemIcon icon={imported ? FileSpreadsheetIcon : cafe ? CoffeeIcon : HandCoinsIcon} />
       <div className="min-w-0 flex-1 space-y-1">
         <ItemHeading title={incomeTitle(change, subject)} createdAt={item.created_at} />
-        <p className="truncate text-sm text-muted-foreground">{incomeLine(subject, today)}</p>
+        <p className="truncate text-sm text-muted-foreground">
+          {imported ? titheImportLine(imported) : incomeLine(subject, today)}
+        </p>
         <ChangeList changes={describeIncomeChanges(change, today)} />
         <Actor event={change} currentUserId={currentUserId} />
       </div>
@@ -196,7 +202,7 @@ function IncomeItem({
   );
   return (
     <li>
-      {subject && !subject.deleted ? (
+      {imported || (subject && !subject.deleted) ? (
         <Link
           href={incomeHref(cafe ? "cafe" : "youth")}
           className="flex items-start gap-3 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted"
