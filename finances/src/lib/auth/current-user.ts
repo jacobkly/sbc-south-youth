@@ -1,7 +1,9 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import type { Tables } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/server";
+import { markSeen } from "./mark-seen";
 import { type AssuranceLevel, type MfaDevice, verifiedDevices } from "./mfa";
 import { financeRoleFrom } from "./roles";
 
@@ -29,7 +31,8 @@ const getClaims = cache(async () => {
 /**
  * The signed-in user's app account, loaded once per request. Redirects to
  * sign-in when there's no session. Returns null if the account row is
- * missing, which the shell treats as "no access".
+ * missing, which the shell treats as "no access". Once the page is sent,
+ * it also marks them as seen.
  */
 export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
   const { sub: userId } = await getClaims();
@@ -41,6 +44,8 @@ export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
     .maybeSingle();
 
   if (error) throw error;
+  // The client is made here because a page can't read cookies inside after().
+  if (user?.is_active) after(() => markSeen(supabase));
   return user && { ...user, role: financeRoleFrom(user.roles) };
 });
 

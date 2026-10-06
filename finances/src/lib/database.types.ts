@@ -582,6 +582,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_invite: { Args: never; Returns: boolean }
       approve_request: {
         Args: { p_external_approver?: string; p_request_id: string }
         Returns: undefined
@@ -801,6 +802,7 @@ export type Database = {
       }
       storage_usage: { Args: never; Returns: number }
       submit_request: { Args: { p_request_id: string }; Returns: undefined }
+      touch_last_seen: { Args: never; Returns: boolean }
       unapprove_request: {
         Args: { p_note: string; p_request_id: string }
         Returns: undefined
