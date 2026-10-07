@@ -3,6 +3,7 @@ import { ArrowRightIcon, ReceiptTextIcon } from "lucide-react";
 import { BackupStatusSkeleton, HomeBackup } from "@/components/portal/home/backup-status";
 import { HomeEmailAlert } from "@/components/portal/home/email-alert";
 import { ErrorsCardSkeleton, HomeErrors } from "@/components/portal/home/errors-card";
+import { HomeHeadcount } from "@/components/portal/home/headcount-card";
 import { HomeMessages } from "@/components/portal/home/messages-card";
 import { HomeStorage, StorageBarSkeleton } from "@/components/portal/home/storage-bar";
 import { NarrowPage } from "@/components/portal/nav/app-shell";
@@ -37,6 +38,8 @@ export default async function PortalHome() {
 
       {hasRole(user.roles, "site_messages") && <HomeMessages />}
 
+      {hasRole(user.roles, "attendance", "finance_viewer") && <HomeHeadcount />}
+
       {financesUrl && (
         <section
           aria-labelledby="finances-heading"
@@ -60,19 +63,22 @@ export default async function PortalHome() {
         </section>
       )}
 
-      <section aria-labelledby="storage-heading" className="space-y-3">
-        <div className="space-y-1">
-          <h2 id="storage-heading" className="text-lg font-semibold">
-            Storage
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            The free plan&apos;s space for files and data, shared by the site and finances.
-          </p>
-        </div>
-        <Suspense fallback={<StorageBarSkeleton />}>
-          <HomeStorage />
-        </Suspense>
-      </section>
+      {/* storage_summary() leaves out the Attendance role, which has nothing to upload. */}
+      {hasRole(user.roles, "finance_viewer", "site_editor", "site_messages") && (
+        <section aria-labelledby="storage-heading" className="space-y-3">
+          <div className="space-y-1">
+            <h2 id="storage-heading" className="text-lg font-semibold">
+              Storage
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              The free plan&apos;s space for files and data, shared by the site and finances.
+            </p>
+          </div>
+          <Suspense fallback={<StorageBarSkeleton />}>
+            <HomeStorage />
+          </Suspense>
+        </section>
+      )}
 
       {isOwner && (
         <section aria-labelledby="backup-heading" className="space-y-3">

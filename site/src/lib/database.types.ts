@@ -234,6 +234,51 @@ export type Database = {
           },
         ]
       }
+      headcounts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          night: string
+          total: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          night: string
+          total: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          night?: string
+          total?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "headcounts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "headcounts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invites: {
         Row: {
           accepted_at: string | null
@@ -1212,6 +1257,7 @@ export type Database = {
         | "finance_requester"
         | "site_editor"
         | "site_messages"
+        | "attendance"
       email_status:
         | "skipped_quota"
         | "suppressed"
@@ -1745,6 +1791,7 @@ export const Constants = {
         "finance_requester",
         "site_editor",
         "site_messages",
+        "attendance",
       ],
       email_status: [
         "skipped_quota",

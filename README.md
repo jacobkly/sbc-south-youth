@@ -25,11 +25,12 @@ See [`finances/README.md`](finances/README.md) for local setup.
 The portal is where leaders run the youth site and its people from a phone. It's invite-only and lives inside the site app, on its own host. Added to a phone's home screen, it opens full screen as "Youth Portal", with its own icon.
 
 - **People:** owners invite leaders by email, give them roles, and remove or restore access. Invited people pick their own password with a 6-digit emailed code.
-- **Home:** a link to finances for finance roles, how full the free plan's storage and database are, and, for owners, when the last nightly backup ran, the errors the site and portal ran into in the last 30 days, and a warning once either email limit passes 80%.
+- **Home:** a link to finances for finance roles, the latest headcount for Attendance and finance viewers, how full the free plan's storage and database are, and, for owners, when the last nightly backup ran, the errors the site and portal ran into in the last 30 days, and a warning once either email limit passes 80%.
 - **Posts:** site editors write the heads-ups on Home and This Week, from a quick template or from scratch. Each one goes up now or at a set time and comes down on its own, and a pinned one leads on Home. Editors can end one early, keep a draft, or post an old one again.
 - **Events:** under Posts, site editors add one-off events with a day and time (or all day), a place, a cost, and details. Each one gets its own page, shows on This Week, and lands in calendars that subscribe. Editors can feature one, for a big card on This Week and a countdown on Home, cancel one with a reason, which keeps its page up with a banner, put it back on, or start a new one from a past one.
 - **Previews:** a Preview tab on each heads-up and event shows the draft the way the site will show it, in dark or light, before it goes up. A heads-up shows as its This Week card and as Home's lead, and an event shows as its This Week row and its own page.
 - **Photos:** site editors add photos from their phone, describe each one, and put it in a spot on the site or on an event's cover. The screen lists every spot still waiting for a photo. Taking one down asks why, can answer a takedown request from the Contact form, and deletes its files, keeping only a short record for 2 years.
+- **Attendance:** whoever has the Attendance role enters how many came to youth each week, leaders included, and can fix one that's off or remove one entered by mistake. The screen shows the latest night, the average of the last eight, and the most, then every night counted. Finance viewers see the same numbers without changing them.
 - **Activity:** one timeline of changes across the site, finances, and people, showing each person only the apps their roles cover. Owners can download it as a CSV.
 - **Email:** finance and owner notices, and an email for each form message, go out through Resend, within the free plan's daily and monthly limits. Owners see how much of both limits is used, what each kind of email sent in the last 31 days, and the newest failures, bounces, and spam reports, and can unblock an address once it's fixed. Owners also get one warning email a month once 2,400 of the 3,000 are used.
 
@@ -42,10 +43,11 @@ Each person can hold several roles. Owner counts as all of them.
 | Role | Can do |
 | --- | --- |
 | Owner | Everything in both apps. The only role that invites people, changes roles, removes access, and approves or pays reimbursements. Uses two-step sign-in |
-| Finance viewer | Read every submitted request, receipt, and report in finances. Change nothing |
+| Finance viewer | Read every submitted request, receipt, and report in finances, and each week's headcount. Change nothing |
 | Requester | Submit their own reimbursements in finances and see only their own requests |
 | Site editor | Post heads-ups and events, and add, place, and take down photos |
 | Messages | Read and handle messages from the site's forms |
+| Attendance | Enter how many came to youth each week and fix a count that's off |
 
 The database enforces every role with row-level security, so hiding a button is never what keeps someone out.
 

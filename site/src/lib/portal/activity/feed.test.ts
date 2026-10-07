@@ -331,6 +331,60 @@ describe("eventChanges for site content", () => {
   });
 });
 
+describe("headcounts", () => {
+  const at = "2026-10-02T17:00:00Z";
+  const USHER = "00000000-0000-4000-8000-000000000004";
+  const headcount = (fields: Partial<FeedRow> & Pick<FeedRow, "action">) =>
+    row({
+      scope: "site",
+      entity_id: "00000000-0000-4000-8000-00000000f200",
+      entity_name: "2026-09-25",
+      actor_id: USHER,
+      created_at: at,
+      ...fields,
+    });
+
+  it("says a night's count was added, changed, or removed", () => {
+    expect(eventTitle(headcount({ action: "headcount.created" }))).toBe("Headcount added");
+    expect(eventTitle(headcount({ action: "headcount.updated" }))).toBe("Headcount changed");
+    expect(eventTitle(headcount({ action: "headcount.deleted" }))).toBe("Headcount removed");
+  });
+
+  it("shows the count, and the night only when it moves", () => {
+    const added = { night: { from: null, to: "2026-09-25" }, total: { from: null, to: 45 } };
+    expect(eventChanges(headcount({ action: "headcount.created", changes: added }))).toEqual([
+      { label: "Count", from: null, to: "45" },
+    ]);
+    const fixed = { night: { from: "2026-09-26", to: "2026-09-25" }, total: { from: 45, to: 47 } };
+    expect(eventChanges(headcount({ action: "headcount.updated", changes: fixed }))).toEqual([
+      { label: "Night", from: "Sep 26, 2026", to: "Sep 25, 2026" },
+      { label: "Count", from: "45", to: "47" },
+    ]);
+    const removed = { night: { from: "2026-09-25", to: null }, total: { from: 47, to: null } };
+    expect(eventChanges(headcount({ action: "headcount.deleted", changes: removed }))).toEqual([
+      { label: "Count", from: "47", to: null },
+    ]);
+  });
+
+  it("names the night it's for, with no link", () => {
+    const [entry] = buildActivityDays([headcount({ action: "headcount.created" })], context())[0].entries;
+    expect(entry).toMatchObject({ title: "Headcount added", subject: "Fri, Sep 25", scope: "site", link: null });
+  });
+
+  it("counts a catch-up of several nights as headcounts", () => {
+    const rows = ["2026-09-11", "2026-09-18", "2026-09-25"].map((night, index) =>
+      headcount({
+        action: "headcount.created",
+        entity_id: `00000000-0000-4000-8000-00000000f21${index}`,
+        entity_name: night,
+      }),
+    );
+    const [entry] = buildActivityDays(rows, context())[0].entries;
+    expect(entry.relatedSummary).toBe("3 headcounts");
+    expect(entry.related.map((related) => related.label).sort()).toEqual(["Fri, Sep 11", "Fri, Sep 18", "Fri, Sep 25"]);
+  });
+});
+
 describe("message triage", () => {
   const at = "2026-10-02T17:00:00Z";
   const MESSAGE = "00000000-0000-4000-8000-00000000f100";
