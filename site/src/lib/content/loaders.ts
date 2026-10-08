@@ -17,18 +17,19 @@ import type { Announcement, SiteEvent, StandingNote, WeeklyGathering } from "./t
  */
 
 /**
- * The photos placed on the site, by spot and by event. An event's cover
- * shows only once the event is published, so they refresh with the events
+ * The photos placed on the site, by spot, by event, and by heads-up. An
+ * event's cover shows only once the event is published, and a heads-up's
+ * only while it's published, so they refresh with the events and heads-ups
  * too.
  */
 export async function getPhotos(): Promise<PlacedPhotos> {
   "use cache";
-  cacheTag("photos", "events");
+  cacheTag("photos", "events", "posts");
   const rows = await readOrNothing("photos", publicPhotos);
   if (!rows) {
     // Nothing, after a failed read, is tried again sooner.
     cacheLife("minutes");
-    return { spots: {}, covers: {} };
+    return { spots: {}, covers: {}, posts: {} };
   }
   cacheLife("feed");
   return placedPhotos(rows, supabaseEnv().url);
@@ -86,17 +87,22 @@ export async function getEventSlugs(): Promise<string[]> {
 }
 
 /**
- * The heads-ups showing now, pinned first. One that links to an event
- * borrows its photo, so they refresh with the events and photos too.
+ * The heads-ups showing now, pinned first, with their own photos. One
+ * without a photo that links to an event borrows the event's, so they
+ * refresh with the events and photos too.
  */
 export async function getAnnouncements(): Promise<Announcement[]> {
   "use cache";
   cacheTag("posts", "events", "photos");
-  const [rows, events] = await Promise.all([readOrNothing("heads-ups", publicPosts), getEvents()]);
+  const [rows, events, { posts }] = await Promise.all([
+    readOrNothing("heads-ups", publicPosts),
+    getEvents(),
+    getPhotos(),
+  ]);
   if (!rows) {
     cacheLife("minutes");
     return [];
   }
   cacheLife("feed");
-  return rows.map((row) => announcementFromRow(row, events));
+  return rows.map((row) => announcementFromRow(row, events, posts[row.id]));
 }

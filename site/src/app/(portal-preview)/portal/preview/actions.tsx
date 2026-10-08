@@ -11,7 +11,7 @@ import { todayInLA } from "@/lib/dates";
 import { oneOffEventView } from "@/lib/event-view";
 import { eventItem } from "@/lib/feed";
 import { getCurrentUser } from "@/lib/portal/auth/current-user";
-import { loadEventCover } from "@/lib/portal/photos/queries";
+import { loadEventCover, loadPhoto } from "@/lib/portal/photos/queries";
 import { previewEvent, previewPost, readPreviewRequest, type PreviewResult } from "@/lib/portal/preview/preview";
 import { hasRole } from "@/lib/portal/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -38,7 +38,11 @@ export async function renderPreview(raw: unknown): Promise<PreviewResult> {
   if (!request) return { problem: "Something here can't be shown yet." };
 
   if (request.kind === "post") {
-    const preview = previewPost(request.values, await getEvents());
+    const [events, photo] = await Promise.all([
+      getEvents(),
+      request.photoId ? loadPhoto(request.photoId) : undefined,
+    ]);
+    const preview = previewPost(request.values, events, photo);
     if (!preview.ok) return { problem: preview.problem };
     return {
       node: (

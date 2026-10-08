@@ -204,10 +204,17 @@ function PhotoDetails({
               aria-describedby={`${PLACE_ID}-hint`}
               className="w-full text-base data-[size=default]:h-11 desktop:text-sm"
             >
-              <SelectValue>{placementLabel(place, eventMap)}</SelectValue>
+              <SelectValue>{placementLabel(place, eventMap, photo)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={LIBRARY}>Not on the site</SelectItem>
+              {/* A heads-up takes its photo from its own screen, so only the one it's on is here. */}
+              {photo.postId && (
+                <SelectGroup>
+                  <SelectLabel>Heads-up</SelectLabel>
+                  <SelectItem value={`post:${photo.postId}`}>{photo.post?.title ?? "A heads-up"}</SelectItem>
+                </SelectGroup>
+              )}
               {spotsByPage().map(([page, spots]) => (
                 <SelectGroup key={page}>
                   <SelectLabel>{page}</SelectLabel>

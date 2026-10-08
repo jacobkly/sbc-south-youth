@@ -14,6 +14,7 @@ import {
 
 const PHOTO_ID = "0d3f6a8e-2b1c-4e5f-9a7b-1c2d3e4f5a6b";
 const EVENT_ID = "00000000-0000-4000-8000-5eed0000e001";
+const POST_ID = "00000000-0000-4000-8000-5eed0000c001";
 const MESSAGE_ID = "00000000-0000-4000-8000-00000000d001";
 
 describe("checkAlt", () => {
@@ -72,22 +73,31 @@ describe("checkNewPhoto", () => {
 });
 
 describe("placementValue and parsePlacement", () => {
-  it("round-trips the library, a spot, and an event's cover", () => {
+  it("round-trips the library, a spot, an event's cover, and a heads-up", () => {
     for (const placement of [
-      { spot: null, eventId: null },
-      { spot: "home-hero", eventId: null },
-      { spot: null, eventId: EVENT_ID },
+      { spot: null, eventId: null, postId: null },
+      { spot: "home-hero", eventId: null, postId: null },
+      { spot: null, eventId: EVENT_ID, postId: null },
+      { spot: null, eventId: null, postId: POST_ID },
     ] as const) {
       expect(parsePlacement(placementValue(placement))).toEqual(placement);
     }
   });
 
   it("names the library plainly", () => {
-    expect(placementValue({ spot: null, eventId: null })).toBe(LIBRARY);
+    expect(placementValue({ spot: null, eventId: null, postId: null })).toBe(LIBRARY);
   });
 
   it("refuses spots the site doesn't have and ids that aren't ids", () => {
-    for (const value of ["spot:home", "spot:", "event:retreat", `event:${EVENT_ID.toUpperCase()}`, "home-hero", 42]) {
+    for (const value of [
+      "spot:home",
+      "spot:",
+      "event:retreat",
+      `event:${EVENT_ID.toUpperCase()}`,
+      "post:merch",
+      "home-hero",
+      42,
+    ]) {
       expect(parsePlacement(value)).toBeNull();
     }
   });
@@ -98,15 +108,22 @@ describe("checkPhotoEdit", () => {
     expect(checkPhotoEdit({ id: PHOTO_ID, alt: " Friends at the retreat ", placement: `event:${EVENT_ID}` })).toEqual({
       ok: true,
       id: PHOTO_ID,
-      changes: { alt: "Friends at the retreat", spot: null, event_id: EVENT_ID },
+      changes: { alt: "Friends at the retreat", spot: null, event_id: EVENT_ID, post_id: null },
     });
   });
 
-  it("clears both places for the library", () => {
+  it("keeps a heads-up's photo on it", () => {
+    expect(checkPhotoEdit({ id: PHOTO_ID, alt: "Hoodies", placement: `post:${POST_ID}` })).toMatchObject({
+      ok: true,
+      changes: { spot: null, event_id: null, post_id: POST_ID },
+    });
+  });
+
+  it("clears every place for the library", () => {
     expect(checkPhotoEdit({ id: PHOTO_ID, alt: "A latte", placement: LIBRARY })).toEqual({
       ok: true,
       id: PHOTO_ID,
-      changes: { alt: "A latte", spot: null, event_id: null },
+      changes: { alt: "A latte", spot: null, event_id: null, post_id: null },
     });
   });
 

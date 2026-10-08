@@ -1624,6 +1624,7 @@ export type Database = {
           height: number
           id: string
           mime_type: string
+          post_id: string | null
           removed_at: string | null
           removed_by: string | null
           removed_reason: string | null
@@ -1642,6 +1643,7 @@ export type Database = {
           height: number
           id?: string
           mime_type?: string
+          post_id?: string | null
           removed_at?: string | null
           removed_by?: string | null
           removed_reason?: string | null
@@ -1660,6 +1662,7 @@ export type Database = {
           height?: number
           id?: string
           mime_type?: string
+          post_id?: string | null
           removed_at?: string | null
           removed_by?: string | null
           removed_reason?: string | null
@@ -1676,6 +1679,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
           {
@@ -1788,6 +1798,7 @@ export type Database = {
           height: number
           id: string
           mime_type: string
+          post_id: string
           spot: string
           width: number
         }[]

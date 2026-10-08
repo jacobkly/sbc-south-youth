@@ -10,18 +10,27 @@ import type { Photo } from "./types";
 
 type Returns = Database["site"]["Functions"]["public_photos"]["Returns"][number];
 
-/** A placed photo. It holds a spot or an event's cover, so the other is null. */
-export type PhotoRow = Omit<Returns, "spot" | "event_id"> & { spot: string | null; event_id: string | null };
+/** A placed photo. It holds a spot, an event's cover, or a heads-up, so the others are null. */
+export type PhotoRow = Omit<Returns, "spot" | "event_id" | "post_id"> & {
+  spot: string | null;
+  event_id: string | null;
+  post_id: string | null;
+};
 
 export type PlacedPhotos = {
   /** By spot. A spot without a photo is missing, and its page draws art there instead. */
   spots: Partial<Record<PhotoSpot, Photo>>;
   /** Event covers, by event id. */
   covers: Record<string, Photo>;
+  /** Heads-ups' own photos, by heads-up id. */
+  posts: Record<string, Photo>;
 };
 
 /** A photo's two files for the browser to pick from. The row's size is the large file's. */
-export function photoFromRow(row: PhotoRow, supabaseUrl: string): Photo {
+export function photoFromRow(
+  row: Pick<PhotoRow, "id" | "alt" | "width" | "height" | "mime_type">,
+  supabaseUrl: string,
+): Photo {
   // The database allows only these two.
   const type = row.mime_type as PhotoType;
   const large = photoUrl(supabaseUrl, row.id, "lg", type);
@@ -31,11 +40,12 @@ export function photoFromRow(row: PhotoRow, supabaseUrl: string): Photo {
 }
 
 export function placedPhotos(rows: readonly PhotoRow[], supabaseUrl: string): PlacedPhotos {
-  const placed: PlacedPhotos = { spots: {}, covers: {} };
+  const placed: PlacedPhotos = { spots: {}, covers: {}, posts: {} };
   for (const row of rows) {
     // A spot the site's code renamed or dropped shows nowhere until it's placed again.
     if (isPhotoSpot(row.spot)) placed.spots[row.spot] = photoFromRow(row, supabaseUrl);
     else if (row.event_id) placed.covers[row.event_id] = photoFromRow(row, supabaseUrl);
+    else if (row.post_id) placed.posts[row.post_id] = photoFromRow(row, supabaseUrl);
   }
   return placed;
 }

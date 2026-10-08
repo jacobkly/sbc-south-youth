@@ -8,9 +8,11 @@ import { Button } from "@/components/portal/ui/button";
 import { readPortalEnv } from "@/lib/env";
 import { publicSiteUrl } from "@/lib/host";
 import { getCurrentUser } from "@/lib/portal/auth/current-user";
+import { loadPostPhotos } from "@/lib/portal/photos/queries";
 import { loadPost } from "@/lib/portal/posts/queries";
 import { againValues, formValues } from "@/lib/portal/posts/save";
 import { hasRole } from "@/lib/portal/roles";
+import { supabaseEnv } from "@/lib/supabase/env";
 
 export const metadata: Metadata = {
   title: "New heads-up",
@@ -27,6 +29,8 @@ export default async function NewPostPage({ searchParams }: PageProps<"/portal/p
 
   const now = new Date();
   const env = readPortalEnv();
+  // Posting one again takes its photo along too.
+  const { photo, choices } = await loadPostPhotos(null, source?.id ?? null, now);
 
   return (
     <NarrowPage className="space-y-6">
@@ -48,6 +52,9 @@ export default async function NewPostPage({ searchParams }: PageProps<"/portal/p
       <PostForm
         id={null}
         initial={source ? againValues(source, now) : formValues(null, now)}
+        photo={photo}
+        choices={choices}
+        supabaseUrl={supabaseEnv().url}
         state={null}
         liveStart={null}
         nowIso={now.toISOString()}

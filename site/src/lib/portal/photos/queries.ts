@@ -5,6 +5,7 @@ import type { Enums } from "@/lib/database.types";
 import type { PhotoType } from "@/lib/photo-files";
 import { supabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { postPhotoOptions, type PlacedPost } from "./placement";
 import { isId } from "./schema";
 
 /**
@@ -19,9 +20,12 @@ export type LibraryPhoto = {
   width: number;
   height: number;
   mimeType: PhotoType;
-  /** Where it shows: a spot's code name, or an event's cover. Neither when it's only in the library. */
+  /** Where it shows: a spot's code name, an event's cover, or a heads-up. None when it's only in the library. */
   spot: string | null;
   eventId: string | null;
+  postId: string | null;
+  /** The heads-up it's on, if any. */
+  post: PlacedPost | null;
   uploadedBy: string | null;
   createdAt: string;
 };
@@ -32,7 +36,9 @@ export async function loadPhotos(): Promise<LibraryPhoto[]> {
   const { data, error } = await supabase
     .schema("site")
     .from("photos")
-    .select("id, alt, width, height, mime_type, spot, event_id, uploaded_by, created_at")
+    .select(
+      "id, alt, width, height, mime_type, spot, event_id, post_id, uploaded_by, created_at, post:posts(title, status, ends_at)",
+    )
     .eq("status", "published")
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -45,6 +51,8 @@ export async function loadPhotos(): Promise<LibraryPhoto[]> {
     mimeType: photo.mime_type as PhotoType,
     spot: photo.spot,
     eventId: photo.event_id,
+    postId: photo.post_id,
+    post: photo.post && { title: photo.post.title, status: photo.post.status, endsAt: photo.post.ends_at },
     uploadedBy: photo.uploaded_by,
     createdAt: photo.created_at,
   }));
@@ -55,14 +63,40 @@ export async function loadPhotos(): Promise<LibraryPhoto[]> {
  * The public read skips drafts, so this one reads as the editor.
  */
 export async function loadEventCover(eventId: string): Promise<Photo | undefined> {
-  if (!isId(eventId)) return undefined;
+  return isId(eventId) ? previewPhoto("event_id", eventId) : undefined;
+}
+
+/** What a heads-up's editor needs to show a photo. */
+export type PostPhotoChoice = Pick<LibraryPhoto, "id" | "alt" | "width" | "height" | "mimeType">;
+
+/**
+ * A heads-up's photo and the ones it can take, for its editor (see
+ * `postPhotoOptions`). `postId` is null for a new one, and `from` is the
+ * heads-up it's posted again from.
+ */
+export async function loadPostPhotos(
+  postId: string | null,
+  from: string | null,
+  now: Date,
+): Promise<{ photo: PostPhotoChoice | null; choices: PostPhotoChoice[] }> {
+  const { photo, choices } = postPhotoOptions(await loadPhotos(), postId, from, now);
+  const shown = ({ id, alt, width, height, mimeType }: LibraryPhoto) => ({ id, alt, width, height, mimeType });
+  return { photo: photo && shown(photo), choices: choices.map(shown) };
+}
+
+/** A photo picked for a heads-up, for the editors' preview, before it's on the heads-up. */
+export async function loadPhoto(photoId: string): Promise<Photo | undefined> {
+  return isId(photoId) ? previewPhoto("id", photoId) : undefined;
+}
+
+async function previewPhoto(column: "id" | "event_id", value: string): Promise<Photo | undefined> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .schema("site")
     .from("photos")
-    .select("id, spot, event_id, alt, width, height, mime_type")
+    .select("id, alt, width, height, mime_type")
     .eq("status", "published")
-    .eq("event_id", eventId)
+    .eq(column, value)
     .maybeSingle();
   if (error) throw error;
   return data ? photoFromRow(data, supabaseEnv().url) : undefined;

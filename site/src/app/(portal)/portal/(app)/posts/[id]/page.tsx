@@ -12,10 +12,12 @@ import { Button } from "@/components/portal/ui/button";
 import { readPortalEnv } from "@/lib/env";
 import { publicSiteUrl } from "@/lib/host";
 import { getCurrentUser } from "@/lib/portal/auth/current-user";
+import { loadPostPhotos } from "@/lib/portal/photos/queries";
 import { postState, whenLabel, type PostState } from "@/lib/portal/posts/list";
 import { loadPost } from "@/lib/portal/posts/queries";
 import { formValues } from "@/lib/portal/posts/save";
 import { hasRole } from "@/lib/portal/roles";
+import { supabaseEnv } from "@/lib/supabase/env";
 
 export async function generateMetadata({ params }: PageProps<"/portal/posts/[id]">): Promise<Metadata> {
   const me = await getCurrentUser();
@@ -91,6 +93,8 @@ export default async function PostPage({ params }: PageProps<"/portal/posts/[id]
     );
   }
 
+  const { photo, choices } = await loadPostPhotos(post.id, null, now);
+
   return (
     <NarrowPage className="space-y-8">
       <div className="space-y-2">
@@ -107,6 +111,9 @@ export default async function PostPage({ params }: PageProps<"/portal/posts/[id]
       <PostForm
         id={post.id}
         initial={formValues(post, now)}
+        photo={photo}
+        choices={choices}
+        supabaseUrl={supabaseEnv().url}
         state={state}
         liveStart={state === "live" ? post.starts_at : null}
         nowIso={now.toISOString()}

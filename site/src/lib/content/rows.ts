@@ -64,13 +64,13 @@ export function eventFromRow(row: EventRow, photo?: Photo): SiteEvent {
 const EVENT_LINK = /^\/events\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
 
 /**
- * A heads-up row as the pages know it. Heads-ups have no photos of their
- * own, so one that links to an event page shows that event's.
+ * A heads-up row as the pages know it, with its own photo if it has one.
+ * Without one, a heads-up that links to an event page shows that event's.
  */
-export function announcementFromRow(row: PostRow, events: SiteEvent[]): Announcement {
+export function announcementFromRow(row: PostRow, events: SiteEvent[], own?: Photo): Announcement {
   const href = text(row.link_url);
   const slug = href?.match(EVENT_LINK)?.[1];
-  const photo = slug ? events.find((event) => event.slug === slug)?.photo : undefined;
+  const photo = own ?? (slug ? events.find((event) => event.slug === slug)?.photo : undefined);
 
   return {
     id: row.id,

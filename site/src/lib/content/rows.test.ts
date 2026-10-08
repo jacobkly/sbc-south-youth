@@ -119,6 +119,12 @@ describe("announcementFromRow", () => {
     expect(announcementFromRow({ ...postRow, link_url: "/events/other" }, [retreat])).not.toHaveProperty("photo");
   });
 
+  it("shows its own photo before the linked event's", () => {
+    const own = { src: "https://example.test/lg.webp", srcSet: "https://example.test/lg.webp 1600w", alt: "Hoodies" };
+    expect(announcementFromRow(postRow, [retreat], own).photo).toEqual(own);
+    expect(announcementFromRow({ ...postRow, link_url: null, link_label: null }, [], own).photo).toEqual(own);
+  });
+
   it("names a link that has no label, and leaves out a missing one", () => {
     expect(announcementFromRow({ ...postRow, link_label: null }, []).cta).toEqual({
       label: "Learn more",

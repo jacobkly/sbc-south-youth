@@ -3,6 +3,7 @@
 import { refresh, updateTag } from "next/cache";
 import { requireRole } from "@/lib/portal/auth/require-role";
 import { actionError } from "@/lib/portal/errors";
+import { isId } from "@/lib/portal/photos/schema";
 import { createClient } from "@/lib/supabase/server";
 import { postState, type PostRow, type PostState } from "./list";
 import { loadPost } from "./queries";
@@ -18,7 +19,8 @@ import type { PostErrors, PostValues } from "./schema";
 export type SaveResult =
   | { status: "invalid"; errors: PostErrors }
   | { status: "failed"; message: string }
-  | { status: "done"; id: string; state: PostState; message: string };
+  /** `photoProblem` says why the heads-up saved without the photo change. */
+  | { status: "done"; id: string; state: PostState; message: string; photoProblem: string | null };
 
 export type PostActionResult = { status: "failed"; message: string } | { status: "done"; message: string };
 
@@ -32,15 +34,18 @@ function failed(message: string): { status: "failed"; message: string } {
 /**
  * Saves the composer: a new heads-up when `id` is null, or changes to one.
  * Publish puts it up now or at its start; draft keeps it off the site.
+ * `photoId` is the photo it shows, or null for none.
  */
 export async function savePost(
   id: string | null,
   values: PostValues,
   intent: "publish" | "draft",
+  photoId: string | null,
 ): Promise<SaveResult> {
   const editor = await requireRole("site_editor", REFUSAL);
   if ("refused" in editor) return failed(editor.refused);
   if (intent !== "publish" && intent !== "draft") return failed("Pick Publish or Save draft.");
+  if (photoId !== null && !isId(photoId)) return failed("The photo didn't come through right. Pick it again.");
 
   const existing = id === null ? null : await loadPost(id);
   if (id !== null && !existing) return failed(GONE);
@@ -57,9 +62,38 @@ export async function savePost(
     : await table.insert(plan.row).select("id").single();
   if (error) return failed(await actionError("Save a heads-up", error, fallback));
 
+  // The heads-up is saved either way, so a photo that didn't go on is said alongside.
+  const photoProblem = await placePhoto(data.id, photoId, existing !== null);
   updateTag("posts");
+  updateTag("photos");
   const posting = !existing || postState(existing, now) !== "live";
-  return { status: "done", id: data.id, state: plan.state, message: savedMessage(plan.row, now, posting) };
+  const message = savedMessage(plan.row, now, posting);
+  return { status: "done", id: data.id, state: plan.state, message, photoProblem };
+}
+
+/**
+ * Puts the chosen photo on the heads-up, moving the one it had back to the
+ * library, or takes its photo off. A photo in a spot or on an event stays
+ * there. Null when it worked, or else why it didn't.
+ */
+async function placePhoto(postId: string, photoId: string | null, existed: boolean): Promise<string | null> {
+  if (photoId === null && !existed) return null;
+  const photos = (await createClient()).schema("site").from("photos");
+  const fallback = "The heads-up saved, but its photo didn't change. Check your connection and save again.";
+  if (photoId === null) {
+    const { error } = await photos.update({ post_id: null }).eq("post_id", postId);
+    return error ? actionError("Take a photo off a heads-up", error, fallback) : null;
+  }
+  const { data, error } = await photos
+    .update({ post_id: postId })
+    .eq("id", photoId)
+    .eq("status", "published")
+    .is("spot", null)
+    .is("event_id", null)
+    .select("id");
+  if (error) return actionError("Put a photo on a heads-up", error, fallback);
+  if (data.length === 0) return "The heads-up saved, but that photo is on the site somewhere else now. Pick another.";
+  return null;
 }
 
 /** Brings a heads-up that's up down now. */

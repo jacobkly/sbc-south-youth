@@ -74,7 +74,7 @@ export type SiteEvent = {
   sequence?: number;
 };
 
-/** A heads-up. Its photo is the one of the event it links to, if any. */
+/** A heads-up. Its photo is its own, or else the one of the event it links to, if any. */
 export type Announcement = {
   id: string;
   /** Up to 80 characters. */

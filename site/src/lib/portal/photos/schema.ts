@@ -47,32 +47,43 @@ export function checkNewPhoto(photo: NewPhoto): { ok: true; row: NewPhoto } | { 
   return { ok: true, row: { id: photo.id, alt: alt.alt, width: photo.width, height: photo.height } };
 }
 
-/** Where a photo shows: one spot on the site, one event's cover, or neither, in the library. */
-export type Placement = { spot: PhotoSpot | null; eventId: string | null };
+/** Where a photo shows: one spot on the site, one event's cover, one heads-up, or none, in the library. */
+export type Placement = { spot: PhotoSpot | null; eventId: string | null; postId: string | null };
 
 /** The placement picker's value for the library. */
 export const LIBRARY = "library";
 
-/** A placement as one picker value, like `spot:home-hero` or `event:<id>`. */
-export function placementValue({ spot, eventId }: { spot: string | null; eventId: string | null }): string {
+/** A placement as one picker value, like `spot:home-hero`, `event:<id>`, or `post:<id>`. */
+export function placementValue({
+  spot,
+  eventId,
+  postId,
+}: {
+  spot: string | null;
+  eventId: string | null;
+  postId: string | null;
+}): string {
   if (spot) return `spot:${spot}`;
   if (eventId) return `event:${eventId}`;
+  if (postId) return `post:${postId}`;
   return LIBRARY;
 }
 
 /** A picker value back as a placement, or null when it isn't one. */
 export function parsePlacement(value: unknown): Placement | null {
-  if (value === LIBRARY) return { spot: null, eventId: null };
-  const [, kind, rest] = (typeof value === "string" && /^(spot|event):(.*)$/.exec(value)) || [];
-  if (kind === "spot" && isPhotoSpot(rest)) return { spot: rest, eventId: null };
-  if (kind === "event" && isId(rest)) return { spot: null, eventId: rest };
+  const none = { spot: null, eventId: null, postId: null };
+  if (value === LIBRARY) return none;
+  const [, kind, rest] = (typeof value === "string" && /^(spot|event|post):(.*)$/.exec(value)) || [];
+  if (kind === "spot" && isPhotoSpot(rest)) return { ...none, spot: rest };
+  if (kind === "event" && isId(rest)) return { ...none, eventId: rest };
+  if (kind === "post" && isId(rest)) return { ...none, postId: rest };
   return null;
 }
 
 /** A photo's alt text and place, as the photo sheet sends them. */
 export type PhotoEdit = { id: string; alt: string; placement: string };
 
-type PhotoChanges = { alt: string; spot: PhotoSpot | null; event_id: string | null };
+type PhotoChanges = { alt: string; spot: PhotoSpot | null; event_id: string | null; post_id: string | null };
 
 /** Checks an edit and gives the row's new values. */
 export function checkPhotoEdit(
@@ -82,7 +93,11 @@ export function checkPhotoEdit(
   if (!alt.ok) return { ok: false, message: alt.error };
   const placement = parsePlacement(edit.placement);
   if (!isId(edit.id) || !placement) return { ok: false, message: GARBLED };
-  return { ok: true, id: edit.id, changes: { alt: alt.alt, spot: placement.spot, event_id: placement.eventId } };
+  return {
+    ok: true,
+    id: edit.id,
+    changes: { alt: alt.alt, spot: placement.spot, event_id: placement.eventId, post_id: placement.postId },
+  };
 }
 
 /** Why a photo is coming down, trimmed, or what's wrong with it. */

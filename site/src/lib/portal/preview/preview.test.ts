@@ -22,6 +22,8 @@ const photo: Photo = {
   alt: "Cabins by a lake",
 };
 
+const photoId = "00000000-0000-4000-8000-0000000f0002";
+
 const retreat = {
   id: "00000000-0000-4000-8000-000000000001",
   slug: "fall-retreat",
@@ -51,6 +53,12 @@ describe("previewPost", () => {
   it("borrows the photo of the event it links to, like the site", () => {
     const result = previewPost({ ...post, linkUrl: "/events/fall-retreat" }, [retreat]);
     expect(result.ok && result.post.photo).toEqual(photo);
+  });
+
+  it("shows its own photo before the linked event's", () => {
+    const own: Photo = { ...photo, alt: "A table of hoodies" };
+    const result = previewPost({ ...post, linkUrl: "/events/fall-retreat" }, [retreat], own);
+    expect(result.ok && result.post.photo).toEqual(own);
   });
 
   it("finishes a link typed without https://, like saving does", () => {
@@ -159,7 +167,17 @@ describe("previewEvent", () => {
 
 describe("readPreviewRequest", () => {
   it("takes a heads-up's values", () => {
-    expect(readPreviewRequest({ kind: "post", values: post })).toEqual({ kind: "post", values: post });
+    expect(readPreviewRequest({ kind: "post", values: post })).toEqual({ kind: "post", values: post, photoId: null });
+  });
+
+  it("takes the id of a heads-up's photo", () => {
+    const request = { kind: "post", values: post, photoId };
+    expect(readPreviewRequest(request)).toEqual(request);
+    expect(readPreviewRequest({ kind: "post", values: post, photoId: null })).toEqual({
+      kind: "post",
+      values: post,
+      photoId: null,
+    });
   });
 
   it("takes an event's values, id, and slug", () => {
@@ -175,7 +193,7 @@ describe("readPreviewRequest", () => {
 
   it("drops anything extra", () => {
     const request = readPreviewRequest({ kind: "post", values: { ...post, status: "published" }, extra: 1 });
-    expect(request).toEqual({ kind: "post", values: post });
+    expect(request).toEqual({ kind: "post", values: post, photoId: null });
   });
 
   it("refuses anything that isn't an editor's values", () => {
@@ -185,6 +203,7 @@ describe("readPreviewRequest", () => {
     expect(readPreviewRequest({ kind: "post" })).toBeNull();
     expect(readPreviewRequest({ kind: "post", values: { ...post, title: 5 } })).toBeNull();
     expect(readPreviewRequest({ kind: "post", values: { ...post, pinned: "yes" } })).toBeNull();
+    expect(readPreviewRequest({ kind: "post", values: post, photoId: "f0002" })).toBeNull();
     const missing = { ...event, endTime: undefined };
     expect(readPreviewRequest({ kind: "event", values: missing, id: null, slug: null })).toBeNull();
     expect(readPreviewRequest({ kind: "event", values: event, id: 7, slug: null })).toBeNull();

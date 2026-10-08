@@ -3,6 +3,7 @@ import { announcementFromRow, eventFromRow, type EventRow, type PostRow } from "
 import type { Announcement, Photo, SiteEvent } from "@/lib/content/types";
 import { checkEvent, type EventErrors, type EventValues } from "@/lib/portal/events/schema";
 import { slugify } from "@/lib/portal/events/slug";
+import { isId } from "@/lib/portal/photos/schema";
 import { checkPost, type PostErrors, type PostValues } from "@/lib/portal/posts/schema";
 
 /**
@@ -12,9 +13,9 @@ import { checkPost, type PostErrors, type PostValues } from "@/lib/portal/posts/
  * fails when the site couldn't show it at all, and then it says why.
  */
 
-/** What the editor asks the preview to show. */
+/** What the editor asks the preview to show. A heads-up's photo comes by id, so the server reads it. */
 export type PreviewRequest =
-  | { kind: "post"; values: PostValues }
+  | { kind: "post"; values: PostValues; photoId: string | null }
   | { kind: "event"; values: EventValues; id: string | null; slug: string | null };
 
 /** Each field an editor sends, and whether it's text or a switch. */
@@ -65,7 +66,9 @@ export function readPreviewRequest(raw: unknown): PreviewRequest | null {
   if (!isRecord(raw)) return null;
   if (raw.kind === "post") {
     const values = pick<PostValues>(raw.values, POST_FIELDS);
-    return values && { kind: "post", values };
+    const photoId = raw.photoId ?? null;
+    if (photoId !== null && !isId(photoId)) return null;
+    return values && { kind: "post", values, photoId };
   }
   if (raw.kind === "event" && isIdOrNull(raw.id) && isIdOrNull(raw.slug)) {
     const values = pick<EventValues>(raw.values, EVENT_FIELDS);
@@ -111,8 +114,11 @@ function firstProblem<Key extends string>(errors: Partial<Record<Key, string>>, 
   return (key && errors[key]) || "Something here can't be shown yet.";
 }
 
-/** A heads-up as it shows on This Week and Home. It borrows the photo of an event it links to. */
-export function previewPost(values: PostValues, events: SiteEvent[]): PostPreview {
+/**
+ * A heads-up as it shows on This Week and Home, with its own photo if it
+ * has one, or else the photo of an event it links to.
+ */
+export function previewPost(values: PostValues, events: SiteEvent[], photo?: Photo): PostPreview {
   const title = values.title.trim() || UNTITLED_POST;
   const check = checkPost({ ...values, title, ...ANY_WINDOW }, { now: new Date() });
   if (!check.ok) return { ok: false, problem: firstProblem(check.errors, POST_ORDER) };
@@ -129,7 +135,7 @@ export function previewPost(values: PostValues, events: SiteEvent[]): PostPrevie
     starts_at: post.starts_at,
     ends_at: post.ends_at,
   };
-  return { ok: true, post: announcementFromRow(row, events) };
+  return { ok: true, post: announcementFromRow(row, events, photo) };
 }
 
 /**

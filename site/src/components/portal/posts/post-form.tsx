@@ -12,6 +12,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import { describedBy, FormField } from "@/components/portal/form-field";
+import type { AddedPhoto } from "@/components/portal/photos/photo-upload";
 import { PreviewPane } from "@/components/portal/preview/preview-pane";
 import { Alert, AlertDescription } from "@/components/portal/ui/alert";
 import { Button } from "@/components/portal/ui/button";
@@ -35,6 +36,7 @@ import {
   type PostValues,
 } from "@/lib/portal/posts/schema";
 import { TEMPLATES, type PostTemplate } from "@/lib/portal/posts/templates";
+import { PostPhoto } from "./post-photo";
 
 type Done = Extract<SaveResult, { status: "done" }>;
 
@@ -73,6 +75,9 @@ const THIS_WEEK_PATH = "/this-week";
 export function PostForm({
   id,
   initial,
+  photo: initialPhoto,
+  choices,
+  supabaseUrl,
   state,
   liveStart,
   nowIso,
@@ -83,6 +88,12 @@ export function PostForm({
   /** Null for a new heads-up. */
   id: string | null;
   initial: PostValues;
+  /** The photo it has, or starts with. */
+  photo: AddedPhoto | null;
+  /** Library photos it can take. */
+  choices: readonly AddedPhoto[];
+  /** For photos' addresses. */
+  supabaseUrl: string;
   /** Where it stands now. Null for a new heads-up. */
   state: Exclude<PostState, "past"> | null;
   /** A live heads-up's start, which saving keeps. */
@@ -97,6 +108,7 @@ export function PostForm({
   const router = useRouter();
   const [now, setNow] = useState(() => new Date(nowIso));
   const [values, setValues] = useState(initial);
+  const [photo, setPhoto] = useState(initialPhoto);
   const [later, setLater] = useState(initial.startsAt !== "");
   const [laterAt, setLaterAt] = useState(() => initial.startsAt || nextHour(new Date(nowIso)));
   const [errors, setErrors] = useState<PostErrors>({});
@@ -209,7 +221,7 @@ export function PostForm({
     startTransition(async () => {
       let result: SaveResult;
       try {
-        result = await savePost(id, sent, intent);
+        result = await savePost(id, sent, intent, photo?.id ?? null);
       } catch {
         setAlert("Couldn't save the heads-up. Check your connection and try again.");
         return;
@@ -229,6 +241,7 @@ export function PostForm({
     const fresh = new Date();
     setNow(fresh);
     setValues(formValues(null, fresh));
+    setPhoto(null);
     setLater(false);
     setLaterAt(nextHour(fresh));
     setErrors({});
@@ -341,6 +354,17 @@ export function PostForm({
                   onChange={(event) => set("body", event.target.value)}
                 />
               </FormField>
+
+              <PostPhoto
+                photo={photo}
+                choices={choices}
+                supabaseUrl={supabaseUrl}
+                disabled={busy}
+                onChange={(next) => {
+                  setPhoto(next);
+                  setSaved(null);
+                }}
+              />
 
               <FormField id="post-tone" label="Kind" error={errors.tone} group>
                 <RadioGroup
@@ -520,7 +544,10 @@ export function PostForm({
 
           <TabsContent value="preview" forceMount className="text-base data-[state=inactive]:hidden">
             {previewed && (
-              <PreviewPane request={{ kind: "post", values: { ...values, startsAt } }} active={tab === "preview"} />
+              <PreviewPane
+                request={{ kind: "post", values: { ...values, startsAt }, photoId: photo?.id ?? null }}
+                active={tab === "preview"}
+              />
             )}
           </TabsContent>
         </Tabs>
@@ -566,6 +593,12 @@ export function PostForm({
               </span>
             </p>
           )}
+          {saved?.photoProblem && (
+            <Alert variant="destructive">
+              <TriangleAlertIcon />
+              <AlertDescription>{saved.photoProblem}</AlertDescription>
+            </Alert>
+          )}
         </fieldset>
       </form>
     </div>
@@ -595,6 +628,13 @@ function PostDone({
         </h2>
         <p className="text-sm text-muted-foreground">{result.message}</p>
       </div>
+
+      {result.photoProblem && (
+        <Alert variant="destructive">
+          <TriangleAlertIcon />
+          <AlertDescription>{result.photoProblem} Keep editing to add one.</AlertDescription>
+        </Alert>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Button asChild className="h-11 px-6">

@@ -6,11 +6,12 @@ import { photoFromRow, placedPhotos, type PhotoRow } from "./photos";
 const SUPABASE = "https://example.supabase.co";
 const FILES = `${SUPABASE}/storage/v1/object/public/site-photos`;
 
-// The way site.public_photos() sends a row: a spot or an event, never both.
+// The way site.public_photos() sends a row: a spot, an event, or a heads-up, never more than one.
 const heroRow: PhotoRow = {
   id: "00000000-0000-4000-8000-0000000f0001",
   spot: "home-hero",
   event_id: null,
+  post_id: null,
   alt: "Hands raised during worship",
   width: 1600,
   height: 1067,
@@ -21,10 +22,22 @@ const coverRow: PhotoRow = {
   id: "00000000-0000-4000-8000-0000000f0002",
   spot: null,
   event_id: "00000000-0000-4000-8000-00000000e001",
+  post_id: null,
   alt: "Cabins by a lake",
   width: 1200,
   height: 1600,
   mime_type: "image/jpeg",
+};
+
+const headsUpRow: PhotoRow = {
+  id: "00000000-0000-4000-8000-0000000f0003",
+  spot: null,
+  event_id: null,
+  post_id: "00000000-0000-4000-8000-00000000d001",
+  alt: "A table of new hoodies",
+  width: 1600,
+  height: 1200,
+  mime_type: "image/webp",
 };
 
 describe("photoFromRow", () => {
@@ -53,22 +66,25 @@ describe("photoFromRow", () => {
 });
 
 describe("placedPhotos", () => {
-  it("files each photo under its spot or its event", () => {
-    const placed = placedPhotos([heroRow, coverRow], SUPABASE);
+  it("files each photo under its spot, its event, or its heads-up", () => {
+    const placed = placedPhotos([heroRow, coverRow, headsUpRow], SUPABASE);
     expect(Object.keys(placed.spots)).toEqual(["home-hero"]);
     expect(placed.spots["home-hero"]?.alt).toBe("Hands raised during worship");
     expect(Object.keys(placed.covers)).toEqual([coverRow.event_id]);
     expect(placed.covers[coverRow.event_id!].alt).toBe("Cabins by a lake");
+    expect(Object.keys(placed.posts)).toEqual([headsUpRow.post_id]);
+    expect(placed.posts[headsUpRow.post_id!].alt).toBe("A table of new hoodies");
   });
 
   it("leaves out a spot the site no longer has", () => {
     const placed = placedPhotos([{ ...heroRow, spot: "old-banner" }], SUPABASE);
     expect(placed.spots).toEqual({});
     expect(placed.covers).toEqual({});
+    expect(placed.posts).toEqual({});
   });
 
   it("has nothing placed when there are no photos", () => {
-    expect(placedPhotos([], SUPABASE)).toEqual({ spots: {}, covers: {} });
+    expect(placedPhotos([], SUPABASE)).toEqual({ spots: {}, covers: {}, posts: {} });
   });
 });
 
