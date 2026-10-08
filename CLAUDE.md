@@ -116,6 +116,7 @@ Roles are a fixed Postgres enum, `public.app_role`, and each person's roles are 
 - **Mobile-first.** The main user is on an iPhone, so design and check every screen at phone width in iOS Safari first. Desktop must work, but desktop-optimized layouts come later.
 - In finances and the portal, use shadcn/ui components for dialogs, pickers, tabs, and menus instead of hand-rolling them (`src/components/ui` in finances, `src/components/portal/ui` in the site app).
 - The portal mirrors finances: the same components, tokens, nav, and iPhone rules. Copy code from `finances/`, never import across apps.
+- In both, the app shell's `<main>` is the only width container. Lists and dashboards fill it and add columns with `@…/main` container queries, never viewport breakpoints. Forms, settings, and detail screens sit in `NarrowPage`. Pages never set their own `max-w-*`.
 - Accessible, with loading, empty, and error states on every screen.
 - The portal installs on a phone's home screen and opens full screen, with no browser buttons. Every portal screen needs its own way back, and a section that couldn't load shows `LoadError` (`site/src/components/portal/load-error.tsx`) with Try again, never "refresh the page". The portal host serves its own manifest and icons in place of the public site's (`site/src/lib/host.ts`, `site/src/lib/portal/install.ts`).
 

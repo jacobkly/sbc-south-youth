@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MegaphoneIcon, PlusIcon } from "lucide-react";
-import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { PostKinds } from "@/components/portal/posts/post-kinds";
 import { PostSection } from "@/components/portal/posts/post-list";
 import { Button } from "@/components/portal/ui/button";
@@ -25,7 +24,7 @@ export default async function PostsPage() {
   const groups = groupPosts([...current, ...past], now);
 
   return (
-    <NarrowPage className="space-y-8">
+    <div className="space-y-8">
       <header className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Posts</h1>
@@ -41,53 +40,59 @@ export default async function PostsPage() {
 
       <PostKinds current="/posts" />
 
-      {current.length === 0 && (
-        <section aria-labelledby="empty-heading" className="space-y-3 rounded-xl border border-dashed p-6 text-center">
-          <MegaphoneIcon className="mx-auto size-6 text-muted-foreground" aria-hidden />
-          <div className="space-y-1">
-            <h2 id="empty-heading" className="font-semibold">
-              Nothing&apos;s up right now
-            </h2>
-            <p className="text-sm text-balance text-muted-foreground">
-              Post a heads-up when plans change, merch comes in, or something special is coming. It shows on Home
-              and This Week until it comes down.
-            </p>
-          </div>
-          <Button asChild variant="outline" className="h-11 px-5">
-            <Link href="/posts/new">Write a heads-up</Link>
-          </Button>
-        </section>
-      )}
+      {/* On a PC the groups flow down two columns that the browser balances by height. */}
+      <div className="@4xl/main:columns-2 @4xl/main:gap-8">
+        {current.length === 0 && (
+          <section
+            aria-labelledby="empty-heading"
+            className="mb-8 break-inside-avoid space-y-3 rounded-xl border border-dashed p-6 text-center last:mb-0"
+          >
+            <MegaphoneIcon className="mx-auto size-6 text-muted-foreground" aria-hidden />
+            <div className="space-y-1">
+              <h2 id="empty-heading" className="font-semibold">
+                Nothing&apos;s up right now
+              </h2>
+              <p className="text-sm text-balance text-muted-foreground">
+                Post a heads-up when plans change, merch comes in, or something special is coming. It shows on Home
+                and This Week until it comes down.
+              </p>
+            </div>
+            <Button asChild variant="outline" className="h-11 px-5">
+              <Link href="/posts/new">Write a heads-up</Link>
+            </Button>
+          </section>
+        )}
 
-      <PostSection
-        id="live"
-        title="Up now"
-        description="On This Week. Pinned ones come first, and the first one is on Home too."
-        posts={groups.live}
-        now={now}
-        onHome
-      />
-      <PostSection
-        id="scheduled"
-        title="Scheduled"
-        description="These go up on their own when their time comes."
-        posts={groups.scheduled}
-        now={now}
-      />
-      <PostSection
-        id="drafts"
-        title="Drafts"
-        description="Only leaders see these until they're published."
-        posts={groups.draft}
-        now={now}
-      />
-      <PostSection
-        id="past"
-        title="Came down"
-        description={`The last ${PAST_LIMIT}. Open one to post it again.`}
-        posts={groups.past}
-        now={now}
-      />
-    </NarrowPage>
+        <PostSection
+          id="live"
+          title="Up now"
+          description="On This Week. Pinned ones come first, and the first one is on Home too."
+          posts={groups.live}
+          now={now}
+          onHome
+        />
+        <PostSection
+          id="scheduled"
+          title="Scheduled"
+          description="These go up on their own when their time comes."
+          posts={groups.scheduled}
+          now={now}
+        />
+        <PostSection
+          id="drafts"
+          title="Drafts"
+          description="Only leaders see these until they're published."
+          posts={groups.draft}
+          now={now}
+        />
+        <PostSection
+          id="past"
+          title="Came down"
+          description={`The last ${PAST_LIMIT}. Open one to post it again.`}
+          posts={groups.past}
+          now={now}
+        />
+      </div>
+    </div>
   );
 }

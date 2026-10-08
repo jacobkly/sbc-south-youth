@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { BlockedSection } from "@/components/portal/email/blocked-section";
 import { EmailListSkeleton, RecentProblems } from "@/components/portal/email/email-problems";
 import { EmailHeader, EmailUsageSections, EmailUsageSkeleton } from "@/components/portal/email/email-usage";
-import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { getCurrentUser } from "@/lib/portal/auth/current-user";
 
 export const metadata: Metadata = {
@@ -17,38 +16,45 @@ export default async function EmailPage() {
   if (!me?.roles.includes("owner")) notFound();
 
   return (
-    <NarrowPage className="space-y-8">
+    <div className="space-y-8">
       <EmailHeader />
 
-      <Suspense fallback={<EmailUsageSkeleton />}>
-        <EmailUsageSections />
-      </Suspense>
-
-      <section aria-labelledby="problems-heading" className="space-y-3">
-        <div className="space-y-1">
-          <h2 id="problems-heading" className="text-lg font-semibold">
-            Recent problems
-          </h2>
-          <p className="text-sm text-muted-foreground">The newest emails that failed, bounced, or were marked as spam.</p>
-        </div>
-        <Suspense fallback={<EmailListSkeleton label="Loading recent problems" />}>
-          <RecentProblems />
+      {/* On a PC, how much is used on the left, and what went wrong on the right. */}
+      <div className="grid grid-cols-1 gap-8 @4xl/main:grid-cols-2 @4xl/main:items-start">
+        <Suspense fallback={<EmailUsageSkeleton />}>
+          <EmailUsageSections />
         </Suspense>
-      </section>
 
-      <section aria-labelledby="blocked-heading" className="space-y-3">
-        <div className="space-y-1">
-          <h2 id="blocked-heading" className="text-lg font-semibold">
-            Blocked addresses
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Nothing is sent to an address that bounced or was marked as spam. Unblock one once it&apos;s fixed.
-          </p>
+        <div className="space-y-8">
+          <section aria-labelledby="problems-heading" className="space-y-3">
+            <div className="space-y-1">
+              <h2 id="problems-heading" className="text-lg font-semibold">
+                Recent problems
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                The newest emails that failed, bounced, or were marked as spam.
+              </p>
+            </div>
+            <Suspense fallback={<EmailListSkeleton label="Loading recent problems" />}>
+              <RecentProblems />
+            </Suspense>
+          </section>
+
+          <section aria-labelledby="blocked-heading" className="space-y-3">
+            <div className="space-y-1">
+              <h2 id="blocked-heading" className="text-lg font-semibold">
+                Blocked addresses
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Nothing is sent to an address that bounced or was marked as spam. Unblock one once it&apos;s fixed.
+              </p>
+            </div>
+            <Suspense fallback={<EmailListSkeleton label="Loading blocked addresses" />}>
+              <BlockedSection />
+            </Suspense>
+          </section>
         </div>
-        <Suspense fallback={<EmailListSkeleton label="Loading blocked addresses" />}>
-          <BlockedSection />
-        </Suspense>
-      </section>
-    </NarrowPage>
+      </div>
+    </div>
   );
 }

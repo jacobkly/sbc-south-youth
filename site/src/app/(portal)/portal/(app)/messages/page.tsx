@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlaskConicalIcon, InboxIcon } from "lucide-react";
-import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { MessageKindChips, MessageTabs } from "@/components/portal/messages/message-filters";
 import { MessageRows, MessageSection } from "@/components/portal/messages/message-list";
 import { Alert, AlertDescription, AlertTitle } from "@/components/portal/ui/alert";
@@ -67,7 +66,7 @@ export default async function MessagesPage({ searchParams }: PageProps<"/portal/
   const { title, text } = emptyText(filters);
 
   return (
-    <NarrowPage className="space-y-6">
+    <div className="space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Messages</h1>
         <p className="text-muted-foreground">What people send from the site&apos;s forms.</p>
@@ -152,6 +151,6 @@ export default async function MessagesPage({ searchParams }: PageProps<"/portal/
           </Link>
         </p>
       )}
-    </NarrowPage>
+    </div>
   );
 }

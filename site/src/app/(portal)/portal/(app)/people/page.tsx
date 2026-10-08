@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { UserPlusIcon } from "lucide-react";
-import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { PeopleList } from "@/components/portal/people/people-list";
 import { Button } from "@/components/portal/ui/button";
 import { getCurrentUser } from "@/lib/portal/auth/current-user";
@@ -21,7 +20,7 @@ export default async function PeoplePage() {
   const onlyYou = people.every((person) => person.you);
 
   return (
-    <NarrowPage className="space-y-6">
+    <div className="space-y-6">
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">People</h1>
         <Button asChild className="h-11 px-5">
@@ -50,6 +49,6 @@ export default async function PeoplePage() {
           </Button>
         </section>
       )}
-    </NarrowPage>
+    </div>
   );
 }

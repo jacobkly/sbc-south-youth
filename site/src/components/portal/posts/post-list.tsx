@@ -7,7 +7,11 @@ const ROW =
   "flex min-w-0 items-start gap-3 p-4 outline-none hover:bg-muted/50 " +
   "focus-visible:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset";
 
-/** One group of heads-ups, each opening its own page. Nothing at all when the group is empty. */
+/**
+ * One group of heads-ups, each opening its own page. Nothing at all when the
+ * group is empty. On a PC the groups flow down two columns, and padding, not
+ * margins, spaces them, since a margin at the top of a column can be dropped.
+ */
 export function PostSection({
   id,
   title,
@@ -26,7 +30,7 @@ export function PostSection({
 }) {
   if (posts.length === 0) return null;
   return (
-    <section aria-labelledby={`${id}-heading`} className="space-y-3">
+    <section aria-labelledby={`${id}-heading`} className="break-inside-avoid space-y-3 pb-8 last:pb-0">
       <div className="space-y-1">
         <h2 id={`${id}-heading`} className="flex items-baseline gap-2 text-lg font-semibold">
           {title}

@@ -4,7 +4,6 @@ import { Tally5Icon, TriangleAlertIcon } from "lucide-react";
 import { HeadcountForm } from "@/components/portal/attendance/headcount-form";
 import { HeadcountList } from "@/components/portal/attendance/headcount-list";
 import { HeadcountTiles } from "@/components/portal/attendance/headcount-tiles";
-import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Alert, AlertDescription } from "@/components/portal/ui/alert";
 import { todayInLA } from "@/lib/dates";
 import { readPortalEnv } from "@/lib/env";
@@ -29,7 +28,7 @@ export default async function AttendancePage() {
   const summary = summarize(counts);
 
   return (
-    <NarrowPage className="space-y-8">
+    <div className="space-y-8">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Attendance</h1>
         <p className="text-muted-foreground">How many came to youth each week, leaders included.</p>
@@ -45,28 +44,36 @@ export default async function AttendancePage() {
         </Alert>
       )}
 
-      {canEdit && <HeadcountForm counts={counts} today={today} readOnly={readOnly} />}
-
-      {summary ? (
-        <>
-          <HeadcountTiles summary={summary} today={today} />
-          <HeadcountList counts={counts} today={today} canEdit={canEdit} readOnly={readOnly} />
-        </>
-      ) : (
-        <section aria-labelledby="empty-heading" className="space-y-3 rounded-xl border border-dashed p-6 text-center">
-          <Tally5Icon className="mx-auto size-6 text-muted-foreground" aria-hidden />
-          <div className="space-y-1">
-            <h2 id="empty-heading" className="font-semibold">
-              No nights counted yet
-            </h2>
-            <p className="text-sm text-balance text-muted-foreground">
-              {canEdit
-                ? "Add the first night above. Each one shows here, newest first."
-                : "Once someone with Attendance adds a night's count, it shows here."}
-            </p>
+      {/* On a PC, adding a night and the totals on the left, and every night on the right. */}
+      <div className="grid grid-cols-1 gap-8 @4xl/main:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] @4xl/main:items-start">
+        {(canEdit || summary) && (
+          <div className="space-y-8">
+            {canEdit && <HeadcountForm counts={counts} today={today} readOnly={readOnly} />}
+            {summary && <HeadcountTiles summary={summary} today={today} />}
           </div>
-        </section>
-      )}
-    </NarrowPage>
+        )}
+
+        {summary ? (
+          <HeadcountList counts={counts} today={today} canEdit={canEdit} readOnly={readOnly} />
+        ) : (
+          <section
+            aria-labelledby="empty-heading"
+            className="space-y-3 rounded-xl border border-dashed p-6 text-center"
+          >
+            <Tally5Icon className="mx-auto size-6 text-muted-foreground" aria-hidden />
+            <div className="space-y-1">
+              <h2 id="empty-heading" className="font-semibold">
+                No nights counted yet
+              </h2>
+              <p className="text-sm text-balance text-muted-foreground">
+                {canEdit
+                  ? "Once you add the first night, each one shows here, newest first."
+                  : "Once someone with Attendance adds a night's count, it shows here."}
+              </p>
+            </div>
+          </section>
+        )}
+      </div>
+    </div>
   );
 }

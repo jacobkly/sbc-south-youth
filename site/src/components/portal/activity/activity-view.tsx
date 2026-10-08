@@ -137,7 +137,7 @@ export function ActivityView({
             {older && (
               <Button
                 variant="outline"
-                className="h-11 w-full sm:mx-auto sm:flex sm:w-auto sm:px-8"
+                className="h-11 w-full @4xl/main:mx-auto @4xl/main:flex @4xl/main:w-auto @4xl/main:px-8"
                 disabled={loadingMore}
                 onClick={() => navigate({ ...shown, since: older })}
               >

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { DownloadIcon } from "lucide-react";
 import { ActivityView, type ActivityPerson } from "@/components/portal/activity/activity-view";
-import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Button } from "@/components/portal/ui/button";
 import { todayInLA } from "@/lib/dates";
 import { readPortalEnv } from "@/lib/env";
@@ -47,7 +46,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/portal/
   ];
 
   return (
-    <NarrowPage className="space-y-6">
+    <div className="space-y-6">
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Activity</h1>
         {owner && (
@@ -70,6 +69,6 @@ export default async function ActivityPage({ searchParams }: PageProps<"/portal/
         older={older}
         capped={capped}
       />
-    </NarrowPage>
+    </div>
   );
 }

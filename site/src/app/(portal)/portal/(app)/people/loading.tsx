@@ -1,10 +1,9 @@
-import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Skeleton } from "@/components/portal/ui/skeleton";
 
 // Shown at once when an owner opens People from another portal page.
 export default function PeopleLoading() {
   return (
-    <NarrowPage className="space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">People</h1>
         <Skeleton className="h-11 w-24" />
@@ -22,6 +21,6 @@ export default function PeopleLoading() {
           </li>
         ))}
       </ul>
-    </NarrowPage>
+    </div>
   );
 }

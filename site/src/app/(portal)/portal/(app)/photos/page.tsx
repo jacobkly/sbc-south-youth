@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CircleCheckIcon, FlagIcon, ImagesIcon, TriangleAlertIcon } from "lucide-react";
-import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { EmptySpots } from "@/components/portal/photos/empty-spots";
 import { PhotoGrid } from "@/components/portal/photos/photo-grid";
 import { PhotoUpload } from "@/components/portal/photos/photo-upload";
@@ -53,7 +52,7 @@ export default async function PhotosPage({ searchParams }: PageProps<"/portal/ph
   };
 
   return (
-    <NarrowPage className="space-y-8">
+    <div className="space-y-8">
       <PhotoUpload readOnly={readOnly}>
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Photos</h1>
@@ -120,6 +119,6 @@ export default async function PhotosPage({ searchParams }: PageProps<"/portal/ph
         showRequests={messages}
         readOnly={readOnly}
       />
-    </NarrowPage>
+    </div>
   );
 }

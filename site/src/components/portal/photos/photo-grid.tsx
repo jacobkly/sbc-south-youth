@@ -74,7 +74,10 @@ export function PhotoGrid(props: PhotoSheetProps) {
         )}
       </div>
 
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Photos">
+      <ul
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3 @3xl/main:grid-cols-4 @6xl/main:grid-cols-5 @7xl/main:grid-cols-6"
+        aria-label="Photos"
+      >
         {photos.map((photo) => {
           const badge = placementBadge(photo, eventMap);
           return (

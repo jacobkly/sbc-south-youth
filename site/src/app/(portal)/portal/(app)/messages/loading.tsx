@@ -1,10 +1,9 @@
-import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Skeleton } from "@/components/portal/ui/skeleton";
 
 // Shown at once when someone with Messages opens it from another portal page.
 export default function MessagesLoading() {
   return (
-    <NarrowPage className="space-y-6">
+    <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Messages</h1>
         <p className="text-muted-foreground">What people send from the site&apos;s forms.</p>
@@ -28,6 +27,6 @@ export default function MessagesLoading() {
           </li>
         ))}
       </ul>
-    </NarrowPage>
+    </div>
   );
 }

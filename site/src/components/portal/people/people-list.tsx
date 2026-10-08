@@ -16,7 +16,10 @@ const ROW =
 /** Search only helps once there are a few people to look through. */
 const SEARCH_FROM = 6;
 
-/** Everyone with an account, each opening their page, with a search once the list grows. */
+/**
+ * Everyone with an account, each opening their page, with a search once the
+ * list grows. On a wide list, each person's roles sit at the end of their row.
+ */
 export function PeopleList({ people }: { people: Person[] }) {
   const [query, setQuery] = useState("");
   const shown = searchPeople(people, query);
@@ -25,7 +28,7 @@ export function PeopleList({ people }: { people: Person[] }) {
   return (
     <div className="space-y-4">
       {people.length >= SEARCH_FROM && (
-        <div className="relative">
+        <div className="relative @4xl/main:w-96">
           <SearchIcon
             className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
@@ -51,7 +54,7 @@ export function PeopleList({ people }: { people: Person[] }) {
           No one matches &ldquo;{query.trim()}&rdquo;.
         </p>
       ) : (
-        <ul className="divide-y overflow-hidden rounded-xl border bg-card" aria-label="People">
+        <ul className="@container divide-y overflow-hidden rounded-xl border bg-card" aria-label="People">
           {shown.map((person) => (
             <li key={person.id}>
               <PersonRow person={person} />
@@ -72,8 +75,8 @@ function PersonRow({ person }: { person: Person }) {
   return (
     <Link href={`/people/${person.id}`} className={ROW}>
       <UserAvatar name={person.name} path={person.avatarPath} className="mt-0.5 size-10" />
-      <div className="min-w-0 flex-1 space-y-2">
-        <div className="min-w-0">
+      <div className="min-w-0 flex-1 space-y-2 @3xl:flex @3xl:items-center @3xl:gap-6 @3xl:space-y-0">
+        <div className="min-w-0 @3xl:flex-1">
           <p className="flex min-w-0 items-baseline gap-1.5 font-medium">
             <span className="truncate">{person.name}</span>
             {person.you && <span className="shrink-0 text-sm font-normal text-muted-foreground">(you)</span>}
@@ -82,7 +85,7 @@ function PersonRow({ person }: { person: Person }) {
           <p className="text-xs text-muted-foreground">{person.seen}</p>
         </div>
         {(status || person.roles.length > 0) && (
-          <p className="flex flex-wrap gap-1.5">
+          <p className="flex flex-wrap gap-1.5 @3xl:max-w-1/2 @3xl:justify-end">
             {status && <Badge variant={STATUS_VARIANTS[status]}>{STATUS_LABELS[status]}</Badge>}
             {person.roles.map((role) => (
               <Badge key={role} variant="secondary">
