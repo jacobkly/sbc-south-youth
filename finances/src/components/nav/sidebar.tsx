@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronsUpDownIcon, LogOutIcon, PlusIcon, UserRoundIcon } from "lucide-react";
+import { ChevronsUpDownIcon, LogOutIcon, PlusIcon } from "lucide-react";
 import { cn } from "cn";
 import { useSignOut } from "@/components/auth/sign-out-button";
 import { AppSwitcher } from "@/components/nav/app-switcher";
@@ -36,16 +36,22 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 /**
- * The signed-in user, with Account and Sign out. In the sidebar it shows the
- * name and role. In the rail it's just the picture, so the menu names them.
+ * The signed-in user, with Account, the menu's other pages, and Sign out. In
+ * the sidebar it shows the name and role. In the rail it's just the picture,
+ * so the menu names them. On one of its pages it looks like the current
+ * page's link.
  */
 export function AccountMenu({
   roleLabel,
   name,
   avatarPath,
+  menu,
   compact = false,
-}: Pick<NavUser, "roleLabel" | "name" | "avatarPath"> & { compact?: boolean }) {
+}: Pick<NavUser, "roleLabel" | "name" | "avatarPath"> & { menu: NavItem[]; compact?: boolean }) {
   const { pending, signOut } = useSignOut();
+  const pathname = usePathname();
+  const items = [ACCOUNT, ...menu];
+  const here = items.some((item) => isActive(pathname, item.href));
 
   return (
     <DropdownMenu>
@@ -54,6 +60,7 @@ export function AccountMenu({
         className={cn(
           "flex items-center rounded-md outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent",
           compact ? "size-12 justify-center rounded-full" : "w-full gap-3 p-2 text-left",
+          here && "bg-background shadow-xs ring-1 ring-sidebar-border dark:bg-sidebar-accent",
         )}
       >
         <UserAvatar name={name} path={avatarPath} className={compact ? "size-9" : undefined} />
@@ -77,12 +84,14 @@ export function AccountMenu({
             <DropdownMenuSeparator />
           </>
         )}
-        <DropdownMenuItem asChild className="h-8">
-          <Link href={ACCOUNT.href}>
-            <UserRoundIcon aria-hidden />
-            Account
-          </Link>
-        </DropdownMenuItem>
+        {items.map((item) => (
+          <DropdownMenuItem key={item.href} asChild className="h-8">
+            <Link href={item.href}>
+              <item.icon aria-hidden />
+              {item.label}
+            </Link>
+          </DropdownMenuItem>
+        ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="h-8"
@@ -135,17 +144,10 @@ export function Sidebar(user: NavUser) {
             </li>
           ))}
         </ul>
-        <ul className="mt-auto space-y-0.5 pb-3">
-          {nav.footer.map((item) => (
-            <li key={item.href}>
-              <SidebarLink item={item} pathname={pathname} />
-            </li>
-          ))}
-        </ul>
       </nav>
 
       <div className="border-t border-sidebar-border p-2">
-        <AccountMenu {...user} />
+        <AccountMenu {...user} menu={nav.menu} />
       </div>
     </aside>
   );

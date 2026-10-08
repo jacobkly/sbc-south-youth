@@ -5,6 +5,7 @@ import { MfaDevices } from "@/components/account/mfa-devices";
 import { PasswordForm } from "@/components/account/password-form";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { NarrowPage } from "@/components/nav/app-shell";
+import { ThemePicker } from "@/components/settings/theme-picker";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentUser, getMfaDevices, getSessionAal } from "@/lib/auth/current-user";
 import { financeRoleLabel } from "@/lib/auth/roles";
@@ -49,6 +50,14 @@ export default async function AccountPage() {
         <>
           <Separator />
           <MfaDevices devices={devices} owner={owner} verified={aal === "aal2"} />
+        </>
+      )}
+
+      {/* Everyone else picks it in Settings, which requesters can't open. */}
+      {user.role === "member" && (
+        <>
+          <Separator />
+          <ThemePicker userId={user.id} />
         </>
       )}
 

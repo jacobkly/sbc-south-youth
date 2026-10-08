@@ -60,8 +60,8 @@ export type Nav = {
   more: NavItem[];
   /** The rail and sidebar's list. */
   main: NavItem[];
-  /** Pinned to the bottom of the rail and sidebar. */
-  footer: NavItem[];
+  /** In the account menu, after Account. */
+  menu: NavItem[];
 };
 
 /**
@@ -76,7 +76,7 @@ export function navFor({ role, requester }: Pick<NavUser, "role" | "requester">)
       tabs: [MY_REQUESTS, MY_NEW_REQUEST],
       more: [ACCOUNT],
       main: [MY_REQUESTS],
-      footer: [],
+      menu: [],
     };
   }
 
@@ -89,6 +89,6 @@ export function navFor({ role, requester }: Pick<NavUser, "role" | "requester">)
     tabs: create ? [DASHBOARD, REQUESTS, create, PAYEES] : [DASHBOARD, REQUESTS, PAYEES],
     more: [...mine, INCOME, REPORTS, ACTIVITY, SETTINGS, ACCOUNT].filter(allowed),
     main: [DASHBOARD, REQUESTS, INCOME, PAYEES, REPORTS, ACTIVITY, ...mine].filter(allowed),
-    footer: [SETTINGS],
+    menu: [SETTINGS],
   };
 }

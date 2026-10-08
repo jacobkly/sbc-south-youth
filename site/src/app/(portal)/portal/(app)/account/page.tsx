@@ -3,7 +3,6 @@ import { AccountForm } from "@/components/portal/account/account-form";
 import { AvatarForm } from "@/components/portal/account/avatar-form";
 import { MfaDevices } from "@/components/portal/account/mfa-devices";
 import { PasswordForm } from "@/components/portal/account/password-form";
-import { ThemePicker } from "@/components/portal/account/theme-picker";
 import { SignOutButton } from "@/components/portal/auth/sign-out-button";
 import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Badge } from "@/components/portal/ui/badge";
@@ -50,10 +49,6 @@ export default async function AccountPage() {
 
         <AccountForm userId={user.id} fullName={user.full_name} />
       </fieldset>
-
-      <Separator />
-
-      <ThemePicker userId={readOnly ? null : user.id} />
 
       <Separator />
 

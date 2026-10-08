@@ -61,17 +61,10 @@ export function Rail(user: NavUser) {
             </li>
           ))}
         </ul>
-        <ul className="mt-auto flex flex-col items-center gap-1 pt-4 pb-2">
-          {nav.footer.map((item) => (
-            <li key={item.href}>
-              <RailLink item={item} pathname={pathname} />
-            </li>
-          ))}
-        </ul>
       </nav>
 
       <div className="flex w-full justify-center border-t border-sidebar-border py-2">
-        <AccountMenu {...user} compact />
+        <AccountMenu {...user} menu={nav.menu} compact />
       </div>
     </aside>
   );

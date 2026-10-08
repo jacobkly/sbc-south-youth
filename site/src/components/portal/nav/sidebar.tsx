@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronsUpDownIcon, LogOutIcon, UserRoundIcon } from "lucide-react";
+import { ChevronsUpDownIcon, LogOutIcon } from "lucide-react";
 import { cn } from "cn";
 import { useSignOut } from "@/components/portal/auth/sign-out-button";
 import { AppSwitcher } from "@/components/portal/nav/app-switcher";
@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/portal/ui/dropdown-menu";
-import { ACCOUNT, allowedFor, isActive, MAIN_ITEMS, type NavItem, type NavUser } from "@/lib/portal/nav-items";
+import { ACCOUNT, allowedFor, isActive, MAIN_ITEMS, SETTINGS, type NavItem, type NavUser } from "@/lib/portal/nav-items";
 import { roleSummary } from "@/lib/portal/roles";
 
 /** How a sidebar or rail link looks when hovered, focused, or showing the current page. */
@@ -38,13 +38,15 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 /**
- * The signed-in person, with Account and Sign out. In the sidebar it shows
- * the name and roles. In the rail it's just the picture, so the menu names
- * them.
+ * The signed-in person, with Account, Settings, and Sign out. In the sidebar
+ * it shows the name and roles. In the rail it's just the picture, so the menu
+ * names them. On Account or Settings it looks like the current page's link.
  */
 export function AccountMenu({ roles, name, avatarPath, compact = false }: NavUser & { compact?: boolean }) {
   const { pending, signOut } = useSignOut();
+  const pathname = usePathname();
   const summary = roleSummary(roles);
+  const here = [ACCOUNT, SETTINGS].some((item) => isActive(pathname, item));
 
   return (
     <DropdownMenu>
@@ -53,6 +55,7 @@ export function AccountMenu({ roles, name, avatarPath, compact = false }: NavUse
         className={cn(
           "flex items-center rounded-md outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent",
           compact ? "size-12 justify-center rounded-full" : "w-full gap-3 p-2 text-left",
+          here && "bg-background shadow-xs ring-1 ring-sidebar-border dark:bg-sidebar-accent",
         )}
       >
         <UserAvatar name={name} path={avatarPath} className={compact ? "size-9" : undefined} />
@@ -76,12 +79,14 @@ export function AccountMenu({ roles, name, avatarPath, compact = false }: NavUse
             <DropdownMenuSeparator />
           </>
         )}
-        <DropdownMenuItem asChild className="h-8">
-          <Link href={ACCOUNT.href}>
-            <UserRoundIcon aria-hidden />
-            Account
-          </Link>
-        </DropdownMenuItem>
+        {[ACCOUNT, SETTINGS].map((item) => (
+          <DropdownMenuItem key={item.href} asChild className="h-8">
+            <Link href={item.href}>
+              <item.icon aria-hidden />
+              {item.label}
+            </Link>
+          </DropdownMenuItem>
+        ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="h-8"

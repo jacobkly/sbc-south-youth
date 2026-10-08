@@ -23,7 +23,7 @@ describe("navFor", () => {
     expect(nav.tabs).toEqual([DASHBOARD, REQUESTS, NEW_REQUEST, PAYEES]);
     expect(nav.more).toEqual([INCOME, REPORTS, ACTIVITY, SETTINGS, ACCOUNT]);
     expect(nav.main).toEqual([DASHBOARD, REQUESTS, INCOME, PAYEES, REPORTS, ACTIVITY]);
-    expect(nav.footer).toEqual([SETTINGS]);
+    expect(nav.menu).toEqual([SETTINGS]);
   });
 
   it("hides the admin-only pages from viewers", () => {
@@ -32,6 +32,7 @@ describe("navFor", () => {
     expect(nav.tabs).toEqual([DASHBOARD, REQUESTS, PAYEES]);
     expect(nav.more).toEqual([INCOME, REPORTS, SETTINGS, ACCOUNT]);
     expect(nav.main).toEqual([DASHBOARD, REQUESTS, INCOME, PAYEES, REPORTS]);
+    expect(nav.menu).toEqual([SETTINGS]);
   });
 
   it("gives a viewer who also requests their own requests, and a new one of their own", () => {
@@ -56,7 +57,7 @@ describe("navFor", () => {
     expect(nav.tabs).toEqual([MY_REQUESTS, MY_NEW_REQUEST]);
     expect(nav.more).toEqual([ACCOUNT]);
     expect(nav.main).toEqual([MY_REQUESTS]);
-    expect(nav.footer).toEqual([]);
+    expect(nav.menu).toEqual([]);
   });
 });
 

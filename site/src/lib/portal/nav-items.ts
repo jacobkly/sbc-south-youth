@@ -5,6 +5,7 @@ import {
   ImagesIcon,
   InboxIcon,
   MailIcon,
+  SettingsIcon,
   Tally5Icon,
   UserRoundIcon,
   UsersIcon,
@@ -52,9 +53,10 @@ export const ACTIVITY: NavItem = {
 };
 export const PEOPLE: NavItem = { href: "/people", label: "People", icon: UsersIcon, roles: ["owner"] };
 export const EMAIL: NavItem = { href: "/email", label: "Email", icon: MailIcon, roles: ["owner"] };
+export const SETTINGS: NavItem = { href: "/settings", label: "Settings", icon: SettingsIcon };
 export const ACCOUNT: NavItem = { href: "/account", label: "Account", icon: UserRoundIcon };
 
-/** The portal's sections, in order. Account sits apart, at the end. */
+/** The portal's sections, in order. Settings and Account sit apart, in the account menu or More. */
 export const MAIN_ITEMS: NavItem[] = [HOME, POSTS, PHOTOS, MESSAGES, ATTENDANCE, ACTIVITY, PEOPLE, EMAIL];
 
 /** Whether a nav item is the current page or the section it's in. */
@@ -71,7 +73,7 @@ export function allowedFor(roles: readonly AppRole[]) {
 /** The tab bar fits four sections beside More. */
 const TAB_COUNT = 4;
 
-/** A phone's tab bar: the first sections as tabs, and the rest under More with Account. */
+/** A phone's tab bar: the first sections as tabs, and the rest under More with Settings and Account. */
 export function splitForTabBar(items: NavItem[]): { tabs: NavItem[]; more: NavItem[] } {
-  return { tabs: items.slice(0, TAB_COUNT), more: [...items.slice(TAB_COUNT), ACCOUNT] };
+  return { tabs: items.slice(0, TAB_COUNT), more: [...items.slice(TAB_COUNT), SETTINGS, ACCOUNT] };
 }

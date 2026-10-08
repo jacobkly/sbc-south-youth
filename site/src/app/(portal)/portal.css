@@ -29,6 +29,9 @@
    keyboard is up. */
 @custom-variant typing (body:has(:is(textarea, input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"])):focus) &);
 
+/* installed: opened from the home screen, full screen with no browser buttons. */
+@custom-variant installed (@media (display-mode: standalone));
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: var(--font-sans);

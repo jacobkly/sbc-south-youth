@@ -12,11 +12,12 @@ import {
   PEOPLE,
   PHOTOS,
   POSTS,
+  SETTINGS,
   splitForTabBar,
   type NavItem,
 } from "./nav-items";
 
-const EVERY_ITEM = [HOME, POSTS, PHOTOS, MESSAGES, ATTENDANCE, ACTIVITY, PEOPLE, EMAIL, ACCOUNT];
+const EVERY_ITEM = [HOME, POSTS, PHOTOS, MESSAGES, ATTENDANCE, ACTIVITY, PEOPLE, EMAIL, SETTINGS, ACCOUNT];
 const labels = (items: NavItem[]) => items.map((item) => item.label);
 
 describe("allowedFor", () => {
@@ -30,15 +31,17 @@ describe("allowedFor", () => {
       "Posts",
       "Photos",
       "Activity",
+      "Settings",
       "Account",
     ]);
   });
 
-  it("shows the messages role only messages, past Home and Account", () => {
+  it("shows the messages role only messages, past Home, Settings, and Account", () => {
     expect(labels(EVERY_ITEM.filter(allowedFor(["site_messages"])))).toEqual([
       "Home",
       "Messages",
       "Activity",
+      "Settings",
       "Account",
     ]);
   });
@@ -50,21 +53,28 @@ describe("allowedFor", () => {
       "Photos",
       "Messages",
       "Activity",
+      "Settings",
       "Account",
     ]);
   });
 
-  it("shows a finance viewer Home, Attendance, Activity, and Account", () => {
+  it("shows a finance viewer Home, Attendance, Activity, Settings, and Account", () => {
     expect(labels(EVERY_ITEM.filter(allowedFor(["finance_viewer"])))).toEqual([
       "Home",
       "Attendance",
       "Activity",
+      "Settings",
       "Account",
     ]);
   });
 
-  it("shows the Attendance role only Attendance, past Home and Account", () => {
-    expect(labels(EVERY_ITEM.filter(allowedFor(["attendance"])))).toEqual(["Home", "Attendance", "Account"]);
+  it("shows the Attendance role only Attendance, past Home, Settings, and Account", () => {
+    expect(labels(EVERY_ITEM.filter(allowedFor(["attendance"])))).toEqual([
+      "Home",
+      "Attendance",
+      "Settings",
+      "Account",
+    ]);
   });
 });
 
@@ -91,16 +101,16 @@ describe("isActive", () => {
 });
 
 describe("splitForTabBar", () => {
-  it("puts up to four sections in the tab bar and the rest under More, before Account", () => {
+  it("puts up to four sections in the tab bar and the rest under More, before Settings and Account", () => {
     const { tabs, more } = splitForTabBar([HOME, POSTS, PHOTOS, MESSAGES, ACTIVITY, PEOPLE, EMAIL]);
     expect(labels(tabs)).toEqual(["Home", "Posts", "Photos", "Messages"]);
-    expect(labels(more)).toEqual(["Activity", "People", "Email", "Account"]);
+    expect(labels(more)).toEqual(["Activity", "People", "Email", "Settings", "Account"]);
   });
 
   it("keeps every section in the tab bar when they fit", () => {
     const { tabs, more } = splitForTabBar([HOME, MESSAGES]);
     expect(labels(tabs)).toEqual(["Home", "Messages"]);
-    expect(labels(more)).toEqual(["Account"]);
+    expect(labels(more)).toEqual(["Settings", "Account"]);
   });
 });
 
