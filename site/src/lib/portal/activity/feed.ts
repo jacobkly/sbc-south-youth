@@ -341,6 +341,13 @@ const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
     // The night names the item already, so it shows only when it moves.
     { field: "night", label: "Night", format: formatNight, isStartingValue: () => true },
     { field: "total", label: "Count", format: (value) => String(value ?? "None"), isStartingValue: () => false },
+    { field: "note", label: "Note", format: formatText, isStartingValue: (value) => value == null },
+    {
+      field: "combined",
+      label: "Combined event",
+      format: (value) => (value === true ? "Yes" : "No"),
+      isStartingValue: (value) => value !== true,
+    },
   ],
   message: [
     {

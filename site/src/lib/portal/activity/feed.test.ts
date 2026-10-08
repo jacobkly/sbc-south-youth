@@ -597,6 +597,30 @@ describe("headcounts", () => {
     ]);
   });
 
+  it("shows a note and a combined event only when there is one, and any change to them", () => {
+    const plain = {
+      night: { from: null, to: "2026-09-25" },
+      total: { from: null, to: 45 },
+      note: { from: null, to: null },
+      combined: { from: null, to: false },
+    };
+    expect(eventChanges(headcount({ action: "headcount.created", changes: plain }))).toEqual([
+      { label: "Count", from: null, to: "45" },
+    ]);
+    const joint = { ...plain, total: { from: null, to: 120 }, note: { from: null, to: "Joint night" } };
+    const added = { ...joint, combined: { from: null, to: true } };
+    expect(eventChanges(headcount({ action: "headcount.created", changes: added }))).toEqual([
+      { label: "Count", from: null, to: "120" },
+      { label: "Note", from: null, to: "Joint night" },
+      { label: "Combined event", from: null, to: "Yes" },
+    ]);
+    const marked = { note: { from: null, to: "Rainy night" }, combined: { from: true, to: false } };
+    expect(eventChanges(headcount({ action: "headcount.updated", changes: marked }))).toEqual([
+      { label: "Note", from: "None", to: "Rainy night" },
+      { label: "Combined event", from: "Yes", to: "No" },
+    ]);
+  });
+
   it("names the night it's for, with no link", () => {
     const [entry] = buildActivityDays([headcount({ action: "headcount.created" })], context())[0].entries;
     expect(entry).toMatchObject({ title: "Headcount added", subject: "Fri, Sep 25", scope: "site", link: null });

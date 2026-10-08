@@ -9,7 +9,7 @@ import type { Headcount } from "./headcount";
  * anyone else gets nothing.
  */
 
-const COLUMNS = "id, night, total";
+const COLUMNS = "id, night, total, note, combined";
 
 /** Every night's count, newest first, or only the newest few. A year of Fridays is about 50. */
 export async function loadHeadcounts(limit?: number): Promise<Headcount[]> {

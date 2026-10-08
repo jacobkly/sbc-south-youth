@@ -14,14 +14,14 @@ import {
   type HeadcountErrors,
   type HeadcountValues,
 } from "@/lib/portal/attendance/headcount";
-import { focusFirstError, HeadcountFields } from "./headcount-fields";
+import { focusFirstError, HeadcountFields, type HeadcountChange } from "./headcount-fields";
 
 const PREFIX = "headcount-edit";
 const OFFLINE = "Couldn't reach the portal. Check your connection and try again.";
 
 /**
- * One night's count, opened from the list: its night and total to fix, and
- * a second step to remove it. Closing waits for a save or removal that's
+ * One night's count, opened from the list: its night, total, note, and mark
+ * to fix, and a second step to remove it. Closing waits for a save or removal that's
  * halfway through.
  */
 export function HeadcountEditor({
@@ -40,17 +40,26 @@ export function HeadcountEditor({
   onDone: (message: string) => void;
 }) {
   const [step, setStep] = useState<"edit" | "remove">("edit");
-  const [values, setValues] = useState<HeadcountValues>({ night: count.night, total: String(count.total) });
+  const [values, setValues] = useState<HeadcountValues>({
+    night: count.night,
+    total: String(count.total),
+    note: count.note ?? "",
+    combined: count.combined,
+  });
   const [errors, setErrors] = useState<HeadcountErrors>({});
   const [error, setError] = useState<string | null>(null);
   const night = formatWeekdayDate(count.night, today);
-  const changed = values.night !== count.night || values.total.trim().replace(/,/g, "") !== String(count.total);
+  const changed =
+    values.night !== count.night ||
+    values.total.trim().replace(/,/g, "") !== String(count.total) ||
+    values.note.trim() !== (count.note ?? "") ||
+    values.combined !== count.combined;
 
-  function change(field: keyof HeadcountValues, value: string) {
+  const change: HeadcountChange = (field, value) => {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setError(null);
-  }
+  };
 
   function showErrors(found: HeadcountErrors) {
     setErrors(found);
@@ -143,7 +152,7 @@ export function HeadcountEditor({
     <>
       <SheetHeader className="pr-12">
         <SheetTitle>{night}</SheetTitle>
-        <SheetDescription>Fix the night or how many came.</SheetDescription>
+        <SheetDescription>Fix the night, how many came, or what was different about it.</SheetDescription>
       </SheetHeader>
 
       <form

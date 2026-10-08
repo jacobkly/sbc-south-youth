@@ -47,7 +47,7 @@ Each person can hold several roles. Owner counts as all of them.
 | Requester | Submit their own reimbursements in finances and see only their own requests |
 | Site editor | Post heads-ups and events, and add, place, and take down photos |
 | Messages | Read and handle messages from the site's forms |
-| Attendance | Enter how many came to youth each week and fix a count that's off |
+| Attendance | Enter how many came to youth each week, note a night that was different, and fix a count that's off |
 
 The database enforces every role with row-level security, so hiding a button is never what keeps someone out.
 

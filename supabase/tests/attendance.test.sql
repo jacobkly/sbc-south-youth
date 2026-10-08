@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(36);
+select plan(42);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-4000-8000-00000000a701', 'usher@example.test', '{"full_name": "Test Usher"}'),
@@ -126,6 +126,20 @@ select throws_ok(
 );
 
 select throws_ok(
+  $$ insert into public.headcounts (night, total, note) values ('2026-09-18', 30, repeat('a', 201)) $$,
+  '23514',
+  null,
+  'a note is at most 200 characters'
+);
+
+select throws_ok(
+  $$ insert into public.headcounts (night, total, note) values ('2026-09-18', 30, ' Rainy night ') $$,
+  '23514',
+  null,
+  'a note is saved trimmed, and a blank one is left empty'
+);
+
+select throws_ok(
   $$ insert into public.headcounts (night, total, created_by)
      values ('2026-09-18', 30, '00000000-0000-4000-8000-00000000a702') $$,
   '42501',
@@ -150,14 +164,17 @@ select results_eq(
      order by action, entity_name $$,
   $$ values
        ('headcount.created', '2026-09-25',
-        '{"night": {"from": null, "to": "2026-09-25"}, "total": {"from": null, "to": 40}}'::jsonb),
+        '{"night": {"from": null, "to": "2026-09-25"}, "total": {"from": null, "to": 40},
+          "note": {"from": null, "to": null}, "combined": {"from": null, "to": false}}'::jsonb),
        ('headcount.created', '2026-10-02',
-        '{"night": {"from": null, "to": "2026-10-02"}, "total": {"from": null, "to": 45}}'::jsonb),
+        '{"night": {"from": null, "to": "2026-10-02"}, "total": {"from": null, "to": 45},
+          "note": {"from": null, "to": null}, "combined": {"from": null, "to": false}}'::jsonb),
        ('headcount.deleted', '2026-10-03',
-        '{"night": {"from": "2026-10-03", "to": null}, "total": {"from": 47, "to": null}}'::jsonb),
+        '{"night": {"from": "2026-10-03", "to": null}, "total": {"from": 47, "to": null},
+          "note": {"from": null, "to": null}, "combined": {"from": false, "to": null}}'::jsonb),
        ('headcount.updated', '2026-10-02', '{"total": {"from": 45, "to": 47}}'::jsonb),
        ('headcount.updated', '2026-10-03', '{"night": {"from": "2026-10-02", "to": "2026-10-03"}}'::jsonb) $$,
-  'each change is logged with only the night and the total'
+  'each change is logged with only the night, the total, the note, and the mark'
 );
 
 select is_empty(
@@ -244,13 +261,37 @@ select is(
 );
 
 select lives_ok(
+  $$ insert into public.headcounts (night, total, note, combined)
+     values ('2026-09-11', 120, 'Joint night with another group', true) $$,
+  'an owner adds a combined event with a note'
+);
+
+select lives_ok(
+  $$ update public.headcounts set note = 'Rainy night' where night = '2026-09-25' $$,
+  'an owner adds a note to someone else''s headcount'
+);
+
+select is(
+  (select updated_by from public.headcounts where night = '2026-09-25'),
+  '00000000-0000-4000-8000-00000000a702'::uuid,
+  'changing only the note names who changed it'
+);
+
+select is(
+  (select changes from public.activity_log
+   where entity_type = 'headcount' and entity_name = '2026-09-25' and action = 'headcount.updated'),
+  '{"note": {"from": null, "to": "Rainy night"}}'::jsonb,
+  'a note on its own is logged'
+);
+
+select lives_ok(
   $$ update public.headcounts set total = 41 where night = '2026-09-25' $$,
   'an owner fixes someone else''s headcount'
 );
 
 select is(
   (select count(*)::int from public.activity_log where entity_type = 'headcount'),
-  7,
+  9,
   'an owner sees every headcount change'
 );
 

@@ -274,28 +274,34 @@ export type Database = {
       }
       headcounts: {
         Row: {
+          combined: boolean
           created_at: string
           created_by: string | null
           id: string
           night: string
+          note: string | null
           total: number
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          combined?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
           night: string
+          note?: string | null
           total: number
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          combined?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
           night?: string
+          note?: string | null
           total?: number
           updated_at?: string
           updated_by?: string | null

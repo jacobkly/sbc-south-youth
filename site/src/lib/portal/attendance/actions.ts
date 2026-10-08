@@ -62,7 +62,7 @@ export async function saveHeadcount(id: string | null, values: HeadcountValues):
 
   refresh();
   if (!data) return failed(GONE);
-  return { status: "done", message: savedMessage(plan.row, existing !== null, today) };
+  return { status: "done", message: savedMessage(plan.row, existing, today) };
 }
 
 /** Removes a night's count, for one entered by mistake. Activity keeps what it was. */

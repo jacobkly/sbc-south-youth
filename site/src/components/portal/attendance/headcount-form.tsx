@@ -13,7 +13,7 @@ import {
   type HeadcountErrors,
   type HeadcountValues,
 } from "@/lib/portal/attendance/headcount";
-import { focusFirstError, HeadcountFields } from "./headcount-fields";
+import { focusFirstError, HeadcountFields, type HeadcountChange } from "./headcount-fields";
 
 const PREFIX = "headcount";
 const OFFLINE = "Couldn't reach the portal. Check your connection and try again.";
@@ -39,17 +39,19 @@ export function HeadcountForm({
       counts.map(({ night }) => night),
     ),
     total: "",
+    note: "",
+    combined: false,
   }));
   const [errors, setErrors] = useState<HeadcountErrors>({});
   const [message, setMessage] = useState<{ kind: "saved" | "error"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const counted = countedHint(values.night, counts, today);
 
-  function change(field: keyof HeadcountValues, value: string) {
+  const change: HeadcountChange = (field, value) => {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setMessage(null);
-  }
+  };
 
   function showErrors(found: HeadcountErrors) {
     setErrors(found);
@@ -62,7 +64,7 @@ export function HeadcountForm({
     const found: HeadcountErrors = check.ok ? {} : { ...check.errors };
     // A night has one count, so a second is a fix to the first.
     if (!found.night && counted) found.night = counted;
-    if (found.night || found.total) {
+    if (found.night || found.total || found.note) {
       showErrors(found);
       return;
     }
@@ -83,7 +85,8 @@ export function HeadcountForm({
         return;
       }
       const saved = values.night.trim();
-      setValues({ night: suggestedNight(today, [...counts.map(({ night }) => night), saved]), total: "" });
+      const next = suggestedNight(today, [...counts.map(({ night }) => night), saved]);
+      setValues({ night: next, total: "", note: "", combined: false });
       setMessage({ kind: "saved", text: result.message });
       // Ready for the next night's number.
       document.getElementById(`${PREFIX}-total`)?.focus();

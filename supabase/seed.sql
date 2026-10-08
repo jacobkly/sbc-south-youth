@@ -274,20 +274,30 @@ cross join (values
 select set_config('request.jwt.claims', '', false);
 
 -- Seven Fridays of headcounts before the latest one in Los Angeles time,
--- which is left for the usher to add. Entered as the usher, so Activity
--- names them.
+-- which is left for the usher to add: one with a note, and one a combined
+-- event that the average and the most leave out. Entered as the usher, so
+-- Activity names them.
 select set_config(
   'request.jwt.claims', '{"sub": "00000000-0000-4000-8000-5eed0000a005", "role": "authenticated"}', false
 );
 
-insert into public.headcounts (night, total)
-select f.latest - 7 * h.weeks_back, h.total
+insert into public.headcounts (night, total, note, combined)
+select f.latest - 7 * h.weeks_back, h.total, h.note, h.combined
 from (
   -- isodow runs Monday 1 to Sunday 7, so this counts back to Friday.
   select (now() at time zone 'America/Los_Angeles')::date
     - (extract(isodow from now() at time zone 'America/Los_Angeles')::int + 2) % 7 as latest
 ) as f
-cross join (values (1, 48), (2, 52), (3, 41), (4, 45), (5, 39), (6, 44), (7, 36)) as h (weeks_back, total);
+cross join (
+  values
+    (1, 48, null, false),
+    (2, 52, null, false),
+    (3, 41, 'Rainy night', false),
+    (4, 96, 'Joint night with another group', true),
+    (5, 39, null, false),
+    (6, 44, null, false),
+    (7, 36, null, false)
+) as h (weeks_back, total, note, combined);
 
 select set_config('request.jwt.claims', '', false);
 

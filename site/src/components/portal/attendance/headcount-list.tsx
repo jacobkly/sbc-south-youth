@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ChevronRightIcon, CircleCheckIcon } from "lucide-react";
+import { Badge } from "@/components/portal/ui/badge";
 import { ResponsiveSheetContent } from "@/components/portal/ui/responsive-sheet";
 import { Sheet } from "@/components/portal/ui/sheet";
 import { formatWeekdayDate, type IsoDate } from "@/lib/dates";
@@ -15,7 +16,13 @@ const ROW =
 function Night({ count, today }: { count: Headcount; today: IsoDate }) {
   return (
     <>
-      <span className="min-w-0 flex-1 font-medium">{formatWeekdayDate(count.night, today)}</span>
+      <span className="min-w-0 flex-1 space-y-0.5">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-medium">{formatWeekdayDate(count.night, today)}</span>
+          {count.combined && <Badge variant="secondary">Combined event</Badge>}
+        </span>
+        {count.note && <span className="block text-sm break-words text-muted-foreground">{count.note}</span>}
+      </span>
       <span className="text-lg font-semibold tabular-nums">
         {count.total}
         <span className="sr-only"> came</span>
