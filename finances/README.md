@@ -21,7 +21,7 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 
 The Supabase project lives in [`supabase/`](../supabase/) at the repo root, since the site and its leader portal share it. Run the Supabase CLI from the repo root after `npm install` there. See the root [README](../README.md#database) for the commands.
 
-For local development, either put a hosted project's URL and publishable key in `.env.local`, or run the local stack with Docker Desktop and use the values from `npx supabase status`.
+For local development, `.env.local` can hold the hosted project's URL and publishable key, so you sign in as yourself to the real data. For the local stack and the seed's fake people, run it with Docker Desktop, put the values from `npx supabase status` in `.env.test.local`, and start the app with `npm run dev:local`. It uses that file in place of `.env.local`, and won't start with a Supabase address off this computer or network.
 
 The local stack loads [`supabase/seed.sql`](../supabase/seed.sql) on `npx supabase db reset`: fake people for each kind of access (an owner, a finance viewer, a requester, and a site-only leader), payees, and requests in every status. Its header comment has the local sign-ins.
 
@@ -39,7 +39,7 @@ The dev server also listens on your network, so a phone on the same Wi-Fi can op
 2. On Windows, allow Node.js on private networks when the firewall asks. If you dismissed the prompt, allow it under Windows Security > Firewall > Allow an app.
 3. Open the Network URL on the phone and sign in with your email and password.
 
-With the local stack, the phone also needs to reach Supabase. Set `NEXT_PUBLIC_SUPABASE_URL` in `.env.local` to `http://<LAN address>:54321` instead of `127.0.0.1`, and restart `npm run dev`.
+With the local stack, the phone also needs to reach Supabase. Set `NEXT_PUBLIC_SUPABASE_URL` in `.env.test.local` to `http://<LAN address>:54321` instead of `127.0.0.1`, and restart `npm run dev:local`.
 
 Sign-in doesn't use redirects, but links in emails (such as invites) return through `/auth/callback`. To follow one on the phone, first add the Network URL with `/**` on the end to the allowed redirect URLs:
 
@@ -53,6 +53,7 @@ The LAN address can change when the router reassigns it. If the phone stops conn
 | Command | What it does |
 |---|---|
 | `npm run dev` | Start the dev server |
+| `npm run dev:local` | Start it against the local stack, with `.env.test.local` |
 | `npm run build` | Production build |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run the TypeScript compiler without emitting files |

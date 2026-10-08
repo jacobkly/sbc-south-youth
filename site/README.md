@@ -17,10 +17,13 @@ npm run dev
 
 The public site runs at [http://localhost:3001](http://localhost:3001), so it can run next to the finances app on port 3000. The portal runs at [http://portal.localhost:3001](http://portal.localhost:3001). Browsers send any `*.localhost` name to your own computer, so no hosts file change is needed.
 
+`.env.local` can point at the hosted project, so you sign in as yourself. That's the real data, so the hosted project needs the code's migrations first, and `APP_ENV=staging` keeps the portal read-only. For the local stack and the seed's fake people, put its values in `.env.test.local` and run `npm run dev:local`. It uses that file in place of `.env.local`, and won't start with a Supabase address off this computer or network.
+
 ## Commands
 
 ```bash
 npm run dev
+npm run dev:local      # against the local stack, with .env.test.local
 npm run lint
 npm run typecheck      # generates Next's route types first, then runs tsc
 npm test               # Vitest unit tests (src/**/*.test.ts)
@@ -52,7 +55,7 @@ The Visit, Join, Serve, and Contact forms check their answers on the page and ag
 - **Keeping:** handled messages are deleted after 12 months and spam after 30 days. Open messages stay until someone handles them.
 - **Security headers:** every public page lets Turnstile's script and frame load from `https://challenges.cloudflare.com`, because a link can open a form page without a reload, and the first page's policy stays in force. The portal host never allows it.
 
-To try the forms locally, put Cloudflare's test keys from `.env.example` in `.env.local`, set `FORM_IP_SALT` and `YOUTH_INBOX_EMAIL`, and turn on local email (see below). Alerts then land in Mailpit.
+To try the forms locally, put Cloudflare's test keys from `.env.example` in `.env.test.local`, set `FORM_IP_SALT` and `YOUTH_INBOX_EMAIL`, and turn on local email (see below). Alerts then land in Mailpit.
 
 ## Photos
 
@@ -137,8 +140,8 @@ Added to a phone's home screen, the portal opens full screen as "Youth Portal", 
 ### Run it locally
 
 1. From the repo root, start the local stack with `npx supabase start`, then load the fake data with `npx supabase db reset`.
-2. Fill in `.env.local` with the API URL, publishable key, and secret key from `npx supabase status`.
-3. Run `npm run dev` and open [http://portal.localhost:3001](http://portal.localhost:3001). The header of `supabase/seed.sql` lists the fake people and their password.
+2. Fill in `.env.test.local` with the API URL, publishable key, and secret key from `npx supabase status`.
+3. Run `npm run dev:local` and open [http://portal.localhost:3001](http://portal.localhost:3001). The header of `supabase/seed.sql` lists the fake people and their password.
 
 For local email, set `EMAIL_FROM` and `EMAIL_LOCAL_INBOX=http://127.0.0.1:54324`. Emails then land in Mailpit at [http://localhost:54324](http://localhost:54324) instead of going through Resend. Set `EMAIL_DRAIN_SECRET` to the `email_drain_secret` in the seed, so the local database can ask the portal to send what it queues.
 

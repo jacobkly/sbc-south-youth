@@ -23,6 +23,7 @@ Run these from `finances/`:
 
 ```bash
 npm run dev            # dev server at http://localhost:3000
+npm run dev:local      # the same against the local stack, with .env.test.local
 npm run lint
 npm run typecheck
 npm test               # Vitest unit tests (src/**/*.test.ts)
@@ -30,6 +31,8 @@ npm run build
 ```
 
 `site/` has the same scripts. Its dev server runs at http://localhost:3001 and the portal at http://portal.localhost:3001. Its `typecheck` runs `next typegen` first, so route types exist before `tsc`.
+
+In both apps, `.env.local` may hold the hosted project's keys, so the maintainer signs in with their own account. Claude runs only `npm run dev:local`, which takes the local stack's values from `.env.test.local` and won't start against a hosted address, and never reads `.env.local`.
 
 Run these from the repo root, where the Supabase CLI is installed:
 
