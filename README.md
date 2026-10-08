@@ -89,6 +89,7 @@ The seed adds fake people for each kind of access. Its header comment lists them
 
 | Job | When (UTC) | What it does |
 | --- | --- | --- |
+| `email-storage-warning` | 14:50 | Emails owners once a month when stored files reach 80% of the free plan's 1 GB, and again at 95%, where new site photos stop |
 | `email-quota-warning` | 14:55 | Emails owners once a month when the last 31 days pass 2,400 of Resend's 3,000 emails |
 | `email-daily-digest` | 15:00 | Asks the portal to send anything still in the email queue, and to send the form inbox one email listing the messages whose alerts never went |
 | `prune-old-activity` | 10:00 | Deletes site and people activity older than two years. Finance history stays |

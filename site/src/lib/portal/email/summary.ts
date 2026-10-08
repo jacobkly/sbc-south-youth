@@ -58,6 +58,8 @@ const TEMPLATE_LABELS: Record<string, string> = {
   "form-alert": "Form alerts",
   "daily-digest": "Daily digest",
   "quota-warning": "Quota warnings",
+  "storage-warning": "Storage warnings",
+  "storage-full": "Storage nearly full",
 };
 
 /** A template's name for people, or its own name if it's new. */

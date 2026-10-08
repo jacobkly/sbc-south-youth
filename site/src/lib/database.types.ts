@@ -1284,6 +1284,7 @@ export type Database = {
         }[]
       }
       queue_quota_warning: { Args: never; Returns: number }
+      queue_storage_warning: { Args: never; Returns: number }
       record_as_paid: {
         Args: {
           p_external_approver?: string

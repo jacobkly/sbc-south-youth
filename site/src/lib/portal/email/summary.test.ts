@@ -181,6 +181,8 @@ describe("templateLabel", () => {
         "form-alert",
         "daily-digest",
         "quota-warning",
+        "storage-warning",
+        "storage-full",
       ].map(templateLabel),
     ).toEqual([
       "Sign-in codes",
@@ -193,6 +195,8 @@ describe("templateLabel", () => {
       "Form alerts",
       "Daily digest",
       "Quota warnings",
+      "Storage warnings",
+      "Storage nearly full",
     ]);
   });
 

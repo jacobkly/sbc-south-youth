@@ -34,8 +34,10 @@ const LEVEL_TEXT: Record<UsageLevel, string> = {
 type Notes = { warning: string; critical: string; full: string };
 
 const FILE_NOTES: Notes = {
-  warning: "Files are over 80% of the free plan. Receipts and site photos share this space.",
-  critical: "Files are nearly full. Past 1 GB, the free plan may limit uploads in both apps.",
+  warning:
+    "Files are over 80% of the free plan. Receipts, site photos, and profile pictures share this space, " +
+    "and new site photos stop at 95%.",
+  critical: "Files are nearly full, so new site photos have stopped. Past 1 GB, uploads may be limited in both apps.",
   full: "Files are past the free plan's 1 GB, which may limit uploads in both apps.",
 };
 

@@ -114,6 +114,7 @@ Everything the apps send goes through `public.email_log`, which is also the outb
 - **Email screen:** owners see both limits as meters with what they're holding back, what each kind of email sent with any that bounced, failed, or were skipped, the newest failures, bounces, and spam reports, and the blocked addresses. `public.email_summary()` returns counts only, never an address or a subject, and `src/lib/portal/email/summary.ts` turns them into what the screen says. It mirrors `email_reserve()`'s caps, so change both together.
 - **Blocked addresses:** an address that bounced or was marked as spam gets nothing more. An owner can unblock one once it's fixed, which runs `email_unsuppress()` as them.
 - **Warnings:** an owner's Home shows a card once either limit passes 80%. Each morning, `public.queue_quota_warning()` emails every owner once the last 31 days pass 2,400, at most once a calendar month in Los Angeles time.
+- **Storage:** receipts, site photos, and profile pictures share the free plan's 1 GB of files. Each morning, `public.queue_storage_warning()` emails every owner once they reach 80%, at most once a calendar month, and again at 95%, where new site photos stop so receipts keep room. Home's storage bar shows the same percent.
 
 ### Errors
 

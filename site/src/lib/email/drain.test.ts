@@ -252,6 +252,43 @@ describe("drainEmails", () => {
     expect(sent[0].html).toContain('href="https://portal.example.test/email"');
   });
 
+  it("warns owners that files pass 80% with the percent in its subject, and links to Home", async () => {
+    const email = queued("001", {
+      template: "storage-warning",
+      subject: "File storage is 82% full",
+      related_type: null,
+      related_id: null,
+    });
+    const { deps, sent } = fakes([email], {});
+
+    await drainEmails(deps);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].subject).toBe("File storage is 82% full");
+    expect(sent[0].text).toContain("File storage is 82% full");
+    expect(sent[0].text).toContain("Receipts, site photos, and profile pictures share");
+    expect(sent[0].text).toContain("At 95%, new site photos stop");
+    expect(sent[0].html).toContain('href="https://portal.example.test/"');
+  });
+
+  it("tells owners when files are nearly full and new site photos have stopped", async () => {
+    const email = queued("001", {
+      template: "storage-full",
+      subject: "File storage is 96% full",
+      related_type: null,
+      related_id: null,
+    });
+    const { deps, sent } = fakes([email], {});
+
+    await drainEmails(deps);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].subject).toBe("File storage is 96% full");
+    expect(sent[0].text).toContain("New site photos have stopped");
+    expect(sent[0].text).not.toContain("At 95%, new site photos stop");
+    expect(sent[0].html).toContain('href="https://portal.example.test/"');
+  });
+
   describe("form alerts", () => {
     const alert = (subject: string) =>
       queued("001", {

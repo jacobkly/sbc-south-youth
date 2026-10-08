@@ -23,6 +23,7 @@ import { quotaWarningEmail } from "./templates/quota-warning";
 import { requestPaidEmail } from "./templates/request-paid";
 import { requestReturnedEmail } from "./templates/request-returned";
 import { requestSubmittedEmail } from "./templates/request-submitted";
+import { storageWarningEmail } from "./templates/storage-warning";
 
 /**
  * The outbox drain. The database queues finance, owner, and form emails
@@ -169,6 +170,13 @@ const TEMPLATES: Record<string, (email: Addressed, details: unknown, links: Drai
   // Its subject carries the month's count, so it needs no details.
   "quota-warning": (email, _details, { portalUrl }) => ({
     body: quotaWarningEmail({ subject: email.subject, url: `${portalUrl}/email` }),
+  }),
+  // Their subjects carry the percent, so they need no details.
+  "storage-warning": (email, _details, { portalUrl }) => ({
+    body: storageWarningEmail({ subject: email.subject, level: "warning", url: `${portalUrl}/` }),
+  }),
+  "storage-full": (email, _details, { portalUrl }) => ({
+    body: storageWarningEmail({ subject: email.subject, level: "full", url: `${portalUrl}/` }),
   }),
   "form-alert": (email, details, { portalUrl }) => {
     const parsed = messageDetails.safeParse(details);
