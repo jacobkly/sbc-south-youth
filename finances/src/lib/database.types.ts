@@ -1036,6 +1036,7 @@ export type Database = {
         | "finance_requester"
         | "site_editor"
         | "site_messages"
+        | "attendance"
       income_method: "cash_app" | "zelle" | "cash"
       payment_method: "cash_app" | "bank_transfer" | "check" | "cash" | "other"
       reimbursement_type: "cafe" | "youth"
@@ -1185,6 +1186,7 @@ export const Constants = {
         "finance_requester",
         "site_editor",
         "site_messages",
+        "attendance",
       ],
       income_method: ["cash_app", "zelle", "cash"],
       payment_method: ["cash_app", "bank_transfer", "check", "cash", "other"],

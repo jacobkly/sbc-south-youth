@@ -1,5 +1,14 @@
 import type { Database, Json } from "@/lib/database.types";
-import { formatDate, formatDayLabel, formatTime, isIsoDate, laDateOf, laTimeOf, type IsoDate } from "@/lib/dates";
+import {
+  formatDate,
+  formatDayLabel,
+  formatTime,
+  formatWeekdayDate,
+  isIsoDate,
+  laDateOf,
+  laTimeOf,
+  type IsoDate,
+} from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { toCsv, type CsvValue } from "@/lib/portal/csv";
 import { backupSizes, readBackupSizes } from "@/lib/portal/home/backup";
@@ -238,6 +247,11 @@ function formatInstant(value: Json | undefined): string {
   return laTimeOf(value) === "00:00" ? date : `${date} at ${formatTime(value)}`;
 }
 
+/** A logged plain date, like a headcount's night. */
+function formatNight(value: Json | undefined): string {
+  return typeof value === "string" && isIsoDate(value) ? formatDate(value) : "None";
+}
+
 function formatText(value: Json | undefined): string {
   return typeof value === "string" && value !== "" ? value : "None";
 }
@@ -322,6 +336,11 @@ const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
     TITLE,
     STARTS,
     { field: "cancel_reason", label: "Reason", format: formatText, isStartingValue: (value) => value == null },
+  ],
+  headcount: [
+    // The night names the item already, so it shows only when it moves.
+    { field: "night", label: "Night", format: formatNight, isStartingValue: () => true },
+    { field: "total", label: "Count", format: (value) => String(value ?? "None"), isStartingValue: () => false },
   ],
   message: [
     {
@@ -717,6 +736,9 @@ function subjectOf(row: FeedRow, ctx: FeedContext): string | null {
     const kind = row.entity_name && Object.hasOwn(KIND_LABELS, row.entity_name) ? row.entity_name : null;
     return kind ? `${formatLabel(KIND_LABELS, kind)} message` : "A message";
   }
+  if (row.entity_type === "headcount" && row.entity_name && isIsoDate(row.entity_name)) {
+    return formatWeekdayDate(row.entity_name, ctx.today);
+  }
   return row.entity_name;
 }
 
@@ -817,6 +839,7 @@ const COUNT_NOUNS: Partial<Record<string, readonly [string, string]>> = {
   youth_income: ["youth entry", "youth entries"],
   cafe_week: ["cafe week", "cafe weeks"],
   tag: ["tag", "tags"],
+  headcount: ["headcount", "headcounts"],
 };
 
 /** Counts an item's things by kind, most first. */

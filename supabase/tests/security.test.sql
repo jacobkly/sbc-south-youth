@@ -5,12 +5,13 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(46);
+select plan(47);
 
 select tables_are(
   'public',
   array['users', 'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'receipts', 'request_lines', 'activity_log',
-        'email_log', 'email_suppressions', 'invites', 'app_errors', 'youth_income', 'cafe_weeks', 'tags', 'request_tags'],
+        'email_log', 'email_suppressions', 'invites', 'app_errors', 'youth_income', 'cafe_weeks', 'tags', 'request_tags',
+        'headcounts'],
   'public has only the known tables (add new ones here once they have RLS and tests)'
 );
 
@@ -215,6 +216,9 @@ insert into public.tags (id, name) values ('00000000-0000-4000-8000-00000000e101
 insert into public.request_tags (request_id, tag_id)
 values ('00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000e101');
 
+insert into public.headcounts (id, night, total)
+values ('00000000-0000-4000-8000-00000000a505', '2026-01-09', 30);
+
 insert into site.posts (id, title, body, status)
 values ('00000000-0000-4000-8000-00000000a501', 'Test heads-up', 'Showing now.', 'published');
 
@@ -249,6 +253,7 @@ select ok(
   and exists (select 1 from public.cafe_weeks where week_ending = '2026-01-04')
   and exists (select 1 from public.tags where id = '00000000-0000-4000-8000-00000000e101')
   and exists (select 1 from public.request_tags where tag_id = '00000000-0000-4000-8000-00000000e101')
+  and exists (select 1 from public.headcounts where id = '00000000-0000-4000-8000-00000000a505')
   and exists (select 1 from site.posts where id = '00000000-0000-4000-8000-00000000a501')
   and exists (select 1 from site.events where id = '00000000-0000-4000-8000-00000000a502')
   and exists (select 1 from site.messages where id = '00000000-0000-4000-8000-00000000a503')

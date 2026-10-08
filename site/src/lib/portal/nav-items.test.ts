@@ -3,6 +3,7 @@ import {
   ACCOUNT,
   ACTIVITY,
   allowedFor,
+  ATTENDANCE,
   EMAIL,
   HOME,
   isActive,
@@ -15,7 +16,7 @@ import {
   type NavItem,
 } from "./nav-items";
 
-const EVERY_ITEM = [HOME, POSTS, PHOTOS, MESSAGES, ACTIVITY, PEOPLE, EMAIL, ACCOUNT];
+const EVERY_ITEM = [HOME, POSTS, PHOTOS, MESSAGES, ATTENDANCE, ACTIVITY, PEOPLE, EMAIL, ACCOUNT];
 const labels = (items: NavItem[]) => items.map((item) => item.label);
 
 describe("allowedFor", () => {
@@ -53,8 +54,17 @@ describe("allowedFor", () => {
     ]);
   });
 
-  it("shows a finance viewer Home, Activity, and Account", () => {
-    expect(labels(EVERY_ITEM.filter(allowedFor(["finance_viewer"])))).toEqual(["Home", "Activity", "Account"]);
+  it("shows a finance viewer Home, Attendance, Activity, and Account", () => {
+    expect(labels(EVERY_ITEM.filter(allowedFor(["finance_viewer"])))).toEqual([
+      "Home",
+      "Attendance",
+      "Activity",
+      "Account",
+    ]);
+  });
+
+  it("shows the Attendance role only Attendance, past Home and Account", () => {
+    expect(labels(EVERY_ITEM.filter(allowedFor(["attendance"])))).toEqual(["Home", "Attendance", "Account"]);
   });
 });
 
@@ -101,12 +111,13 @@ describe("MAIN_ITEMS", () => {
       "Posts",
       "Photos",
       "Messages",
+      "Attendance",
       "Activity",
       "People",
       "Email",
     ]);
     expect(labels(MAIN_ITEMS.filter(allowedFor(["site_editor"])))).toEqual(["Home", "Posts", "Photos", "Activity"]);
-    expect(labels(MAIN_ITEMS.filter(allowedFor(["finance_viewer"])))).toEqual(["Home", "Activity"]);
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["finance_viewer"])))).toEqual(["Home", "Attendance", "Activity"]);
   });
 
   it("has Posts for site editors and owners", () => {
@@ -126,13 +137,24 @@ describe("MAIN_ITEMS", () => {
     expect(MAIN_ITEMS.filter(allowedFor(["site_editor", "finance_viewer"]))).not.toContain(MESSAGES);
   });
 
+  it("has Attendance for the Attendance role, finance viewers, and owners", () => {
+    expect(MAIN_ITEMS.filter(allowedFor(["attendance"]))).toContain(ATTENDANCE);
+    expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer"]))).toContain(ATTENDANCE);
+    expect(MAIN_ITEMS.filter(allowedFor(["owner"]))).toContain(ATTENDANCE);
+    expect(MAIN_ITEMS.filter(allowedFor(["site_editor", "site_messages"]))).not.toContain(ATTENDANCE);
+  });
+
   it("has People for owners only", () => {
     expect(MAIN_ITEMS.filter(allowedFor(["owner"]))).toContain(PEOPLE);
-    expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_editor", "site_messages"]))).not.toContain(PEOPLE);
+    expect(
+      MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_editor", "site_messages", "attendance"])),
+    ).not.toContain(PEOPLE);
   });
 
   it("has Email for owners only", () => {
     expect(MAIN_ITEMS.filter(allowedFor(["owner"]))).toContain(EMAIL);
-    expect(MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_editor", "site_messages"]))).not.toContain(EMAIL);
+    expect(
+      MAIN_ITEMS.filter(allowedFor(["finance_viewer", "site_editor", "site_messages", "attendance"])),
+    ).not.toContain(EMAIL);
   });
 });

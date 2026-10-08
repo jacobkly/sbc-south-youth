@@ -9,6 +9,7 @@
 --   sam@example.test    finance viewer
 --   jo@example.test     site editor and messages, so the portal only
 --   riley@example.test  requester only, so finances only
+--   drew@example.test   attendance only, to enter each week's headcount
 --
 -- Dates count back from today, so the dashboard always has recent activity.
 
@@ -27,7 +28,8 @@ from (values
   ('00000000-0000-4000-8000-5eed0000a001'::uuid, 'alex@example.test', 'Alex Example'),
   ('00000000-0000-4000-8000-5eed0000a002'::uuid, 'sam@example.test', 'Sam Sample'),
   ('00000000-0000-4000-8000-5eed0000a003'::uuid, 'jo@example.test', 'Jo Example'),
-  ('00000000-0000-4000-8000-5eed0000a004'::uuid, 'riley@example.test', 'Riley Example')
+  ('00000000-0000-4000-8000-5eed0000a004'::uuid, 'riley@example.test', 'Riley Example'),
+  ('00000000-0000-4000-8000-5eed0000a005'::uuid, 'drew@example.test', 'Drew Example')
 ) as u (id, email, full_name);
 
 insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
@@ -38,7 +40,8 @@ select
 from auth.users u
 where u.id in (
   '00000000-0000-4000-8000-5eed0000a001', '00000000-0000-4000-8000-5eed0000a002',
-  '00000000-0000-4000-8000-5eed0000a003', '00000000-0000-4000-8000-5eed0000a004'
+  '00000000-0000-4000-8000-5eed0000a003', '00000000-0000-4000-8000-5eed0000a004',
+  '00000000-0000-4000-8000-5eed0000a005'
 );
 
 -- The signup trigger gave everyone no roles.
@@ -46,6 +49,7 @@ update public.users set roles = '{owner}' where id = '00000000-0000-4000-8000-5e
 update public.users set roles = '{finance_viewer}' where id = '00000000-0000-4000-8000-5eed0000a002';
 update public.users set roles = '{site_editor,site_messages}' where id = '00000000-0000-4000-8000-5eed0000a003';
 update public.users set roles = '{finance_requester}' where id = '00000000-0000-4000-8000-5eed0000a004';
+update public.users set roles = '{attendance}' where id = '00000000-0000-4000-8000-5eed0000a005';
 
 insert into public.payees (id, full_name, email, notes, is_active, user_id, linked_at, linked_by) values
   (
@@ -266,6 +270,24 @@ cross join (values
     null, null, false, interval '-8 days 9 hours', interval '-1 days 9 hours'
   )
 ) as p (id, title, body, link_url, link_label, pinned, starts, ends);
+
+select set_config('request.jwt.claims', '', false);
+
+-- Seven Fridays of headcounts before the latest one in Los Angeles time,
+-- which is left for the usher to add. Entered as the usher, so Activity
+-- names them.
+select set_config(
+  'request.jwt.claims', '{"sub": "00000000-0000-4000-8000-5eed0000a005", "role": "authenticated"}', false
+);
+
+insert into public.headcounts (night, total)
+select f.latest - 7 * h.weeks_back, h.total
+from (
+  -- isodow runs Monday 1 to Sunday 7, so this counts back to Friday.
+  select (now() at time zone 'America/Los_Angeles')::date
+    - (extract(isodow from now() at time zone 'America/Los_Angeles')::int + 2) % 7 as latest
+) as f
+cross join (values (1, 48), (2, 52), (3, 41), (4, 45), (5, 39), (6, 44), (7, 36)) as h (weeks_back, total);
 
 select set_config('request.jwt.claims', '', false);
 

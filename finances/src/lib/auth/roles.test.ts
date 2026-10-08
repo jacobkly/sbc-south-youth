@@ -65,6 +65,7 @@ describe("canUseArea", () => {
   it("keeps out anyone without a finance role", () => {
     for (const area of ["team", "requests", "account"] as const) {
       expect(canUseArea(person(["site_editor", "site_messages"]), area)).toBe(false);
+      expect(canUseArea(person(["attendance"]), area)).toBe(false);
       expect(canUseArea(person([]), area)).toBe(false);
     }
   });
