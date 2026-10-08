@@ -1,5 +1,6 @@
 import {
   ChartColumnIcon,
+  HandCoinsIcon,
   HistoryIcon,
   LayoutDashboardIcon,
   PlusIcon,
@@ -32,6 +33,7 @@ export type NavUser = {
 export const DASHBOARD: NavItem = { href: "/admin", label: "Dashboard", icon: LayoutDashboardIcon };
 export const REQUESTS: NavItem = { href: "/admin/requests", label: "Requests", icon: ReceiptTextIcon };
 export const NEW_REQUEST: NavItem = { href: "/admin/requests/new", label: "New", icon: PlusIcon, adminOnly: true };
+export const INCOME: NavItem = { href: "/admin/income", label: "Income", icon: HandCoinsIcon };
 export const PAYEES: NavItem = { href: "/admin/payees", label: "Payees", icon: UsersIcon };
 export const REPORTS: NavItem = { href: "/admin/reports", label: "Reports", icon: ChartColumnIcon };
 export const ACTIVITY: NavItem = { href: "/admin/activity", label: "Activity", icon: HistoryIcon, adminOnly: true };
@@ -85,8 +87,8 @@ export function navFor({ role, requester }: Pick<NavUser, "role" | "requester">)
     home: DASHBOARD,
     create,
     tabs: create ? [DASHBOARD, REQUESTS, create, PAYEES] : [DASHBOARD, REQUESTS, PAYEES],
-    more: [...mine, REPORTS, ACTIVITY, SETTINGS, ACCOUNT].filter(allowed),
-    main: [DASHBOARD, REQUESTS, PAYEES, REPORTS, ACTIVITY, ...mine].filter(allowed),
+    more: [...mine, INCOME, REPORTS, ACTIVITY, SETTINGS, ACCOUNT].filter(allowed),
+    main: [DASHBOARD, REQUESTS, INCOME, PAYEES, REPORTS, ACTIVITY, ...mine].filter(allowed),
     footer: [SETTINGS],
   };
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FileSpreadsheetIcon, PlusIcon, ReceiptTextIcon } from "lucide-react";
 import { LatestRequests } from "@/components/dashboard/latest-requests";
+import { MoneyInOut } from "@/components/dashboard/money-in-out";
 import { MonthlyChart } from "@/components/dashboard/monthly-chart";
 import { NeedsAction } from "@/components/dashboard/needs-action";
 import { QuickActions } from "@/components/dashboard/quick-actions";
@@ -13,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getCurrentUser, getCurrentUserId } from "@/lib/auth/current-user";
 import { loadDashboard } from "@/lib/dashboard/summary";
 import { todayInLA } from "@/lib/dates";
+import { loadCafeWeeks } from "@/lib/income/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -21,8 +23,16 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const [supabase, userId] = await Promise.all([createClient(), getCurrentUserId()]);
-  // loadDashboard throws on failure, and admin/error.tsx handles it.
-  const [user, summary] = await Promise.all([getCurrentUser(), loadDashboard(supabase, todayInLA(), userId)]);
+  const today = todayInLA();
+  // The loaders throw on failure, and admin/error.tsx handles it.
+  const [{ user, cafeWeeks }, summary] = await Promise.all([
+    // Only owners add cafe weeks, and the sheet needs the ones already in to step through them.
+    getCurrentUser().then(async (user) => ({
+      user,
+      cafeWeeks: user?.role === "admin" ? await loadCafeWeeks(supabase) : [],
+    })),
+    loadDashboard(supabase, today, userId),
+  ]);
   const canEdit = user?.role === "admin";
   const firstName = user?.full_name.trim().split(/\s+/)[0];
 
@@ -35,27 +45,29 @@ export default async function DashboardPage() {
             {firstName ? `Welcome, ${firstName}. ` : ""}Here&apos;s where things stand.
           </p>
         </div>
-        <QuickActions canEdit={canEdit} />
+        <QuickActions canEdit={canEdit} today={today} cafeWeeks={cafeWeeks} />
       </div>
 
       {summary.hasRequests ? (
         // On a PC, two columns that each stack on their own, so neither waits
-        // for the other: what needs action, paid by month, and the latest
-        // requests on the left, and the totals, top payees, and the cafe and
-        // youth split on the right. Stats spans the first two rows, so the
-        // left column starts right under what needs action. The last row is
-        // flexible, so a taller left column stretches only that row. Margins
-        // stand in for row gaps, so a row that ends up empty adds no space.
-        // The last card in each column stretches, so both end together.
+        // for the other: what needs action, in and out by month, and the
+        // latest requests on the left, and the totals, money in and out, top
+        // payees, and the cafe and youth split on the right. The totals span
+        // the first two rows, so the left column starts right under what
+        // needs action. The last row is flexible, so a taller left column
+        // stretches only that row. Margins stand in for row gaps, so a row
+        // that ends up empty adds no space. The last card in each column
+        // stretches, so both end together.
         <div className="grid grid-cols-1 gap-6 @4xl/main:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] @4xl/main:grid-rows-[auto_auto_1fr] @4xl/main:items-start @4xl/main:gap-y-0">
           <div className="@4xl/main:mb-6">
             <NeedsAction summary={summary} />
           </div>
-          <div className="@4xl/main:row-span-2 @4xl/main:mb-6">
+          <div className="space-y-6 @4xl/main:row-span-2 @4xl/main:mb-6">
             <StatCards summary={summary} />
+            <MoneyInOut money={summary.money} />
           </div>
           <div className="grid grid-cols-1 gap-6 @4xl/main:row-span-2 @4xl/main:grid-rows-[auto_1fr] @4xl/main:self-stretch">
-            <MonthlyChart months={summary.paidByMonth} />
+            <MonthlyChart months={summary.moneyByMonth} />
             <LatestRequests rows={summary.latest} />
           </div>
           <div className="grid grid-cols-1 gap-6 @4xl/main:grid-rows-[auto_1fr] @4xl/main:self-stretch">

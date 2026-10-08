@@ -1,11 +1,32 @@
 import type { Database, Json } from "@/lib/database.types";
-import { formatDate, formatDayLabel, formatTime, laDateOf, laTimeOf, type IsoDate } from "@/lib/dates";
+import {
+  formatDate,
+  formatDayLabel,
+  formatTime,
+  formatWeekdayDate,
+  isIsoDate,
+  laDateOf,
+  laTimeOf,
+  type IsoDate,
+} from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { toCsv, type CsvValue } from "@/lib/portal/csv";
 import { backupSizes, readBackupSizes } from "@/lib/portal/home/backup";
 import { KIND_LABELS, OUTCOME_LABELS, STATUS_LABELS } from "@/lib/portal/messages/list";
 import { APP_ROLES, ROLE_LABELS, sortRoles, type AppRole } from "@/lib/portal/roles";
 import { ACTIVITY_SCOPES, SCOPE_LABELS, type ActivityScope } from "./filters";
+import {
+  INCOME_METHOD_LABELS,
+  incomeLine,
+  isIncomeType,
+  MIXED_LABEL,
+  titheImportLine,
+  titheImportOf,
+  titheImportTitle,
+  weekLabel,
+  YOUTH_KIND_LABELS,
+  type IncomeSubject,
+} from "./income";
 import {
   describeRequestChanges,
   eventFilename,
@@ -70,6 +91,8 @@ export type FeedContext = {
   payeeNames: ReadonlyMap<string, string>;
   /** Each invite's account, so an invite reads and groups as its person. */
   inviteUsers: ReadonlyMap<string, string>;
+  /** The tithes, event income, and cafe weeks finance rows are about, by ID. */
+  income: ReadonlyMap<string, IncomeSubject>;
   /** Null when someone has no finances link to follow. */
   financesUrl: string | null;
   /** Only owners have people pages to open. */
@@ -147,8 +170,26 @@ function messageTitle(row: Pick<FeedRow, "changes">): string {
   return "Message changed";
 }
 
-/** One event's headline. */
-export function eventTitle(row: Pick<FeedRow, "action" | "from_status" | "changes">): string {
+/**
+ * Whether youth income was a tithe or an event's: what the row logged, or
+ * for an edit that didn't change it, what the entry is.
+ */
+function youthKindOf(
+  row: Pick<FeedRow, "action" | "changes" | "entity_id">,
+  income: ReadonlyMap<string, IncomeSubject>,
+): string | undefined {
+  const kind = changeOf(row, "kind");
+  const logged = row.action === "youth_income.deleted" ? kind?.from : kind?.to;
+  if (typeof logged === "string") return logged;
+  const subject = row.entity_id ? income.get(row.entity_id) : undefined;
+  return subject?.type === "youth_income" ? subject.entry.kind : undefined;
+}
+
+/** One event's headline. `income` tells a tithe's edit from an event's when the edit doesn't say. */
+export function eventTitle(
+  row: Pick<FeedRow, "action" | "from_status" | "changes" | "entity_id">,
+  income: ReadonlyMap<string, IncomeSubject> = new Map(),
+): string {
   if (isRequestRow(row)) return requestEventTitle({ action: requestAction(row), from_status: row.from_status });
 
   const fixed = FIXED_TITLES[row.action];
@@ -165,10 +206,16 @@ export function eventTitle(row: Pick<FeedRow, "action" | "from_status" | "change
     return "Invite changed";
   }
   if (row.action === "message.updated") return messageTitle(row);
+  if (row.action === "youth_income.imported") return titheImportTitle(titheImportOf(row));
 
   const [type, verb] = row.action.split(".");
   const word = verb ? VERB_WORDS[verb] : undefined;
   if (!type || !word) return row.action;
+  if (type === "youth_income") {
+    const kind = youthKindOf(row, income);
+    if (kind === "tithe") return `Tithe ${word}`;
+    if (kind === "event") return `Event income ${word}`;
+  }
   const noun = NOUNS[type] ?? `${type.charAt(0).toUpperCase()}${type.slice(1).replaceAll("_", " ")}`;
   return `${noun} ${contentStatusChange(row) ?? word}`;
 }
@@ -198,6 +245,11 @@ function formatInstant(value: Json | undefined): string {
   if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return "None";
   const date = formatDate(laDateOf(value));
   return laTimeOf(value) === "00:00" ? date : `${date} at ${formatTime(value)}`;
+}
+
+/** A logged plain date, like a headcount's night. */
+function formatNight(value: Json | undefined): string {
+  return typeof value === "string" && isIsoDate(value) ? formatDate(value) : "None";
 }
 
 function formatText(value: Json | undefined): string {
@@ -233,6 +285,19 @@ const CONTENT_STATUS: LogField = {
 const TITLE: LogField = { field: "title", label: "Title", format: formatText, isStartingValue: () => true };
 
 const STARTS: LogField = { field: "starts_at", label: "Starts", format: formatInstant, isStartingValue: () => false };
+
+/** An income entry's line shows it whole, so its fields show only when they change. */
+function incomeField(field: string, label: string, format: (value: Json | undefined) => string): LogField {
+  return { field, label, format, isStartingValue: () => true };
+}
+
+function formatAmount(value: Json | undefined): string {
+  return typeof value === "number" ? formatCents(value) : "None";
+}
+
+function formatPlainDate(value: Json | undefined): string {
+  return typeof value === "string" && isIsoDate(value) ? formatDate(value) : "None";
+}
 
 /** Logged fields worth showing for each kind of thing, in the order they show. */
 const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
@@ -272,6 +337,11 @@ const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
     STARTS,
     { field: "cancel_reason", label: "Reason", format: formatText, isStartingValue: (value) => value == null },
   ],
+  headcount: [
+    // The night names the item already, so it shows only when it moves.
+    { field: "night", label: "Night", format: formatNight, isStartingValue: () => true },
+    { field: "total", label: "Count", format: (value) => String(value ?? "None"), isStartingValue: () => false },
+  ],
   message: [
     {
       field: "status",
@@ -292,6 +362,34 @@ const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
       isStartingValue: (value) => value == null,
     },
   ],
+  // In the words finances' forms use.
+  youth_income: [
+    incomeField("amount_cents", "Amount", formatAmount),
+    incomeField("received_on", "Date given", formatPlainDate),
+    incomeField("kind", "What it was", (value) => formatLabel(YOUTH_KIND_LABELS, value)),
+    incomeField("event_name", "Event name", formatText),
+    incomeField("method", "How it came in", (value) =>
+      value == null ? MIXED_LABEL : formatLabel(INCOME_METHOD_LABELS, value),
+    ),
+  ],
+  cafe_week: [
+    incomeField("week_ending", "Week", (value) =>
+      typeof value === "string" && isIsoDate(value) ? weekLabel(value) : "None",
+    ),
+    incomeField("sales_cents", "Sales", formatAmount),
+    incomeField("note", "Note", formatText),
+  ],
+  // The line names the tag, so its name shows only when it's renamed. A
+  // rename or delete also says how many requests the tag was on.
+  tag: [
+    { field: "name", label: "Name", format: formatText, isStartingValue: () => true },
+    {
+      field: "requests",
+      label: "Requests",
+      format: (value) => (typeof value === "number" ? value.toLocaleString("en-US") : "None"),
+      isStartingValue: (value) => value === 0,
+    },
+  ],
 };
 
 function describeLogChanges(
@@ -307,6 +405,10 @@ function describeLogChanges(
     }
     if (verb === "deleted") {
       return isStartingValue(change.from) ? [] : [{ label, from: format(change.from, names), to: null }];
+    }
+    // Logged alongside the change rather than changed, like a renamed tag's request count.
+    if (change.from === change.to) {
+      return isStartingValue(change.to) ? [] : [{ label, from: null, to: format(change.to, names) }];
     }
     return [{ label, from: format(change.from, names), to: format(change.to, names) }];
   });
@@ -451,7 +553,10 @@ function isPartOfInvite(row: FeedRow): boolean {
  * action once, in order, counting files: "Created, 2 files added". A bulk
  * item says how many things it touched.
  */
-export function itemTitle(item: Pick<ActivityItem, "type" | "events">): string {
+export function itemTitle(
+  item: Pick<ActivityItem, "type" | "events">,
+  income: ReadonlyMap<string, IncomeSubject> = new Map(),
+): string {
   if (item.type === "bulk") {
     const count = new Set(item.events.map((row) => `${row.entity_type}|${row.entity_id}`)).size;
     if (!item.events.every(isRequestRow)) return `${count} changes at once`;
@@ -464,18 +569,18 @@ export function itemTitle(item: Pick<ActivityItem, "type" | "events">): string {
 
   const invited = item.events.some((row) => row.action === "invite.created");
   const events = invited ? item.events.filter((row) => !isPartOfInvite(row)) : item.events;
-  if (events.length === 1) return eventTitle(events[0]);
+  if (events.length === 1) return eventTitle(events[0], income);
 
   const counts = new Map<string, { row: FeedRow; count: number }>();
   for (const row of events) {
-    const key = row.action in FILE_COUNT_TITLES ? row.action : eventTitle(row);
+    const key = row.action in FILE_COUNT_TITLES ? row.action : eventTitle(row, income);
     const entry = counts.get(key);
     if (entry) entry.count += 1;
     else counts.set(key, { row, count: 1 });
   }
   const parts = [...counts.values()].map(({ row, count }) => {
     const counted = FILE_COUNT_TITLES[row.action];
-    return count > 1 && counted ? counted(count) : eventTitle(row);
+    return count > 1 && counted ? counted(count) : eventTitle(row, income);
   });
   return upperFirst(parts.map(lowerFirst).join(", "));
 }
@@ -526,12 +631,15 @@ export type ActivityIcon =
   | "sign_in"
   | "download"
   | "backup"
+  | "income"
+  | "cafe"
   | "deleted";
 
 const ACTION_ICONS: Partial<Record<string, ActivityIcon>> = {
   "request.created": "created",
   "request.updated": "edited",
   "request.corrected": "edited",
+  "request.tagged": "edited",
   "request.submitted": "submitted",
   "request.approved": "approved",
   "request.recorded_paid": "paid",
@@ -572,6 +680,9 @@ function iconOf(row: FeedRow): ActivityIcon {
     if (title === "Access restored") return "access_restored";
     return "roles";
   }
+  if (row.action === "youth_income.imported") return "bulk";
+  if (row.entity_type === "youth_income") return "income";
+  if (row.entity_type === "cafe_week") return "cafe";
   const status = contentStatusChange(row);
   if (status) return status === "published" ? "submitted" : status === "cancelled" ? "cancelled" : "undo";
   const icon = ACTION_ICONS[row.action];
@@ -599,7 +710,7 @@ function personOf(row: FeedRow, ctx: FeedContext): string | null {
   return null;
 }
 
-/** What a row is about: a request, a person by their current name, a downloaded file, or a backup's sizes. */
+/** What a row is about: a request, income, a person by their current name, a downloaded file, or a backup's sizes. */
 function subjectOf(row: FeedRow, ctx: FeedContext): string | null {
   if (isRequestRow(row)) {
     const request = row.entity_id ? ctx.requests.get(row.entity_id) : undefined;
@@ -608,6 +719,13 @@ function subjectOf(row: FeedRow, ctx: FeedContext): string | null {
   if (row.entity_type === "user" || row.entity_type === "invite") {
     const person = personOf(row, ctx);
     return (person && ctx.names.get(person)) || row.entity_name || "Someone";
+  }
+  if (row.action === "youth_income.imported") {
+    const imported = titheImportOf(row);
+    return imported ? titheImportLine(imported) : null;
+  }
+  if (isIncomeType(row.entity_type)) {
+    return incomeLine(row.entity_id ? ctx.income.get(row.entity_id) : undefined, ctx.today);
   }
   if (row.action === "export.downloaded") return row.entity_name ?? "A finance report";
   if (row.action === "backup.completed") {
@@ -618,6 +736,9 @@ function subjectOf(row: FeedRow, ctx: FeedContext): string | null {
     const kind = row.entity_name && Object.hasOwn(KIND_LABELS, row.entity_name) ? row.entity_name : null;
     return kind ? `${formatLabel(KIND_LABELS, kind)} message` : "A message";
   }
+  if (row.entity_type === "headcount" && row.entity_name && isIsoDate(row.entity_name)) {
+    return formatWeekdayDate(row.entity_name, ctx.today);
+  }
   return row.entity_name;
 }
 
@@ -627,6 +748,16 @@ function linkOf(row: FeedRow, ctx: FeedContext): ItemLink | null {
   if (isRequestRow(row)) {
     if (!ctx.financesUrl || !row.entity_id || !ctx.requests.has(row.entity_id)) return null;
     return { href: `${ctx.financesUrl}/admin/requests/${row.entity_id}`, label: "Open in Finances" };
+  }
+  // An import's tithes are on the Income page, still there or not.
+  if (row.action === "youth_income.imported") {
+    return ctx.financesUrl ? { href: `${ctx.financesUrl}/admin/income`, label: "Open in Finances" } : null;
+  }
+  if (isIncomeType(row.entity_type)) {
+    const subject = row.entity_id ? ctx.income.get(row.entity_id) : undefined;
+    if (!ctx.financesUrl || !subject || subject.deleted) return null;
+    const tab = subject.type === "cafe_week" ? "?tab=cafe" : "";
+    return { href: `${ctx.financesUrl}/admin/income${tab}`, label: "Open in Finances" };
   }
   if (row.entity_type === "message" && row.entity_id) return { href: `/messages/${row.entity_id}`, label: "Open message" };
   const person = personOf(row, ctx);
@@ -680,7 +811,7 @@ function actorName(actorId: string | null, ctx: FeedContext): string | null {
 function eventView(row: FeedRow, ctx: FeedContext): EventView {
   return {
     key: row.id,
-    title: eventTitle(row),
+    title: eventTitle(row, ctx.income),
     time: formatTime(row.created_at),
     changes: eventChanges(row, ctx.payeeNames, ctx.names),
     filename: isRequestRow(row) ? eventFilename({ action: requestAction(row), changes: row.changes }) : null,
@@ -694,7 +825,7 @@ function relatedOf(item: ActivityItem, ctx: FeedContext): EntryView["related"] {
     (row.entity_id && ctx.requests.get(row.entity_id)?.request_number) || Number.MAX_SAFE_INTEGER;
   return rows
     .sort((a, b) => numberOf(a) - numberOf(b))
-    .map((row) => ({ label: subjectOf(row, ctx) ?? eventTitle(row), href: linkOf(row, ctx)?.href ?? null }));
+    .map((row) => ({ label: subjectOf(row, ctx) ?? eventTitle(row, ctx.income), href: linkOf(row, ctx)?.href ?? null }));
 }
 
 /** Each kind of thing, as one and as many. */
@@ -705,6 +836,10 @@ const COUNT_NOUNS: Partial<Record<string, readonly [string, string]>> = {
   user: ["person", "people"],
   invite: ["invite", "invites"],
   message: ["message", "messages"],
+  youth_income: ["youth entry", "youth entries"],
+  cafe_week: ["cafe week", "cafe weeks"],
+  tag: ["tag", "tags"],
+  headcount: ["headcount", "headcounts"],
 };
 
 /** Counts an item's things by kind, most first. */
@@ -738,7 +873,7 @@ function entryView(item: ActivityItem, ctx: FeedContext): EntryView {
     when: `${formatDayLabel(laDateOf(item.created_at), ctx.today)} at ${time}`,
     scope: lead.scope,
     icon: bulk ? "bulk" : iconOf(lead),
-    title: itemTitle(item),
+    title: itemTitle(item, ctx.income),
     subject: bulk ? null : subjectOf(lead, ctx),
     byline: hideByline ? null : `by ${actor}`,
     actor,

@@ -24,7 +24,7 @@ describe("hasRole", () => {
 });
 
 describe("canUsePortal", () => {
-  it.each([["owner"], ["finance_viewer"], ["site_editor"], ["site_messages"]] as const)(
+  it.each([["owner"], ["finance_viewer"], ["site_editor"], ["site_messages"], ["attendance"]] as const)(
     "lets an active %s in",
     (role) => {
       expect(canUsePortal({ is_active: true, roles: [role] })).toBe(true);
@@ -54,6 +54,10 @@ describe("canUseFinances", () => {
   it("leaves out the site-only roles", () => {
     expect(canUseFinances(["site_editor", "site_messages"])).toBe(false);
   });
+
+  it("leaves out the Attendance role", () => {
+    expect(canUseFinances(["attendance"])).toBe(false);
+  });
 });
 
 describe("sortRoles", () => {
@@ -63,6 +67,10 @@ describe("sortRoles", () => {
       "site_editor",
       "site_messages",
     ]);
+  });
+
+  it("lists Attendance last", () => {
+    expect(sortRoles(["attendance", "finance_viewer"])).toEqual(["finance_viewer", "attendance"]);
   });
 
   it("drops repeats", () => {

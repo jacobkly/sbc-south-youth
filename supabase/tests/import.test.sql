@@ -3,7 +3,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
+select plan(21);
 
 -- Fake people. New auth users get a member row from the signup trigger.
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -17,6 +17,10 @@ update public.users set role = 'viewer' where id = '00000000-0000-4000-8000-0000
 insert into public.payees (id, full_name, user_id, linked_at) values
   ('00000000-0000-4000-8000-00000000b001', 'Test Payee', null, null),
   ('00000000-0000-4000-8000-00000000b002', 'Linked Admin', '00000000-0000-4000-8000-00000000a001', now());
+
+-- One tag already exists. The seed's don't count.
+delete from public.tags;
+insert into public.tags (id, name) values ('00000000-0000-4000-8000-00000000e001', 'Van');
 
 select has_function('public', 'import_paid_requests', 'import_paid_requests exists');
 
@@ -56,7 +60,7 @@ select is(
     ]',
     'cash_app'
   ),
-  '{"requests": 3, "payees": 1}'::jsonb,
+  '{"requests": 3, "payees": 1, "tags": 0}'::jsonb,
   'imports every row and counts the new payees'
 );
 
@@ -156,6 +160,74 @@ select is(
   ) ->> 'requests',
   '1',
   'rows paid to the importing admin take the outside approver'
+);
+
+-- Tags.
+select is(
+  public.import_paid_requests(
+    '[
+      {"line": 2, "date": "2026-05-01", "name": "Test Payee", "amount_cents": 3000, "type": "youth", "notes": "Retreat gas",
+       "tags": ["Fall  retreat", "van", "fall retreat", " "]},
+      {"line": 3, "date": "2026-05-02", "name": "Test Payee", "amount_cents": 4000, "type": "youth", "notes": "Retreat food",
+       "tags": ["FALL RETREAT"]}
+    ]',
+    'cash_app'
+  ),
+  '{"requests": 2, "payees": 0, "tags": 1}'::jsonb,
+  'tags are matched without regard to case or spacing, and new ones are counted'
+);
+
+select results_eq(
+  $$ select r.description, t.name
+     from public.request_tags rt
+     join public.reimbursement_requests r on r.id = rt.request_id
+     join public.tags t on t.id = rt.tag_id
+     order by r.description, t.name $$,
+  $$ values ('Retreat food', 'Fall retreat'), ('Retreat gas', 'Fall retreat'), ('Retreat gas', 'Van') $$,
+  'each row gets its tags, spelled as the tag already is or as first seen'
+);
+
+select results_eq(
+  $$ select entity_name from public.activity_log
+     where action = 'tag.created' and actor_id = '00000000-0000-4000-8000-00000000a001' $$,
+  $$ values ('Fall retreat') $$,
+  'a new tag is logged like any other'
+);
+
+select is_empty(
+  $$ select 1
+     from public.request_events e
+     join public.reimbursement_requests r on r.id = e.request_id
+     where e.action = 'tagged' and r.paid_by = '00000000-0000-4000-8000-00000000a001' $$,
+  'tags are part of creating the request, not a change to it'
+);
+
+select throws_ok(
+  $$ select public.import_paid_requests(
+       '[{"line": 7, "date": "2026-05-03", "name": "Test Payee", "amount_cents": 1000, "type": "youth", "notes": "Too many",
+          "tags": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"]}]',
+       'cash_app'
+     ) $$,
+  '22023',
+  'Row 7: A request can have at most 10 tags.',
+  'a row can have at most 10 tags'
+);
+
+select throws_ok(
+  $$ select public.import_paid_requests(
+       '[{"line": 8, "date": "2026-05-03", "name": "Test Payee", "amount_cents": 1000, "type": "youth", "notes": "Long",
+          "tags": ["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]}]',
+       'cash_app'
+     ) $$,
+  '22001',
+  'Row 8: Keep each tag to 50 characters or fewer.',
+  'a tag can be at most 50 characters'
+);
+
+select is(
+  (select count(*)::int from public.tags),
+  2,
+  'a failed import adds no tags'
 );
 
 select * from finish();

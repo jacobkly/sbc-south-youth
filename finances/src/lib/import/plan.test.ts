@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { ImportRow } from "./parse";
-import { monthTotals, planImport, type ExistingPayee } from "./plan";
+import { monthTotals, newTagNames, planImport, type ExistingPayee } from "./plan";
 
 const ME = "user-me";
 
 function row(line: number, name: string, date: string, cents: number, type: ImportRow["type"] = "youth"): ImportRow {
-  return { line, date, name, amount_cents: cents, type, notes: "" };
+  return { line, date, name, amount_cents: cents, type, notes: "", tags: [] };
 }
 
 function payee(id: string, full_name: string, extra: Partial<ExistingPayee> = {}): ExistingPayee {
@@ -73,6 +73,21 @@ describe("planImport", () => {
       ME,
     );
     expect([...plan.selfRows]).toEqual([2]);
+  });
+});
+
+describe("newTagNames", () => {
+  it("lists tags the rows need that aren't in the app, once, spelled as first seen", () => {
+    const rows = [
+      { ...row(2, "A", "2026-01-05", 100), tags: ["fall retreat", "Van"] },
+      { ...row(3, "B", "2026-01-06", 100), tags: ["Game night", "van"] },
+      { ...row(4, "C", "2026-01-07", 100), tags: ["game  NIGHT"] },
+    ];
+    expect(newTagNames(rows, [{ id: "t1", name: "Fall retreat" }])).toEqual(["Van", "Game night"]);
+  });
+
+  it("is empty when no row has tags", () => {
+    expect(newTagNames([row(2, "A", "2026-01-05", 100)], [])).toEqual([]);
   });
 });
 

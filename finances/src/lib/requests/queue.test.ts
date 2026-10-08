@@ -15,6 +15,7 @@ import {
 } from "./queue";
 
 const PAYEE = "0b7c6a8e-4f1d-4c2a-9e3b-5d6f7a8b9c0d";
+const TAG = "7a1e2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b";
 
 describe("parseQueueFilters", () => {
   it("leaves the tab to be picked, with nothing filtered", () => {
@@ -31,6 +32,7 @@ describe("parseQueueFilters", () => {
         to: "2026-03-31",
         type: "cafe",
         payee: PAYEE.toUpperCase(),
+        tag: TAG.toUpperCase(),
         missing: "1",
         pages: "3",
       }),
@@ -41,6 +43,7 @@ describe("parseQueueFilters", () => {
       to: "2026-03-31",
       type: "cafe",
       payee: PAYEE,
+      tag: TAG,
       missingReceipt: true,
       pages: 3,
     });
@@ -54,6 +57,7 @@ describe("parseQueueFilters", () => {
         to: "yesterday",
         type: "travel",
         payee: "not-a-uuid",
+        tag: "fall-retreat",
         missing: "yes",
         pages: "2.5",
       }),
@@ -110,6 +114,7 @@ describe("queueHref", () => {
       to: "2026-01-31",
       type: "youth",
       payee: PAYEE,
+      tag: TAG,
       missingReceipt: true,
       pages: 2,
     } as const;
@@ -130,8 +135,16 @@ describe("activeFilterCount and isFiltered", () => {
 
   it("counts each filter but not the tab or search", () => {
     expect(
-      activeFilterCount({ ...DEFAULT_QUEUE_FILTERS, tab: "all", q: "x", type: "cafe", payee: PAYEE, missingReceipt: true }),
-    ).toBe(3);
+      activeFilterCount({
+        ...DEFAULT_QUEUE_FILTERS,
+        tab: "all",
+        q: "x",
+        type: "cafe",
+        payee: PAYEE,
+        tag: TAG,
+        missingReceipt: true,
+      }),
+    ).toBe(4);
   });
 
   it("treats a search as filtering", () => {
@@ -139,6 +152,7 @@ describe("activeFilterCount and isFiltered", () => {
     expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, tab: "all" })).toBe(false);
     expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, q: "x" })).toBe(true);
     expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, missingReceipt: true })).toBe(true);
+    expect(isFiltered({ ...DEFAULT_QUEUE_FILTERS, tag: TAG })).toBe(true);
   });
 });
 
@@ -179,15 +193,12 @@ describe("containsPattern", () => {
 
 describe("searchFilter", () => {
   it("searches the text columns", () => {
-    expect(searchFilter("pizza", [])).toBe(
-      'vendor.ilike."%pizza%",description.ilike."%pizza%",event_name.ilike."%pizza%"',
-    );
+    expect(searchFilter("pizza", [])).toBe('vendor.ilike."%pizza%",description.ilike."%pizza%"');
   });
 
   it("adds matching payees and the request number", () => {
     expect(searchFilter("12", [PAYEE])).toBe(
-      'vendor.ilike."%12%",description.ilike."%12%",event_name.ilike."%12%",' +
-        `payee_id.in.(${PAYEE}),request_number.eq.12`,
+      `vendor.ilike."%12%",description.ilike."%12%",payee_id.in.(${PAYEE}),request_number.eq.12`,
     );
   });
 
@@ -196,7 +207,6 @@ describe("searchFilter", () => {
       [
         'vendor.ilike."%Joe\'s, \\"Inc.\\" (east)%"',
         'description.ilike."%Joe\'s, \\"Inc.\\" (east)%"',
-        'event_name.ilike."%Joe\'s, \\"Inc.\\" (east)%"',
       ].join(","),
     );
   });

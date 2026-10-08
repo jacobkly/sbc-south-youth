@@ -273,6 +273,15 @@ export function addDays(date: IsoDate, days: number): IsoDate {
   return toIsoDate(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate());
 }
 
+/** The same day `months` later, or earlier when negative, kept within a shorter month. */
+export function addMonths(date: IsoDate, months: number): IsoDate {
+  const { year, month, day } = parseIsoDate(date);
+  const index = year * 12 + month - 1 + months;
+  const shiftedYear = Math.floor(index / 12);
+  const shiftedMonth = (index % 12) + 1;
+  return toIsoDate(shiftedYear, shiftedMonth, Math.min(day, lastDayOfMonth(shiftedYear, shiftedMonth)));
+}
+
 /** An instant as LA "YYYY-MM-DD HH:MM", which spreadsheets read as a date and time. */
 export function laDateTime(instant: Date | string): string {
   const date = typeof instant === "string" ? new Date(instant) : instant;

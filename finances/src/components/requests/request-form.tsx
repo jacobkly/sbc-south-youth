@@ -41,6 +41,7 @@ import {
   type RequestFormValues,
 } from "@/lib/requests/schema";
 import { createClient } from "@/lib/supabase/client";
+import { sortTags, type TagRow } from "@/lib/tags/tags";
 
 type FormErrors = RequestFormErrors & SaveOptionErrors;
 
@@ -58,12 +59,12 @@ type Saved = {
 /**
  * The admin's main entry form. Built for speed on a phone: big touch targets,
  * the right keyboard for each field, and today's date filled in. After saving,
- * "Enter another" starts over but keeps how it was saved and paid, so a run
- * of past payments goes quickly.
+ * "Enter another" starts over but keeps the tags and how it was saved and
+ * paid, so a run of past payments, or a retreat's receipts, goes quickly.
  */
 export function RequestForm({
   payees: initialPayees,
-  eventNames,
+  tags: initialTags,
   today,
   currentUserId,
   allowExternalApproval,
@@ -71,8 +72,8 @@ export function RequestForm({
 }: {
   /** Active payees, sorted by name. */
   payees: PayeeRow[];
-  /** Recent event names, offered as suggestions. */
-  eventNames: string[];
+  /** Every tag, sorted by name. */
+  tags: TagRow[];
   /** Today in Los Angeles, from the server so the first render matches. */
   today: IsoDate;
   /** The signed-in admin, to spot a reimbursement paid to them. */
@@ -82,6 +83,8 @@ export function RequestForm({
   lateLimitDays: number;
 }) {
   const [payees, setPayees] = useState(initialPayees);
+  const [tags, setTags] = useState(initialTags);
+  const [tagIds, setTagIds] = useState<readonly string[]>([]);
   const [values, setValues] = useState<RequestFormValues>(() => blankRequest(today));
   const [saveValues, setSaveValues] = useState<SaveOptionValues>({
     option: "draft",
@@ -174,7 +177,7 @@ export function RequestForm({
     setPending(true);
     const supabase = createClient();
     // Creates the draft, or updates it on a retry. The receipts' ids come from here, so a retry updates them too.
-    const { data, error } = await supabase.rpc("save_request", saveRequestArgs(requestId, parsed.data));
+    const { data, error } = await supabase.rpc("save_request", saveRequestArgs(requestId, parsed.data, tagIds));
 
     if (error) {
       setPending(false);
@@ -226,7 +229,7 @@ export function RequestForm({
     setScreen((count) => count + 1);
   }
 
-  /** Clears the form for the next request, keeping how it's saved and the payment method and date. */
+  /** Clears the form for the next request, keeping the tags, how it's saved, and the payment method and date. */
   function enterAnother() {
     setValues(blankRequest(todayInLA()));
     setSaveValues((current) => ({ ...current, external_approver: "", payment_reference: "" }));
@@ -267,7 +270,12 @@ export function RequestForm({
           onAdded: (added) =>
             setPayees((current) => [...current, added].sort((a, b) => a.full_name.localeCompare(b.full_name))),
         }}
-        eventNames={eventNames}
+        tagPicker={{
+          tags,
+          value: tagIds,
+          onChange: setTagIds,
+          onAdded: (added) => setTags((current) => sortTags([...current, added])),
+        }}
         today={today}
         pendingReceipts={pendingReceipts}
         receiptCount={receipts.length}

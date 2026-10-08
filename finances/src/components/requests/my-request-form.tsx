@@ -40,13 +40,10 @@ type Saved = { id: string; requestNumber: number; intent: Intent; amountCents: n
  */
 export function MyRequestForm({
   payeeId,
-  eventNames,
   today,
 }: {
   /** The payee the signed-in person is linked to. */
   payeeId: string;
-  /** Recent event names from their own requests, offered as suggestions. */
-  eventNames: string[];
   /** Today in Los Angeles, from the server so the first render matches. */
   today: IsoDate;
 }) {
@@ -187,7 +184,6 @@ export function MyRequestForm({
         errors={errors}
         onChange={set}
         allowNoReceipt={false}
-        eventNames={eventNames}
         today={today}
         pendingReceipts={pendingReceipts}
         receiptCount={receipts.length}

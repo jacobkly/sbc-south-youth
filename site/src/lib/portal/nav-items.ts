@@ -5,6 +5,7 @@ import {
   ImagesIcon,
   InboxIcon,
   MailIcon,
+  Tally5Icon,
   UserRoundIcon,
   UsersIcon,
   type LucideIcon,
@@ -37,6 +38,12 @@ export const POSTS: NavItem = {
 };
 export const PHOTOS: NavItem = { href: "/photos", label: "Photos", icon: ImagesIcon, roles: ["site_editor"] };
 export const MESSAGES: NavItem = { href: "/messages", label: "Messages", icon: InboxIcon, roles: ["site_messages"] };
+export const ATTENDANCE: NavItem = {
+  href: "/attendance",
+  label: "Attendance",
+  icon: Tally5Icon,
+  roles: ["attendance", "finance_viewer"],
+};
 export const ACTIVITY: NavItem = {
   href: "/activity",
   label: "Activity",
@@ -48,7 +55,7 @@ export const EMAIL: NavItem = { href: "/email", label: "Email", icon: MailIcon, 
 export const ACCOUNT: NavItem = { href: "/account", label: "Account", icon: UserRoundIcon };
 
 /** The portal's sections, in order. Account sits apart, at the end. */
-export const MAIN_ITEMS: NavItem[] = [HOME, POSTS, PHOTOS, MESSAGES, ACTIVITY, PEOPLE, EMAIL];
+export const MAIN_ITEMS: NavItem[] = [HOME, POSTS, PHOTOS, MESSAGES, ATTENDANCE, ACTIVITY, PEOPLE, EMAIL];
 
 /** Whether a nav item is the current page or the section it's in. */
 export function isActive(pathname: string, item: Pick<NavItem, "href" | "also">): boolean {

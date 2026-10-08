@@ -20,6 +20,9 @@ const REQUEST_3 = "00000000-0000-4000-8000-0000000000b3";
 const INVITE = "00000000-0000-4000-8000-0000000000c1";
 const PAYEE = "00000000-0000-4000-8000-0000000000d1";
 const GONE = "00000000-0000-4000-8000-0000000000e1";
+const TITHE = "00000000-0000-4000-8000-00000000f200";
+const BAKE_SALE = "00000000-0000-4000-8000-00000000f201";
+const CAFE_WEEK = "00000000-0000-4000-8000-00000000f202";
 
 let nextId = 0;
 
@@ -66,6 +69,28 @@ function context(overrides: Partial<FeedContext> = {}): FeedContext {
     ]),
     payeeNames: new Map([[PAYEE, "Test Payee"]]),
     inviteUsers: new Map([[INVITE, EDITOR]]),
+    income: new Map([
+      [
+        TITHE,
+        {
+          type: "youth_income",
+          entry: { kind: "tithe", received_on: "2026-10-02", amount_cents: 4000, method: "zelle", event_name: null },
+          deleted: false,
+        },
+      ],
+      [
+        BAKE_SALE,
+        {
+          type: "youth_income",
+          entry: { kind: "event", received_on: "2026-10-01", amount_cents: 34000, method: null, event_name: "Bake sale" },
+          deleted: true,
+        },
+      ],
+      [
+        CAFE_WEEK,
+        { type: "cafe_week", week: { week_ending: "2026-09-27", sales_cents: 65000, note: "Fall kickoff night" }, deleted: false },
+      ],
+    ]),
     financesUrl: "https://finances.example.test",
     canOpenPeople: true,
     today: "2026-10-02",
@@ -328,6 +353,266 @@ describe("eventChanges for site content", () => {
     expect(buildActivityDays([published], context())[0].entries[0].icon).toBe("submitted");
     const backOn = { ...cancelled, id: "back-on", changes: { status: { from: "cancelled", to: "published" } } };
     expect(buildActivityDays([backOn], context())[0].entries[0].icon).toBe("undo");
+  });
+});
+
+describe("tags", () => {
+  const at = "2026-10-02T17:00:00Z";
+  const tag = (fields: Partial<FeedRow> & Pick<FeedRow, "action">) =>
+    row({
+      scope: "finances",
+      entity_type: "tag",
+      entity_id: "00000000-0000-4000-8000-00000000f300",
+      entity_name: "Fall retreat",
+      created_at: at,
+      ...fields,
+    });
+
+  it("words a request's tag change the way finances does", () => {
+    const changes = { tags: { from: ["Snacks"], to: ["Fall retreat", "Snacks"] } };
+    const tagged = row({ action: "request.tagged", entity_id: REQUEST, changes, created_at: at });
+    expect(eventTitle(tagged)).toBe("Tags changed");
+    expect(eventChanges(tagged)).toEqual([{ label: "Tags", from: "Snacks", to: "Fall retreat, Snacks" }]);
+  });
+
+  it("names a tag by its name, showing the old and new name only when renamed", () => {
+    const added = tag({ action: "tag.created", changes: { name: { from: null, to: "Fall retreat" } } });
+    expect(buildActivityDays([added], context())[0].entries[0]).toMatchObject({
+      title: "Tag added",
+      subject: "Fall retreat",
+      icon: "created",
+    });
+    expect(eventChanges(added)).toEqual([]);
+
+    const renamed = tag({ action: "tag.updated", changes: { name: { from: "Fall retreat", to: "Winter retreat" } } });
+    expect(eventTitle(renamed)).toBe("Tag changed");
+    expect(eventChanges(renamed)).toEqual([{ label: "Name", from: "Fall retreat", to: "Winter retreat" }]);
+
+    expect(eventTitle(tag({ action: "tag.deleted" }))).toBe("Tag removed");
+  });
+
+  it("says how many requests a renamed or deleted tag was on", () => {
+    const renamed = tag({
+      action: "tag.updated",
+      changes: { name: { from: "Fall retreat", to: "Winter retreat" }, requests: { from: 1200, to: 1200 } },
+    });
+    expect(eventChanges(renamed)).toEqual([
+      { label: "Name", from: "Fall retreat", to: "Winter retreat" },
+      { label: "Requests", from: null, to: "1,200" },
+    ]);
+
+    const deleted = tag({
+      action: "tag.deleted",
+      changes: { name: { from: "Fall retreat", to: null }, requests: { from: 12, to: 0 } },
+    });
+    expect(eventChanges(deleted)).toEqual([{ label: "Requests", from: "12", to: null }]);
+  });
+
+  it("leaves the count out when the tag was on no requests", () => {
+    const renamed = tag({
+      action: "tag.updated",
+      changes: { name: { from: "Fall retreat", to: "Winter retreat" }, requests: { from: 0, to: 0 } },
+    });
+    expect(eventChanges(renamed)).toEqual([{ label: "Name", from: "Fall retreat", to: "Winter retreat" }]);
+
+    const deleted = tag({
+      action: "tag.deleted",
+      changes: { name: { from: "Fall retreat", to: null }, requests: { from: 0, to: 0 } },
+    });
+    expect(eventChanges(deleted)).toEqual([]);
+  });
+});
+
+describe("income", () => {
+  const at = "2026-10-02T17:00:00Z";
+  const income = (fields: Partial<FeedRow> & Pick<FeedRow, "action">) =>
+    row({ scope: "finances", entity_id: TITHE, entity_name: "", created_at: at, ...fields });
+
+  it("names a tithe, an event's income, and a cafe week by what each was", () => {
+    const tithe = { kind: { from: null, to: "tithe" } };
+    expect(eventTitle(income({ action: "youth_income.created", changes: tithe }))).toBe("Tithe added");
+    const event = { kind: { from: null, to: "event" } };
+    expect(eventTitle(income({ action: "youth_income.created", changes: event }))).toBe("Event income added");
+    const gone = { kind: { from: "event", to: null } };
+    expect(eventTitle(income({ action: "youth_income.deleted", changes: gone }))).toBe("Event income removed");
+    expect(eventTitle(income({ action: "cafe_week.updated", entity_id: CAFE_WEEK }))).toBe("Cafe week changed");
+  });
+
+  it("tells a tithe's edit from an event's by the entry when the edit doesn't say", () => {
+    const edit = income({ action: "youth_income.updated", changes: { amount_cents: { from: 2500, to: 4000 } } });
+    expect(eventTitle(edit, context().income)).toBe("Tithe changed");
+    expect(eventTitle(edit)).toBe("Youth income changed");
+    const nowEvent = income({ action: "youth_income.updated", changes: { kind: { from: "tithe", to: "event" } } });
+    expect(eventTitle(nowEvent, context().income)).toBe("Event income changed");
+  });
+
+  it("describes a tithe by its amount, method, and date, and links to it in finances", () => {
+    const changes = { amount_cents: { from: 2500, to: 4000 }, method: { from: "cash_app", to: "zelle" } };
+    const [entry] = buildActivityDays([income({ action: "youth_income.updated", changes })], context())[0].entries;
+    expect(entry).toMatchObject({
+      title: "Tithe changed",
+      subject: "$40.00 · Zelle · Oct 2",
+      scope: "finances",
+      icon: "income",
+      link: { href: "https://finances.example.test/admin/income", label: "Open in Finances" },
+    });
+    expect(entry.events[0].changes).toEqual([
+      { label: "Amount", from: "$25.00", to: "$40.00" },
+      { label: "How it came in", from: "Cash App", to: "Zelle" },
+    ]);
+  });
+
+  it("shows a cafe week's days and sales, and opens the Cafe tab", () => {
+    const changes = { sales_cents: { from: 61250, to: 65000 }, note: { from: null, to: "Fall kickoff night" } };
+    const rows = [income({ action: "cafe_week.updated", entity_id: CAFE_WEEK, changes })];
+    const [entry] = buildActivityDays(rows, context())[0].entries;
+    expect(entry).toMatchObject({
+      title: "Cafe week changed",
+      subject: "Sep 21–27 · $650.00",
+      icon: "cafe",
+      link: { href: "https://finances.example.test/admin/income?tab=cafe", label: "Open in Finances" },
+    });
+    expect(entry.events[0].changes).toEqual([
+      { label: "Sales", from: "$612.50", to: "$650.00" },
+      { label: "Note", from: "None", to: "Fall kickoff night" },
+    ]);
+  });
+
+  it("words each field the way the finances form does", () => {
+    const youth = {
+      received_on: { from: "2026-10-01", to: "2026-10-02" },
+      kind: { from: "tithe", to: "event" },
+      event_name: { from: null, to: "Bake sale" },
+      method: { from: "cash_app", to: null },
+    };
+    expect(eventChanges(income({ action: "youth_income.updated", changes: youth }))).toEqual([
+      { label: "Date given", from: "Oct 1, 2026", to: "Oct 2, 2026" },
+      { label: "What it was", from: "Tithe", to: "Event" },
+      { label: "Event name", from: "None", to: "Bake sale" },
+      { label: "How it came in", from: "Cash App", to: "Mixed" },
+    ]);
+    const week = { week_ending: { from: "2026-09-20", to: "2026-09-27" } };
+    expect(eventChanges(income({ action: "cafe_week.updated", entity_id: CAFE_WEEK, changes: week }))).toEqual([
+      { label: "Week", from: "Sep 14–20, 2026", to: "Sep 21–27, 2026" },
+    ]);
+  });
+
+  it("leaves the fields off adds and removals, since the line shows the entry", () => {
+    const added = {
+      kind: { from: null, to: "tithe" },
+      received_on: { from: null, to: "2026-10-02" },
+      amount_cents: { from: null, to: 4000 },
+      method: { from: null, to: "zelle" },
+      event_name: { from: null, to: null },
+    };
+    expect(eventChanges(income({ action: "youth_income.created", changes: added }))).toEqual([]);
+  });
+
+  it("names a removed entry as it was, with nothing to open", () => {
+    const gone = { kind: { from: "event", to: null }, amount_cents: { from: 34000, to: null } };
+    const rows = [income({ action: "youth_income.deleted", entity_id: BAKE_SALE, entity_name: "Bake sale", changes: gone })];
+    const [entry] = buildActivityDays(rows, context())[0].entries;
+    expect(entry).toMatchObject({
+      title: "Event income removed",
+      subject: "Bake sale · $340.00 · Mixed · Oct 1",
+      icon: "income",
+      link: null,
+    });
+  });
+
+  it("says when an entry can't be found", () => {
+    const [entry] = buildActivityDays([income({ action: "youth_income.updated", entity_id: GONE })], context())[0]
+      .entries;
+    expect(entry).toMatchObject({ title: "Youth income changed", subject: "An entry that's gone", link: null });
+  });
+
+  it("counts entries changed at once by kind", () => {
+    const tithes = ["f210", "f211", "f212"].map((end) =>
+      income({
+        action: "youth_income.created",
+        entity_id: `00000000-0000-4000-8000-00000000${end}`,
+        changes: { kind: { from: null, to: "tithe" } },
+      }),
+    );
+    const rows = [...tithes, income({ action: "cafe_week.created", entity_id: CAFE_WEEK })];
+    const [entry] = buildActivityDays(rows, context())[0].entries;
+    expect(entry.relatedSummary).toBe("3 youth entries, 1 cafe week");
+  });
+
+  it("shows a tithe import as one item, with its total and dates, opening the Income page", () => {
+    const changes = { count: 48, total_cents: 120000, method: "cash_app", first_on: "2026-01-04", last_on: "2026-09-27" };
+    const rows = [income({ action: "youth_income.imported", entity_id: null, changes })];
+    const [entry] = buildActivityDays(rows, context())[0].entries;
+    expect(entry).toMatchObject({
+      title: "Imported 48 tithes",
+      subject: "$1,200.00 · Cash App · Jan 4 – Sep 27, 2026",
+      icon: "bulk",
+      link: { href: "https://finances.example.test/admin/income", label: "Open in Finances" },
+    });
+    expect(entry.events[0].changes).toEqual([]);
+    expect(buildActivityDays(rows, context({ financesUrl: null }))[0].entries[0].link).toBeNull();
+  });
+
+  it("writes income to the download with its line and changes", () => {
+    const changes = { amount_cents: { from: 2500, to: 4000 } };
+    const lines = activityCsv([income({ action: "youth_income.updated", changes })], context()).split("\r\n");
+    expect(lines[1]).toBe(
+      "2026-10-02,10:00 AM,Finances,Test Owner,Tithe changed,$40.00 · Zelle · Oct 2,Amount: $25.00 → $40.00,",
+    );
+  });
+});
+
+describe("headcounts", () => {
+  const at = "2026-10-02T17:00:00Z";
+  const USHER = "00000000-0000-4000-8000-000000000004";
+  const headcount = (fields: Partial<FeedRow> & Pick<FeedRow, "action">) =>
+    row({
+      scope: "site",
+      entity_id: "00000000-0000-4000-8000-00000000f200",
+      entity_name: "2026-09-25",
+      actor_id: USHER,
+      created_at: at,
+      ...fields,
+    });
+
+  it("says a night's count was added, changed, or removed", () => {
+    expect(eventTitle(headcount({ action: "headcount.created" }))).toBe("Headcount added");
+    expect(eventTitle(headcount({ action: "headcount.updated" }))).toBe("Headcount changed");
+    expect(eventTitle(headcount({ action: "headcount.deleted" }))).toBe("Headcount removed");
+  });
+
+  it("shows the count, and the night only when it moves", () => {
+    const added = { night: { from: null, to: "2026-09-25" }, total: { from: null, to: 45 } };
+    expect(eventChanges(headcount({ action: "headcount.created", changes: added }))).toEqual([
+      { label: "Count", from: null, to: "45" },
+    ]);
+    const fixed = { night: { from: "2026-09-26", to: "2026-09-25" }, total: { from: 45, to: 47 } };
+    expect(eventChanges(headcount({ action: "headcount.updated", changes: fixed }))).toEqual([
+      { label: "Night", from: "Sep 26, 2026", to: "Sep 25, 2026" },
+      { label: "Count", from: "45", to: "47" },
+    ]);
+    const removed = { night: { from: "2026-09-25", to: null }, total: { from: 47, to: null } };
+    expect(eventChanges(headcount({ action: "headcount.deleted", changes: removed }))).toEqual([
+      { label: "Count", from: "47", to: null },
+    ]);
+  });
+
+  it("names the night it's for, with no link", () => {
+    const [entry] = buildActivityDays([headcount({ action: "headcount.created" })], context())[0].entries;
+    expect(entry).toMatchObject({ title: "Headcount added", subject: "Fri, Sep 25", scope: "site", link: null });
+  });
+
+  it("counts a catch-up of several nights as headcounts", () => {
+    const rows = ["2026-09-11", "2026-09-18", "2026-09-25"].map((night, index) =>
+      headcount({
+        action: "headcount.created",
+        entity_id: `00000000-0000-4000-8000-00000000f21${index}`,
+        entity_name: night,
+      }),
+    );
+    const [entry] = buildActivityDays(rows, context())[0].entries;
+    expect(entry.relatedSummary).toBe("3 headcounts");
+    expect(entry.related.map((related) => related.label).sort()).toEqual(["Fri, Sep 11", "Fri, Sep 18", "Fri, Sep 25"]);
   });
 });
 

@@ -32,8 +32,9 @@ export async function GET(request: NextRequest) {
   if (ownerNeedsMfa(me.roles, await getSessionAal())) redirect(mfaHref("/activity"));
 
   const visible = scopesFor(me.roles);
-  const filters = parseActivityFilters(Object.fromEntries(request.nextUrl.searchParams), visible);
-  const filename = `activity-${todayInLA()}.csv`;
+  const today = todayInLA();
+  const filters = parseActivityFilters(Object.fromEntries(request.nextUrl.searchParams), visible, today);
+  const filename = `activity-${today}.csv`;
 
   try {
     await recordActivityExport(filename);
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
     ...lookups,
     financesUrl: readPortalEnv().financesUrl,
     canOpenPeople: true,
-    today: todayInLA(),
+    today,
   });
 
   return new Response(csv, {

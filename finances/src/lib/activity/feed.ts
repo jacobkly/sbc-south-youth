@@ -1,10 +1,11 @@
-import { addDays, formatWeekdayDate, laDateOf, type IsoDate } from "@/lib/dates";
+import { addDays, addMonths, daysBetween, formatWeekdayDate, isIsoDate, laDateOf, type IsoDate } from "@/lib/dates";
 import { EVENT_ACTION_LABELS, eventTitle, type EventAction, type RequestEvent } from "@/lib/requests/status";
 
 /** In the order the filter shows them. */
-export const ACTIVITY_KINDS = ["all", "receipts", "payments", "status", "edits"] as const;
+export const ACTIVITY_KINDS = ["all", "receipts", "payments", "status", "edits", "income"] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
-export type EventKind = Exclude<ActivityKind, "all">;
+/** The kinds of request events. Income changes come from the activity log instead. */
+export type EventKind = Exclude<ActivityKind, "all" | "income">;
 
 export const ACTIVITY_KIND_LABELS: Record<ActivityKind, string> = {
   all: "All",
@@ -12,14 +13,15 @@ export const ACTIVITY_KIND_LABELS: Record<ActivityKind, string> = {
   payments: "Payments",
   status: "Status",
   edits: "Edits",
+  income: "Income",
 };
 
-/** The actions in each kind. Every action is in exactly one. */
+/** The request actions in each kind. Every action is in exactly one. */
 export const ACTIVITY_KIND_ACTIONS: Record<EventKind, readonly EventAction[]> = {
   receipts: ["receipt_added", "receipt_removed"],
   payments: ["paid", "recorded_paid", "unpaid"],
   status: ["submitted", "approved", "unapproved", "info_requested", "rejected", "cancelled"],
-  edits: ["created", "updated", "corrected"],
+  edits: ["created", "updated", "corrected", "tagged"],
 };
 
 const KIND_OF = new Map(
@@ -33,18 +35,42 @@ export function kindOf(action: string): EventKind {
   return KIND_OF.get(action as EventAction) ?? "edits";
 }
 
-export const ACTIVITY_PAGE_SIZE = 50;
-/** Enough for 1,000 events, the most one Supabase query returns. */
-export const MAX_ACTIVITY_PAGES = 20;
+/**
+ * The most events the page loads, enough for the biggest import (2,000
+ * requests with two events each) and then some.
+ */
+export const MAX_ACTIVITY_EVENTS = 5000;
 
 /** The activity page's filter, as kept in the URL. */
 export type ActivityFilters = {
   kind: ActivityKind;
-  /** How many pages have been loaded with "Load more". */
-  pages: number;
+  /** The oldest day "Load more" has reached, or null for the past week. */
+  since: IsoDate | null;
 };
 
-export const DEFAULT_ACTIVITY_FILTERS: ActivityFilters = { kind: "all", pages: 1 };
+export const DEFAULT_ACTIVITY_FILTERS: ActivityFilters = { kind: "all", since: null };
+
+/** The first day the feed shows before "Load more": the past week, today included. */
+export function firstSince(today: IsoDate): IsoDate {
+  return addDays(today, -6);
+}
+
+/** Back a week while the feed covers less than two, then a month at a time. */
+function stepBack(since: IsoDate, today: IsoDate): IsoDate {
+  return daysBetween(since, today) < 13 ? addDays(since, -7) : addMonths(since, -1);
+}
+
+/**
+ * Where "Load more" reaches back to from `since`, given `olderOn`, the day
+ * of the newest activity before it. The feed always covers whole days, so
+ * an import never comes in pieces. When nothing happened in the next
+ * stretch, it skips to the stretch that ends with `olderOn`, so every press
+ * shows something.
+ */
+export function olderSince(since: IsoDate, olderOn: IsoDate, today: IsoDate): IsoDate {
+  const next = stepBack(since, today);
+  return olderOn < next ? stepBack(addDays(olderOn, 1), today) : next;
+}
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -54,12 +80,12 @@ function single(params: SearchParams, key: string): string | undefined {
 }
 
 /** Reads the filter from the URL. Anything unrecognized falls back to its default. */
-export function parseActivityFilters(params: SearchParams): ActivityFilters {
+export function parseActivityFilters(params: SearchParams, today: IsoDate): ActivityFilters {
   const kind = single(params, "kind");
-  const pages = Number(single(params, "pages"));
+  const since = single(params, "since");
   return {
     kind: ACTIVITY_KINDS.find((candidate) => candidate === kind) ?? DEFAULT_ACTIVITY_FILTERS.kind,
-    pages: Number.isInteger(pages) && pages > 1 ? Math.min(pages, MAX_ACTIVITY_PAGES) : 1,
+    since: since && isIsoDate(since) && since < firstSince(today) ? since : null,
   };
 }
 
@@ -67,7 +93,7 @@ export function parseActivityFilters(params: SearchParams): ActivityFilters {
 export function activityHref(filters: ActivityFilters): string {
   const params = new URLSearchParams();
   if (filters.kind !== "all") params.set("kind", filters.kind);
-  if (filters.pages > 1) params.set("pages", String(filters.pages));
+  if (filters.since) params.set("since", filters.since);
   const query = params.toString();
   return query ? `/admin/activity?${query}` : "/admin/activity";
 }

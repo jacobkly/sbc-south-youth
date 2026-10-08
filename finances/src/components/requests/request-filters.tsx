@@ -17,21 +17,29 @@ import { formatDate } from "@/lib/dates";
 import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
 import { activeFilterCount, type QueueFilters } from "@/lib/requests/queue";
 import { REQUEST_TYPES, type RequestType } from "@/lib/requests/schema";
+import type { TagRow } from "@/lib/tags/tags";
 
 export type PayeeOption = Pick<Tables<"payees">, "id" | "full_name" | "is_active">;
 
 /** The filters set in the sheet. The tab and search are set on the page. */
-export type SheetFilters = Pick<QueueFilters, "from" | "to" | "type" | "payee" | "missingReceipt">;
+export type SheetFilters = Pick<QueueFilters, "from" | "to" | "type" | "payee" | "tag" | "missingReceipt">;
 
-const CLEARED: SheetFilters = { from: null, to: null, type: null, payee: null, missingReceipt: false };
+export const CLEARED_FILTERS: SheetFilters = {
+  from: null,
+  to: null,
+  type: null,
+  payee: null,
+  tag: null,
+  missingReceipt: false,
+};
 
 // Radix Select and RadioGroup need a non-empty value for "no filter".
 const ANY = "any";
 
 const FILTERS_BUTTON_ID = "request-filters-button";
 
-function sheetFilters({ from, to, type, payee, missingReceipt }: QueueFilters): SheetFilters {
-  return { from, to, type, payee, missingReceipt };
+function sheetFilters({ from, to, type, payee, tag, missingReceipt }: QueueFilters): SheetFilters {
+  return { from, to, type, payee, tag, missingReceipt };
 }
 
 /**
@@ -41,10 +49,12 @@ function sheetFilters({ from, to, type, payee, missingReceipt }: QueueFilters): 
 export function FilterSheet({
   filters,
   payees,
+  tags,
   onApply,
 }: {
   filters: QueueFilters;
   payees: PayeeOption[];
+  tags: TagRow[];
   onApply: (changes: SheetFilters) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -168,6 +178,28 @@ export function FilterSheet({
             </Select>
           </FormField>
 
+          {/* Shown while a tag is picked, even after it's deleted, so it can be cleared. */}
+          {(tags.length > 0 || draft.tag) && (
+            <FormField id="filter-tag" label="Tag">
+              <Select value={draft.tag ?? ANY} onValueChange={(value) => change({ tag: value === ANY ? null : value })}>
+                <SelectTrigger id="filter-tag" className="w-full text-base data-[size=default]:h-11 desktop:text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ANY}>Any tag</SelectItem>
+                  {draft.tag && !tags.some((tag) => tag.id === draft.tag) && (
+                    <SelectItem value={draft.tag}>Deleted tag</SelectItem>
+                  )}
+                  {tags.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      {tag.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          )}
+
           <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 py-2">
             <Label htmlFor="filter-missing-receipt" className="text-base font-normal desktop:text-sm">
               Only requests missing a receipt
@@ -180,7 +212,7 @@ export function FilterSheet({
           </div>
 
           <div className="flex flex-col-reverse gap-2 pt-2 desktop:flex-row desktop:justify-end">
-            <Button type="button" variant="outline" className="h-11 desktop:min-w-28" onClick={() => setDraft(CLEARED)}>
+            <Button type="button" variant="outline" className="h-11 desktop:min-w-28" onClick={() => setDraft(CLEARED_FILTERS)}>
               Clear all
             </Button>
             <Button type="submit" className="h-11 desktop:min-w-28">
@@ -204,10 +236,12 @@ function dateRangeLabel(from: string | null, to: string | null): string | null {
 export function ActiveFilters({
   filters,
   payees,
+  tags,
   onRemove,
 }: {
   filters: QueueFilters;
   payees: PayeeOption[];
+  tags: TagRow[];
   onRemove: (changes: Partial<SheetFilters>) => void;
 }) {
   const chips: { key: string; label: string; clear: Partial<SheetFilters> }[] = [];
@@ -217,6 +251,10 @@ export function ActiveFilters({
   if (filters.payee) {
     const name = payees.find((option) => option.id === filters.payee)?.full_name ?? "Unknown payee";
     chips.push({ key: "payee", label: name, clear: { payee: null } });
+  }
+  if (filters.tag) {
+    const name = tags.find((tag) => tag.id === filters.tag)?.name ?? "Deleted tag";
+    chips.push({ key: "tag", label: `Tag: ${name}`, clear: { tag: null } });
   }
   if (filters.missingReceipt) {
     chips.push({ key: "missingReceipt", label: "Missing a receipt", clear: { missingReceipt: false } });

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import type { IsoDate } from "@/lib/dates";
 import { fetchAll } from "@/lib/supabase/fetch-all";
+import { findTag, TAG_COLUMNS, tidyTagName, type TagRow } from "@/lib/tags/tags";
 import { nameKey, type ImportRow } from "./parse";
 
 export type ExistingPayee = {
@@ -98,6 +99,20 @@ export function planImport(
   return { newPayees: [...newPayees.values()], payeeNames, duplicates, selfRows };
 }
 
+/**
+ * Tags these rows have that aren't in the app yet, in the order they first
+ * appear, spelled as first seen. import_paid_requests adds them, and uses the
+ * tags already in the app whatever their case or spacing.
+ */
+export function newTagNames(rows: readonly ImportRow[], tags: readonly TagRow[]): string[] {
+  const added = new Map<string, string>();
+  for (const name of rows.flatMap((row) => row.tags)) {
+    const key = tidyTagName(name).toLowerCase();
+    if (!added.has(key) && !findTag(tags, name)) added.set(key, tidyTagName(name));
+  }
+  return [...added.values()];
+}
+
 /** Totals by month and type, oldest month first, to check against the spreadsheet. */
 export function monthTotals(rows: readonly ImportRow[]): MonthTotal[] {
   const months = new Map<string, MonthTotal>();
@@ -112,16 +127,17 @@ export function monthTotals(rows: readonly ImportRow[]): MonthTotal[] {
   return [...months.values()].sort((a, b) => a.month.localeCompare(b.month));
 }
 
-/** Every payee, and the requests still open or paid in the import's date range, for planning. */
+/** Every payee and tag, and the requests still open or paid in the import's date range, for planning. */
 export async function loadImportContext(
   supabase: SupabaseClient<Database>,
   rows: readonly ImportRow[],
-): Promise<{ payees: ExistingPayee[]; existing: ExistingRequest[] }> {
+): Promise<{ payees: ExistingPayee[]; existing: ExistingRequest[]; tags: TagRow[] }> {
   const dates = rows.map((row) => row.date).sort();
-  const [payees, existing] = await Promise.all([
+  const [payees, tags, existing] = await Promise.all([
     fetchAll((from, to) =>
       supabase.from("payees").select("id, full_name, user_id, is_active, created_at").order("id").range(from, to),
     ),
+    fetchAll((from, to) => supabase.from("tags").select(TAG_COLUMNS).order("id").range(from, to)),
     dates.length === 0
       ? Promise.resolve([])
       : fetchAll((from, to) =>
@@ -135,5 +151,5 @@ export async function loadImportContext(
             .range(from, to),
         ),
   ]);
-  return { payees, existing };
+  return { payees, existing, tags };
 }

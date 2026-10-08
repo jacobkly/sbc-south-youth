@@ -29,6 +29,7 @@ The leader portal is where leaders run the site from a phone. It's invite-only, 
 - invite people and set their roles
 - post heads-ups and events, and add photos
 - follow up on form messages
+- enter how many came to youth each week
 - see recent activity, email and storage use, and the last backup
 
 Once one sign-in is turned on (see [Deployment](#deployment)), people sign in once on the portal and switch between it and finances from the navigation.
@@ -42,10 +43,11 @@ Each person can hold several roles. Owner counts as all of them.
 | Role | Can do |
 | --- | --- |
 | Owner | Everything in both apps. The only role that invites people, changes roles, removes access, and approves or pays reimbursements. Uses two-step sign-in |
-| Finance viewer | Read every submitted request, receipt, and report in finances. Change nothing |
+| Finance viewer | Read every submitted request, receipt, and report in finances, and each week's headcount. Change nothing |
 | Requester | Submit their own reimbursements in finances and see only their own requests |
 | Site editor | Post heads-ups and events, and add, place, and take down photos |
 | Messages | Read and handle messages from the site's forms |
+| Attendance | Enter how many came to youth each week and fix a count that's off |
 
 The database enforces every role with row-level security, so hiding a button is never what keeps someone out.
 

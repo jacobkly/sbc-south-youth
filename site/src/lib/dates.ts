@@ -124,6 +124,15 @@ export function addDays(date: IsoDate, days: number): IsoDate {
   return toIsoDate(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate());
 }
 
+/** The same day `months` later, or earlier when negative, kept within a shorter month. */
+export function addMonths(date: IsoDate, months: number): IsoDate {
+  const { year, month, day } = parseIsoDate(date);
+  const index = year * 12 + month - 1 + months;
+  const shiftedYear = Math.floor(index / 12);
+  const shiftedMonth = (index % 12) + 1;
+  return toIsoDate(shiftedYear, shiftedMonth, Math.min(day, lastDayOfMonth(shiftedYear, shiftedMonth)));
+}
+
 /** Whole days from one date to another, negative when `to` is earlier. */
 export function daysBetween(from: IsoDate, to: IsoDate): number {
   const a = parseIsoDate(from);

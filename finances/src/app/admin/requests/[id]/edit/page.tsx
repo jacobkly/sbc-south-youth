@@ -7,7 +7,6 @@ import { todayInLA } from "@/lib/dates";
 import { PAYEE_COLUMNS } from "@/lib/payees/columns";
 import { signReceiptUrls } from "@/lib/receipts/signed-urls";
 import { EDIT_REQUEST_COLUMNS, toEditableRequest } from "@/lib/requests/edit";
-import { recentEventNames } from "@/lib/requests/event-names";
 import { isCorrectable, isEditable } from "@/lib/requests/format";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/utils";
@@ -27,25 +26,16 @@ export default async function EditRequestPage({ params }: PageProps<"/admin/requ
   if (user?.role !== "admin") redirect(detailHref);
 
   const supabase = await createClient();
-  const [{ data: request, error }, events] = await Promise.all([
-    supabase
-      .from("reimbursement_requests")
-      .select(REQUEST_COLUMNS)
-      .eq("id", id)
-      .order("position", { referencedTable: "lines" })
-      .order("created_at", { referencedTable: "receipts" })
-      .maybeSingle(),
-    supabase
-      .from("reimbursement_requests")
-      .select("event_name")
-      .not("event_name", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(200),
-  ]);
+  const { data: request, error } = await supabase
+    .from("reimbursement_requests")
+    .select(REQUEST_COLUMNS)
+    .eq("id", id)
+    .order("position", { referencedTable: "lines" })
+    .order("created_at", { referencedTable: "receipts" })
+    .maybeSingle();
 
   // Handled by admin/error.tsx.
   if (error) throw error;
-  if (events.error) throw events.error;
   if (!request) notFound();
   // An approved or paid request can still be corrected. Closed ones change only through their actions.
   if (!isEditable(request.status) && !isCorrectable(request.status)) redirect(detailHref);
@@ -69,7 +59,6 @@ export default async function EditRequestPage({ params }: PageProps<"/admin/requ
       <EditRequestForm
         request={toEditableRequest(id, request, request.payee?.full_name ?? "", signed)}
         payees={payees.data}
-        eventNames={recentEventNames(events.data)}
         today={todayInLA()}
         deletableBy={request.status === "draft" && request.created_by === user.id ? user.id : null}
         detailHref={detailHref}

@@ -1,8 +1,10 @@
 import "server-only";
+import { laDateOf, laMidnight, type IsoDate } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import type { FeedContext, FeedRequest, FeedRow } from "./feed";
 import { toFeedRow } from "./feed";
-import { ACTIVITY_PAGE_SIZE, MAX_ACTIVITY_PAGES, type ActivityQuery } from "./filters";
+import { firstSince, MAX_ACTIVITY_EVENTS, olderSince, type ActivityQuery } from "./filters";
+import { currentIncome, incomeSubjects, type IncomeSubject } from "./income";
 import { changedPayeeIds } from "./requests";
 
 /**
@@ -29,20 +31,61 @@ function feedRows(data: Parameters<typeof toFeedRow>[0][]): FeedRow[] {
   return data.map(toFeedRow).filter((row) => row !== null);
 }
 
-/** The newest events across the loaded pages. Throws if the query fails. */
-export async function loadActivity(query: ActivityQuery, pages: number) {
-  const supabase = await createClient();
-  const shown = pages * ACTIVITY_PAGE_SIZE;
-  // One more than is shown, to know whether there are more. On the last
-  // page that's past what Supabase returns, so it doesn't come back.
-  const { data, error } = await feedQuery(supabase, query).range(0, shown);
+/**
+ * Events from `start` on, newest first: the most the screen shows, and one
+ * more. Only an empty page means the end, since a short one might just be
+ * a lower cap.
+ */
+async function eventsFrom(supabase: Supabase, query: ActivityQuery, start: string) {
+  const limit = MAX_ACTIVITY_EVENTS + 1;
+  const rows: Parameters<typeof toFeedRow>[0][] = [];
+  while (rows.length < limit) {
+    const to = Math.min(rows.length + MAX_ROWS, limit) - 1;
+    const { data, error } = await feedQuery(supabase, query).gte("created_at", start).range(rows.length, to);
+    if (error) throw error;
+    if (data.length === 0) break;
+    rows.push(...data);
+  }
+  return rows;
+}
+
+/** The LA day of the newest event before `start`, or null. */
+async function newestDayBefore(supabase: Supabase, query: ActivityQuery, start: string) {
+  const { data, error } = await feedQuery(supabase, query).lt("created_at", start).limit(1);
   if (error) throw error;
-  const rows = feedRows(data.slice(0, shown));
+  const at = data[0]?.created_at;
+  return at ? laDateOf(at) : null;
+}
+
+/** The events from the start of `since` in LA, and the day of the newest one before it. */
+async function loadSince(supabase: Supabase, query: ActivityQuery, since: IsoDate) {
+  const start = laMidnight(since).toISOString();
+  const [rows, olderOn] = await Promise.all([
+    eventsFrom(supabase, query, start),
+    newestDayBefore(supabase, query, start),
+  ]);
+  return { since, rows, olderOn };
+}
+
+/**
+ * Every event from today back to the day the filters have reached, newest
+ * first. When nothing happened in the past week, it starts at the newest
+ * activity instead, so the screen never opens empty while there's history.
+ * Throws if a query fails.
+ */
+export async function loadActivity(query: ActivityQuery, since: IsoDate | null, today: IsoDate) {
+  const supabase = await createClient();
+  let loaded = await loadSince(supabase, query, since ?? firstSince(today));
+  if (loaded.rows.length === 0 && loaded.olderOn) {
+    loaded = await loadSince(supabase, query, olderSince(loaded.since, loaded.olderOn, today));
+  }
+  const capped = loaded.rows.length > MAX_ACTIVITY_EVENTS;
   return {
-    rows,
-    hasMore: data.length > shown && pages < MAX_ACTIVITY_PAGES,
-    /** There may be older events than the most the screen loads. */
-    capped: pages >= MAX_ACTIVITY_PAGES && data.length >= shown,
+    rows: feedRows(loaded.rows.slice(0, MAX_ACTIVITY_EVENTS)),
+    /** Where "Load more" reaches back to, or null when there's nothing older to show. */
+    older: !capped && loaded.olderOn ? olderSince(loaded.since, loaded.olderOn, today) : null,
+    /** There's more activity than the most the screen loads, so the oldest is left out. */
+    capped,
   };
 }
 
@@ -110,6 +153,33 @@ async function loadInviteUsers(supabase: Supabase, ids: string[]): Promise<Map<s
   return users;
 }
 
+/**
+ * The tithes, event income, and cafe weeks the rows mention: each as it is
+ * now, or as the log last recorded it once deleted.
+ */
+async function loadIncome(supabase: Supabase, rows: readonly FeedRow[]): Promise<Map<string, IncomeSubject>> {
+  const [entries, weeks] = await Promise.all([
+    Promise.all(
+      chunks(entityIds(rows, (row) => row.entity_type === "youth_income")).map((group) =>
+        supabase.from("youth_income").select("id, kind, received_on, amount_cents, method, event_name").in("id", group),
+      ),
+    ),
+    Promise.all(
+      chunks(entityIds(rows, (row) => row.entity_type === "cafe_week")).map((group) =>
+        supabase.from("cafe_weeks").select("id, week_ending, sales_cents, note").in("id", group),
+      ),
+    ),
+  ]);
+  for (const { error } of [...entries, ...weeks]) if (error) throw error;
+  return incomeSubjects(
+    rows,
+    currentIncome(
+      entries.flatMap(({ data }) => data ?? []),
+      weeks.flatMap(({ data }) => data ?? []),
+    ),
+  );
+}
+
 /** Everyone's name, for bylines, the person filter, and who an event is about. */
 export async function loadPeopleNames(): Promise<Map<string, string>> {
   const supabase = await createClient();
@@ -125,20 +195,21 @@ function entityIds(rows: readonly FeedRow[], test: (row: FeedRow) => boolean): s
   return [...new Set(rows.filter(test).flatMap((row) => (row.entity_id ? [row.entity_id] : [])))];
 }
 
-/** The requests, payees, and invites the rows mention, for wording them. */
+/** The requests, payees, invites, and income the rows mention, for wording them. */
 export async function loadFeedLookups(
   rows: readonly FeedRow[],
-): Promise<Pick<FeedContext, "requests" | "payeeNames" | "inviteUsers">> {
+): Promise<Pick<FeedContext, "requests" | "payeeNames" | "inviteUsers" | "income">> {
   const supabase = await createClient();
   const isRequest = (row: FeedRow) => row.entity_type === "request";
   // Finances' wording takes the action without the feed's "request." prefix.
   const edits = rows.filter(isRequest).map((row) => ({ ...row, action: row.action.replace(/^request\./, "") }));
-  const [requests, payeeNames, inviteUsers] = await Promise.all([
+  const [requests, payeeNames, inviteUsers, income] = await Promise.all([
     loadRequests(supabase, entityIds(rows, isRequest)),
     loadPayeeNames(supabase, changedPayeeIds(edits)),
     loadInviteUsers(supabase, entityIds(rows, (row) => row.entity_type === "invite")),
+    loadIncome(supabase, rows),
   ]);
-  return { requests, payeeNames, inviteUsers };
+  return { requests, payeeNames, inviteUsers, income };
 }
 
 /** Records that someone downloaded the feed. Throws if it can't, so nothing goes out unrecorded. */

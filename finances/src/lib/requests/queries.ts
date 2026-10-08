@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/lib/database.types";
-import { reportBounds, type ReportFilters } from "@/lib/reports/filters";
+import { REPORT_STATUSES, reportBounds, type ReportFilters } from "@/lib/reports/filters";
 import { fetchAll } from "@/lib/supabase/fetch-all";
+import { REQUEST_TAGS_EMBED, type RequestTagLinks } from "@/lib/tags/tags";
+import type { RequestStatus } from "./format";
 import {
   defaultTab,
   MAX_QUEUE_PAGES,
@@ -15,19 +17,21 @@ import {
   type QueueTab,
 } from "./queue";
 
+// A requester can't read tags, so for them the embed comes back empty.
 const QUEUE_COLUMNS =
-  "id, request_number, status, type, amount_cents, purchase_date, paid_at, sort_at, vendor, description, missing_receipt, payee:payees(full_name)";
+  `id, request_number, status, type, amount_cents, purchase_date, paid_at, sort_at, vendor, description, missing_receipt, payee:payees(full_name), ${REQUEST_TAGS_EMBED}` as const;
+const TAG_FILTER = "tagged:request_tags!inner()";
 const REPORT_COLUMNS =
-  `${QUEUE_COLUMNS}, payee_id, event_name, submitted_at, approved_at, payment_method, no_receipt_reason, lines:request_lines(vendor, amount_cents)` as const;
+  `${QUEUE_COLUMNS}, payee_id, submitted_at, approved_at, payment_method, no_receipt_reason, lines:request_lines(vendor, amount_cents)` as const;
 const EXPORT_COLUMNS = `
-  request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
+  request_number, status, type, amount_cents, purchase_date, vendor, description, ${REQUEST_TAGS_EMBED},
   submitted_at, external_approver, approved_at, paid_at, payment_method, payment_reference, no_receipt, no_receipt_reason,
   payee:payees(full_name),
   entered_by:users!reimbursement_requests_created_by_fkey(full_name),
   approver:users!reimbursement_requests_approved_by_fkey(full_name),
   payer:users!reimbursement_requests_paid_by_fkey(full_name),
   receipts(count)
-`;
+` as const;
 
 /** A request as the queue lists it. */
 export type QueueRow = Pick<
@@ -43,7 +47,7 @@ export type QueueRow = Pick<
   | "vendor"
   | "description"
   | "missing_receipt"
-> & { payee: { full_name: string } | null };
+> & { payee: { full_name: string } | null; tags: RequestTagLinks };
 
 export type QueuePage = {
   /** The tab shown: the one in the URL, or the one picked for it. */
@@ -54,30 +58,50 @@ export type QueuePage = {
   counts: Record<QueueTab, number>;
   /** More match than were loaded, and "Load more" can fetch them. */
   hasMore: boolean;
+  /** With a tag filter on, the cents approved or paid that match, in every tab. */
+  total: number | null;
 };
 
 /**
- * Requests in one tab that match the filters. `payeeIds` are the payees whose
- * names match the search, and `userId` is who's looking, whose drafts show.
+ * The columns of requests with one of these statuses, or any status, that
+ * match the filters. `payeeIds` are the payees whose names match the search,
+ * and `userId` is who's looking, whose drafts show.
  */
-function queueQuery(
+function queueQuery<Columns extends string>(
   supabase: SupabaseClient<Database>,
-  tab: QueueTab,
+  columns: Columns,
+  statuses: readonly RequestStatus[] | null,
   filters: QueueFilters,
   payeeIds: readonly string[],
   userId: string,
   options?: { count: "exact"; head: true },
 ) {
-  let query = supabase.from("reimbursement_requests").select(QUEUE_COLUMNS, options).or(ownDraftsFilter(userId));
-  const statuses = QUEUE_TAB_STATUSES[tab];
+  // A tag filter joins the tag's links without returning any, so the rows
+  // come back the same and each still lists all its tags.
+  const select = (filters.tag ? `${columns}, ${TAG_FILTER}` : columns) as Columns;
+  let query = supabase.from("reimbursement_requests").select(select, options).or(ownDraftsFilter(userId));
   if (statuses) query = query.in("status", statuses);
   if (filters.from) query = query.gte("purchase_date", filters.from);
   if (filters.to) query = query.lte("purchase_date", filters.to);
   if (filters.type) query = query.eq("type", filters.type);
   if (filters.payee) query = query.eq("payee_id", filters.payee);
+  if (filters.tag) query = query.eq("tagged.tag_id", filters.tag);
   if (filters.missingReceipt) query = query.eq("missing_receipt", true);
   if (filters.q) query = query.or(searchFilter(filters.q, payeeIds));
   return query;
+}
+
+/** The cents approved or paid that match the filters, in every tab. Throws if a query fails. */
+async function loadTotal(
+  supabase: SupabaseClient<Database>,
+  filters: QueueFilters,
+  payeeIds: readonly string[],
+  userId: string,
+): Promise<number> {
+  const rows = await fetchAll((from, to) =>
+    queueQuery(supabase, "amount_cents", REPORT_STATUSES, filters, payeeIds, userId).order("id").range(from, to),
+  );
+  return rows.reduce((sum, row) => sum + row.amount_cents, 0);
 }
 
 /** How many requests in each tab match the filters. Throws if a query fails. */
@@ -88,7 +112,9 @@ async function loadCounts(
   userId: string,
 ): Promise<Record<QueueTab, number>> {
   const results = await Promise.all(
-    QUEUE_TABS.map((tab) => queueQuery(supabase, tab, filters, payeeIds, userId, { count: "exact", head: true })),
+    QUEUE_TABS.map((tab) =>
+      queueQuery(supabase, "id", QUEUE_TAB_STATUSES[tab], filters, payeeIds, userId, { count: "exact", head: true }),
+    ),
   );
   return Object.fromEntries(
     QUEUE_TABS.map((tab, index) => {
@@ -113,12 +139,13 @@ export async function loadQueue(
   const counting = loadCounts(supabase, filters, payeeIds, userId);
   // Only waits for the counts first when it needs them to pick the tab.
   const tab = filters.tab ?? defaultTab(await counting);
-  const [rows, counts] = await Promise.all([
-    queueQuery(supabase, tab, filters, payeeIds, userId)
+  const [rows, counts, total] = await Promise.all([
+    queueQuery(supabase, QUEUE_COLUMNS, QUEUE_TAB_STATUSES[tab], filters, payeeIds, userId)
       .order(sortsByPurchaseDate(filters) ? "purchase_date" : "sort_at", { ascending: false })
       .order("request_number", { ascending: false })
       .range(0, filters.pages * QUEUE_PAGE_SIZE - 1),
     counting,
+    filters.tag ? loadTotal(supabase, filters, payeeIds, userId) : null,
   ]);
 
   if (rows.error) throw rows.error;
@@ -128,6 +155,7 @@ export async function loadQueue(
     rows: rows.data,
     counts,
     hasMore: counts[tab] > rows.data.length && filters.pages < MAX_QUEUE_PAGES,
+    total,
   };
 }
 
@@ -178,7 +206,7 @@ export async function loadPayeeRequests(
 export type ReportRow = QueueRow &
   Pick<
     Tables<"reimbursement_requests">,
-    "payee_id" | "event_name" | "submitted_at" | "approved_at" | "payment_method" | "no_receipt_reason"
+    "payee_id" | "submitted_at" | "approved_at" | "payment_method" | "no_receipt_reason"
   > & { lines: Pick<Tables<"request_lines">, "vendor" | "amount_cents">[] };
 
 /** The requests in a report with the given columns, newest first by the report's date. */
@@ -198,10 +226,10 @@ export async function loadReport(supabase: SupabaseClient<Database>, filters: Re
   return fetchAll((from, to) => reportQuery(supabase, filters, REPORT_COLUMNS).range(from, to));
 }
 
-/** The amounts and dates in a report, to compare another report with. Throws if a query fails. */
+/** The amounts, dates, and statuses in a report, to compare another report with. Throws if a query fails. */
 export async function loadReportAmounts(supabase: SupabaseClient<Database>, filters: ReportFilters) {
   return fetchAll((from, to) =>
-    reportQuery(supabase, filters, "type, amount_cents, purchase_date, paid_at").range(from, to),
+    reportQuery(supabase, filters, "type, amount_cents, purchase_date, paid_at, status").range(from, to),
   );
 }
 

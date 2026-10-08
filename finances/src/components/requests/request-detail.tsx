@@ -23,7 +23,6 @@ export type RequestDetailData = {
   purchase_date: string;
   vendor: string | null;
   description: string | null;
-  event_name: string | null;
   no_receipt: boolean;
   no_receipt_reason: string | null;
   external_approver: string | null;
@@ -53,6 +52,9 @@ export type LateWarning = {
   sent: boolean;
 };
 
+/** The id of the Tags detail's label, for an editor in it to read as "Tags". */
+export const TAGS_LABEL_ID = "request-tags-label";
+
 /** A column on a PC. On a phone it drops out of the layout, so its sections join the page's single column. */
 const COLUMN = "contents @4xl/main:flex @4xl/main:flex-col @4xl/main:gap-6";
 
@@ -63,9 +65,8 @@ function detailRows(request: RequestDetailData): [string, string | null][] {
     ["Purchase date", formatDate(request.purchase_date)],
     // With several receipts, it's the list of their vendors.
     [request.lines.length > 1 ? "Vendors" : "Vendor", request.vendor],
+    ["Description", request.description],
   ];
-  if (request.event_name) rows.push(["Event", request.event_name]);
-  rows.push(["Description", request.description]);
   if (request.external_approver) rows.push(["Approved by", request.external_approver]);
   if (request.paid_at) {
     const method = request.payment_method && PAYMENT_METHOD_LABELS[request.payment_method];
@@ -121,6 +122,7 @@ export function RequestDetail({
   signed,
   late,
   actions,
+  tags,
   editHref,
   backHref = "/admin/requests",
   backLabel = "Requests",
@@ -133,6 +135,11 @@ export function RequestDetail({
   late: LateWarning | null;
   /** Shown under the summary. Left out for anyone who can only view. */
   actions?: ReactNode;
+  /**
+   * The first detail, labelled by `TAGS_LABEL_ID`. Left out for a requester,
+   * who never sees tags.
+   */
+  tags?: ReactNode;
   /** Where to edit it, while it can still be edited by this user. */
   editHref?: string;
   /** Where the back link goes when there's no page to go back to. */
@@ -199,6 +206,14 @@ export function RequestDetail({
               Details
             </h2>
             <dl className="divide-y rounded-lg border">
+              {tags && (
+                <div className="space-y-1 px-4 py-3">
+                  <dt id={TAGS_LABEL_ID} className="text-sm text-muted-foreground">
+                    Tags
+                  </dt>
+                  <dd>{tags}</dd>
+                </div>
+              )}
               {detailRows(request).map(([term, value]) => (
                 <div key={term} className="space-y-1 px-4 py-3">
                   <dt className="text-sm text-muted-foreground">{term}</dt>

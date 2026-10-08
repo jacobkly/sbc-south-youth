@@ -13,10 +13,12 @@ import {
   type MonthPeriod,
   type Period,
 } from "@/lib/dates";
+import { loadCafeCosts } from "@/lib/income/queries";
 import type { RequestStatus } from "@/lib/requests/format";
 import { loadRecentRequests, type QueueRow } from "@/lib/requests/queries";
 import type { RequestType } from "@/lib/requests/schema";
 import { fetchAll } from "@/lib/supabase/fetch-all";
+import { moneyByMonth, moneyTotals, type MoneyPeriod, type MoneyTotals } from "./money";
 
 /** Months shown in the dashboard's monthly chart, this month included. */
 export const CHART_MONTHS = 12;
@@ -53,8 +55,10 @@ export type DashboardSummary = {
   paid: PaidTotals;
   /** Paid in the month, quarter, and year before, up to the same point as today. */
   paidBefore: Record<PaidKind, number>;
-  /** The last 12 months, oldest first, ending with this month. */
-  paidByMonth: PaidPeriod<MonthPeriod>[];
+  /** Money in, paid out, and what's left in the month, quarter, and year, plus cafe profit. */
+  money: MoneyTotals;
+  /** The last 12 months of money in and paid out, oldest first, ending with this month. */
+  moneyByMonth: MoneyPeriod<MonthPeriod>[];
   /** Who was paid the most this year, most first. */
   topPayees: PayeeTotal[];
   activePayees: number;
@@ -186,7 +190,7 @@ export async function loadDashboard(
   const from = periodRange(shiftPeriod(periodContaining("year", today), -1)).start;
   const to = periodRange(periodContaining("month", today)).end;
 
-  const [open, paid, payees, latest, storage] = await Promise.all([
+  const [open, paid, payees, latest, storage, youth, weeks, cafeCosts] = await Promise.all([
     fetchAll((start, end) =>
       supabase
         .from("reimbursement_requests")
@@ -210,6 +214,26 @@ export async function loadDashboard(
     ),
     loadRecentRequests(supabase, LATEST_REQUESTS, userId),
     supabase.rpc("storage_usage"),
+    fetchAll((start, end) =>
+      supabase
+        .from("youth_income")
+        .select("received_on, amount_cents")
+        .gte("received_on", from)
+        .lte("received_on", to)
+        .order("id")
+        .range(start, end),
+    ),
+    fetchAll((start, end) =>
+      supabase
+        .from("cafe_weeks")
+        .select("week_ending, sales_cents")
+        .gte("week_ending", from)
+        .lte("week_ending", to)
+        .order("id")
+        .range(start, end),
+    ),
+    // Cafe profit goes back as far as the year.
+    loadCafeCosts(supabase, periodRange(periodContaining("year", today)).start),
   ]);
 
   if (storage.error) throw storage.error;
@@ -223,7 +247,8 @@ export async function loadDashboard(
     toPay: statusTotal(open, "approved"),
     paid: totals,
     paidBefore: paidBefore(paid, today),
-    paidByMonth: paidByMonth(paid, today),
+    money: moneyTotals(youth, weeks, cafeCosts, totals),
+    moneyByMonth: moneyByMonth(youth, weeks, paidByMonth(paid, today)),
     topPayees: topPayees(paid, names, totals.year.period),
     activePayees: payees.filter((payee) => payee.is_active).length,
     latest: latest.rows,

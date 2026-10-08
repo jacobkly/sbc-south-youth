@@ -40,7 +40,8 @@ export type RequestAction =
   | "unpaid"
   | "receipt_added"
   | "receipt_removed"
-  | "corrected";
+  | "corrected"
+  | "tagged";
 
 export const REQUEST_ACTION_LABELS: Record<RequestAction, string> = {
   created: "Created",
@@ -57,6 +58,7 @@ export const REQUEST_ACTION_LABELS: Record<RequestAction, string> = {
   receipt_added: "File added",
   receipt_removed: "File removed",
   corrected: "Corrected",
+  tagged: "Tags changed",
 };
 
 /** One request event, as its wording needs it. `action` is without the feed's "request." prefix. */
@@ -97,6 +99,8 @@ const CHANGE_FIELDS = [
   ["purchase_date", "Purchase date"],
   ["vendor", "Vendor"],
   ["description", "Description"],
+  ["tags", "Tags"],
+  // Before tags, a request had one event name. Kept so older history still reads.
   ["event_name", "Event"],
   ["no_receipt", "No receipt on file"],
   ["no_receipt_reason", "Why there's no receipt"],
@@ -149,6 +153,8 @@ function formatValue(field: ChangeField, value: Json | undefined, payeeNames: Re
       return typeof value === "string" && !Number.isNaN(Date.parse(value)) ? formatDate(laDateOf(value)) : String(value);
     case "lines":
       return Array.isArray(value) && value.length > 0 ? value.map(formatLine).join(", ") : "None";
+    case "tags":
+      return Array.isArray(value) && value.length > 0 ? value.map(String).join(", ") : "None";
     default:
       return typeof value === "string" ? value : JSON.stringify(value);
   }

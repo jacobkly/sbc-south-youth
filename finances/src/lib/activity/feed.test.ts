@@ -9,8 +9,9 @@ import {
   groupByDay,
   itemTitle,
   kindOf,
+  firstSince,
   leadEvent,
-  MAX_ACTIVITY_PAGES,
+  olderSince,
   parseActivityFilters,
 } from "./feed";
 
@@ -32,22 +33,39 @@ describe("kindOf", () => {
     expect(kindOf("rejected")).toBe("status");
     expect(kindOf("updated")).toBe("edits");
     expect(kindOf("corrected")).toBe("edits");
+    expect(kindOf("tagged")).toBe("edits");
   });
 });
 
 describe("parseActivityFilters", () => {
-  it("reads the kind and pages", () => {
-    expect(parseActivityFilters({ kind: "receipts", pages: "3" })).toEqual({ kind: "receipts", pages: 3 });
+  const today = "2026-10-05";
+
+  it("reads the kind and how far back the feed goes", () => {
+    expect(parseActivityFilters({ kind: "receipts", since: "2026-08-22" }, today)).toEqual({
+      kind: "receipts",
+      since: "2026-08-22",
+    });
   });
 
   it("falls back to the defaults for anything it doesn't recognize", () => {
-    expect(parseActivityFilters({})).toEqual(DEFAULT_ACTIVITY_FILTERS);
-    expect(parseActivityFilters({ kind: "photos", pages: "0" })).toEqual(DEFAULT_ACTIVITY_FILTERS);
-    expect(parseActivityFilters({ kind: ["edits", "status"], pages: "1.5" })).toEqual({ kind: "edits", pages: 1 });
+    expect(parseActivityFilters({}, today)).toEqual(DEFAULT_ACTIVITY_FILTERS);
+    expect(parseActivityFilters({ kind: "photos", since: "last week" }, today)).toEqual(DEFAULT_ACTIVITY_FILTERS);
+    expect(parseActivityFilters({ kind: ["edits", "status"], since: "2026-02-30" }, today)).toEqual({
+      kind: "edits",
+      since: null,
+    });
   });
 
-  it("caps the pages", () => {
-    expect(parseActivityFilters({ pages: "9999" }).pages).toBe(MAX_ACTIVITY_PAGES);
+  it("starts at the past week when asked for less", () => {
+    expect(parseActivityFilters({ since: "2026-09-29" }, today).since).toBeNull();
+    expect(parseActivityFilters({ since: "2026-10-04" }, today).since).toBeNull();
+    expect(parseActivityFilters({ since: "2026-11-01" }, today).since).toBeNull();
+    expect(parseActivityFilters({ since: "2026-09-28" }, today).since).toBe("2026-09-28");
+  });
+
+  it("reads the income kind", () => {
+    expect(parseActivityFilters({ kind: "income" }, today)).toEqual({ kind: "income", since: null });
+    expect(activityHref({ kind: "income", since: null })).toBe("/admin/activity?kind=income");
   });
 });
 
@@ -56,8 +74,37 @@ describe("activityHref", () => {
     expect(activityHref(DEFAULT_ACTIVITY_FILTERS)).toBe("/admin/activity");
   });
 
-  it("keeps the kind and pages", () => {
-    expect(activityHref({ kind: "payments", pages: 2 })).toBe("/admin/activity?kind=payments&pages=2");
+  it("keeps the kind and how far back", () => {
+    expect(activityHref({ kind: "payments", since: "2026-09-22" })).toBe(
+      "/admin/activity?kind=payments&since=2026-09-22",
+    );
+  });
+});
+
+describe("firstSince", () => {
+  it("shows the past week, today included", () => {
+    expect(firstSince("2026-10-05")).toBe("2026-09-29");
+  });
+});
+
+describe("olderSince", () => {
+  const today = "2026-10-05";
+
+  it("reaches back another week, then a month at a time", () => {
+    expect(olderSince("2026-09-29", "2026-09-28", today)).toBe("2026-09-22");
+    expect(olderSince("2026-09-22", "2026-09-21", today)).toBe("2026-08-22");
+    expect(olderSince("2026-08-22", "2026-08-21", today)).toBe("2026-07-22");
+  });
+
+  it("covers the newest activity it's reaching for", () => {
+    expect(olderSince("2026-09-29", "2026-09-22", today)).toBe("2026-09-22");
+    expect(olderSince("2026-09-22", "2026-08-22", today)).toBe("2026-08-22");
+  });
+
+  it("skips a stretch with nothing in it, to the stretch that ends with the next activity", () => {
+    expect(olderSince("2026-09-29", "2026-09-20", today)).toBe("2026-08-21");
+    expect(olderSince("2026-09-29", "2026-06-10", today)).toBe("2026-05-11");
+    expect(olderSince("2026-08-22", "2025-12-31", today)).toBe("2025-12-01");
   });
 });
 

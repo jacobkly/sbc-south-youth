@@ -6,6 +6,7 @@ import { describedBy, FormField } from "@/components/form-field";
 import { pickedTwice, ReceiptPicker } from "@/components/receipts/receipt-picker";
 import type { PendingReceipts } from "@/components/receipts/use-pending-receipts";
 import { PayeePicker } from "@/components/requests/payee-picker";
+import { TagPicker } from "@/components/tags/tag-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,7 @@ import {
   type RequestFormValues,
   type RequestType,
 } from "@/lib/requests/schema";
+import type { TagRow } from "@/lib/tags/tags";
 
 export type RequestFormErrors = RequestFieldErrors & { receipts?: string };
 
@@ -46,6 +48,8 @@ export const lineFieldId = (index: number, field: LineField | "files") => `reque
 const lineHeadingId = (index: number) => `${lineFieldId(index, "files")}-heading`;
 
 const ADD_LINE_ID = "request-add-line";
+
+const TAGS_ID = "request-tags";
 
 /** Scrolled to after adding or removing a receipt, it stops clear of the phone tab bar, like the page's own bottom padding. */
 const SCROLL_CLEAR = "scroll-mt-4 scroll-mb-[calc(7rem+env(safe-area-inset-bottom))] rail:scroll-mb-4 wide:scroll-mb-4";
@@ -74,7 +78,6 @@ export function requestErrorIds(errors: RequestFormErrors, lines: readonly Reque
       ...field("purchase_date"),
       ...line(0, ["vendor"]),
       ...field("description"),
-      ...field("event_name"),
       ...field("total"),
       ...receipts,
       ...field("no_receipt_reason"),
@@ -85,7 +88,6 @@ export function requestErrorIds(errors: RequestFormErrors, lines: readonly Reque
     ...field("type"),
     ...field("purchase_date"),
     ...field("description"),
-    ...field("event_name"),
     ...lines.flatMap((_, index) => line(index, ["amount", "vendor"])),
     ...field("total"),
     ...receipts,
@@ -100,7 +102,6 @@ export function blankRequest(today: IsoDate): RequestFormValues {
     purchase_date: today,
     lines: [blankLine()],
     description: "",
-    event_name: "",
     no_receipt: false,
     no_receipt_reason: "",
   };
@@ -113,9 +114,10 @@ function receiptHint(count: number): string {
 }
 
 /**
- * The purchase itself: payee, type, date, description, event, and its
- * receipts, each with an amount, a vendor, and files. Shared by the new and
- * edit forms, which own the values and how they're saved.
+ * The purchase itself: payee, type, date, description, and its receipts,
+ * each with an amount, a vendor, and files, plus its tags on the owner's new
+ * form. Shared by the new and edit forms, which own the values and how
+ * they're saved.
  *
  * Most requests have one receipt, so that looks like a single purchase. "Add
  * another receipt" turns it into a list with a total.
@@ -129,7 +131,7 @@ export function RequestFields({
   onChange,
   payeePicker,
   allowNoReceipt = true,
-  eventNames,
+  tagPicker,
   today,
   pendingReceipts,
   savedReceipts,
@@ -144,8 +146,13 @@ export function RequestFields({
   payeePicker?: { payees: PayeeRow[]; onAdded: (payee: PayeeRow) => void };
   /** Shows the "No receipt on file" switch and its reason. */
   allowNoReceipt?: boolean;
-  /** Recent event names, offered as suggestions. */
-  eventNames: string[];
+  /** The request's tags, from every tag sorted by name. Left out, the form has no tags field. */
+  tagPicker?: {
+    tags: TagRow[];
+    value: readonly string[];
+    onChange: (ids: readonly string[]) => void;
+    onAdded: (tag: TagRow) => void;
+  };
   today: IsoDate;
   /** Files picked here and not saved yet. */
   pendingReceipts: PendingReceipts;
@@ -402,28 +409,19 @@ export function RequestFields({
         <Textarea {...textProps("description", true)} rows={3} maxLength={1000} />
       </FormField>
 
-      <FormField
-        id={requestFieldId("event_name")}
-        label="Event"
-        optional
-        hint="Like a retreat or camp."
-        error={errors.event_name}
-      >
-        <Input
-          {...textProps("event_name", true)}
-          list={eventNames.length > 0 ? "request-event-suggestions" : undefined}
-          autoComplete="off"
-          autoCapitalize="words"
-          maxLength={100}
-          className="h-11"
-        />
-      </FormField>
-      {eventNames.length > 0 && (
-        <datalist id="request-event-suggestions">
-          {eventNames.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
+      {tagPicker && (
+        <FormField id={TAGS_ID} label="Tags" optional hint="Like a retreat or camp. Requesters never see them." group>
+          <TagPicker
+            id={TAGS_ID}
+            labelId={`${TAGS_ID}-label`}
+            tags={tagPicker.tags}
+            value={tagPicker.value}
+            onChange={tagPicker.onChange}
+            onAdded={tagPicker.onAdded}
+            describedBy={`${TAGS_ID}-hint`}
+            disabled={locked}
+          />
+        </FormField>
       )}
 
       {single ? (

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  eventBreakdown,
   paymentMethodBreakdown,
   receiptBreakdown,
   sizeBreakdown,
   statusBreakdown,
+  tagBreakdown,
   vendorBreakdown,
   type BreakdownRow,
 } from "./breakdowns";
@@ -157,34 +157,40 @@ describe("vendorBreakdown", () => {
   });
 });
 
-describe("eventBreakdown", () => {
-  function request(event_name: string | null, amount_cents: number) {
-    return { event_name, amount_cents };
+describe("tagBreakdown", () => {
+  function request(amount_cents: number, ...names: string[]) {
+    return { amount_cents, tags: names.map((name) => ({ tag: { id: `id-${name}`, name } })) };
   }
 
-  it("adds up each event's requests, grouping spellings, with no event last", () => {
-    const rows = [
-      request("Test Retreat", 4000),
-      request(null, 9000),
-      request("test retreat ", 1000),
-      request("Test Kickoff", 2500),
-    ];
-    expect(eventBreakdown(rows)).toEqual([
+  it("adds up each tag's requests, with untagged ones last", () => {
+    const rows = [request(4000, "Test Retreat"), request(9000), request(1000, "Test Retreat"), request(2500, "Test Kickoff")];
+    expect(tagBreakdown(rows)).toEqual([
       { key: "name:test retreat", label: "Test Retreat", count: 2, cents: 5000 },
       { key: "name:test kickoff", label: "Test Kickoff", count: 1, cents: 2500 },
-      { key: "none", label: "No event", count: 1, cents: 9000 },
+      { key: "none", label: "No tag", count: 1, cents: 9000 },
     ]);
   });
 
-  it("adds up the events past the top ones in one row", () => {
-    const rows = [request("Event A", 300), request("Event B", 200), request("Event C", 100)];
-    expect(eventBreakdown(rows, 1)).toEqual([
-      { key: "name:event a", label: "Event A", count: 1, cents: 300 },
-      { key: "other", label: "2 other events", count: 2, cents: 300 },
+  it("counts a request with two tags under both", () => {
+    expect(tagBreakdown([request(1200, "Snacks", "Test Retreat")])).toEqual([
+      { key: "name:snacks", label: "Snacks", count: 1, cents: 1200 },
+      { key: "name:test retreat", label: "Test Retreat", count: 1, cents: 1200 },
     ]);
   });
 
-  it("is empty when no request is for an event", () => {
-    expect(eventBreakdown([request(null, 500)])).toEqual([]);
+  it("skips a tag that couldn't be read", () => {
+    expect(tagBreakdown([{ amount_cents: 500, tags: [{ tag: null }] }])).toEqual([]);
+  });
+
+  it("adds up the tags past the top ones in one row", () => {
+    const rows = [request(300, "Tag A"), request(200, "Tag B"), request(100, "Tag C")];
+    expect(tagBreakdown(rows, 1)).toEqual([
+      { key: "name:tag a", label: "Tag A", count: 1, cents: 300 },
+      { key: "other", label: "2 other tags", count: 2, cents: 300 },
+    ]);
+  });
+
+  it("is empty when no request has a tag", () => {
+    expect(tagBreakdown([request(500), { amount_cents: 500, tags: null }])).toEqual([]);
   });
 });

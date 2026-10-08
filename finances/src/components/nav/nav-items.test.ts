@@ -3,6 +3,7 @@ import {
   ACCOUNT,
   ACTIVITY,
   DASHBOARD,
+  INCOME,
   isActive,
   MY_NEW_REQUEST,
   MY_REQUESTS,
@@ -20,8 +21,8 @@ describe("navFor", () => {
     expect(nav.home).toBe(DASHBOARD);
     expect(nav.create).toBe(NEW_REQUEST);
     expect(nav.tabs).toEqual([DASHBOARD, REQUESTS, NEW_REQUEST, PAYEES]);
-    expect(nav.more).toEqual([REPORTS, ACTIVITY, SETTINGS, ACCOUNT]);
-    expect(nav.main).toEqual([DASHBOARD, REQUESTS, PAYEES, REPORTS, ACTIVITY]);
+    expect(nav.more).toEqual([INCOME, REPORTS, ACTIVITY, SETTINGS, ACCOUNT]);
+    expect(nav.main).toEqual([DASHBOARD, REQUESTS, INCOME, PAYEES, REPORTS, ACTIVITY]);
     expect(nav.footer).toEqual([SETTINGS]);
   });
 
@@ -29,16 +30,16 @@ describe("navFor", () => {
     const nav = navFor({ role: "viewer", requester: false });
     expect(nav.create).toBeNull();
     expect(nav.tabs).toEqual([DASHBOARD, REQUESTS, PAYEES]);
-    expect(nav.more).toEqual([REPORTS, SETTINGS, ACCOUNT]);
-    expect(nav.main).toEqual([DASHBOARD, REQUESTS, PAYEES, REPORTS]);
+    expect(nav.more).toEqual([INCOME, REPORTS, SETTINGS, ACCOUNT]);
+    expect(nav.main).toEqual([DASHBOARD, REQUESTS, INCOME, PAYEES, REPORTS]);
   });
 
   it("gives a viewer who also requests their own requests, and a new one of their own", () => {
     const nav = navFor({ role: "viewer", requester: true });
     expect(nav.create).toBe(MY_NEW_REQUEST);
     expect(nav.tabs).toEqual([DASHBOARD, REQUESTS, MY_NEW_REQUEST, PAYEES]);
-    expect(nav.more).toEqual([MY_REQUESTS, REPORTS, SETTINGS, ACCOUNT]);
-    expect(nav.main).toEqual([DASHBOARD, REQUESTS, PAYEES, REPORTS, MY_REQUESTS]);
+    expect(nav.more).toEqual([MY_REQUESTS, INCOME, REPORTS, SETTINGS, ACCOUNT]);
+    expect(nav.main).toEqual([DASHBOARD, REQUESTS, INCOME, PAYEES, REPORTS, MY_REQUESTS]);
   });
 
   it("adds My requests for an admin who's also a requester, keeping the team's New", () => {

@@ -9,6 +9,7 @@
 --   sam@example.test    finance viewer
 --   jo@example.test     site editor and messages, so the portal only
 --   riley@example.test  requester only, so finances only
+--   drew@example.test   attendance only, to enter each week's headcount
 --
 -- Dates count back from today, so the dashboard always has recent activity.
 
@@ -27,7 +28,8 @@ from (values
   ('00000000-0000-4000-8000-5eed0000a001'::uuid, 'alex@example.test', 'Alex Example'),
   ('00000000-0000-4000-8000-5eed0000a002'::uuid, 'sam@example.test', 'Sam Sample'),
   ('00000000-0000-4000-8000-5eed0000a003'::uuid, 'jo@example.test', 'Jo Example'),
-  ('00000000-0000-4000-8000-5eed0000a004'::uuid, 'riley@example.test', 'Riley Example')
+  ('00000000-0000-4000-8000-5eed0000a004'::uuid, 'riley@example.test', 'Riley Example'),
+  ('00000000-0000-4000-8000-5eed0000a005'::uuid, 'drew@example.test', 'Drew Example')
 ) as u (id, email, full_name);
 
 insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
@@ -38,7 +40,8 @@ select
 from auth.users u
 where u.id in (
   '00000000-0000-4000-8000-5eed0000a001', '00000000-0000-4000-8000-5eed0000a002',
-  '00000000-0000-4000-8000-5eed0000a003', '00000000-0000-4000-8000-5eed0000a004'
+  '00000000-0000-4000-8000-5eed0000a003', '00000000-0000-4000-8000-5eed0000a004',
+  '00000000-0000-4000-8000-5eed0000a005'
 );
 
 -- The signup trigger gave everyone no roles.
@@ -46,6 +49,7 @@ update public.users set roles = '{owner}' where id = '00000000-0000-4000-8000-5e
 update public.users set roles = '{finance_viewer}' where id = '00000000-0000-4000-8000-5eed0000a002';
 update public.users set roles = '{site_editor,site_messages}' where id = '00000000-0000-4000-8000-5eed0000a003';
 update public.users set roles = '{finance_requester}' where id = '00000000-0000-4000-8000-5eed0000a004';
+update public.users set roles = '{attendance}' where id = '00000000-0000-4000-8000-5eed0000a005';
 
 insert into public.payees (id, full_name, email, notes, is_active, user_id, linked_at, linked_by) values
   (
@@ -69,39 +73,38 @@ select set_config(
 begin;
 
 insert into public.reimbursement_requests (
-  id, payee_id, created_by, type, amount_cents, purchase_date, vendor, description, event_name,
-  no_receipt, no_receipt_reason
+  id, payee_id, created_by, type, amount_cents, purchase_date, vendor, description, no_receipt, no_receipt_reason
 )
 select
   r.id::uuid, r.payee_id::uuid, '00000000-0000-4000-8000-5eed0000a001', r.type::public.reimbursement_type,
   r.amount_cents, (now() at time zone 'America/Los_Angeles')::date - r.days_ago, r.vendor, r.description,
-  r.event_name, r.no_receipt_reason is not null, r.no_receipt_reason
+  r.no_receipt_reason is not null, r.no_receipt_reason
 from (values
   ('00000000-0000-4000-8000-5eed0000c001', '00000000-0000-4000-8000-5eed0000b002', 'youth', 2350, 2,
-    'Grocery Outlet, Dollar Store, Corner Store', 'Snacks for small group', null, null),
+    'Grocery Outlet, Dollar Store, Corner Store', 'Snacks for small group', null),
   ('00000000-0000-4000-8000-5eed0000c002', '00000000-0000-4000-8000-5eed0000b003', 'cafe', 4800, 5,
-    'Restaurant Depot', 'Coffee beans and milk', null, 'The receipt was lost.'),
+    'Restaurant Depot', 'Coffee beans and milk', 'The receipt was lost.'),
   ('00000000-0000-4000-8000-5eed0000c003', '00000000-0000-4000-8000-5eed0000b002', 'youth', 12000, 10,
-    'Camp Example', 'Retreat deposit', 'Fall retreat', 'Paid online; no receipt was sent.'),
+    'Camp Example', 'Retreat deposit', 'Paid online; no receipt was sent.'),
   ('00000000-0000-4000-8000-5eed0000c004', '00000000-0000-4000-8000-5eed0000b003', 'youth', 3525, 12,
-    'Pizza Place', 'Pizza for game night', 'Game night', 'The receipt was lost.'),
+    'Pizza Place', 'Pizza for game night', 'The receipt was lost.'),
   ('00000000-0000-4000-8000-5eed0000c005', '00000000-0000-4000-8000-5eed0000b002', 'cafe', 1875, 20,
-    'Party Supply', 'Cups and lids', null, 'The receipt was lost.'),
+    'Party Supply', 'Cups and lids', 'The receipt was lost.'),
   ('00000000-0000-4000-8000-5eed0000c006', '00000000-0000-4000-8000-5eed0000b001', 'youth', 6410, 30,
-    'Gas Station', 'Gas for the church van', 'Fall retreat', 'Pay-at-pump receipt didn''t print.'),
+    'Gas Station', 'Gas for the church van', 'Pay-at-pump receipt didn''t print.'),
   ('00000000-0000-4000-8000-5eed0000c007', '00000000-0000-4000-8000-5eed0000b003', 'cafe', 999, 15,
-    'Corner Store', 'Snack for the drive home', null, 'The receipt was lost.'),
+    'Corner Store', 'Snack for the drive home', 'The receipt was lost.'),
   ('00000000-0000-4000-8000-5eed0000c008', '00000000-0000-4000-8000-5eed0000b002', 'youth', 1200, 8,
-    'Grocery Outlet', 'Entered twice by mistake', null, 'The receipt was lost.'),
+    'Grocery Outlet', 'Entered twice by mistake', 'The receipt was lost.'),
   ('00000000-0000-4000-8000-5eed0000c009', '00000000-0000-4000-8000-5eed0000b002', 'cafe', 5620, 45,
-    'Restaurant Depot, Warehouse Club', 'Syrups and whipped cream', null, 'The receipt was lost.'),
+    'Restaurant Depot, Warehouse Club', 'Syrups and whipped cream', 'The receipt was lost.'),
   ('00000000-0000-4000-8000-5eed0000c010', '00000000-0000-4000-8000-5eed0000b003', 'youth', 21500, 70,
-    'Trampoline Park', 'Group tickets', 'Summer outing', 'Paid online; no receipt was sent.'),
+    'Trampoline Park', 'Group tickets', 'Paid online; no receipt was sent.'),
   ('00000000-0000-4000-8000-5eed0000c011', '00000000-0000-4000-8000-5eed0000b004', 'youth', 4275, 100,
-    'Craft Store', 'Poster board and markers', 'VBS', 'The receipt was lost.'),
+    'Craft Store', 'Poster board and markers', 'The receipt was lost.'),
   ('00000000-0000-4000-8000-5eed0000c012', '00000000-0000-4000-8000-5eed0000b001', 'cafe', 3190, 130,
-    'Warehouse Club', 'Pastries for Sunday', null, 'The receipt was lost.')
-) as r (id, payee_id, type, amount_cents, days_ago, vendor, description, event_name, no_receipt_reason);
+    'Warehouse Club', 'Pastries for Sunday', 'The receipt was lost.')
+) as r (id, payee_id, type, amount_cents, days_ago, vendor, description, no_receipt_reason);
 
 -- One receipt each, except c001 (three stores) and c009 (two).
 insert into public.request_lines (request_id, position, amount_cents, vendor)
@@ -118,6 +121,21 @@ insert into public.request_lines (request_id, position, amount_cents, vendor) va
   ('00000000-0000-4000-8000-5eed0000c009', 2, 1520, 'Warehouse Club');
 
 commit;
+
+-- Tags. The van's gas for the retreat has two.
+insert into public.tags (name) values ('Fall retreat'), ('Game night'), ('Summer outing'), ('VBS'), ('Van');
+
+insert into public.request_tags (request_id, tag_id)
+select r.id::uuid, t.id
+from (values
+  ('00000000-0000-4000-8000-5eed0000c003', 'Fall retreat'),
+  ('00000000-0000-4000-8000-5eed0000c004', 'Game night'),
+  ('00000000-0000-4000-8000-5eed0000c006', 'Fall retreat'),
+  ('00000000-0000-4000-8000-5eed0000c006', 'Van'),
+  ('00000000-0000-4000-8000-5eed0000c010', 'Summer outing'),
+  ('00000000-0000-4000-8000-5eed0000c011', 'VBS')
+) as r (id, tag)
+join public.tags t on t.name = r.tag;
 
 -- c001 stays a draft.
 select public.submit_request('00000000-0000-4000-8000-5eed0000c002');
@@ -252,6 +270,24 @@ cross join (values
     null, null, false, interval '-8 days 9 hours', interval '-1 days 9 hours'
   )
 ) as p (id, title, body, link_url, link_label, pinned, starts, ends);
+
+select set_config('request.jwt.claims', '', false);
+
+-- Seven Fridays of headcounts before the latest one in Los Angeles time,
+-- which is left for the usher to add. Entered as the usher, so Activity
+-- names them.
+select set_config(
+  'request.jwt.claims', '{"sub": "00000000-0000-4000-8000-5eed0000a005", "role": "authenticated"}', false
+);
+
+insert into public.headcounts (night, total)
+select f.latest - 7 * h.weeks_back, h.total
+from (
+  -- isodow runs Monday 1 to Sunday 7, so this counts back to Friday.
+  select (now() at time zone 'America/Los_Angeles')::date
+    - (extract(isodow from now() at time zone 'America/Los_Angeles')::int + 2) % 7 as latest
+) as f
+cross join (values (1, 48), (2, 52), (3, 41), (4, 45), (5, 39), (6, 44), (7, 36)) as h (weeks_back, total);
 
 select set_config('request.jwt.claims', '', false);
 

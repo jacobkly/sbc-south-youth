@@ -15,7 +15,6 @@ export type CorrectionSnapshot = {
   type: RequestType;
   purchase_date: string;
   description: string | null;
-  event_name: string | null;
   no_receipt: boolean;
   no_receipt_reason: string | null;
   lines: { amount_cents: number; vendor: string | null }[];
@@ -43,7 +42,6 @@ const FIELDS = [
   "purchase_date",
   "vendor",
   "description",
-  "event_name",
   "no_receipt",
   "no_receipt_reason",
   "paid_at",
@@ -130,7 +128,6 @@ export function correctRequestArgs(
     p_type: input.type,
     p_purchase_date: input.purchase_date,
     p_description: input.description,
-    p_event_name: input.event_name,
     p_no_receipt: input.no_receipt,
     p_no_receipt_reason: input.no_receipt_reason,
     p_lines: input.lines,
@@ -147,7 +144,6 @@ export function correctionSnapshot(input: RequestInput, payment: CorrectedPaymen
     type: input.type,
     purchase_date: input.purchase_date,
     description: input.description,
-    event_name: input.event_name,
     no_receipt: input.no_receipt,
     no_receipt_reason: input.no_receipt_reason,
     lines: input.lines.map((line) => ({ amount_cents: line.amount_cents, vendor: line.vendor })),

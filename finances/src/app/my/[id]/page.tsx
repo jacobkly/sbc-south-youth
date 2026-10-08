@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 // No payee: it's always them. Requesters can't read payees anyway.
 const REQUEST_COLUMNS = `
-  request_number, status, type, amount_cents, purchase_date, vendor, description, event_name,
+  request_number, status, type, amount_cents, purchase_date, vendor, description,
   no_receipt, no_receipt_reason, external_approver, paid_at, payment_method, payment_reference, created_by, payee_id,
   lines:request_lines(id, amount_cents, vendor),
   receipts(id, line_id, storage_path, original_filename, mime_type, width, height),

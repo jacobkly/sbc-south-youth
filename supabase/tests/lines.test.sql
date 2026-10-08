@@ -42,12 +42,12 @@ select ok(
 select ok(
   has_function_privilege(
     'authenticated',
-    'public.save_request(uuid, uuid, public.reimbursement_type, date, text, text, boolean, text, jsonb)',
+    'public.save_request(uuid, uuid, public.reimbursement_type, date, text, text, boolean, text, jsonb, uuid[])',
     'execute'
   )
   and not has_function_privilege(
     'anon',
-    'public.save_request(uuid, uuid, public.reimbursement_type, date, text, text, boolean, text, jsonb)',
+    'public.save_request(uuid, uuid, public.reimbursement_type, date, text, text, boolean, text, jsonb, uuid[])',
     'execute'
   ),
   'signed-in users can call save_request, anon can''t'

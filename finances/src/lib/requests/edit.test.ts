@@ -9,7 +9,6 @@ const row = {
   amount_cents: 1750,
   purchase_date: "2026-01-10",
   description: null,
-  event_name: "Lock-in",
   no_receipt: false,
   no_receipt_reason: null,
   paid_at: null,
@@ -34,7 +33,6 @@ describe("toEditableRequest", () => {
         { id: "00000000-0000-4000-8000-00000000f002", amount: "5.00", vendor: "" },
       ],
       description: "",
-      event_name: "Lock-in",
       no_receipt: false,
       no_receipt_reason: "",
     });
@@ -55,7 +53,6 @@ describe("toEditableRequest", () => {
       type: "youth",
       purchase_date: "2026-01-10",
       description: null,
-      event_name: "Lock-in",
       no_receipt: false,
       no_receipt_reason: null,
       lines: [

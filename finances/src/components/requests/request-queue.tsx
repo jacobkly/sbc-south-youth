@@ -4,11 +4,17 @@ import { useEffect, useEffectEvent, useOptimistic, useRef, useState, useTransiti
 import { useRouter } from "next/navigation";
 import { SearchIcon, XIcon } from "lucide-react";
 import { cn } from "cn";
-import { ActiveFilters, FilterSheet, type PayeeOption } from "@/components/requests/request-filters";
+import {
+  ActiveFilters,
+  CLEARED_FILTERS,
+  FilterSheet,
+  type PayeeOption,
+} from "@/components/requests/request-filters";
 import { EmptyQueue, RequestList, RequestListSkeleton } from "@/components/requests/request-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatCents } from "@/lib/money";
 import type { QueuePage } from "@/lib/requests/queries";
 import {
   isFiltered,
@@ -22,6 +28,7 @@ import {
   type QueueTab,
   type ShownQueueFilters,
 } from "@/lib/requests/queue";
+import type { TagRow } from "@/lib/tags/tags";
 
 const SEARCH_DELAY_MS = 300;
 
@@ -35,9 +42,16 @@ export function RequestQueue({
   rows,
   counts,
   hasMore,
+  total: tagTotal,
   payees,
+  tags,
   canCreate,
-}: Omit<QueuePage, "tab"> & { filters: ShownQueueFilters; payees: PayeeOption[]; canCreate: boolean }) {
+}: Omit<QueuePage, "tab"> & {
+  filters: ShownQueueFilters;
+  payees: PayeeOption[];
+  tags: TagRow[];
+  canCreate: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(filters);
@@ -66,7 +80,7 @@ export function RequestQueue({
 
   function clearFilters() {
     setQuery("");
-    update({ q: "", from: null, to: null, type: null, payee: null, missingReceipt: false });
+    update({ q: "", ...CLEARED_FILTERS });
   }
 
   const searchIfChanged = useEffectEvent((text: string) => {
@@ -178,10 +192,27 @@ export function RequestQueue({
               </Button>
             )}
           </form>
-          <FilterSheet filters={shown} payees={payees} onApply={update} />
+          <FilterSheet filters={shown} payees={payees} tags={tags} onApply={update} />
         </div>
-        <ActiveFilters filters={shown} payees={payees} onRemove={update} />
+        <ActiveFilters filters={shown} payees={payees} tags={tags} onRemove={update} />
       </div>
+
+      {/* Waits for the new numbers rather than showing the last tag's. */}
+      {tagTotal !== null && shown.tag === filters.tag && (
+        <dl
+          className={cn("grid grid-cols-2 gap-3 transition-opacity", refreshing && "opacity-60")}
+          aria-label="Totals for this tag"
+        >
+          <div className="space-y-1 rounded-lg border px-4 py-3">
+            <dt className="text-sm text-muted-foreground">Requests</dt>
+            <dd className="text-xl font-semibold tabular-nums">{counts.all.toLocaleString()}</dd>
+          </div>
+          <div className="space-y-1 rounded-lg border px-4 py-3">
+            <dt className="text-sm text-muted-foreground">Approved and paid</dt>
+            <dd className="text-xl font-semibold tabular-nums">{formatCents(tagTotal)}</dd>
+          </div>
+        </dl>
+      )}
 
       <Tabs value={shown.tab} onValueChange={(value) => update({ tab: value as QueueTab })}>
         {/* Wraps onto more rows instead of scrolling sideways, so every tab stays in reach on a phone. */}

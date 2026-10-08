@@ -15,12 +15,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/portal/ui/dropdown-menu";
+import type { IsoDate } from "@/lib/dates";
 import type { DayView } from "@/lib/portal/activity/feed";
 import {
   activityHref,
   DEFAULT_ACTIVITY_FILTERS,
   kindLabel,
   kindsFor,
+  MAX_ACTIVITY_EVENTS,
   SCOPE_LABELS,
   withScope,
   type ActivityFilters,
@@ -41,7 +43,7 @@ export function ActivityView({
   visible,
   people,
   days,
-  hasMore,
+  older,
   capped,
 }: {
   filters: ActivityFilters;
@@ -49,8 +51,9 @@ export function ActivityView({
   visible: ActivityScope[];
   people: ActivityPerson[];
   days: DayView[];
-  hasMore: boolean;
-  /** The newest events filled every page there is, so older ones can't be shown. */
+  /** Where "Load more" reaches back to, or null when there's nothing older. */
+  older: IsoDate | null;
+  /** There's more activity than the screen loads, so older activity can't be shown. */
   capped: boolean;
 }) {
   const router = useRouter();
@@ -66,7 +69,7 @@ export function ActivityView({
 
   const clear = () => navigate(DEFAULT_ACTIVITY_FILTERS);
   const switching = shown.scope !== filters.scope || shown.person !== filters.person || shown.kind !== filters.kind;
-  const loadingMore = pending && !switching && shown.pages > filters.pages;
+  const loadingMore = pending && !switching && shown.since !== filters.since;
   const filtered = shown.scope !== "all" || shown.person !== null || shown.kind !== "all";
   const kinds = kindsFor(visible, shown.scope);
   const personLabel = shown.person
@@ -95,7 +98,7 @@ export function ActivityView({
           active={shown.person !== null}
           options={[{ value: "", label: "Anyone" }, ...people.map(({ id, label }) => ({ value: id, label }))]}
           selected={shown.person ?? ""}
-          onSelect={(value) => navigate({ ...shown, person: value || null, pages: 1 })}
+          onSelect={(value) => navigate({ ...shown, person: value || null, since: null })}
         />
         {kinds.length > 0 && (
           <FilterMenu
@@ -107,7 +110,7 @@ export function ActivityView({
               ...kinds.map((kind) => ({ value: kind, label: kindLabel(kind) })),
             ]}
             selected={shown.kind}
-            onSelect={(value) => navigate({ ...shown, kind: value as ActivityKind | "all", pages: 1 })}
+            onSelect={(value) => navigate({ ...shown, kind: value as ActivityKind | "all", since: null })}
           />
         )}
         {filtered && (
@@ -127,15 +130,16 @@ export function ActivityView({
             <ActivityFeed days={days} showScope={visible.length > 1 && shown.scope === "all"} />
             {capped && (
               <p className="text-center text-sm text-balance text-muted-foreground">
-                Showing the newest 1,000 events. Pick a person or action to see older ones.
+                Showing the newest {MAX_ACTIVITY_EVENTS.toLocaleString("en-US")} events. Pick a person or action to
+                see older ones.
               </p>
             )}
-            {hasMore && (
+            {older && (
               <Button
                 variant="outline"
                 className="h-11 w-full sm:mx-auto sm:flex sm:w-auto sm:px-8"
                 disabled={loadingMore}
-                onClick={() => navigate({ ...shown, pages: shown.pages + 1 })}
+                onClick={() => navigate({ ...shown, since: older })}
               >
                 {loadingMore ? "Loading…" : "Load more"}
               </Button>

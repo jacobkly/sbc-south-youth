@@ -9,6 +9,7 @@ export const APP_ROLES = [
   "finance_requester",
   "site_editor",
   "site_messages",
+  "attendance",
 ] as const satisfies readonly AppRole[];
 
 export const ROLE_LABELS: Record<AppRole, string> = {
@@ -17,14 +18,17 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   finance_requester: "Requester",
   site_editor: "Site editor",
   site_messages: "Messages",
+  attendance: "Attendance",
 };
 
 export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
   owner: "Everything in the portal and finances, including people, roles, and paying reimbursements.",
-  finance_viewer: "Read every submitted request, receipt, and report in finances, without changing anything.",
+  finance_viewer:
+    "Read every submitted request, receipt, and report in finances, and each week's headcount, without changing anything.",
   finance_requester: "Submit reimbursements with receipt photos in finances, and follow each one until it's paid.",
   site_editor: "Post heads-ups and events, and upload, place, and take down photos.",
   site_messages: "Read and handle Visit, Join, Serve, and Contact messages.",
+  attendance: "Enter how many came to youth each week, and fix a count that's off.",
 };
 
 /**
@@ -37,7 +41,7 @@ export function hasRole(roles: readonly AppRole[], ...wanted: AppRole[]): boolea
 }
 
 /** Requesters only use finances. Everyone else with a role uses the portal. */
-const PORTAL_ROLES: AppRole[] = ["finance_viewer", "site_editor", "site_messages"];
+const PORTAL_ROLES: AppRole[] = ["finance_viewer", "site_editor", "site_messages", "attendance"];
 
 /** Active people with a portal role can use it. RLS enforces the same on the data. */
 export function canUsePortal(user: { is_active: boolean; roles: readonly AppRole[] }): boolean {

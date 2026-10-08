@@ -12,7 +12,7 @@ describe("destinationsFor", () => {
       {
         key: "portal",
         name: "Portal",
-        description: "Posts, photos, messages, activity, people, and email",
+        description: "Posts, photos, messages, attendance, activity, people, and email",
         href: "https://portal.example.test",
       },
       { key: "finances", name: "Finances", description: "Requests, payees, and reports", href: "/" },
@@ -22,9 +22,15 @@ describe("destinationsFor", () => {
 
   it("describes the portal by the sections this person sees there", () => {
     const [viewer] = destinationsFor({ is_active: true, roles: ["finance_viewer"] }, urls);
-    expect(viewer).toMatchObject({ key: "portal", description: "Activity" });
+    expect(viewer).toMatchObject({ key: "portal", description: "Attendance and activity" });
     const [both] = destinationsFor({ is_active: true, roles: ["finance_requester", "site_editor"] }, urls);
     expect(both).toMatchObject({ key: "portal", description: "Posts, photos, and activity" });
+  });
+
+  it("opens the portal for Attendance alone", () => {
+    const destinations = destinationsFor({ is_active: true, roles: ["attendance"] }, urls);
+    expect(destinations.map((d) => d.key)).toEqual(["portal", "site"]);
+    expect(destinations[0].description).toBe("Attendance");
   });
 
   it("gives a requester only finances and the public site", () => {

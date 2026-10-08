@@ -32,6 +32,7 @@ const PORTAL_SECTIONS: { label: string; roles: AppRole[] }[] = [
   { label: "Posts", roles: ["site_editor"] },
   { label: "Photos", roles: ["site_editor"] },
   { label: "Messages", roles: ["site_messages"] },
+  { label: "Attendance", roles: ["attendance", "finance_viewer"] },
   { label: "Activity", roles: ["finance_viewer", "site_editor", "site_messages"] },
   { label: "People", roles: ["owner"] },
   { label: "Email", roles: ["owner"] },

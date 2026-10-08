@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { ReportExportRow } from "@/lib/requests/queries";
 import {
+  INCOME_CSV_HEADER,
+  incomeCsv,
+  incomeFileName,
   receiptsZipFileName,
   REPORT_CSV_HEADER,
   reportCsv,
@@ -19,7 +22,10 @@ const PAID: ReportExportRow = {
   purchase_date: "2026-08-14",
   vendor: "Example Mart",
   description: "Snacks, drinks, and plates",
-  event_name: "Summer kickoff",
+  tags: [
+    { tag: { id: "00000000-0000-4000-8000-0000000000a1", name: "Summer kickoff" } },
+    { tag: { id: "00000000-0000-4000-8000-0000000000a2", name: "Snacks" } },
+  ],
   submitted_at: "2026-08-15T17:00:00+00:00",
   external_approver: null,
   approved_at: "2026-08-16T19:30:00+00:00",
@@ -42,7 +48,7 @@ const DRAFT: ReportExportRow = {
   type: "cafe",
   amount_cents: 500,
   description: "Coffee",
-  event_name: null,
+  tags: [],
   submitted_at: null,
   approved_at: null,
   paid_at: null,
@@ -68,7 +74,7 @@ describe("reportCsvRow", () => {
       vendor: "Example Mart",
       type: "Youth",
       description: "Snacks, drinks, and plates",
-      event: "Summer kickoff",
+      tags: "Snacks; Summer kickoff",
       amount: "45.99",
       submitted_at: "2026-08-15 10:00",
       approved_by: "Test Admin",
@@ -90,7 +96,7 @@ describe("reportCsvRow", () => {
       status: "Draft",
       type: "Cafe",
       amount: "5.00",
-      event: null,
+      tags: null,
       submitted_at: null,
       approved_by: undefined,
       paid_by: undefined,
@@ -117,7 +123,7 @@ describe("reportCsv", () => {
     const lines = reportCsv([PAID, DRAFT]).split("\r\n");
     expect(lines[0]).toBe(`﻿${REPORT_CSV_HEADER.join(",")}`);
     expect(lines[1]).toBe(
-      'R-0012,Paid,Test Payee,Test Admin,2026-08-14,Example Mart,Youth,"Snacks, drinks, and plates",Summer kickoff,45.99,2026-08-15 10:00,Test Admin,,2026-08-16 12:30,Test Admin,2026-09-25 23:30,Bank transfer,TEST-001,2,No,',
+      'R-0012,Paid,Test Payee,Test Admin,2026-08-14,Example Mart,Youth,"Snacks, drinks, and plates",Snacks; Summer kickoff,45.99,2026-08-15 10:00,Test Admin,,2026-08-16 12:30,Test Admin,2026-09-25 23:30,Bank transfer,TEST-001,2,No,',
     );
     expect(lines[2]).toBe("R-0003,Draft,Test Payee,Test Admin,2026-08-14,Example Mart,Cafe,Coffee,,5.00,,,,,,,,,0,Yes,Lost it");
     expect(lines).toHaveLength(4);
@@ -184,6 +190,46 @@ describe("summaryFileName", () => {
     expect(summaryFileName({ period: q3, basis: "paid", allStatuses: false })).toBe(
       "sbc-youth-reimbursements_2026-Q3_paid-date_summary.csv",
     );
+  });
+});
+
+describe("incomeCsv", () => {
+  it("writes one line per entry, oldest first, with no one's name", () => {
+    const lines = incomeCsv({
+      youth: [
+        { id: "y1", kind: "tithe", received_on: "2026-09-06", amount_cents: 2000, method: "cash_app", event_name: null },
+        { id: "y2", kind: "event", received_on: "2026-09-13", amount_cents: 15050, method: null, event_name: "Bake sale" },
+        { id: "y3", kind: "event", received_on: "2026-09-20", amount_cents: 999, method: "zelle", event_name: null },
+      ],
+      weeks: [
+        { id: "c1", week_ending: "2026-09-06", sales_cents: 31025, note: null },
+        { id: "c2", week_ending: "2026-08-30", sales_cents: 0, note: "Closed for camp, back soon" },
+      ],
+    }).split("\r\n");
+    expect(lines).toEqual([
+      "﻿date,source,kind,event,method,amount,note",
+      "2026-08-30,Cafe,Cafe week,,,0.00,\"Closed for camp, back soon\"",
+      "2026-09-06,Youth,Tithe,,Cash App,20.00,",
+      "2026-09-06,Cafe,Cafe week,,,310.25,",
+      "2026-09-13,Youth,Event,Bake sale,Mixed,150.50,",
+      "2026-09-20,Youth,Event,,Zelle,9.99,",
+      "",
+    ]);
+  });
+
+  it("is just the header with nothing in", () => {
+    expect(incomeCsv({ youth: [], weeks: [] })).toBe(`﻿${INCOME_CSV_HEADER.join(",")}\r\n`);
+  });
+});
+
+describe("incomeFileName", () => {
+  it("names the period, the same whatever the requests are counted by", () => {
+    const q3 = { kind: "quarter", year: 2026, quarter: 3 } as const;
+    expect(incomeFileName({ period: q3, basis: "purchase", allStatuses: false })).toBe("sbc-youth-income_2026-Q3.csv");
+    expect(incomeFileName({ period: q3, basis: "paid", allStatuses: false })).toBe("sbc-youth-income_2026-Q3.csv");
+    expect(
+      incomeFileName({ period: { kind: "custom", start: "2026-03-15", end: "2026-04-02" }, basis: "purchase", allStatuses: true }),
+    ).toBe("sbc-youth-income_2026-03-15_to_2026-04-02.csv");
   });
 });
 

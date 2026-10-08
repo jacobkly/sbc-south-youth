@@ -179,6 +179,7 @@ describe("accountLinks", () => {
       signInUrl: "https://portal.example.test/login",
     });
     expect(accountLinks(["finance_viewer"], urls).app).toBe("portal");
+    expect(accountLinks(["attendance"], urls).app).toBe("portal");
   });
 
   it("signs everyone in on the portal once finances shares its sign-in", () => {
