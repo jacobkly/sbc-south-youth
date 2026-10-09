@@ -2,18 +2,15 @@ import "server-only";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { logoSize } from "./install";
-import { THEME_CONFIG } from "./theme";
+import { ICON_TILE, logoSize, PORTAL_ICONS, type PortalIcon } from "./install";
 
 // A local file that never changes, so it's read once when the module loads.
 const logo = readFileSync(join(process.cwd(), "src/assets/logo.png"), "base64");
 
-/**
- * A square home screen icon: the logo on the dark tile the portal's header
- * shows. The phone rounds its corners.
- */
-export function drawIcon(size: number): ImageResponse {
-  const { width, height } = logoSize(size);
+/** A square home screen icon: the logo on a black tile. The phone rounds its corners. */
+export function drawIcon(file: PortalIcon): ImageResponse {
+  const size = PORTAL_ICONS[file];
+  const { width, height } = logoSize(file);
   return new ImageResponse(
     <div
       style={{
@@ -22,7 +19,7 @@ export function drawIcon(size: number): ImageResponse {
         height: "100%",
         alignItems: "center",
         justifyContent: "center",
-        background: THEME_CONFIG.colors.dark,
+        background: ICON_TILE,
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- drawn to a PNG, not a page */}

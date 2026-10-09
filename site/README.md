@@ -133,7 +133,7 @@ Vercel's free plan keeps runtime logs for only a short time, so the server also 
 Added to a phone's home screen, the portal opens full screen as "Youth Portal", without the browser's buttons.
 
 - **Files:** the root layout links `/manifest.webmanifest`, `/icon.png`, and `/apple-icon.png` on both hosts. On the portal host, rewrites in `src/lib/host.ts` swap in the portal's own from `src/app/(portal)/portal/manifest.webmanifest/` and `src/app/(portal)/portal/icons/[file]/`, plus `/icon-512.png` for Android. The public host never serves them.
-- **Manifest and icons:** both come from `src/lib/portal/install.ts`. The icons are the logo on the portal's dark tile, drawn with `next/og` when the site builds, and the logo stays inside the circle Android may crop a maskable icon to.
+- **Manifest and icons:** both come from `src/lib/portal/install.ts`. The icons are the logo on a black tile, drawn with `next/og` when the site builds. The iPhone and browser tab icons draw the logo as big as finances' and the public site's do, so the apps match side by side, and only the 512 one is smaller, so the logo stays inside the circle Android may crop a maskable icon to.
 - **Steps:** the portal's Settings shows how to add it on an iPhone or Android, and says it's set up instead once the portal opens from the home screen (the `installed` variant in `portal.css`).
 - **No browser buttons:** every screen needs its own way back, and a section that couldn't load shows `LoadError` (`src/components/portal/load-error.tsx`), whose Try again button loads the screen's data again in place.
 

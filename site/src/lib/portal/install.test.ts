@@ -57,18 +57,37 @@ describe("logoSize", () => {
     expect({ width: png.readUInt32BE(16), height: png.readUInt32BE(20) }).toEqual(LOGO);
   });
 
-  it.each(Object.entries(PORTAL_ICONS))("keeps the logo's shape on %s", (_file, size) => {
-    const { width, height } = logoSize(size);
+  it.each(Object.keys(PORTAL_ICONS).filter(isPortalIcon))("keeps the logo's shape on %s", (file) => {
+    const { width, height } = logoSize(file);
 
     expect(Math.abs(width / height - LOGO.width / LOGO.height)).toBeLessThan(0.01);
   });
 
-  it.each(Object.entries(PORTAL_ICONS))("keeps the logo on %s inside the circle a mask keeps", (_file, size) => {
-    const { width, height } = logoSize(size);
-    // Android may crop a maskable icon to a circle 80% as wide as the icon.
-    const corner = Math.hypot(width / 2, height / 2);
+  const maskable = (portalManifest().icons ?? []).filter((icon) => icon.purpose === "maskable");
 
-    expect(corner).toBeLessThanOrEqual(size * 0.4);
-    expect(height).toBeGreaterThanOrEqual(size * 0.5);
+  it.each(maskable.map((icon) => icon.src.replace(/^\//, "")).filter(isPortalIcon))(
+    "keeps the logo on %s inside the circle a mask keeps",
+    (file) => {
+      const size = PORTAL_ICONS[file];
+      const { width, height } = logoSize(file);
+      // Android may crop a maskable icon to a circle 80% as wide as the icon.
+      const corner = Math.hypot(width / 2, height / 2);
+
+      expect(corner).toBeLessThanOrEqual(size * 0.4);
+      expect(height).toBeGreaterThanOrEqual(size * 0.5);
+    },
+  );
+
+  it("has a maskable icon to check", () => {
+    expect(maskable).not.toHaveLength(0);
+  });
+
+  // Finances' and the public site's apple-icon.png and icon.png, measured, so
+  // the apps match side by side on a home screen and in browser tabs.
+  it.each([
+    ["apple-icon.png", { width: 120, height: 130 }],
+    ["icon.png", { width: 142, height: 154 }],
+  ] as const)("draws the logo on %s as big as finances' does", (file, size) => {
+    expect(logoSize(file)).toEqual(size);
   });
 });

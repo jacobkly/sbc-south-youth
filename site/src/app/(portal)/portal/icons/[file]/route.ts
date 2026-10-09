@@ -9,5 +9,5 @@ export function generateStaticParams() {
 export async function GET(_request: Request, { params }: RouteContext<"/portal/icons/[file]">) {
   const { file } = await params;
   if (!isPortalIcon(file)) return new Response("Not found", { status: 404 });
-  return drawIcon(PORTAL_ICONS[file]);
+  return drawIcon(file);
 }

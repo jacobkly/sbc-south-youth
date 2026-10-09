@@ -32,13 +32,22 @@ export function isPortalIcon(file: string): file is PortalIcon {
 /** The size of src/assets/logo.png. */
 export const LOGO = { width: 334, height: 363 };
 
-// The logo's height on an icon. Small enough that Android's round crop
-// keeps all of it, the way the portal's header shows it on its tile.
-const LOGO_SHARE = 0.56;
+/** The tile behind the logo: black, like finances' and the public site's icons. */
+export const ICON_TILE = "#000000";
 
-/** The logo's size, centered on an icon `size` pixels square. */
-export function logoSize(size: number): { width: number; height: number } {
-  const height = Math.round(size * LOGO_SHARE);
+// The logo's height on each icon. The browser tab and iPhone icons match
+// finances' and the public site's, so the apps look the same side by side
+// on a home screen. Android may crop the 512 one to a circle, so its logo
+// is small enough to stay inside.
+const LOGO_SHARE: Record<PortalIcon, number> = {
+  "icon.png": 0.8,
+  "apple-icon.png": 0.72,
+  "icon-512.png": 0.56,
+};
+
+/** The logo's size, centered on the icon. */
+export function logoSize(file: PortalIcon): { width: number; height: number } {
+  const height = Math.round(PORTAL_ICONS[file] * LOGO_SHARE[file]);
   return { width: Math.round((height * LOGO.width) / LOGO.height), height };
 }
 
