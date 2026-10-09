@@ -52,6 +52,13 @@ jobs:
             exit 0
           fi
 
-          echo "::error::Postgres didn't answer (HTTP $status). Check the project isn't paused and the secrets are right."
+          case "$status" in
+            401|403)
+              echo "::error::The API refused the key before Postgres ran (HTTP $status). Set SUPABASE_PUBLISHABLE_KEY to this project's publishable key and SUPABASE_URL to its https://<project-ref>.supabase.co address."
+              ;;
+            *)
+              echo "::error::Postgres didn't answer (HTTP $status). Check the project isn't paused and the secrets are right."
+              ;;
+          esac
           cat body.json 2>/dev/null || true
           exit 1
