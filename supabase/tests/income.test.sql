@@ -19,6 +19,11 @@ update public.users set roles = '{owner}' where id = '00000000-0000-4000-8000-00
 update public.users set roles = '{finance_viewer}' where id = '00000000-0000-4000-8000-00000000a002';
 update public.users set roles = '{finance_requester}' where id = '00000000-0000-4000-8000-00000000a003';
 
+-- The owner has an authenticator set up, so a session without its code is refused.
+insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at) values
+  ('00000000-0000-4000-8000-00000000f001', '00000000-0000-4000-8000-00000000a001', 'Test phone', 'totp', 'verified',
+    now(), now());
+
 -- Shape.
 select enum_has_labels('public', 'income_method', array['cash_app', 'zelle', 'cash'], 'money comes in by Cash App, Zelle, or cash');
 select enum_has_labels('public', 'youth_income_kind', array['tithe', 'event'], 'youth money is a tithe or an event');

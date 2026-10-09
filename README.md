@@ -42,7 +42,7 @@ Each person can hold several roles. Owner counts as all of them.
 
 | Role | Can do |
 | --- | --- |
-| Owner | Everything in both apps. The only role that invites people, changes roles, removes access, and approves or pays reimbursements. Uses two-step sign-in |
+| Owner | Everything in both apps. The only role that invites people, changes roles, removes access, and approves or pays reimbursements. Can turn on two-step sign-in under Account |
 | Finance viewer | Read every submitted request, receipt, and report in finances, and each week's headcount. Change nothing |
 | Requester | Submit their own reimbursements in finances and see only their own requests |
 | Site editor | Post heads-ups and events, and add, place, and take down photos |

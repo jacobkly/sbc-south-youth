@@ -6,28 +6,10 @@ import {
   formatDeviceDate,
   groupKey,
   mfaHref,
-  ownerNeedsMfa,
   qrCodeSrc,
   suggestDeviceName,
   verifiedDevices,
 } from "./mfa";
-
-describe("ownerNeedsMfa", () => {
-  it("asks an owner who hasn't entered a code yet", () => {
-    expect(ownerNeedsMfa(["owner"], "aal1")).toBe(true);
-    expect(ownerNeedsMfa(["owner", "site_editor"], null)).toBe(true);
-  });
-
-  it("lets an owner through once they've entered a code", () => {
-    expect(ownerNeedsMfa(["owner"], "aal2")).toBe(false);
-  });
-
-  it("never asks anyone else", () => {
-    expect(ownerNeedsMfa(["site_editor"], "aal1")).toBe(false);
-    expect(ownerNeedsMfa(["finance_viewer", "site_messages"], "aal1")).toBe(false);
-    expect(ownerNeedsMfa([], "aal1")).toBe(false);
-  });
-});
 
 describe("mfaHref", () => {
   it("keeps where to go after", () => {

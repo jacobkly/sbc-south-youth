@@ -4,7 +4,7 @@ import { AuthPage } from "@/components/portal/auth/auth-page";
 import { MfaStep } from "@/components/portal/auth/mfa-step";
 import { SignOutButton } from "@/components/portal/auth/sign-out-button";
 import { nextAfterSignIn } from "@/lib/auth/after-sign-in";
-import { getCurrentUser, getMfaDevices, getSessionAal } from "@/lib/portal/auth/current-user";
+import { getCurrentUser, getMfaDevices, needsCode } from "@/lib/portal/auth/current-user";
 import { canUseFinances, canUsePortal } from "@/lib/portal/roles";
 
 export const metadata: Metadata = {
@@ -14,10 +14,7 @@ export const metadata: Metadata = {
 // It reads the sign-in cookie, so it renders on each request.
 export const instant = false;
 
-/**
- * The step after the password for anyone with an authenticator app, and
- * where an owner sets one up before using the portal.
- */
+/** The step after the password for anyone with an authenticator app. */
 export default async function MfaPage({ searchParams }: PageProps<"/portal/mfa">) {
   const params = await searchParams;
   const next = nextAfterSignIn(typeof params.next === "string" ? params.next : null);
@@ -25,12 +22,10 @@ export default async function MfaPage({ searchParams }: PageProps<"/portal/mfa">
   const user = await getCurrentUser();
   // Finances asks for the same code, so its people sign in here too.
   if (!user?.is_active || !(canUsePortal(user) || canUseFinances(user.roles))) redirect("/no-access");
-  if ((await getSessionAal()) === "aal2") redirect(next);
+  if (!(await needsCode())) redirect(next);
 
   const devices = await getMfaDevices();
-  const owner = user.roles.includes("owner");
-  // Nobody else has to set it up.
-  if (devices.length === 0 && !owner) redirect(next);
+  if (devices.length === 0) redirect(next);
 
   const signedIn = (
     <div className="mt-8 flex flex-col items-center gap-1 border-t pt-6 text-center text-sm text-muted-foreground">
@@ -40,18 +35,6 @@ export default async function MfaPage({ searchParams }: PageProps<"/portal/mfa">
       <SignOutButton variant="link" className="h-11 text-muted-foreground hover:text-foreground" />
     </div>
   );
-
-  if (devices.length === 0) {
-    return (
-      <AuthPage
-        title="Set up two-step sign-in"
-        description="Owners can change access and pay reimbursements, so signing in also takes a code from your phone."
-      >
-        <MfaStep devices={devices} next={next} />
-        {signedIn}
-      </AuthPage>
-    );
-  }
 
   return (
     <AuthPage

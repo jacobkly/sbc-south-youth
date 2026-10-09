@@ -7,8 +7,8 @@ import { SignOutButton } from "@/components/portal/auth/sign-out-button";
 import { AppTile, DestinationLink } from "@/components/portal/nav/app-switcher";
 import { START_PATH } from "@/lib/auth/next-path";
 import { readPortalEnv } from "@/lib/env";
-import { getCurrentUser, getSessionAal } from "@/lib/portal/auth/current-user";
-import { mfaHref, ownerNeedsMfa } from "@/lib/portal/auth/mfa";
+import { getCurrentUser, needsCode } from "@/lib/portal/auth/current-user";
+import { mfaHref } from "@/lib/portal/auth/mfa";
 import { type Destination, destinationsFor, destinationUrls, onlyApp } from "@/lib/portal/destinations";
 import { parseSavedTheme } from "@/lib/portal/theme";
 
@@ -29,8 +29,8 @@ export default async function StartPage({ searchParams }: PageProps<"/portal/sta
   const choose = (await searchParams).choose !== undefined;
   const user = await getCurrentUser();
   if (!user?.is_active) redirect("/no-access");
-  // Owners enter their code before going anywhere, finances included.
-  if (ownerNeedsMfa(user.roles, await getSessionAal())) redirect(mfaHref(START_PATH));
+  // An owner with an authenticator app enters a code before going anywhere, finances included.
+  if (user.roles.includes("owner") && (await needsCode())) redirect(mfaHref(START_PATH));
 
   const destinations = destinationsFor(user, destinationUrls(), "portal");
   const only = onlyApp(destinations);

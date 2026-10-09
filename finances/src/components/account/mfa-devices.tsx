@@ -23,7 +23,8 @@ type Message = { kind: "saved" | "error"; text: string };
 /**
  * Account → Two-step sign-in: the authenticator apps this person signs in
  * with, adding another, and removing one. Supabase only allows changes from
- * a session that has entered a code. An owner always keeps at least one.
+ * a session that has entered a code. Removing the last one turns two-step
+ * sign-in off, and adding one turns it back on.
  */
 export function MfaDevices({
   devices,
@@ -32,13 +33,14 @@ export function MfaDevices({
 }: {
   devices: MfaDevice[];
   owner: boolean;
-  /** Whether this session has entered a code, which changes need. */
+  /** Whether this session can change devices: it has entered a code, or has none to enter. */
   verified: boolean;
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   // Kept after the sheet closes, so its title doesn't empty while it slides away.
   const [removing, setRemoving] = useState<MfaDevice | null>(null);
+  const [removingLast, setRemovingLast] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -47,9 +49,6 @@ export function MfaDevices({
   // The Remove button that opened the sheet, so focus goes back to it on cancel.
   const opener = useRef<HTMLButtonElement | null>(null);
   const removed = useRef(false);
-
-  // An owner's last device stays: the app won't let them in without one.
-  const canRemove = verified && (!owner || devices.length > 1);
 
   async function remove(device: MfaDevice) {
     setPending(true);
@@ -63,7 +62,8 @@ export function MfaDevices({
 
     removed.current = true;
     setConfirming(false);
-    setMessage({ kind: "saved", text: `Removed ${device.name}. Delete it from your authenticator app too.` });
+    const off = removingLast ? ", so two-step sign-in is off" : "";
+    setMessage({ kind: "saved", text: `Removed ${device.name}${off}. Delete it from your authenticator app too.` });
     router.refresh();
   }
 
@@ -74,7 +74,9 @@ export function MfaDevices({
           Two-step sign-in
         </h2>
         <p className="text-sm text-muted-foreground">
-          {owner ? "Owners sign in" : "You sign in"} with a password and a 6-digit code from an authenticator app.
+          {devices.length > 0
+            ? "On. You sign in with a password and a 6-digit code from an authenticator app."
+            : "Off. You sign in with only a password. Add an authenticator app to also need a 6-digit code from it."}
         </p>
       </div>
 
@@ -87,7 +89,7 @@ export function MfaDevices({
                 <p className="truncate font-medium">{device.name}</p>
                 <p className="text-xs text-muted-foreground">Added {formatDeviceDate(device.createdAt)}</p>
               </div>
-              {canRemove && (
+              {verified && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -98,6 +100,7 @@ export function MfaDevices({
                     setMessage(null);
                     setRemoveError(null);
                     setRemoving(device);
+                    setRemovingLast(devices.length === 1);
                     setConfirming(true);
                   }}
                 >
@@ -136,7 +139,11 @@ export function MfaDevices({
           <ResponsiveSheetContent>
             <SheetHeader className="pr-12">
               <SheetTitle>Add a device</SheetTitle>
-              <SheetDescription>Then you can sign in with a code from either one.</SheetDescription>
+              <SheetDescription>
+                {devices.length > 0
+                  ? "Then you can sign in with a code from either one."
+                  : "Then you'll sign in with your password and a code from it."}
+              </SheetDescription>
             </SheetHeader>
             <div className="px-4">
               <MfaSetup
@@ -144,7 +151,8 @@ export function MfaDevices({
                 submitLabel="Add device"
                 onDone={(name) => {
                   setAdding(false);
-                  setMessage({ kind: "saved", text: `Added ${name}.` });
+                  const on = devices.length === 0 ? " Two-step sign-in is on." : "";
+                  setMessage({ kind: "saved", text: `Added ${name}.${on}` });
                   router.refresh();
                 }}
               />
@@ -189,7 +197,11 @@ export function MfaDevices({
         >
           <SheetHeader className="pr-12">
             <SheetTitle>Remove {removing?.name}?</SheetTitle>
-            <SheetDescription>Codes from it won&apos;t work for signing in anymore.</SheetDescription>
+            <SheetDescription>
+              {removingLast
+                ? "It's your only one, so two-step sign-in turns off and you'll sign in with only your password."
+                : "Codes from it won't work for signing in anymore."}
+            </SheetDescription>
           </SheetHeader>
           {removeError && (
             <p role="alert" className="px-4 text-sm text-destructive">

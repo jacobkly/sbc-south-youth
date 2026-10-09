@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { AuthPage } from "@/components/auth/auth-page";
 import { MfaStep } from "@/components/auth/mfa-step";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { getCurrentUser, getMfaDevices, getSessionAal } from "@/lib/auth/current-user";
+import { getCurrentUser, getMfaDevices, needsCode } from "@/lib/auth/current-user";
 import { safeNextPath } from "@/lib/auth/next-path";
 import { canUseArea } from "@/lib/auth/roles";
 
@@ -11,10 +11,7 @@ export const metadata: Metadata = {
   title: "Two-step sign-in",
 };
 
-/**
- * The step after the password for anyone with an authenticator app, and
- * where an owner sets one up before using the app.
- */
+/** The step after the password for anyone with an authenticator app. */
 export default async function MfaPage({ searchParams }: PageProps<"/mfa">) {
   const params = await searchParams;
   const next = safeNextPath(typeof params.next === "string" ? params.next : null);
@@ -22,12 +19,10 @@ export default async function MfaPage({ searchParams }: PageProps<"/mfa">) {
   const user = await getCurrentUser();
   // The shell shows anyone without access the No access screen.
   if (!user || !canUseArea(user, "account")) redirect(next);
-  if ((await getSessionAal()) === "aal2") redirect(next);
+  if (!(await needsCode())) redirect(next);
 
   const devices = await getMfaDevices();
-  const owner = user.roles.includes("owner");
-  // Nobody else has to set it up.
-  if (devices.length === 0 && !owner) redirect(next);
+  if (devices.length === 0) redirect(next);
 
   const signedIn = (
     <div className="mt-8 flex flex-col items-center gap-1 border-t pt-6 text-center text-sm text-muted-foreground">
@@ -37,18 +32,6 @@ export default async function MfaPage({ searchParams }: PageProps<"/mfa">) {
       <SignOutButton variant="link" className="h-11 text-muted-foreground hover:text-foreground" />
     </div>
   );
-
-  if (devices.length === 0) {
-    return (
-      <AuthPage
-        title="Set up two-step sign-in"
-        description="Owners can change access and pay reimbursements, so signing in also takes a code from your phone."
-      >
-        <MfaStep devices={devices} next={next} />
-        {signedIn}
-      </AuthPage>
-    );
-  }
 
   return (
     <AuthPage

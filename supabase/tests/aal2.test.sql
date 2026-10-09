@@ -1,21 +1,32 @@
--- Two-step sign-in in the database: changing who has access, and approving
--- or paying requests, need a session that has entered an authenticator code
--- (aal2). Reading doesn't.
+-- Two-step sign-in in the database: for someone with an authenticator set
+-- up, changing who has access, and approving or paying requests, need a
+-- session that has entered its code (aal2). Someone without one acts with
+-- only their password. Reading doesn't need a code.
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(31);
+select plan(38);
 
 -- Fake people. New auth users get a row with no roles from the signup trigger.
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-4000-8000-00000000a001', 'owner@example.test', '{"full_name": "Test Owner"}'),
   ('00000000-0000-4000-8000-00000000a002', 'viewer@example.test', '{"full_name": "Test Viewer"}'),
-  ('00000000-0000-4000-8000-00000000a003', 'requester@example.test', '{"full_name": "Test Requester"}');
+  ('00000000-0000-4000-8000-00000000a003', 'requester@example.test', '{"full_name": "Test Requester"}'),
+  ('00000000-0000-4000-8000-00000000a004', 'owner2@example.test', '{"full_name": "Test Second Owner"}');
 
 update public.users set roles = '{owner}' where id = '00000000-0000-4000-8000-00000000a001';
 update public.users set roles = '{finance_viewer}' where id = '00000000-0000-4000-8000-00000000a002';
 update public.users set roles = '{finance_requester}' where id = '00000000-0000-4000-8000-00000000a003';
+update public.users set roles = '{owner}' where id = '00000000-0000-4000-8000-00000000a004';
+
+-- The first owner has an authenticator set up. The second only started
+-- setting one up, which doesn't count until a code from it is entered.
+insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at) values
+  ('00000000-0000-4000-8000-00000000f001', '00000000-0000-4000-8000-00000000a001', 'Test phone', 'totp', 'verified',
+    now(), now()),
+  ('00000000-0000-4000-8000-00000000f004', '00000000-0000-4000-8000-00000000a004', 'Test phone', 'totp', 'unverified',
+    now(), now());
 
 insert into public.payees (id, full_name) values ('00000000-0000-4000-8000-00000000b001', 'Test Payee');
 
@@ -29,12 +40,20 @@ insert into public.reimbursement_requests (
     'draft', true, 'Lost it'),
   ('00000000-0000-4000-8000-00000000c002', '00000000-0000-4000-8000-00000000b001',
     '00000000-0000-4000-8000-00000000a001', 'youth', 2000, '2026-01-11', 'Fake Store', 'Paid before entry',
+    'draft', true, 'Lost it'),
+  ('00000000-0000-4000-8000-00000000c003', '00000000-0000-4000-8000-00000000b001',
+    '00000000-0000-4000-8000-00000000a004', 'youth', 3000, '2026-01-12', 'Fake Store', 'No authenticator',
     'draft', true, 'Lost it');
 
 select ok(
   not has_function_privilege('anon', 'public.require_aal2()', 'execute')
   and not has_function_privilege('authenticated', 'public.require_aal2()', 'execute'),
   'nobody can call the aal2 check directly'
+);
+select ok(
+  not has_function_privilege('anon', 'public.needs_code()', 'execute')
+  and has_function_privilege('authenticated', 'public.needs_code()', 'execute'),
+  'signed-in people can ask whether they owe a code, and nobody else can'
 );
 
 set local role authenticated;
@@ -45,6 +64,8 @@ select set_config(
   '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal1"}',
   true
 );
+
+select is(public.needs_code(), true, 'an owner with an authenticator owes a code after only a password');
 
 select is(
   (
@@ -136,6 +157,8 @@ select set_config(
   '{"sub": "00000000-0000-4000-8000-00000000a001", "role": "authenticated", "aal": "aal2"}',
   true
 );
+
+select is(public.needs_code(), false, 'and owes nothing once they enter it');
 
 select lives_ok(
   $$ select public.set_roles('00000000-0000-4000-8000-00000000a003', '{finance_requester,site_editor}') $$,
@@ -233,6 +256,23 @@ select lives_ok(
   'imports paid requests'
 );
 
+-- An owner without an authenticator, signed in with only a password.
+select set_config(
+  'request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000a004", "role": "authenticated", "aal": "aal1"}',
+  true
+);
+
+select is(public.needs_code(), false, 'an owner without an authenticator owes no code');
+select lives_ok(
+  $$ select public.approve_request('00000000-0000-4000-8000-00000000c003') $$,
+  'and approves with only a password'
+);
+select lives_ok(
+  $$ select public.mark_paid('00000000-0000-4000-8000-00000000c003', 'cash_app') $$,
+  'and marks it paid'
+);
+
 reset role;
 
 -- The rows only changed once each call had a code.
@@ -253,6 +293,11 @@ select results_eq(
   $$ values ('00000000-0000-4000-8000-00000000c001', 'submitted'),
             ('00000000-0000-4000-8000-00000000c002', 'paid') $$,
   'the requests ended where the calls with a code left them'
+);
+select is(
+  (select status::text from public.reimbursement_requests where id = '00000000-0000-4000-8000-00000000c003'),
+  'paid',
+  'and the owner without an authenticator paid theirs'
 );
 
 select * from finish();

@@ -10,8 +10,8 @@ import {
   loadPeopleNames,
   recordActivityExport,
 } from "@/lib/portal/activity/queries";
-import { getCurrentUser, getSessionAal } from "@/lib/portal/auth/current-user";
-import { mfaHref, ownerNeedsMfa } from "@/lib/portal/auth/mfa";
+import { getCurrentUser, needsCode } from "@/lib/portal/auth/current-user";
+import { mfaHref } from "@/lib/portal/auth/mfa";
 import { reportPortalError } from "@/lib/portal/errors";
 import { canUsePortal, hasRole } from "@/lib/portal/roles";
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   if (!me || !canUsePortal(me) || !hasRole(me.roles, "owner")) {
     return new Response("Only owners can download activity.", { status: 403 });
   }
-  if (ownerNeedsMfa(me.roles, await getSessionAal())) redirect(mfaHref("/activity"));
+  if (await needsCode()) redirect(mfaHref("/activity"));
 
   const visible = scopesFor(me.roles);
   const today = todayInLA();

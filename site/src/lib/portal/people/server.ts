@@ -1,6 +1,6 @@
 import "server-only";
 import { EMAIL_PRIORITY, sendEmail, type SendResult } from "@/lib/email/send";
-import { getSessionAal, type PortalUser } from "@/lib/portal/auth/current-user";
+import { needsCode, type PortalUser } from "@/lib/portal/auth/current-user";
 import { actionError } from "@/lib/portal/errors";
 import { requireRole } from "@/lib/portal/auth/require-role";
 import type { AppRole } from "@/lib/portal/roles";
@@ -18,12 +18,13 @@ export type Supabase = Awaited<ReturnType<typeof createClient>>;
 /**
  * The signed-in owner, or why they can't manage people right now. The
  * secret key can't check who's asking, so every people action calls this
- * first: an active owner, past two-step sign-in, and not on staging.
+ * first: an active owner, past two-step sign-in if they use it, and not
+ * on staging.
  */
 export async function requireOwner(refusal: string): Promise<{ me: PortalUser } | { refused: string }> {
   const owner = await requireRole("owner", refusal);
   if ("refused" in owner) return owner;
-  if ((await getSessionAal()) !== "aal2") {
+  if (await needsCode()) {
     return { refused: "Enter a code from your authenticator app first, under Account." };
   }
   return owner;

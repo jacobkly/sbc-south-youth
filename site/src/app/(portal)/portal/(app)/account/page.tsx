@@ -8,7 +8,7 @@ import { NarrowPage } from "@/components/portal/nav/app-shell";
 import { Badge } from "@/components/portal/ui/badge";
 import { Separator } from "@/components/portal/ui/separator";
 import { readPortalEnv } from "@/lib/env";
-import { getCurrentUser, getMfaDevices, getSessionAal } from "@/lib/portal/auth/current-user";
+import { getCurrentUser, getMfaDevices, needsCode } from "@/lib/portal/auth/current-user";
 import { ROLE_LABELS, sortRoles } from "@/lib/portal/roles";
 
 export const metadata: Metadata = {
@@ -20,7 +20,7 @@ export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) return null;
   const owner = user.roles.includes("owner");
-  const [devices, aal] = await Promise.all([getMfaDevices(), getSessionAal()]);
+  const [devices, owesCode] = await Promise.all([getMfaDevices(), needsCode()]);
 
   // Staging shares production's data, and these forms save straight from
   // the browser, so they're turned off there.
@@ -61,12 +61,12 @@ export default async function AccountPage() {
         </fieldset>
       </section>
 
-      {/* Only owners need it, but anyone else who has a device can still manage it. */}
+      {/* Owners can turn it on, and anyone else who has a device can still manage it. */}
       {(owner || devices.length > 0) && (
         <>
           <Separator />
           <fieldset disabled={readOnly} className="min-w-0">
-            <MfaDevices devices={devices} owner={owner} verified={aal === "aal2"} />
+            <MfaDevices devices={devices} owner={owner} verified={!owesCode} />
           </fieldset>
         </>
       )}

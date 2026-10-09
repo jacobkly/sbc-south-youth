@@ -6,8 +6,7 @@ import { AdminNav } from "@/components/nav/admin-nav";
 import { navFor, type NavUser } from "@/components/nav/nav-items";
 import { NoAccess } from "@/components/nav/no-access";
 import { RefreshOnHistory } from "@/components/nav/refresh-on-history";
-import { getCurrentUser, getSessionAal } from "@/lib/auth/current-user";
-import { ownerNeedsMfa } from "@/lib/auth/mfa";
+import { getCurrentUser, needsCode } from "@/lib/auth/current-user";
 import { type AppArea, canUseArea, financeRoleLabel } from "@/lib/auth/roles";
 import { destinationsFor, destinationUrls } from "@/lib/destinations";
 import { parseSavedTheme } from "@/lib/theme";
@@ -32,9 +31,9 @@ export async function AppShell({ area, children }: { area: AppArea; children: Re
       />
     );
   }
-  // Owners enter a code from their phone first, or set one up. Signing in
-  // usually goes there directly; this catches anyone who skipped ahead.
-  if (ownerNeedsMfa(user.roles, await getSessionAal())) redirect("/mfa");
+  // An owner with an authenticator app enters a code from it first. Signing
+  // in usually goes there directly; this catches anyone who skipped ahead.
+  if (user.roles.includes("owner") && (await needsCode())) redirect("/mfa");
 
   return (
     <>

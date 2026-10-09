@@ -72,6 +72,7 @@ select set_eq(
   array[
     'current_app_role',
     'has_role',
+    'needs_code',
     'set_roles',
     'record_invite',
     'accept_invite',

@@ -16,6 +16,11 @@ update public.users set roles = '{owner}' where id = '00000000-0000-4000-8000-00
 update public.users set roles = '{finance_viewer}' where id = '00000000-0000-4000-8000-00000000a002';
 update public.users set roles = '{finance_requester}' where id = '00000000-0000-4000-8000-00000000a003';
 
+-- The owner has an authenticator set up, so a session without its code is refused.
+insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at) values
+  ('00000000-0000-4000-8000-00000000f001', '00000000-0000-4000-8000-00000000a001', 'Test phone', 'totp', 'verified',
+    now(), now());
+
 -- The local database may hold other income, so the checks here look only at
 -- 2001, which nothing else uses.
 

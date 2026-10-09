@@ -1275,6 +1275,7 @@ export type Database = {
           error: true
         } & "the function public.missing_receipt with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
+      needs_code: { Args: never; Returns: boolean }
       people_directory: {
         Args: never
         Returns: {

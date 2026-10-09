@@ -1,13 +1,13 @@
 import type { AuthenticatorAssuranceLevels, Factor } from "@supabase/supabase-js";
 import { withNext } from "@/lib/auth/next-path";
-import type { Enums } from "@/lib/database.types";
 
 /**
  * Two-step sign-in: a password, then a 6-digit code from an authenticator
- * app. Owners must use it, since they can change who has access and pay
- * reimbursements. Supabase calls a session that's done both steps "aal2",
- * and won't change the password of someone who uses it without one.
- * The shell only asks; the database requires aal2 for owner actions later.
+ * app. Each person chooses: adding an app under Account turns it on, and
+ * removing the last one turns it off. Supabase calls a session that's done
+ * both steps "aal2", and won't change the password of someone who uses it
+ * without one. The shell only asks; the database's needs_code() decides,
+ * and its rules for owner actions ask it too.
  */
 
 export type AssuranceLevel = AuthenticatorAssuranceLevels | null | undefined;
@@ -16,11 +16,6 @@ export type AssuranceLevel = AuthenticatorAssuranceLevels | null | undefined;
 export type MfaDevice = { id: string; name: string; createdAt: string };
 
 const MAX_NAME_LENGTH = 40;
-
-/** Whether an owner still has to enter a code before using the app. Nobody else is asked. */
-export function ownerNeedsMfa(roles: readonly Enums<"app_role">[], aal: AssuranceLevel): boolean {
-  return roles.includes("owner") && aal !== "aal2";
-}
 
 /** The code step's URL, keeping where to go after. */
 export function mfaHref(next: string): string {

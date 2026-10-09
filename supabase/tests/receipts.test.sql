@@ -20,6 +20,12 @@ insert into auth.users (id, email, raw_user_meta_data) values
 update public.users set role = 'admin' where id = '00000000-0000-4000-8000-00000000a001';
 update public.users set role = 'viewer' where id = '00000000-0000-4000-8000-00000000a002';
 
+-- The admin has an authenticator set up, so a session without its code can't
+-- correct an approved request's receipts.
+insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at) values
+  ('00000000-0000-4000-8000-00000000f001', '00000000-0000-4000-8000-00000000a001', 'Test phone', 'totp', 'verified',
+    now(), now());
+
 insert into public.payees (id, full_name)
 values ('00000000-0000-4000-8000-00000000b001', 'Test Payee');
 

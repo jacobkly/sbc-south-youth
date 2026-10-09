@@ -7,7 +7,7 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { NarrowPage } from "@/components/nav/app-shell";
 import { ThemePicker } from "@/components/settings/theme-picker";
 import { Separator } from "@/components/ui/separator";
-import { getCurrentUser, getMfaDevices, getSessionAal } from "@/lib/auth/current-user";
+import { getCurrentUser, getMfaDevices, needsCode } from "@/lib/auth/current-user";
 import { financeRoleLabel } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) return null;
   const owner = user.roles.includes("owner");
-  const [devices, aal] = await Promise.all([getMfaDevices(), getSessionAal()]);
+  const [devices, owesCode] = await Promise.all([getMfaDevices(), needsCode()]);
 
   return (
     <NarrowPage className="space-y-6">
@@ -45,11 +45,11 @@ export default async function AccountPage() {
         <PasswordForm email={user.email} />
       </section>
 
-      {/* Only owners need it, but anyone else who has a device can still manage it. */}
+      {/* Owners can turn it on, and anyone else who has a device can still manage it. */}
       {(owner || devices.length > 0) && (
         <>
           <Separator />
-          <MfaDevices devices={devices} owner={owner} verified={aal === "aal2"} />
+          <MfaDevices devices={devices} owner={owner} verified={!owesCode} />
         </>
       )}
 

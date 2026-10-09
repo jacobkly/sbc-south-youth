@@ -90,7 +90,7 @@ Roles are a fixed Postgres enum, `public.app_role`, and each person's roles are 
 
 | Role | Shown as | Can do |
 | --- | --- | --- |
-| `owner` | Owner | Everything in both apps. The only role that invites people, changes roles, removes access, and approves or pays reimbursements. Uses two-step sign-in |
+| `owner` | Owner | Everything in both apps. The only role that invites people, changes roles, removes access, and approves or pays reimbursements. Can turn on two-step sign-in under Account |
 | `finance_viewer` | Finance viewer | Read every submitted request, receipt, and report in finances, and every headcount. Change nothing, and never see drafts |
 | `finance_requester` | Requester | In finances only: submit their own reimbursements with receipt photos and see only their own requests |
 | `site_editor` | Site editor | Post heads-ups and events, and upload, place, and take down photos |
@@ -100,7 +100,8 @@ Roles are a fixed Postgres enum, `public.app_role`, and each person's roles are 
 - Only owners change roles, through the `set_roles()` RPC. The database always keeps at least one active owner, and removing access keeps the roles so it can be undone.
 - Nobody under 18 gets an account.
 - Everyone signs in with email and password. Forgot password and first-time setup use a 6-digit emailed code. No magic links or social sign-in.
-- **One sign-in:** with `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` set the same in both apps, finances shares the portal's cookie. Finances sends `/login`, `/forgot`, and `/setup` to the portal with a `next` back to its `FINANCES_URL`, and the portal follows a `next` only to its own paths or that address. Signing in ends on `/start` ("Where to?"), which skips ahead for someone with one app. `/start?choose` never skips, so a sign-in finances can't see stops there instead of bouncing between the apps. Owners still enter their code, and finances checks it too.
+- Two-step sign-in is optional. Adding an authenticator app under Account turns it on, and removing the last one turns it off. `public.needs_code()` says whether a session still owes a code, and `require_aal2()`, the policies that need a code, and both apps all ask it.
+- **One sign-in:** with `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` set the same in both apps, finances shares the portal's cookie. Finances sends `/login`, `/forgot`, and `/setup` to the portal with a `next` back to its `FINANCES_URL`, and the portal follows a `next` only to its own paths or that address. Signing in ends on `/start` ("Where to?"), which skips ahead for someone with one app. `/start?choose` never skips, so a sign-in finances can't see stops there instead of bouncing between the apps. An owner with an authenticator app still enters a code, and finances checks it too.
 - Both apps' app switchers list only what a person can use. Finances' `PORTAL_SECTIONS` (`finances/src/lib/destinations.ts`) mirrors the portal nav's roles, so change both together.
 - The shared cookie reaches every `sbcsouthyouth.com` host, the public site and staging included, and scripts on those pages can read it. That's one more reason the public site loads no outside script but Turnstile.
 

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import type { Tables } from "@/lib/database.types";
 import { reportError } from "@/lib/errors/report";
-import { type AssuranceLevel, type MfaDevice, verifiedDevices } from "@/lib/portal/auth/mfa";
+import { type MfaDevice, verifiedDevices } from "@/lib/portal/auth/mfa";
 import { createClient } from "@/lib/supabase/server";
 
 export type PortalUser = Pick<
@@ -61,10 +61,19 @@ async function markSeen(supabase: Awaited<ReturnType<typeof createClient>>, user
   if (acceptError) reportError("Accept an invite", acceptError, { userId });
 }
 
-/** "aal2" once this session has entered a code from an authenticator app. */
-export async function getSessionAal(): Promise<AssuranceLevel> {
-  return (await getClaims()).aal;
-}
+/**
+ * Whether this session still owes a code from an authenticator app: the
+ * person has one set up and hasn't entered a code since signing in. Anyone
+ * without one, owners included, signs in with only a password. The
+ * database's needs_code() decides, so the app and its rules agree.
+ */
+export const needsCode = cache(async (): Promise<boolean> => {
+  if ((await getClaims()).aal === "aal2") return false;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("needs_code");
+  if (error) throw error;
+  return data;
+});
 
 /**
  * The person's finished authenticator app setups. It asks Supabase Auth
