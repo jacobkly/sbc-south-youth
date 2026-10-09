@@ -102,7 +102,7 @@ export function AppSwitcher({ destinations, compact = false }: { destinations: D
               <AppTile app={destination.key} />
               <span className="min-w-0 flex-1 leading-tight">
                 <span className="block font-medium">{destination.name}</span>
-                <span className="block truncate text-xs text-muted-foreground">{destination.description}</span>
+                <span className="block text-xs text-muted-foreground">{destination.description}</span>
               </span>
               <DestinationMark app={destination.key} />
             </DestinationLink>

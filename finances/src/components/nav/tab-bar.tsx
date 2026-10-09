@@ -105,11 +105,14 @@ export function TabBar({ role, requester, name, avatarPath, destinations }: NavU
                   <ul>
                     {elsewhere.map((destination) => (
                       <li key={destination.key}>
-                        <DestinationLink destination={destination} className={cn(SHEET_LINK_CLASSES, "h-14")}>
+                        <DestinationLink
+                          destination={destination}
+                          className={cn(SHEET_LINK_CLASSES, "h-auto min-h-14 py-2")}
+                        >
                           <AppTile app={destination.key} />
                           <span className="min-w-0 flex-1 leading-tight">
                             <span className="block">{destination.name}</span>
-                            <span className="block truncate text-xs text-muted-foreground">
+                            <span className="block text-xs text-muted-foreground">
                               {destination.description}
                             </span>
                           </span>
