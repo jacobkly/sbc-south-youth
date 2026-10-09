@@ -1,6 +1,6 @@
 import { readPortalEnv } from "@/lib/env";
 import { publicSiteUrl } from "@/lib/host";
-import { allowedFor, HOME, MAIN_ITEMS } from "./nav-items";
+import { allowedFor, DASHBOARD, MAIN_ITEMS } from "./nav-items";
 import { canUseFinances, canUsePortal, hasRole, type AppRole } from "./roles";
 
 /**
@@ -49,7 +49,7 @@ export function destinationsFor(person: Person, urls: DestinationUrls, current?:
   const destinations: Destination[] = [];
 
   if (canUsePortal(person)) {
-    const sections = MAIN_ITEMS.filter((item) => item !== HOME).filter(allowedFor(person.roles));
+    const sections = MAIN_ITEMS.filter((item) => item !== DASHBOARD).filter(allowedFor(person.roles));
     destinations.push({
       key: "portal",
       name: "Portal",

@@ -10,7 +10,7 @@ async function NewMessages() {
   return <>{newMessagesText(await loadNewMessageCount())}</>;
 }
 
-/** Messages on Home, for people with the role, with how many are new. */
+/** Messages on the Dashboard, for people with the role, with how many are new. */
 export function HomeMessages() {
   return (
     <section

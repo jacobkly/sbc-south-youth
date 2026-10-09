@@ -13,7 +13,7 @@ describe("destinationsFor", () => {
       {
         key: "portal",
         name: "Portal",
-        description: "Posts, photos, messages, attendance, activity, people, and email",
+        description: "Posts, photos, attendance, messages, email, people, and activity",
         href: "https://portal.example.test",
       },
       {

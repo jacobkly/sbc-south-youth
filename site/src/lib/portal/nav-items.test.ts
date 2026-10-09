@@ -4,8 +4,8 @@ import {
   ACTIVITY,
   allowedFor,
   ATTENDANCE,
+  DASHBOARD,
   EMAIL,
-  HOME,
   isActive,
   MAIN_ITEMS,
   MESSAGES,
@@ -17,7 +17,7 @@ import {
   type NavItem,
 } from "./nav-items";
 
-const EVERY_ITEM = [HOME, POSTS, PHOTOS, MESSAGES, ATTENDANCE, ACTIVITY, PEOPLE, EMAIL, SETTINGS, ACCOUNT];
+const EVERY_ITEM = [DASHBOARD, POSTS, PHOTOS, ATTENDANCE, MESSAGES, EMAIL, PEOPLE, ACTIVITY, SETTINGS, ACCOUNT];
 const labels = (items: NavItem[]) => items.map((item) => item.label);
 
 describe("allowedFor", () => {
@@ -27,7 +27,7 @@ describe("allowedFor", () => {
 
   it("shows a site editor the site's content, but not messages or owner tools", () => {
     expect(labels(EVERY_ITEM.filter(allowedFor(["site_editor"])))).toEqual([
-      "Home",
+      "Dashboard",
       "Posts",
       "Photos",
       "Activity",
@@ -36,9 +36,9 @@ describe("allowedFor", () => {
     ]);
   });
 
-  it("shows the messages role only messages, past Home, Settings, and Account", () => {
+  it("shows the messages role only messages, past Dashboard, Settings, and Account", () => {
     expect(labels(EVERY_ITEM.filter(allowedFor(["site_messages"])))).toEqual([
-      "Home",
+      "Dashboard",
       "Messages",
       "Activity",
       "Settings",
@@ -48,7 +48,7 @@ describe("allowedFor", () => {
 
   it("adds up the items of stacked roles", () => {
     expect(labels(EVERY_ITEM.filter(allowedFor(["site_editor", "site_messages"])))).toEqual([
-      "Home",
+      "Dashboard",
       "Posts",
       "Photos",
       "Messages",
@@ -58,9 +58,9 @@ describe("allowedFor", () => {
     ]);
   });
 
-  it("shows a finance viewer Home, Attendance, Activity, Settings, and Account", () => {
+  it("shows a finance viewer Dashboard, Attendance, Activity, Settings, and Account", () => {
     expect(labels(EVERY_ITEM.filter(allowedFor(["finance_viewer"])))).toEqual([
-      "Home",
+      "Dashboard",
       "Attendance",
       "Activity",
       "Settings",
@@ -68,9 +68,9 @@ describe("allowedFor", () => {
     ]);
   });
 
-  it("shows the Attendance role only Attendance, past Home, Settings, and Account", () => {
+  it("shows the Attendance role only Attendance, past Dashboard, Settings, and Account", () => {
     expect(labels(EVERY_ITEM.filter(allowedFor(["attendance"])))).toEqual([
-      "Home",
+      "Dashboard",
       "Attendance",
       "Settings",
       "Account",
@@ -79,9 +79,9 @@ describe("allowedFor", () => {
 });
 
 describe("isActive", () => {
-  it("matches Home only on the home page", () => {
-    expect(isActive("/", HOME)).toBe(true);
-    expect(isActive("/account", HOME)).toBe(false);
+  it("matches Dashboard only on the home page", () => {
+    expect(isActive("/", DASHBOARD)).toBe(true);
+    expect(isActive("/account", DASHBOARD)).toBe(false);
   });
 
   it("matches a section and the pages inside it", () => {
@@ -102,32 +102,35 @@ describe("isActive", () => {
 
 describe("splitForTabBar", () => {
   it("puts up to four sections in the tab bar and the rest under More, before Settings and Account", () => {
-    const { tabs, more } = splitForTabBar([HOME, POSTS, PHOTOS, MESSAGES, ACTIVITY, PEOPLE, EMAIL]);
-    expect(labels(tabs)).toEqual(["Home", "Posts", "Photos", "Messages"]);
-    expect(labels(more)).toEqual(["Activity", "People", "Email", "Settings", "Account"]);
+    const { tabs, more } = splitForTabBar(MAIN_ITEMS.filter(allowedFor(["owner"])));
+    expect(labels(tabs)).toEqual(["Dashboard", "Posts", "Photos", "Attendance"]);
+    expect(labels(more)).toEqual(["Messages", "Email", "People", "Activity", "Settings", "Account"]);
   });
 
   it("keeps every section in the tab bar when they fit", () => {
-    const { tabs, more } = splitForTabBar([HOME, MESSAGES]);
-    expect(labels(tabs)).toEqual(["Home", "Messages"]);
+    const { tabs, more } = splitForTabBar([DASHBOARD, MESSAGES]);
+    expect(labels(tabs)).toEqual(["Dashboard", "Messages"]);
     expect(labels(more)).toEqual(["Settings", "Account"]);
   });
 });
 
 describe("MAIN_ITEMS", () => {
-  it("has Activity for anyone whose roles show some", () => {
+  it("lists every section an owner sees, in order", () => {
     expect(labels(MAIN_ITEMS.filter(allowedFor(["owner"])))).toEqual([
-      "Home",
+      "Dashboard",
       "Posts",
       "Photos",
-      "Messages",
       "Attendance",
-      "Activity",
-      "People",
+      "Messages",
       "Email",
+      "People",
+      "Activity",
     ]);
-    expect(labels(MAIN_ITEMS.filter(allowedFor(["site_editor"])))).toEqual(["Home", "Posts", "Photos", "Activity"]);
-    expect(labels(MAIN_ITEMS.filter(allowedFor(["finance_viewer"])))).toEqual(["Home", "Attendance", "Activity"]);
+  });
+
+  it("has Activity for anyone whose roles show some", () => {
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["site_editor"])))).toEqual(["Dashboard", "Posts", "Photos", "Activity"]);
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["finance_viewer"])))).toEqual(["Dashboard", "Attendance", "Activity"]);
   });
 
   it("has Posts for site editors and owners", () => {
@@ -142,7 +145,7 @@ describe("MAIN_ITEMS", () => {
   });
 
   it("has Messages for the Messages role and owners, and not for site editors without it", () => {
-    expect(labels(MAIN_ITEMS.filter(allowedFor(["site_messages"])))).toEqual(["Home", "Messages", "Activity"]);
+    expect(labels(MAIN_ITEMS.filter(allowedFor(["site_messages"])))).toEqual(["Dashboard", "Messages", "Activity"]);
     expect(MAIN_ITEMS.filter(allowedFor(["owner"]))).toContain(MESSAGES);
     expect(MAIN_ITEMS.filter(allowedFor(["site_editor", "finance_viewer"]))).not.toContain(MESSAGES);
   });

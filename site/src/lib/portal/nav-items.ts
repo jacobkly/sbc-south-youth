@@ -1,9 +1,9 @@
 import {
   CalendarDaysIcon,
   HistoryIcon,
-  HouseIcon,
   ImagesIcon,
   InboxIcon,
+  LayoutDashboardIcon,
   MailIcon,
   SettingsIcon,
   Tally5Icon,
@@ -29,7 +29,7 @@ export type NavUser = {
   destinations: Destination[];
 };
 
-export const HOME: NavItem = { href: "/", label: "Home", icon: HouseIcon };
+export const DASHBOARD: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboardIcon };
 export const POSTS: NavItem = {
   href: "/posts",
   label: "Posts",
@@ -57,11 +57,11 @@ export const SETTINGS: NavItem = { href: "/settings", label: "Settings", icon: S
 export const ACCOUNT: NavItem = { href: "/account", label: "Account", icon: UserRoundIcon };
 
 /** The portal's sections, in order. Settings and Account sit apart, in the account menu or More. */
-export const MAIN_ITEMS: NavItem[] = [HOME, POSTS, PHOTOS, MESSAGES, ATTENDANCE, ACTIVITY, PEOPLE, EMAIL];
+export const MAIN_ITEMS: NavItem[] = [DASHBOARD, POSTS, PHOTOS, ATTENDANCE, MESSAGES, EMAIL, PEOPLE, ACTIVITY];
 
 /** Whether a nav item is the current page or the section it's in. */
 export function isActive(pathname: string, item: Pick<NavItem, "href" | "also">): boolean {
-  if (item.href === HOME.href) return pathname === HOME.href;
+  if (item.href === DASHBOARD.href) return pathname === DASHBOARD.href;
   return [item.href, ...(item.also ?? [])].some((href) => pathname === href || pathname.startsWith(`${href}/`));
 }
 

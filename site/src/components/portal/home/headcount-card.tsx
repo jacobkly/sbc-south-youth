@@ -19,7 +19,7 @@ async function LatestCount() {
   return <>{text}</>;
 }
 
-/** Attendance on Home, for the Attendance role and finance viewers, with the newest night's count. */
+/** Attendance on the Dashboard, for the Attendance role and finance viewers, with the newest night's count. */
 export function HomeHeadcount() {
   return (
     <section

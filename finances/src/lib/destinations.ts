@@ -31,11 +31,11 @@ export function destinationUrls(): DestinationUrls {
 const PORTAL_SECTIONS: { label: string; roles: AppRole[] }[] = [
   { label: "Posts", roles: ["site_editor"] },
   { label: "Photos", roles: ["site_editor"] },
-  { label: "Messages", roles: ["site_messages"] },
   { label: "Attendance", roles: ["attendance", "finance_viewer"] },
-  { label: "Activity", roles: ["finance_viewer", "site_editor", "site_messages"] },
-  { label: "People", roles: ["owner"] },
+  { label: "Messages", roles: ["site_messages"] },
   { label: "Email", roles: ["owner"] },
+  { label: "People", roles: ["owner"] },
+  { label: "Activity", roles: ["finance_viewer", "site_editor", "site_messages"] },
 ];
 
 /** Like has_role() in the database, an owner counts as every role. */

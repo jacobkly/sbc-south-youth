@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ArrowRightIcon, ReceiptTextIcon } from "lucide-react";
 import { BackupStatusSkeleton, HomeBackup } from "@/components/portal/home/backup-status";
@@ -10,6 +11,10 @@ import { Button } from "@/components/portal/ui/button";
 import { readPortalEnv } from "@/lib/env";
 import { getCurrentUser } from "@/lib/portal/auth/current-user";
 import { canUseFinances, hasRole, ROLE_DESCRIPTIONS, ROLE_LABELS, sortRoles } from "@/lib/portal/roles";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
 
 export default async function PortalHome() {
   // The layout already checked access, so this is an active person with a portal role.
