@@ -40,7 +40,7 @@ export default async function IncomeRoute({ searchParams }: PageProps<"/admin/in
       youthMonth={youthSummary(youthEntries.filter((entry) => entry.received_on >= start && entry.received_on <= end))}
       cafeWeeks={cafe.weeks}
       cafeCosts={cafe.costs}
-      cafeMonth={cafeTotalsIn(cafe.weeks, cafe.costs, month)}
+      cafeMonth={cafeTotalsIn(cafe.weeks, cafe.costs, cafePaybacks, month)}
       cafePaybacks={cafePaybacks}
     />
   );

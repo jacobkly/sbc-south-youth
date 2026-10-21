@@ -33,7 +33,13 @@ const cafeWeekFields = {
   note: null,
 };
 const cafeWeek: IncomeSubject = { type: "cafe_week", week: cafeWeekFields, deleted: false };
-const paybackFields = { quarter_start: "2026-07-01", received_on: "2026-10-02", amount_cents: 12000, note: null };
+const paybackFields = {
+  kind: "discounts" as const,
+  quarter_start: "2026-07-01",
+  received_on: "2026-10-02",
+  amount_cents: 12000,
+  note: null,
+};
 const payback: IncomeSubject = { type: "cafe_payback", payback: paybackFields, deleted: false };
 
 function change(overrides: Partial<IncomeChange>): IncomeChange {
@@ -139,6 +145,15 @@ describe("incomeLine", () => {
     expect(incomeLine(payback, TODAY)).toBe("Q3 2026 discounts · $120.00 · Oct 2");
   });
 
+  it("says when a church payback was for gift cards", () => {
+    const giftCards: IncomeSubject = {
+      type: "cafe_payback",
+      payback: { ...paybackFields, kind: "gift_cards", amount_cents: 25000 },
+      deleted: false,
+    };
+    expect(incomeLine(giftCards, TODAY)).toBe("Q3 2026 gift cards · $250.00 · Oct 2");
+  });
+
   it("says when nothing is known about the entry", () => {
     expect(incomeLine(undefined, TODAY)).toBe("Since deleted");
   });
@@ -196,11 +211,12 @@ describe("describeIncomeChanges", () => {
     ]);
   });
 
-  it("describes a church payback's quarter, date, amount, and note", () => {
+  it("describes a church payback's kind, quarter, date, amount, and note", () => {
     const edit = change({
       action: "cafe_payback.updated",
       entity_type: "cafe_payback",
       changes: {
+        kind: { from: "discounts", to: "gift_cards" },
         note: { from: null, to: "Short by one week" },
         amount_cents: { from: 12000, to: 9000 },
         quarter_start: { from: "2026-04-01", to: "2026-07-01" },
@@ -208,6 +224,7 @@ describe("describeIncomeChanges", () => {
       },
     });
     expect(describeIncomeChanges(edit, TODAY)).toEqual([
+      { field: "kind", label: "For", from: "Discounts", to: "Gift cards" },
       { field: "quarter_start", label: "Quarter", from: "Q2 2026", to: "Q3 2026" },
       { field: "received_on", label: "Date received", from: "Oct 2, 2026", to: "Oct 1, 2026" },
       { field: "amount_cents", label: "Amount", from: "$120.00", to: "$90.00" },

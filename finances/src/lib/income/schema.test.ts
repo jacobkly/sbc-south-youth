@@ -250,7 +250,14 @@ describe("parseSalesToCents", () => {
 });
 
 function payback(values: Partial<CafePaybackFormValues> = {}): CafePaybackFormValues {
-  return { quarter_start: "2026-07-01", received_on: "2026-10-02", amount: "120", note: "", ...values };
+  return {
+    kind: "discounts",
+    quarter_start: "2026-07-01",
+    received_on: "2026-10-02",
+    amount: "120",
+    note: "",
+    ...values,
+  };
 }
 
 function paybackErrorsFor(values: CafePaybackFormValues) {
@@ -262,6 +269,7 @@ function paybackErrorsFor(values: CafePaybackFormValues) {
 describe("cafePaybackSchema", () => {
   it("turns a payback into saved values", () => {
     expect(cafePaybackSchema(TODAY).parse(payback({ amount: "$1,234.5", note: "  By check  " }))).toEqual({
+      kind: "discounts",
       quarter_start: "2026-07-01",
       received_on: "2026-10-02",
       amount_cents: 123450,
@@ -271,6 +279,11 @@ describe("cafePaybackSchema", () => {
 
   it("saves no note as null", () => {
     expect(cafePaybackSchema(TODAY).parse(payback({ note: "   " })).note).toBeNull();
+  });
+
+  it("keeps what the payback was for", () => {
+    expect(cafePaybackSchema(TODAY).parse(payback({ kind: "gift_cards" })).kind).toBe("gift_cards");
+    expect(paybackErrorsFor(payback({ kind: "" as never })).kind).toBe("Choose what it was for.");
   });
 
   it("asks for an amount more than $0, up to $1,000,000", () => {

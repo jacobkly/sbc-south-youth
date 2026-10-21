@@ -1507,7 +1507,7 @@ export type Database = {
         | "site_editor"
         | "site_messages"
         | "attendance"
-      cafe_payback_kind: "discounts"
+      cafe_payback_kind: "discounts" | "gift_cards"
       email_status:
         | "skipped_quota"
         | "suppressed"
@@ -2056,7 +2056,7 @@ export const Constants = {
         "site_messages",
         "attendance",
       ],
-      cafe_payback_kind: ["discounts"],
+      cafe_payback_kind: ["discounts", "gift_cards"],
       email_status: [
         "skipped_quota",
         "suppressed",

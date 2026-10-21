@@ -10,11 +10,21 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ResponsiveSheetContent } from "@/components/ui/responsive-sheet";
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate, periodContaining, periodLabel, periodRange, shiftPeriod, type IsoDate } from "@/lib/dates";
-import { quarterStartOf, stillOwed, type CafePayback, type DiscountQuarter } from "@/lib/income/cafe";
+import {
+  CAFE_PAYBACK_KIND_LABELS,
+  CAFE_PAYBACK_KINDS,
+  quarterStartOf,
+  stillOwed,
+  type CafePayback,
+  type CafePaybackKind,
+  type DiscountQuarter,
+} from "@/lib/income/cafe";
 import {
   cafePaybackFieldErrors,
   cafePaybackSchema,
@@ -42,9 +52,9 @@ function shiftQuarter(start: IsoDate, steps: number): IsoDate {
 }
 
 /**
- * What the church owes for cafe discounts, quarter by quarter. Owners record
- * a payback here and tap one to fix it. Left out until there's a discount or
- * a payback.
+ * What the church owes for cafe discounts, quarter by quarter, and the gift
+ * cards it prepays. Owners record a payback here and tap one to fix it. Left
+ * out until there's a discount or a payback.
  */
 export function CafePaybacks({
   quarters,
@@ -136,19 +146,25 @@ export function CafePaybacks({
 }
 
 function QuarterRow({ quarter, onOpen }: { quarter: DiscountQuarter; onOpen?: (payback: CafePayback) => void }) {
+  // A quarter can have gift cards and no discounts.
+  const hasDiscounts = quarter.owed > 0 || quarter.paid > 0;
+  const detail = [
+    hasDiscounts && `Discounts ${formatCents(quarter.owed)} · Paid back ${formatCents(quarter.paid)}`,
+    quarter.giftCards > 0 && `Gift cards ${formatCents(quarter.giftCards)}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <div className="space-y-1 px-4 py-3">
       <div className="flex items-baseline justify-between gap-3">
         <p className="font-medium">{quarterName(quarter.start)}</p>
-        {quarter.left === 0 ? (
+        {!hasDiscounts ? null : quarter.left === 0 ? (
           <Badge variant="secondary">Paid</Badge>
         ) : (
           <span className="text-sm tabular-nums">{formatCents(quarter.left)} left</span>
         )}
       </div>
-      <p className="text-sm text-muted-foreground tabular-nums">
-        Discounts {formatCents(quarter.owed)} · Paid back {formatCents(quarter.paid)}
-      </p>
+      <p className="text-sm text-muted-foreground tabular-nums">{detail}</p>
       {quarter.paybacks.length > 0 && (
         <ul className="-mx-2 pt-1">
           {quarter.paybacks.map((payback) => (
@@ -166,7 +182,9 @@ function PaybackRow({ payback, onOpen }: { payback: CafePayback; onOpen?: (payba
   const content = (
     <>
       <span className="min-w-0 flex-1 truncate">
-        {[`Received ${formatDate(payback.received_on)}`, payback.note].filter(Boolean).join(" · ")}
+        {[CAFE_PAYBACK_KIND_LABELS[payback.kind], `Received ${formatDate(payback.received_on)}`, payback.note]
+          .filter(Boolean)
+          .join(" · ")}
       </span>
       <span className="shrink-0 tabular-nums">{formatCents(payback.amount_cents)}</span>
     </>
@@ -192,10 +210,20 @@ const fieldId = (key: PaybackField | "quarter") => `cafe-payback-${key}`;
 
 const FIELD_ORDER: PaybackField[] = ["amount", "received_on", "note"];
 
+/** A radio button drawn as a card, like the request form's Cafe and Youth. */
+const OPTION =
+  "h-11 cursor-pointer rounded-lg border px-3 text-base font-normal has-[[aria-invalid=true]]:border-destructive has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-muted desktop:text-sm";
+
+/** "Q3 2026 gift cards", for what a payback covers. */
+function coversLabel(payback: Pick<CafePayback, "kind" | "quarter_start">): string {
+  return `${quarterName(payback.quarter_start)} ${CAFE_PAYBACK_KIND_LABELS[payback.kind].toLowerCase()}`;
+}
+
 /**
- * Record or fix a payback from the church for a quarter's cafe discounts, in
- * a bottom sheet on phones and tablets and a dialog on PCs. A new one opens
- * on the oldest quarter still owed, with what's left of it and today's date.
+ * Record or fix a payback from the church, for a quarter's cafe discounts or
+ * the gift cards it prepays, in a bottom sheet on phones and tablets and a
+ * dialog on PCs. A new one opens on discounts, for the oldest quarter still
+ * owed, with what's left of it and today's date.
  */
 export function CafePaybackSheet({
   payback,
@@ -251,10 +279,10 @@ export function CafePaybackSheet({
           </SheetTitle>
           <SheetDescription>
             {!existing
-              ? "Money from the church for a quarter's cafe discounts."
+              ? "Money from the church for a quarter's cafe discounts or gift cards."
               : confirmingDelete
-                ? `${formatCents(existing.amount_cents)} for ${quarterName(existing.quarter_start)}, received ${formatDate(existing.received_on)}. This can't be undone.`
-                : "Fix the quarter, date, amount, or note."}
+                ? `${formatCents(existing.amount_cents)} for ${coversLabel(existing)}, received ${formatDate(existing.received_on)}. This can't be undone.`
+                : "Fix what it was for, the quarter, date, amount, or note."}
           </SheetDescription>
         </SheetHeader>
         {existing && confirmingDelete ? (
@@ -280,20 +308,43 @@ export function CafePaybackSheet({
   );
 }
 
+/** The last gift card payback's amount, since the church tends to prepay the same each time. */
+function lastGiftCards(quarters: DiscountQuarter[]): number {
+  const last = quarters
+    .flatMap((quarter) => quarter.paybacks)
+    .filter((payback) => payback.kind === "gift_cards")
+    .sort((a, b) => b.received_on.localeCompare(a.received_on))[0];
+  return last?.amount_cents ?? 0;
+}
+
+/** Where a new payback's amount starts: what's left of the quarter's discounts, or the last gift cards. */
+function suggestedAmount(kind: CafePaybackKind, start: IsoDate, quarters: DiscountQuarter[]): string {
+  const cents =
+    kind === "gift_cards" ? lastGiftCards(quarters) : (quarters.find((quarter) => quarter.start === start)?.left ?? 0);
+  return cents > 0 ? centsToDecimal(cents) : "";
+}
+
+/** Discounts start on the oldest quarter still owed, and gift cards on this one. */
+function suggestedQuarter(kind: CafePaybackKind, quarters: DiscountQuarter[], today: IsoDate): IsoDate {
+  return (kind === "discounts" && stillOwed(quarters)[0]?.start) || quarterStartOf(today);
+}
+
 function initialValues(existing: CafePayback | null, quarters: DiscountQuarter[], today: IsoDate): CafePaybackFormValues {
   if (existing) {
     return {
+      kind: existing.kind,
       quarter_start: existing.quarter_start,
       received_on: existing.received_on,
       amount: centsToDecimal(existing.amount_cents),
       note: existing.note ?? "",
     };
   }
-  const oldest = stillOwed(quarters)[0];
+  const start = suggestedQuarter("discounts", quarters, today);
   return {
-    quarter_start: oldest?.start ?? quarterStartOf(today),
+    kind: "discounts",
+    quarter_start: start,
     received_on: today,
-    amount: oldest ? centsToDecimal(oldest.left) : "",
+    amount: suggestedAmount("discounts", start, quarters),
     note: "",
   };
 }
@@ -316,20 +367,34 @@ function CafePaybackForm({
   onDelete: () => void;
 }) {
   const [values, setValues] = useState(() => initialValues(existing, quarters, today));
-  // A new payback's amount follows the quarter until it's typed.
+  // A new payback's amount follows the kind and quarter until it's typed.
   const [amountTyped, setAmountTyped] = useState(existing !== null);
   const [errors, setErrors] = useState<CafePaybackFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   function pickQuarter(start: IsoDate) {
-    const left = quarters.find((quarter) => quarter.start === start)?.left ?? 0;
     setValues((current) => ({
       ...current,
       quarter_start: start,
-      amount: amountTyped ? current.amount : left > 0 ? centsToDecimal(left) : "",
+      amount: amountTyped ? current.amount : suggestedAmount(current.kind, start, quarters),
     }));
     if (!amountTyped) setErrors((current) => ({ ...current, amount: undefined }));
+    setFormError(null);
+  }
+
+  function pickKind(kind: CafePaybackKind) {
+    setValues((current) => {
+      // A new payback moves to the kind's usual quarter. A saved one keeps its own.
+      const start = existing ? current.quarter_start : suggestedQuarter(kind, quarters, today);
+      return {
+        ...current,
+        kind,
+        quarter_start: start,
+        amount: amountTyped ? current.amount : suggestedAmount(kind, start, quarters),
+      };
+    });
+    setErrors((current) => ({ ...current, kind: undefined, ...(!amountTyped && { amount: undefined }) }));
     setFormError(null);
   }
 
@@ -406,7 +471,36 @@ function CafePaybackForm({
         </Alert>
       )}
 
+      <FormField
+        id={fieldId("kind")}
+        label="For"
+        hint={
+          values.kind === "gift_cards"
+            ? "Gift card money the church prepays. It doesn't change what's owed for discounts."
+            : "Pays back the quarter's discounts."
+        }
+        error={errors.kind}
+        group
+      >
+        <RadioGroup
+          value={values.kind}
+          onValueChange={(value) => pickKind(value as CafePaybackKind)}
+          aria-labelledby={`${fieldId("kind")}-label`}
+          aria-describedby={describedBy(fieldId("kind"), errors.kind, true)}
+          aria-invalid={errors.kind ? true : undefined}
+          className="grid-cols-2 gap-3"
+        >
+          {CAFE_PAYBACK_KINDS.map((kind) => (
+            <Label key={kind} htmlFor={`${fieldId("kind")}-${kind}`} className={OPTION}>
+              <RadioGroupItem id={`${fieldId("kind")}-${kind}`} value={kind} aria-invalid={errors.kind ? true : undefined} />
+              {CAFE_PAYBACK_KIND_LABELS[kind]}
+            </Label>
+          ))}
+        </RadioGroup>
+      </FormField>
+
       <QuarterPicker
+        kind={values.kind}
         start={values.quarter_start}
         quarter={quarters.find((quarter) => quarter.start === values.quarter_start)}
         today={today}
@@ -464,11 +558,14 @@ function CafePaybackForm({
 
 /** Steps a quarter at a time, back to 2000 and up to this quarter. */
 function QuarterPicker({
+  kind,
   start,
   quarter,
   today,
   onPick,
 }: {
+  /** Which of the quarter's numbers to show under it. */
+  kind: CafePaybackKind;
   start: IsoDate;
   /** Its discounts and paybacks, if it has any. */
   quarter: DiscountQuarter | undefined;
@@ -476,11 +573,16 @@ function QuarterPicker({
   onPick: (start: IsoDate) => void;
 }) {
   const id = fieldId("quarter");
-  const detail = !quarter
-    ? "No discounts"
-    : quarter.left === 0
-      ? `Discounts ${formatCents(quarter.owed)} · Paid back`
-      : `Discounts ${formatCents(quarter.owed)} · ${formatCents(quarter.left)} left`;
+  const detail =
+    kind === "gift_cards"
+      ? quarter?.giftCards
+        ? `Gift cards ${formatCents(quarter.giftCards)} so far`
+        : "No gift cards yet"
+      : !quarter || quarter.owed === 0
+        ? "No discounts"
+        : quarter.left === 0
+          ? `Discounts ${formatCents(quarter.owed)} · Paid back`
+          : `Discounts ${formatCents(quarter.owed)} · ${formatCents(quarter.left)} left`;
   return (
     <FormField id={id} label="Quarter" group>
       <div role="group" aria-labelledby={`${id}-label`} className="flex items-center gap-2">

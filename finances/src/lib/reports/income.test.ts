@@ -16,8 +16,13 @@ function week(week_ending: string, sales_cents: number, lines: Partial<CafeLines
   return { id: week_ending, week_ending, ...NO_LINES, sales_cents, ...lines, source: "square", note: null };
 }
 
-function payback(received_on: string, amount_cents: number, quarter_start = "2026-07-01"): CafePayback {
-  return { id: `p-${received_on}`, quarter_start, received_on, amount_cents, note: null };
+function payback(
+  received_on: string,
+  amount_cents: number,
+  kind: CafePayback["kind"] = "discounts",
+  quarter_start = "2026-07-01",
+): CafePayback {
+  return { id: `p-${received_on}`, kind, quarter_start, received_on, amount_cents, note: null };
 }
 
 function out(type: OutRow["type"], amount_cents: number, status: OutRow["status"] = "paid"): OutRow {
@@ -37,6 +42,7 @@ describe("incomeTotals", () => {
     expect(totals).toEqual({
       moneyIn: { youth: 7000, cafe: 55000, paybacks: 0, total: 62000 },
       discounts: 0,
+      giftCards: 0,
       out: { youth: 4500, cafe: 15000, total: 19500, count: 3 },
       left: 42500,
       profit: { cafe: 40000, youth: 2500 },
@@ -70,6 +76,17 @@ describe("incomeTotals", () => {
     expect(totals.profit).toEqual({ cafe: 20000, youth: 0 });
   });
 
+  it("counts the church's gift card money as money in and in the cafe's profit", () => {
+    const totals = incomeTotals(
+      { youth: [], weeks: [week("2026-09-06", 30000)], paybacks: [payback("2026-09-10", 25000, "gift_cards")] },
+      [out("cafe", 25000)],
+    );
+    // The cards were bought with a cafe request, and the church's money for them makes it up.
+    expect(totals.moneyIn).toMatchObject({ paybacks: 25000, total: 55000 });
+    expect(totals.giftCards).toBe(25000);
+    expect(totals.profit.cafe).toBe(30000);
+  });
+
   it("counts only approved and paid requests as out, so All statuses doesn't add what wasn't spent", () => {
     const totals = incomeTotals({ youth: [youth("2026-09-06", 1000)], weeks: [], paybacks: [] }, [
       out("youth", 400, "approved"),
@@ -94,6 +111,7 @@ describe("incomeTotals", () => {
     expect(incomeTotals({ youth: [], weeks: [], paybacks: [] }, [])).toEqual({
       moneyIn: { youth: 0, cafe: 0, paybacks: 0, total: 0 },
       discounts: 0,
+      giftCards: 0,
       out: { youth: 0, cafe: 0, total: 0, count: 0 },
       left: 0,
       profit: { cafe: 0, youth: 0 },

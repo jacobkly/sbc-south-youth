@@ -1,6 +1,6 @@
 import { toCsv, type CsvValue } from "@/lib/csv";
 import { laDateTime, periodContaining, periodLabel } from "@/lib/dates";
-import { moneyFromSquare } from "@/lib/income/cafe";
+import { moneyFromSquare, type CafePaybackKind } from "@/lib/income/cafe";
 import { incomeMethodLabel, YOUTH_INCOME_KIND_LABELS } from "@/lib/income/schema";
 import { centsToDecimal } from "@/lib/money";
 import { PAYMENT_METHOD_LABELS } from "@/lib/requests/actions";
@@ -135,6 +135,12 @@ export const INCOME_CSV_HEADER = [
 
 const NO_SQUARE_LINES: CsvValue[] = Array(8).fill(null);
 
+/** A church payback's kind column, which says what it paid for. */
+const PAYBACK_KIND_LABELS: Record<CafePaybackKind, string> = {
+  discounts: "Discount payback",
+  gift_cards: "Gift card payback",
+};
+
 /**
  * One line per tithe, event, cafe week, and church payback, oldest first. On
  * the same day, youth entries come first, then the cafe week, then paybacks.
@@ -183,7 +189,7 @@ export function incomeCsv({ youth, weeks, paybacks }: ReportIncome): string {
       values: [
         payback.received_on,
         REQUEST_TYPE_LABELS.cafe,
-        "Church payback",
+        PAYBACK_KIND_LABELS[payback.kind],
         null,
         null,
         centsToDecimal(payback.amount_cents),

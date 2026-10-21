@@ -1,5 +1,5 @@
 import { periodContaining, periodRange, type IsoDate, type MonthPeriod, type Period } from "@/lib/dates";
-import type { Tables } from "@/lib/database.types";
+import type { Enums, Tables } from "@/lib/database.types";
 
 /** A week's money, line by line as Square's sales summary has it. */
 export type CafeLines = Pick<
@@ -34,8 +34,24 @@ export type CafeSales = Pick<CafeWeek, "week_ending"> & CafeLines;
 /** A cafe request Reports counts: approved or paid, by its purchase date. */
 export type CafeCost = { purchase_date: IsoDate | null; amount_cents: number | null };
 
-/** A transfer from the church for the discounts of the quarter starting on `quarter_start`. */
-export type CafePayback = Pick<Tables<"cafe_paybacks">, "id" | "quarter_start" | "received_on" | "amount_cents" | "note">;
+/** What a church payback is for: a quarter's discounts, or gift cards the church prepays. */
+export type CafePaybackKind = Enums<"cafe_payback_kind">;
+
+export const CAFE_PAYBACK_KINDS = ["discounts", "gift_cards"] as const satisfies readonly CafePaybackKind[];
+
+export const CAFE_PAYBACK_KIND_LABELS: Record<CafePaybackKind, string> = {
+  discounts: "Discounts",
+  gift_cards: "Gift cards",
+};
+
+/** A transfer from the church for the quarter starting on `quarter_start`. */
+export type CafePayback = Pick<
+  Tables<"cafe_paybacks">,
+  "id" | "kind" | "quarter_start" | "received_on" | "amount_cents" | "note"
+>;
+
+/** What totals need from a church payback. */
+export type CafePaybackIncome = Pick<CafePayback, "kind" | "received_on" | "amount_cents">;
 
 /** Gross sales less returns and discounts. */
 export function netSales(lines: CafeLines): number {
@@ -62,15 +78,17 @@ export type CafeTotals = {
   moneyIn: number;
   /** Discounts the church pays back. */
   discounts: number;
+  /** What the church prepaid for gift cards, on the day it came in. */
+  giftCards: number;
   costs: number;
-  /** Money in plus discounts less costs. Below 0 when costs are more. */
+  /** Money in plus discounts and gift cards, less costs. Below 0 when costs are more. */
   profit: number;
   weeks: number;
   /** A week's gross sales on average, in whole cents. Null with no weeks. */
   average: number | null;
 };
 
-function totals(weeks: readonly CafeSales[], costs: number): CafeTotals {
+function totals(weeks: readonly CafeSales[], costs: number, giftCards: number): CafeTotals {
   let sales = 0;
   let moneyIn = 0;
   let discounts = 0;
@@ -83,8 +101,9 @@ function totals(weeks: readonly CafeSales[], costs: number): CafeTotals {
     sales,
     moneyIn,
     discounts,
+    giftCards,
     costs,
-    profit: moneyIn + discounts - costs,
+    profit: moneyIn + discounts + giftCards - costs,
     weeks: weeks.length,
     average: weeks.length ? Math.round(sales / weeks.length) : null,
   };
@@ -101,24 +120,46 @@ function costsIn(costs: readonly CafeCost[], period: Period): number {
   );
 }
 
+function giftCardsIn(paybacks: readonly CafePaybackIncome[], period: Period): number {
+  const { start, end } = periodRange(period);
+  return paybacks.reduce(
+    (total, payback) =>
+      payback.kind === "gift_cards" && payback.received_on >= start && payback.received_on <= end
+        ? total + payback.amount_cents
+        : total,
+    0,
+  );
+}
+
 /**
  * A period's cafe sales, costs, and profit. A week counts in the period it
- * ends in, and a cost in the period it was bought.
+ * ends in, a cost in the period it was bought, and the church's gift card
+ * money in the period it came in. Discount paybacks don't count, since
+ * profit already has the discounts.
  */
-export function cafeTotalsIn(weeks: readonly CafeSales[], costs: readonly CafeCost[], period: Period): CafeTotals {
+export function cafeTotalsIn(
+  weeks: readonly CafeSales[],
+  costs: readonly CafeCost[],
+  paybacks: readonly CafePaybackIncome[],
+  period: Period,
+): CafeTotals {
   const { start, end } = periodRange(period);
   const inPeriod = weeks.filter((week) => week.week_ending >= start && week.week_ending <= end);
-  return totals(inPeriod, costsIn(costs, period));
+  return totals(inPeriod, costsIn(costs, period), giftCardsIn(paybacks, period));
 }
 
 export type CafeMonthGroup = { period: MonthPeriod; totals: CafeTotals; weeks: CafeWeek[] };
 
 /**
- * Weeks by the month they end in, each with that month's costs and profit.
- * Expects the weeks newest first, and keeps that order. A month with costs
- * but no weeks isn't listed.
+ * Weeks by the month they end in, each with that month's costs, gift cards,
+ * and profit. Expects the weeks newest first, and keeps that order. A month
+ * with costs or gift cards but no weeks isn't listed.
  */
-export function groupWeeksByMonth(weeks: readonly CafeWeek[], costs: readonly CafeCost[]): CafeMonthGroup[] {
+export function groupWeeksByMonth(
+  weeks: readonly CafeWeek[],
+  costs: readonly CafeCost[],
+  paybacks: readonly CafePaybackIncome[],
+): CafeMonthGroup[] {
   const groups: { key: string; period: MonthPeriod; weeks: CafeWeek[] }[] = [];
   for (const week of weeks) {
     const key = week.week_ending.slice(0, 7);
@@ -128,7 +169,7 @@ export function groupWeeksByMonth(weeks: readonly CafeWeek[], costs: readonly Ca
   }
   return groups.map(({ period, weeks: monthWeeks }) => ({
     period,
-    totals: totals(monthWeeks, costsIn(costs, period)),
+    totals: totals(monthWeeks, costsIn(costs, period), giftCardsIn(paybacks, period)),
     weeks: monthWeeks,
   }));
 }
@@ -143,13 +184,17 @@ export type DiscountQuarter = {
   start: IsoDate;
   /** The discounts of the weeks that end in it. */
   owed: number;
+  /** What the church paid back for those discounts. */
   paid: number;
   /** What the church still owes, 0 once paybacks reach it. */
   left: number;
+  /** What the church prepaid for the quarter's gift cards, which it never owes. */
+  giftCards: number;
+  /** Both kinds, in the order given. */
   paybacks: CafePayback[];
 };
 
-/** Each quarter with discounts or a payback, newest first. */
+/** Each quarter with discounts or a payback of either kind, newest first. */
 export function discountQuarters(
   weeks: readonly Pick<CafeWeek, "week_ending" | "discounts_cents">[],
   paybacks: readonly CafePayback[],
@@ -158,7 +203,7 @@ export function discountQuarters(
   const quarter = (start: IsoDate) => {
     let found = quarters.get(start);
     if (!found) {
-      found = { start, owed: 0, paid: 0, left: 0, paybacks: [] };
+      found = { start, owed: 0, paid: 0, left: 0, giftCards: 0, paybacks: [] };
       quarters.set(start, found);
     }
     return found;
@@ -169,7 +214,8 @@ export function discountQuarters(
   }
   for (const payback of paybacks) {
     const found = quarter(payback.quarter_start);
-    found.paid += payback.amount_cents;
+    if (payback.kind === "gift_cards") found.giftCards += payback.amount_cents;
+    else found.paid += payback.amount_cents;
     found.paybacks.push(payback);
   }
 

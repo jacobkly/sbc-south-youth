@@ -1,6 +1,14 @@
 import type { Json } from "@/lib/database.types";
 import { formatDate, formatListDate, isIsoDate, periodContaining, periodLabel, type IsoDate } from "@/lib/dates";
-import { moneyFromSquare, NO_LINES, type CafeLines, type CafePayback, type CafeWeek } from "@/lib/income/cafe";
+import {
+  CAFE_PAYBACK_KIND_LABELS,
+  moneyFromSquare,
+  NO_LINES,
+  type CafeLines,
+  type CafePayback,
+  type CafePaybackKind,
+  type CafeWeek,
+} from "@/lib/income/cafe";
 import {
   INCOME_METHOD_LABELS,
   incomeMethodLabel,
@@ -45,6 +53,10 @@ function isRecord(value: Json | null | undefined): value is JsonRecord {
 
 function isIncomeMethod(value: Json | undefined): value is IncomeMethod {
   return typeof value === "string" && Object.hasOwn(INCOME_METHOD_LABELS, value);
+}
+
+function isPaybackKind(value: Json | undefined): value is CafePaybackKind {
+  return typeof value === "string" && Object.hasOwn(CAFE_PAYBACK_KIND_LABELS, value);
 }
 
 function isDate(value: Json | undefined): value is IsoDate {
@@ -111,7 +123,7 @@ export function incomeTitle(
 /**
  * "$25.00 · Cash App · Oct 4", "Bake sale · $340.00 · Mixed · Oct 4",
  * "Sep 28 – Oct 4 · $650.00" with the money from Square, or
- * "Q3 2026 discounts · $120.00 · Oct 2".
+ * "Q3 2026 discounts · $120.00 · Oct 2" (or gift cards).
  */
 export function incomeLine(subject: IncomeSubject | undefined, today: IsoDate): string {
   if (!subject) return "Since deleted";
@@ -121,7 +133,7 @@ export function incomeLine(subject: IncomeSubject | undefined, today: IsoDate): 
   if (subject.type === "cafe_payback") {
     const { payback } = subject;
     return [
-      `${quarterLabel(payback.quarter_start)} discounts`,
+      `${quarterLabel(payback.quarter_start)} ${CAFE_PAYBACK_KIND_LABELS[payback.kind].toLowerCase()}`,
       formatCents(payback.amount_cents),
       formatListDate(payback.received_on, today),
     ].join(" · ");
@@ -160,6 +172,7 @@ const FIELDS: Partial<Record<string, readonly (readonly [string, string])[]>> = 
     ["note", "Note"],
   ],
   cafe_payback: [
+    ["kind", "For"],
     ["quarter_start", "Quarter"],
     ["received_on", "Date received"],
     ["amount_cents", "Amount"],
@@ -187,7 +200,12 @@ function formatValue(field: string, value: Json | undefined, today: IsoDate): st
     case "source":
       return (typeof value === "string" && SOURCE_LABELS[value]) || String(value);
     case "kind":
-      return value === "tithe" || value === "event" ? YOUTH_INCOME_KIND_LABELS[value] : String(value);
+      // A youth entry's kind, or what a church payback was for.
+      return value === "tithe" || value === "event"
+        ? YOUTH_INCOME_KIND_LABELS[value]
+        : isPaybackKind(value)
+          ? CAFE_PAYBACK_KIND_LABELS[value]
+          : String(value);
     default:
       return typeof value === "string" ? value : JSON.stringify(value);
   }
@@ -255,13 +273,14 @@ function snapshotOf(change: IncomeChange): IncomeSubject | null {
     };
   }
   if (change.entity_type === "cafe_payback") {
+    const kind = value("kind");
     const quarterStart = value("quarter_start");
     const receivedOn = value("received_on");
     const amount = value("amount_cents");
-    if (!isDate(quarterStart) || !isDate(receivedOn) || typeof amount !== "number") return null;
+    if (!isPaybackKind(kind) || !isDate(quarterStart) || !isDate(receivedOn) || typeof amount !== "number") return null;
     return {
       type: "cafe_payback",
-      payback: { quarter_start: quarterStart, received_on: receivedOn, amount_cents: amount, note: text("note") },
+      payback: { kind, quarter_start: quarterStart, received_on: receivedOn, amount_cents: amount, note: text("note") },
       deleted: true,
     };
   }

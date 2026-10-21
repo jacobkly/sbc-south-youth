@@ -1,4 +1,4 @@
--- Cafe weeks from Square, and the church's paybacks for the cafe's discounts.
+-- Cafe weeks from Square, and what the church pays the cafe back.
 --
 -- Square's sales summary splits a week's money into lines, and each week now
 -- keeps them all. Gross sales stay in sales_cents. Less returns and discounts
@@ -12,7 +12,9 @@
 -- The church pays back every discount, once a quarter, by bank transfer. Each
 -- transfer is a row in cafe_paybacks for the calendar quarter it covers, and a
 -- quarter can have more than one when a payment comes in short. A week counts
--- in the quarter of the Sunday it ends.
+-- in the quarter of the Sunday it ends. The church also prepays for gift cards
+-- each quarter. Those transfers are paybacks of their own kind, since the
+-- cards were bought with cafe money and nothing is owed for them.
 --
 -- Like the cafe's weeks, owners who don't owe an authenticator code add,
 -- change, and delete paybacks. Owners and finance viewers read them, and
@@ -56,8 +58,8 @@ create trigger log_activity
     'gift_card_sales_cents', 'gift_card_redeemed_cents', 'taxes_cents', 'tips_cents', 'fees_cents', 'source', 'note'
   );
 
--- What the church pays back. Only discounts for now.
-create type public.cafe_payback_kind as enum ('discounts');
+-- What the church pays back: the quarter's discounts, or gift cards it prepays.
+create type public.cafe_payback_kind as enum ('discounts', 'gift_cards');
 
 create table public.cafe_paybacks (
   id uuid primary key default gen_random_uuid(),
@@ -77,7 +79,7 @@ create table public.cafe_paybacks (
 );
 
 comment on table public.cafe_paybacks is
-  'Each transfer the church makes to pay back the cafe''s discounts, for the calendar quarter it covers.';
+  'Each transfer the church makes to pay back the cafe''s discounts or prepay its gift cards, for the calendar quarter it covers.';
 
 create index cafe_paybacks_quarter_start_idx on public.cafe_paybacks (quarter_start desc);
 

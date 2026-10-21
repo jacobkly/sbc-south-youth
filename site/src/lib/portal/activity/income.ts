@@ -9,11 +9,14 @@ import { formatCents } from "@/lib/money";
 
 type IncomeMethod = Database["public"]["Enums"]["income_method"];
 type YouthIncomeKind = Database["public"]["Enums"]["youth_income_kind"];
+type CafePaybackKind = Database["public"]["Enums"]["cafe_payback_kind"];
 
 export const INCOME_METHOD_LABELS: Record<IncomeMethod, string> = { cash_app: "Cash App", zelle: "Zelle", cash: "Cash" };
 /** A youth entry with no method came in more than one way. */
 export const MIXED_LABEL = "Mixed";
 export const YOUTH_KIND_LABELS: Record<YouthIncomeKind, string> = { tithe: "Tithe", event: "Event" };
+/** What a church payback was for. */
+export const PAYBACK_KIND_LABELS: Record<CafePaybackKind, string> = { discounts: "Discounts", gift_cards: "Gift cards" };
 
 /** The income tables whose changes the feed shows, as the activity log names them. */
 export const INCOME_ENTITY_TYPES = ["youth_income", "cafe_week", "cafe_payback"] as const;
@@ -42,7 +45,13 @@ type CafeLines = typeof NO_LINES;
 
 export type CafeWeekFields = CafeLines & { week_ending: IsoDate; source: string; note: string | null };
 
-export type CafePaybackFields = { quarter_start: IsoDate; received_on: IsoDate; amount_cents: number; note: string | null };
+export type CafePaybackFields = {
+  kind: CafePaybackKind;
+  quarter_start: IsoDate;
+  received_on: IsoDate;
+  amount_cents: number;
+  note: string | null;
+};
 
 /** What a change was about, as it is now or, once deleted, as it was then. */
 export type IncomeSubject =
@@ -61,6 +70,10 @@ function isRecord(value: Json | null | undefined): value is JsonRecord {
 
 function isIncomeMethod(value: Json | undefined): value is IncomeMethod {
   return typeof value === "string" && Object.hasOwn(INCOME_METHOD_LABELS, value);
+}
+
+function isPaybackKind(value: Json | undefined): value is CafePaybackKind {
+  return typeof value === "string" && Object.hasOwn(PAYBACK_KIND_LABELS, value);
 }
 
 function isDate(value: Json | undefined): value is IsoDate {
@@ -114,7 +127,7 @@ function moneyFromSquare(lines: CafeLines): number {
 /**
  * "$25.00 · Cash App · Oct 4", "Bake sale · $340.00 · Mixed · Oct 4",
  * "Sep 28 – Oct 4 · $650.00" with the money from Square, or
- * "Q3 2026 discounts · $120.00 · Oct 2".
+ * "Q3 2026 discounts · $120.00 · Oct 2" (or gift cards).
  */
 export function incomeLine(subject: IncomeSubject | undefined, today: IsoDate): string {
   if (!subject) return "An entry that's gone";
@@ -124,7 +137,7 @@ export function incomeLine(subject: IncomeSubject | undefined, today: IsoDate): 
   if (subject.type === "cafe_payback") {
     const { payback } = subject;
     return [
-      `${quarterLabel(payback.quarter_start)} discounts`,
+      `${quarterLabel(payback.quarter_start)} ${PAYBACK_KIND_LABELS[payback.kind].toLowerCase()}`,
       formatCents(payback.amount_cents),
       shortDate(payback.received_on, today),
     ].join(" · ");
@@ -219,13 +232,14 @@ function snapshotOf(row: IncomeRow): IncomeSubject | null {
     };
   }
   if (row.entity_type === "cafe_payback") {
+    const kind = value("kind");
     const quarterStart = value("quarter_start");
     const receivedOn = value("received_on");
     const amount = value("amount_cents");
-    if (!isDate(quarterStart) || !isDate(receivedOn) || typeof amount !== "number") return null;
+    if (!isPaybackKind(kind) || !isDate(quarterStart) || !isDate(receivedOn) || typeof amount !== "number") return null;
     return {
       type: "cafe_payback",
-      payback: { quarter_start: quarterStart, received_on: receivedOn, amount_cents: amount, note: text("note") },
+      payback: { kind, quarter_start: quarterStart, received_on: receivedOn, amount_cents: amount, note: text("note") },
       deleted: true,
     };
   }

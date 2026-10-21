@@ -20,6 +20,7 @@ import {
   incomeLine,
   isIncomeType,
   MIXED_LABEL,
+  PAYBACK_KIND_LABELS,
   quarterLabel,
   titheImportLine,
   titheImportOf,
@@ -400,6 +401,7 @@ const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
     incomeField("note", "Note", formatText),
   ],
   cafe_payback: [
+    incomeField("kind", "For", (value) => formatLabel(PAYBACK_KIND_LABELS, value)),
     incomeField("quarter_start", "Quarter", (value) =>
       typeof value === "string" && isIsoDate(value) ? quarterLabel(value) : "None",
     ),

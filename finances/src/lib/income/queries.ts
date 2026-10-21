@@ -15,7 +15,7 @@ export const CAFE_SALES_COLUMNS =
 export const CAFE_WEEK_COLUMNS =
   "id, week_ending, sales_cents, returns_cents, discounts_cents, gift_card_sales_cents, gift_card_redeemed_cents, taxes_cents, tips_cents, fees_cents, source, note";
 
-export const CAFE_PAYBACK_COLUMNS = "id, quarter_start, received_on, amount_cents, note";
+export const CAFE_PAYBACK_COLUMNS = "id, kind, quarter_start, received_on, amount_cents, note";
 
 /** Every youth entry, newest first. Throws on failure. */
 export function loadYouthEntries(supabase: SupabaseClient<Database>): Promise<YouthEntry[]> {

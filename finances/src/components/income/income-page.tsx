@@ -106,6 +106,7 @@ export function IncomePage({
           <CafeWeekList
             weeks={cafeWeeks}
             costs={cafeCosts}
+            paybacks={cafePaybacks}
             quarters={quarters}
             today={today}
             onOpen={canEdit ? (week) => setCafeWeek(week.week_ending) : undefined}

@@ -32,7 +32,12 @@ function cost(purchase_date: string, amount_cents: number): CafeCost {
 
 function payback(quarter_start: string, amount_cents: number, received_on = "2026-10-15"): CafePayback {
   next += 1;
-  return { id: `p${next}`, quarter_start, received_on, amount_cents, note: null };
+  return { id: `p${next}`, kind: "discounts", quarter_start, received_on, amount_cents, note: null };
+}
+
+/** The church's prepayment for a quarter's gift cards. */
+function giftCards(quarter_start: string, amount_cents: number, received_on = "2026-10-15"): CafePayback {
+  return { ...payback(quarter_start, amount_cents, received_on), kind: "gift_cards" };
 }
 
 // A made-up Square week with a return and gift cards.
@@ -69,10 +74,11 @@ describe("a week's lines", () => {
 
 describe("cafeTotalsIn", () => {
   it("has nothing for a month with no weeks or costs", () => {
-    expect(cafeTotalsIn([], [], OCTOBER)).toEqual({
+    expect(cafeTotalsIn([], [], [], OCTOBER)).toEqual({
       sales: 0,
       moneyIn: 0,
       discounts: 0,
+      giftCards: 0,
       costs: 0,
       profit: 0,
       weeks: 0,
@@ -82,13 +88,13 @@ describe("cafeTotalsIn", () => {
 
   it("counts a week in the month it ends", () => {
     // September 28 to October 4 counts in October, and September 21 to 27 doesn't.
-    const totals = cafeTotalsIn([week("2026-10-04", 60000), week("2026-09-27", 50000)], [], OCTOBER);
+    const totals = cafeTotalsIn([week("2026-10-04", 60000), week("2026-09-27", 50000)], [], [], OCTOBER);
     expect(totals).toMatchObject({ sales: 60000, weeks: 1 });
   });
 
   it("takes away the month's cafe costs by purchase date", () => {
     const costs = [cost("2026-10-01", 12000), cost("2026-10-31", 3000), cost("2026-09-30", 99900)];
-    expect(cafeTotalsIn([week("2026-10-04", 60000)], costs, OCTOBER)).toMatchObject({
+    expect(cafeTotalsIn([week("2026-10-04", 60000)], costs, [], OCTOBER)).toMatchObject({
       sales: 60000,
       moneyIn: 60000,
       costs: 15000,
@@ -98,10 +104,11 @@ describe("cafeTotalsIn", () => {
 
   it("adds the church's discounts to the money from Square for profit", () => {
     const weeks = [week("2026-10-11", 50000, SQUARE), week("2026-10-04", 30000)];
-    expect(cafeTotalsIn(weeks, [cost("2026-10-06", 10000)], OCTOBER)).toEqual({
+    expect(cafeTotalsIn(weeks, [cost("2026-10-06", 10000)], [], OCTOBER)).toEqual({
       sales: 80000,
       moneyIn: 74450,
       discounts: 8000,
+      giftCards: 0,
       costs: 10000,
       profit: 72450,
       weeks: 2,
@@ -109,12 +116,27 @@ describe("cafeTotalsIn", () => {
     });
   });
 
+  it("adds the gift cards the church prepaid, on the day the money came in", () => {
+    // Discounts count when they're given, so their payback isn't counted again.
+    const paybacks = [
+      giftCards("2026-10-01", 25000, "2026-10-09"),
+      giftCards("2026-07-01", 25000, "2026-09-30"),
+      payback("2026-07-01", 8000, "2026-10-12"),
+    ];
+    expect(cafeTotalsIn([week("2026-10-04", 30000)], [cost("2026-10-02", 25000)], paybacks, OCTOBER)).toMatchObject({
+      moneyIn: 30000,
+      giftCards: 25000,
+      costs: 25000,
+      profit: 30000,
+    });
+  });
+
   it("shows a loss when costs are more than sales", () => {
-    expect(cafeTotalsIn([week("2026-10-04", 5000)], [cost("2026-10-02", 20000)], OCTOBER).profit).toBe(-15000);
+    expect(cafeTotalsIn([week("2026-10-04", 5000)], [cost("2026-10-02", 20000)], [], OCTOBER).profit).toBe(-15000);
   });
 
   it("counts a $0 week in the average", () => {
-    const totals = cafeTotalsIn([week("2026-10-11", 0), week("2026-10-04", 60001)], [], OCTOBER);
+    const totals = cafeTotalsIn([week("2026-10-11", 0), week("2026-10-04", 60001)], [], [], OCTOBER);
     expect(totals).toMatchObject({ weeks: 2, average: 30001 });
   });
 
@@ -123,37 +145,44 @@ describe("cafeTotalsIn", () => {
       { purchase_date: null, amount_cents: 5000 },
       { purchase_date: "2026-10-02", amount_cents: null },
     ];
-    expect(cafeTotalsIn([], costs, OCTOBER).costs).toBe(0);
+    expect(cafeTotalsIn([], costs, [], OCTOBER).costs).toBe(0);
   });
 
   it("covers a whole quarter or year", () => {
     const weeks = [week("2026-10-04", 60000), week("2026-09-27", 50000), week("2026-07-05", 40000)];
     const costs = [cost("2026-09-29", 15000), cost("2026-07-01", 10000), cost("2026-06-30", 99900)];
-    expect(cafeTotalsIn(weeks, costs, { kind: "quarter", year: 2026, quarter: 3 })).toMatchObject({
+    expect(cafeTotalsIn(weeks, costs, [], { kind: "quarter", year: 2026, quarter: 3 })).toMatchObject({
       sales: 90000,
       costs: 25000,
       profit: 65000,
       weeks: 2,
     });
-    expect(cafeTotalsIn(weeks, costs, { kind: "year", year: 2026 })).toMatchObject({ sales: 150000, weeks: 3 });
+    expect(cafeTotalsIn(weeks, costs, [], { kind: "year", year: 2026 })).toMatchObject({ sales: 150000, weeks: 3 });
   });
 });
 
 describe("groupWeeksByMonth", () => {
   it("has no months with no weeks", () => {
-    expect(groupWeeksByMonth([], [cost("2026-10-02", 1000)])).toEqual([]);
+    expect(groupWeeksByMonth([], [cost("2026-10-02", 1000)], [])).toEqual([]);
   });
 
   it("groups weeks newest first by the month they end in, with that month's costs", () => {
     const weeks = [week("2026-10-11", 70000), week("2026-10-04", 60000), week("2026-09-27", 50000)];
     const costs = [cost("2026-10-03", 20000), cost("2026-09-15", 10000), cost("2026-08-20", 40000)];
 
-    const months = groupWeeksByMonth(weeks, costs);
+    const months = groupWeeksByMonth(weeks, costs, []);
 
     expect(months.map((month) => month.period)).toEqual([OCTOBER, { kind: "month", year: 2026, month: 9 }]);
     expect(months[0].weeks.map((w) => w.week_ending)).toEqual(["2026-10-11", "2026-10-04"]);
     expect(months[0].totals).toMatchObject({ sales: 130000, costs: 20000, profit: 110000, weeks: 2, average: 65000 });
     expect(months[1].totals).toMatchObject({ sales: 50000, costs: 10000, profit: 40000, weeks: 1, average: 50000 });
+  });
+
+  it("adds gift cards to the month the church's money came in", () => {
+    const weeks = [week("2026-10-04", 60000), week("2026-09-27", 50000)];
+    const months = groupWeeksByMonth(weeks, [], [giftCards("2026-07-01", 25000, "2026-09-14")]);
+    expect(months.map((month) => month.totals.giftCards)).toEqual([0, 25000]);
+    expect(months[1].totals.profit).toBe(75000);
   });
 });
 
@@ -179,8 +208,8 @@ describe("discountQuarters", () => {
       week("2026-09-27", 0, { discounts_cents: 4000 }),
     ];
     expect(discountQuarters(weeks, [])).toEqual([
-      { start: "2026-10-01", owed: 5000, paid: 0, left: 5000, paybacks: [] },
-      { start: "2026-07-01", owed: 4000, paid: 0, left: 4000, paybacks: [] },
+      { start: "2026-10-01", owed: 5000, paid: 0, left: 5000, giftCards: 0, paybacks: [] },
+      { start: "2026-07-01", owed: 4000, paid: 0, left: 4000, giftCards: 0, paybacks: [] },
     ]);
   });
 
@@ -190,7 +219,7 @@ describe("discountQuarters", () => {
     const weeks = [week("2026-09-27", 0, { discounts_cents: 4000 }), week("2026-08-02", 0, { discounts_cents: 1000 })];
 
     expect(discountQuarters(weeks, [short])).toEqual([
-      { start: "2026-07-01", owed: 5000, paid: 2500, left: 2500, paybacks: [short] },
+      { start: "2026-07-01", owed: 5000, paid: 2500, left: 2500, giftCards: 0, paybacks: [short] },
     ]);
     expect(discountQuarters(weeks, [short, rest])[0]).toMatchObject({ paid: 4000, left: 1000 });
   });
@@ -206,6 +235,24 @@ describe("discountQuarters", () => {
       "2026-10-01",
       "2026-04-01",
     ]);
+  });
+
+  it("keeps gift cards apart from the discounts the church owes", () => {
+    const cards = giftCards("2026-07-01", 25000);
+    const discounts = payback("2026-07-01", 1000);
+    const weeks = [week("2026-09-27", 0, { discounts_cents: 4000 })];
+    expect(discountQuarters(weeks, [cards, discounts])).toEqual([
+      { start: "2026-07-01", owed: 4000, paid: 1000, left: 3000, giftCards: 25000, paybacks: [cards, discounts] },
+    ]);
+  });
+
+  it("lists a quarter with only gift cards, with nothing owed", () => {
+    expect(discountQuarters([], [giftCards("2026-04-01", 25000)])[0]).toMatchObject({
+      start: "2026-04-01",
+      owed: 0,
+      left: 0,
+      giftCards: 25000,
+    });
   });
 });
 

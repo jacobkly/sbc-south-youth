@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(37);
+select plan(39);
 
 -- Fake people. New auth users get a row with no roles from the signup trigger.
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -24,7 +24,9 @@ insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, c
     now(), now());
 
 -- Shape.
-select enum_has_labels('public', 'cafe_payback_kind', array['discounts'], 'the church pays back discounts');
+select enum_has_labels(
+  'public', 'cafe_payback_kind', array['discounts', 'gift_cards'], 'the church pays back discounts and prepays gift cards'
+);
 
 -- As the owner, with a code.
 set local role authenticated;
@@ -108,6 +110,19 @@ select lives_ok(
   $$ insert into public.cafe_paybacks (id, quarter_start, received_on, amount_cents)
      values ('00000000-0000-4000-8000-0000000cb002', '2026-01-01', '2026-04-24', 4500) $$,
   'a quarter can have a second payback when the first came in short'
+);
+
+select lives_ok(
+  $$ insert into public.cafe_paybacks (id, kind, quarter_start, received_on, amount_cents)
+     values ('00000000-0000-4000-8000-0000000cb003', 'gift_cards', '2026-01-01', '2026-01-09', 25000) $$,
+  'and one for the gift cards the church prepays'
+);
+
+select is(
+  (select changes -> 'kind' from public.activity_log where action = 'cafe_payback.created'
+     and entity_id = '00000000-0000-4000-8000-0000000cb003'),
+  '{"from": null, "to": "gift_cards"}'::jsonb,
+  'and the history says what it was for'
 );
 
 select throws_ok(

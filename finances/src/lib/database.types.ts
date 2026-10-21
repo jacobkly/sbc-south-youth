@@ -1108,7 +1108,7 @@ export type Database = {
         | "site_editor"
         | "site_messages"
         | "attendance"
-      cafe_payback_kind: "discounts"
+      cafe_payback_kind: "discounts" | "gift_cards"
       income_method: "cash_app" | "zelle" | "cash"
       payment_method: "cash_app" | "bank_transfer" | "check" | "cash" | "other"
       reimbursement_type: "cafe" | "youth"
@@ -1260,7 +1260,7 @@ export const Constants = {
         "site_messages",
         "attendance",
       ],
-      cafe_payback_kind: ["discounts"],
+      cafe_payback_kind: ["discounts", "gift_cards"],
       income_method: ["cash_app", "zelle", "cash"],
       payment_method: ["cash_app", "bank_transfer", "check", "cash", "other"],
       reimbursement_type: ["cafe", "youth"],

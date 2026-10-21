@@ -111,7 +111,13 @@ function context(overrides: Partial<FeedContext> = {}): FeedContext {
         PAYBACK,
         {
           type: "cafe_payback",
-          payback: { quarter_start: "2026-07-01", received_on: "2026-10-01", amount_cents: 12000, note: "By check" },
+          payback: {
+            kind: "discounts",
+            quarter_start: "2026-07-01",
+            received_on: "2026-10-01",
+            amount_cents: 12000,
+            note: "By check",
+          },
           deleted: false,
         },
       ],
@@ -528,6 +534,7 @@ describe("income", () => {
 
   it("shows a church payback's quarter, amount, and day, and opens the Cafe tab", () => {
     const changes = {
+      kind: { from: "gift_cards", to: "discounts" },
       quarter_start: { from: "2026-04-01", to: "2026-07-01" },
       received_on: { from: "2026-09-30", to: "2026-10-01" },
       amount_cents: { from: 10000, to: 12000 },
@@ -542,6 +549,7 @@ describe("income", () => {
       link: { href: "https://finances.example.test/admin/income?tab=cafe", label: "Open in Finances" },
     });
     expect(entry.events[0].changes).toEqual([
+      { label: "For", from: "Gift cards", to: "Discounts" },
       { label: "Quarter", from: "Q2 2026", to: "Q3 2026" },
       { label: "Date received", from: "Sep 30, 2026", to: "Oct 1, 2026" },
       { label: "Amount", from: "$100.00", to: "$120.00" },

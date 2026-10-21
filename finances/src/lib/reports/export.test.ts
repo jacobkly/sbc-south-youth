@@ -216,7 +216,10 @@ describe("incomeCsv", () => {
         },
         { id: "c2", week_ending: "2026-08-30", ...NO_LINES, source: "manual", note: "Closed for camp, back soon" },
       ],
-      paybacks: [{ id: "p1", quarter_start: "2026-07-01", received_on: "2026-09-13", amount_cents: 4250, note: "By check" }],
+      paybacks: [
+        { id: "p1", kind: "discounts", quarter_start: "2026-07-01", received_on: "2026-09-13", amount_cents: 4250, note: "By check" },
+        { id: "p2", kind: "gift_cards", quarter_start: "2026-07-01", received_on: "2026-09-20", amount_cents: 25000, note: null },
+      ],
     }).split("\r\n");
     expect(lines).toEqual([
       "﻿date,source,kind,event,method,amount,gross_sales,returns,discounts,gift_card_sales,gift_card_redeemed,taxes,tips,fees,quarter,note",
@@ -224,8 +227,9 @@ describe("incomeCsv", () => {
       "2026-09-06,Youth,Tithe,,Cash App,20.00,,,,,,,,,,",
       "2026-09-06,Cafe,Cafe week,,,297.00,310.25,0.00,10.00,0.00,0.00,0.00,2.00,5.25,,",
       "2026-09-13,Youth,Event,Bake sale,Mixed,150.50,,,,,,,,,,",
-      "2026-09-13,Cafe,Church payback,,,42.50,,,,,,,,,Q3 2026,By check",
+      "2026-09-13,Cafe,Discount payback,,,42.50,,,,,,,,,Q3 2026,By check",
       "2026-09-20,Youth,Event,,Zelle,9.99,,,,,,,,,,",
+      "2026-09-20,Cafe,Gift card payback,,,250.00,,,,,,,,,Q3 2026,",
       "",
     ]);
   });

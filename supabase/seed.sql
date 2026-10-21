@@ -343,6 +343,13 @@ join public.cafe_weeks w on w.week_ending >= q.before_last and w.week_ending < q
 group by q.before_last, q.last
 having sum(w.discounts_cents) > 0;
 
+-- Last quarter's gift cards, prepaid a few days in.
+insert into public.cafe_paybacks (kind, quarter_start, received_on, amount_cents, note)
+select 'gift_cards', q.last, q.last + 4, 25000, 'Gift card prepay'
+from (
+  select (date_trunc('quarter', now() at time zone 'America/Los_Angeles') - interval '3 months')::date as last
+) as q;
+
 select set_config('request.jwt.claims', '', false);
 
 -- A month of email for the owner's Email screen: sign-in codes and invites

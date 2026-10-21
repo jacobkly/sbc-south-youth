@@ -154,7 +154,7 @@ export function IncomeReport({
         <Heading id="income-profit-heading" title="Profit">
           <p className="text-sm text-muted-foreground">
             What each type took in, minus its own requests. The cafe&apos;s adds its discounts, which the church
-            pays back.
+            pays back, and the gift cards it prepays.
           </p>
         </Heading>
         <dl className="grid divide-y rounded-lg border @md:grid-cols-2 @md:divide-x @md:divide-y-0">
@@ -167,6 +167,7 @@ export function IncomeReport({
               detail={[
                 `${formatCents(totals.moneyIn[type])} in`,
                 type === "cafe" && totals.discounts > 0 && `${formatCents(totals.discounts)} discounts`,
+                type === "cafe" && totals.giftCards > 0 && `${formatCents(totals.giftCards)} gift cards`,
                 `${formatCents(totals.out[type])} out`,
               ]
                 .filter(Boolean)

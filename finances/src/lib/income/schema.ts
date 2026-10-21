@@ -4,7 +4,7 @@ import type { Enums } from "@/lib/database.types";
 import { parseAmountToCents } from "@/lib/money";
 import { appErrorMessage } from "@/lib/requests/actions";
 import { amountSchema, MIN_PURCHASE_DATE } from "@/lib/requests/schema";
-import { quarterStartOf } from "./cafe";
+import { quarterStartOf, type CafePaybackKind } from "./cafe";
 import { FIRST_WEEK_ENDING, isWeekEnding, latestWeekEnding } from "./weeks";
 
 export type IncomeMethod = Enums<"income_method">;
@@ -203,7 +203,8 @@ export function cafeWeekFieldErrors(error: Pick<z.ZodError, "issues">): CafeWeek
 
 /** What the payback form holds while editing. The amount stays text until it's saved. */
 export type CafePaybackFormValues = {
-  /** The first day of the quarter whose discounts it pays back. */
+  kind: CafePaybackKind;
+  /** The first day of the quarter it covers. */
   quarter_start: string;
   received_on: string;
   amount: string;
@@ -222,6 +223,7 @@ export type CafePaybackFieldErrors = Partial<Record<CafePaybackField, string>>;
 export function cafePaybackSchema(today: IsoDate = todayInLA()) {
   return z
     .object({
+      kind: z.enum(["discounts", "gift_cards"], "Choose what it was for."),
       quarter_start: z.string().superRefine((value, ctx) => {
         const message =
           !isIsoDate(value) || quarterStartOf(value) !== value
@@ -237,7 +239,8 @@ export function cafePaybackSchema(today: IsoDate = todayInLA()) {
       amount: amountSchema,
       note: z.string().trim().max(500, "Keep the note to 500 characters or fewer."),
     })
-    .transform(({ quarter_start, received_on, amount, note }) => ({
+    .transform(({ kind, quarter_start, received_on, amount, note }) => ({
+      kind,
       quarter_start,
       received_on,
       amount_cents: amount,

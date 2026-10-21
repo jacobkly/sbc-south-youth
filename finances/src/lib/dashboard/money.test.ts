@@ -22,7 +22,7 @@ const weeks = [
 ];
 
 // The church paid back the third quarter's discounts in October.
-const paybacks = [{ received_on: "2026-10-02", amount_cents: 4000 }];
+const paybacks = [{ kind: "discounts" as const, received_on: "2026-10-02", amount_cents: 4000 }];
 
 const paid = [
   { paid_date: "2026-10-02", amount_cents: 20000, type: "cafe" as const },
@@ -83,6 +83,12 @@ describe("moneyTotals", () => {
   it("works out cafe profit like the Income page, with discounts and cafe costs by purchase date", () => {
     expect(totals.month.cafeProfit).toBe(65000);
     expect(totals.year.cafeProfit).toBe(130000);
+  });
+
+  it("counts the church's gift card money as money in and cafe profit, on the day it came in", () => {
+    const withCards = [...paybacks, { kind: "gift_cards" as const, received_on: "2026-10-03", amount_cents: 25000 }];
+    const cards = moneyTotals(youth, weeks, withCards, cafeCosts, paidTotals(paid, TODAY));
+    expect(cards.month).toMatchObject({ moneyIn: { paybacks: 29000, total: 132000 }, cafeProfit: 90000 });
   });
 
   it("goes below zero when more was paid out than came in", () => {

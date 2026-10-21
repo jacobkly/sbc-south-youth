@@ -9,6 +9,7 @@ import {
   paybackStatus,
   quarterStartOf,
   type CafeCost,
+  type CafePaybackIncome,
   type CafeTotals,
   type CafeWeek,
   type DiscountQuarter,
@@ -18,26 +19,41 @@ import { relativeWeekLabel, weekLabel } from "@/lib/income/weeks";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
-/** This month's money from Square, discounts, costs, and profit. */
+/**
+ * This month's money from Square, discounts, costs, and profit, plus the
+ * church's gift card money in a month it came in.
+ */
 export function CafeMonthSummary({ month, totals }: { month: MonthPeriod; totals: CafeTotals }) {
+  const giftCards = totals.giftCards > 0;
+  // Five don't pair up on a phone, so profit takes the last row.
+  const profitClass = giftCards ? "col-span-2 desktop:col-span-1" : undefined;
   return (
     <section aria-labelledby="cafe-month-heading" className="space-y-2">
       <h2 id="cafe-month-heading" className="text-sm font-medium text-muted-foreground">
         This month · {periodLabel(month)}
       </h2>
-      <div className="grid grid-cols-2 gap-2 desktop:grid-cols-4">
+      <div className={cn("grid grid-cols-2 gap-2", giftCards ? "desktop:grid-cols-5" : "desktop:grid-cols-4")}>
         <Stat label="From Square" value={formatCents(totals.moneyIn)} note={plural(totals.weeks, "week", "weeks")} />
         <Stat label="Discounts" value={formatCents(totals.discounts)} note="The church pays back" />
+        {giftCards && <Stat label="Gift cards" value={formatCents(totals.giftCards)} note="The church prepaid" />}
         <Stat label="Cafe costs" value={formatCents(totals.costs)} note="Cafe requests" />
         <Stat
           label="Profit"
           value={formatCents(totals.profit)}
-          note={totals.profit < 0 ? "Costs are ahead" : "Square and discounts, less costs"}
+          note={
+            totals.profit < 0
+              ? "Costs are ahead"
+              : giftCards
+                ? "Square, discounts, and gift cards, less costs"
+                : "Square and discounts, less costs"
+          }
+          className={profitClass}
         />
       </div>
       <p className="text-xs text-muted-foreground">
         From Square is card, cash, and Cash App, less Square&apos;s fees. Costs are approved and paid cafe requests,
-        by purchase date. A week counts in the month it ends.
+        by purchase date. A week counts in the month it ends
+        {giftCards ? ", and the church's gift card money in the month it came in." : "."}
       </p>
     </section>
   );
@@ -57,6 +73,7 @@ const PAYBACK_LABELS: Record<PaybackStatus, string> = {
 export function CafeWeekList({
   weeks,
   costs,
+  paybacks,
   quarters,
   today,
   onOpen,
@@ -65,6 +82,8 @@ export function CafeWeekList({
 }: {
   weeks: CafeWeek[];
   costs: CafeCost[];
+  /** The church's paybacks. Its gift card money counts in each month's profit. */
+  paybacks: CafePaybackIncome[];
   /** Each quarter's discounts and paybacks, from `discountQuarters`. */
   quarters: DiscountQuarter[];
   today: IsoDate;
@@ -98,7 +117,7 @@ export function CafeWeekList({
 
   return (
     <div className="space-y-6">
-      {groupWeeksByMonth(weeks, costs).map(({ period, totals, weeks: monthWeeks }) => {
+      {groupWeeksByMonth(weeks, costs, paybacks).map(({ period, totals, weeks: monthWeeks }) => {
         const headingId = `cafe-${period.year}-${period.month}`;
         return (
           <section key={headingId} aria-labelledby={headingId} className="space-y-2">
@@ -116,6 +135,7 @@ export function CafeWeekList({
                 {[
                   `From Square ${formatCents(totals.moneyIn)}`,
                   totals.discounts > 0 && `Discounts ${formatCents(totals.discounts)}`,
+                  totals.giftCards > 0 && `Gift cards ${formatCents(totals.giftCards)}`,
                   `Costs ${formatCents(totals.costs)}`,
                 ]
                   .filter(Boolean)

@@ -235,7 +235,7 @@ export async function loadDashboard(
     fetchAll((start, end) =>
       supabase
         .from("cafe_paybacks")
-        .select("received_on, amount_cents")
+        .select("kind, received_on, amount_cents")
         .gte("received_on", from)
         .lte("received_on", to)
         .order("id")

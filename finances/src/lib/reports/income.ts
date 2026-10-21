@@ -5,7 +5,7 @@ import type { RequestStatus } from "@/lib/requests/format";
 import type { RequestType } from "@/lib/requests/schema";
 import { REPORT_STATUSES } from "./filters";
 
-/** A report period's youth entries, cafe weeks, and the church's paybacks for the cafe's discounts. */
+/** A report period's youth entries, cafe weeks, and the church's paybacks for the cafe's discounts and gift cards. */
 export type ReportIncome = { youth: YouthEntry[]; weeks: CafeWeek[]; paybacks: CafePayback[] };
 
 /** A request as the Income tab counts it. */
@@ -16,10 +16,12 @@ export type IncomeTotals = {
   moneyIn: Record<RequestType, number> & { paybacks: number; total: number };
   /** The cafe's discounts, which the church pays back. */
   discounts: number;
+  /** What the church prepaid for the cafe's gift cards. */
+  giftCards: number;
   out: Record<RequestType, number> & { total: number; count: number };
   /** Below 0 when more went out than came in. */
   left: number;
-  /** Each type's money in minus its requests. The cafe's adds its discounts. */
+  /** Each type's money in minus its requests. The cafe's adds its discounts and gift cards. */
   profit: Record<RequestType, number>;
 };
 
@@ -30,7 +32,8 @@ const counted = new Set<RequestStatus>(REPORT_STATUSES);
  * requests count as out, even with All statuses on, since the rest weren't
  * spent. Money in is what reached the bank, so a payback counts when it came
  * in, while the cafe's profit counts its discounts in the week they were
- * given, like the Cafe tab.
+ * given, like the Cafe tab. The church's gift card money counts in profit
+ * when it came in, since nothing is owed for it.
  */
 export function incomeTotals({ youth, weeks, paybacks }: ReportIncome, rows: readonly OutRow[]): IncomeTotals {
   const moneyIn = {
@@ -39,6 +42,10 @@ export function incomeTotals({ youth, weeks, paybacks }: ReportIncome, rows: rea
     paybacks: paybacks.reduce((total, payback) => total + payback.amount_cents, 0),
   };
   const discounts = weeks.reduce((total, week) => total + week.discounts_cents, 0);
+  const giftCards = paybacks.reduce(
+    (total, payback) => (payback.kind === "gift_cards" ? total + payback.amount_cents : total),
+    0,
+  );
   const out = { youth: 0, cafe: 0, total: 0, count: 0 };
   for (const row of rows) {
     if (!counted.has(row.status)) continue;
@@ -50,9 +57,10 @@ export function incomeTotals({ youth, weeks, paybacks }: ReportIncome, rows: rea
   return {
     moneyIn: { ...moneyIn, total },
     discounts,
+    giftCards,
     out,
     left: total - out.total,
-    profit: { cafe: moneyIn.cafe + discounts - out.cafe, youth: moneyIn.youth - out.youth },
+    profit: { cafe: moneyIn.cafe + discounts + giftCards - out.cafe, youth: moneyIn.youth - out.youth },
   };
 }
 

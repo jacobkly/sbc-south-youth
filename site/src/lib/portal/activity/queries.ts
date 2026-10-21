@@ -176,7 +176,7 @@ async function loadIncome(supabase: Supabase, rows: readonly FeedRow[]): Promise
     ),
     Promise.all(
       chunks(entityIds(rows, (row) => row.entity_type === "cafe_payback")).map((group) =>
-        supabase.from("cafe_paybacks").select("id, quarter_start, received_on, amount_cents, note").in("id", group),
+        supabase.from("cafe_paybacks").select("id, kind, quarter_start, received_on, amount_cents, note").in("id", group),
       ),
     ),
   ]);

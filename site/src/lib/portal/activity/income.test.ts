@@ -38,7 +38,13 @@ const noLines = {
 };
 const cafeWeekFields = { week_ending: "2026-10-04", ...noLines, sales_cents: 65000, source: "manual", note: null };
 const cafeWeek: IncomeSubject = { type: "cafe_week", week: cafeWeekFields, deleted: false };
-const paybackFields = { quarter_start: "2026-07-01", received_on: "2026-10-02", amount_cents: 12000, note: null };
+const paybackFields = {
+  kind: "discounts" as const,
+  quarter_start: "2026-07-01",
+  received_on: "2026-10-02",
+  amount_cents: 12000,
+  note: null,
+};
 const payback: IncomeSubject = { type: "cafe_payback", payback: paybackFields, deleted: false };
 
 function incomeRow(overrides: Partial<IncomeRow>): IncomeRow {
@@ -224,6 +230,21 @@ describe("incomeSubjects", () => {
       },
     });
     expect(incomeSubjects([deleted], new Map()).get("e1")).toEqual({ ...payback, deleted: true });
+  });
+
+  it("keeps a deleted payback's kind, so gift cards stay gift cards", () => {
+    const deleted = incomeRow({
+      action: "cafe_payback.deleted",
+      entity_type: "cafe_payback",
+      changes: {
+        kind: { from: "gift_cards", to: null },
+        quarter_start: { from: "2026-07-01", to: null },
+        received_on: { from: "2026-10-02", to: null },
+        amount_cents: { from: 25000, to: null },
+        note: { from: null, to: null },
+      },
+    });
+    expect(incomeLine(incomeSubjects([deleted], new Map()).get("e1"), TODAY)).toBe("Q3 2026 gift cards · $250.00 · Oct 2");
   });
 
   it("leaves out entries it can't name, and rows that aren't income", () => {
