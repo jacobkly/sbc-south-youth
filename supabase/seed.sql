@@ -301,6 +301,50 @@ cross join (
 
 select set_config('request.jwt.claims', '', false);
 
+-- Half a year of cafe weeks before the latest Sunday in Los Angeles time,
+-- which is left to import: the oldest three typed by hand, the rest from
+-- Square. The church has paid back the quarter before last, so the last
+-- full quarter is still owed. Entered as the owner, so Activity names them.
+select set_config(
+  'request.jwt.claims', '{"sub": "00000000-0000-4000-8000-5eed0000a001", "role": "authenticated"}', false
+);
+
+insert into public.cafe_weeks (
+  week_ending, source, sales_cents, returns_cents, discounts_cents, gift_card_sales_cents,
+  gift_card_redeemed_cents, tips_cents, fees_cents, note
+)
+select
+  s.latest - 7 * w.weeks_back,
+  case when w.weeks_back > 23 then 'manual' else 'square' end,
+  30000 + w.weeks_back * 3700 % 25000,
+  case when w.weeks_back <= 23 and w.weeks_back % 9 = 0 then 650 else 0 end,
+  case when w.weeks_back <= 23 then 1500 + w.weeks_back * 1300 % 4000 else 0 end,
+  case when w.weeks_back <= 23 and w.weeks_back % 7 = 3 then 2500 else 0 end,
+  case when w.weeks_back <= 23 and w.weeks_back % 5 = 2 then 1200 else 0 end,
+  case when w.weeks_back <= 23 then 800 + w.weeks_back * 900 % 2500 else 0 end,
+  case when w.weeks_back <= 23 then (30000 + w.weeks_back * 3700 % 25000) * 26 / 1000 + 300 else 0 end,
+  case when w.weeks_back = 26 then 'Counted by hand before Square' end
+from (
+  -- isodow runs Monday 1 to Sunday 7, so this counts back to Sunday.
+  select (now() at time zone 'America/Los_Angeles')::date
+    - extract(isodow from now() at time zone 'America/Los_Angeles')::int % 7 as latest
+) as s
+cross join generate_series(1, 26) as w (weeks_back);
+
+-- The quarter before last, paid in full ten days into the next one.
+insert into public.cafe_paybacks (quarter_start, received_on, amount_cents, note)
+select q.before_last, q.last + 9, sum(w.discounts_cents), 'Transfer from the church office'
+from (
+  select
+    (date_trunc('quarter', now() at time zone 'America/Los_Angeles') - interval '6 months')::date as before_last,
+    (date_trunc('quarter', now() at time zone 'America/Los_Angeles') - interval '3 months')::date as last
+) as q
+join public.cafe_weeks w on w.week_ending >= q.before_last and w.week_ending < q.last
+group by q.before_last, q.last
+having sum(w.discounts_cents) > 0;
+
+select set_config('request.jwt.claims', '', false);
+
 -- A month of email for the owner's Email screen: sign-in codes and invites
 -- that went out, an invite that bounced and a paid notice marked as spam
 -- (both now blocked), an alert Resend never took, and two the quota skipped.

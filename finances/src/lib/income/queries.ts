@@ -3,12 +3,19 @@ import type { DateRange, IsoDate } from "@/lib/dates";
 import type { Database } from "@/lib/database.types";
 import { REPORT_STATUSES } from "@/lib/reports/filters";
 import { fetchAll } from "@/lib/supabase/fetch-all";
-import type { CafeCost, CafeWeek } from "./cafe";
+import type { CafeCost, CafePayback, CafeWeek } from "./cafe";
 import type { YouthEntry } from "./stats";
 
 export const YOUTH_ENTRY_COLUMNS = "id, kind, received_on, amount_cents, method, event_name";
 
-export const CAFE_WEEK_COLUMNS = "id, week_ending, sales_cents, note";
+/** What totals need from a week: its Sunday and Square's lines. */
+export const CAFE_SALES_COLUMNS =
+  "week_ending, sales_cents, returns_cents, discounts_cents, gift_card_sales_cents, gift_card_redeemed_cents, taxes_cents, tips_cents, fees_cents";
+
+export const CAFE_WEEK_COLUMNS =
+  "id, week_ending, sales_cents, returns_cents, discounts_cents, gift_card_sales_cents, gift_card_redeemed_cents, taxes_cents, tips_cents, fees_cents, source, note";
+
+export const CAFE_PAYBACK_COLUMNS = "id, quarter_start, received_on, amount_cents, note";
 
 /** Every youth entry, newest first. Throws on failure. */
 export function loadYouthEntries(supabase: SupabaseClient<Database>): Promise<YouthEntry[]> {
@@ -30,16 +37,29 @@ export function loadCafeWeeks(supabase: SupabaseClient<Database>): Promise<CafeW
   );
 }
 
+/** Every payback for the cafe's discounts, newest quarter first. Throws on failure. */
+export function loadCafePaybacks(supabase: SupabaseClient<Database>): Promise<CafePayback[]> {
+  return fetchAll((from, to) =>
+    supabase
+      .from("cafe_paybacks")
+      .select(CAFE_PAYBACK_COLUMNS)
+      .order("quarter_start", { ascending: false })
+      .order("received_on", { ascending: false })
+      .order("id")
+      .range(from, to),
+  );
+}
+
 /**
- * The youth entries and cafe weeks that count in a range, oldest first: an
- * entry by the day it came in, and a week by the Sunday it ends. Throws on
- * failure.
+ * The youth entries, cafe weeks, and church paybacks that count in a range,
+ * oldest first: an entry or payback by the day it came in, and a week by the
+ * Sunday it ends. Throws on failure.
  */
 export async function loadIncomeIn(
   supabase: SupabaseClient<Database>,
   { start, end }: DateRange,
-): Promise<{ youth: YouthEntry[]; weeks: CafeWeek[] }> {
-  const [youth, weeks] = await Promise.all([
+): Promise<{ youth: YouthEntry[]; weeks: CafeWeek[]; paybacks: CafePayback[] }> {
+  const [youth, weeks, paybacks] = await Promise.all([
     fetchAll((from, to) =>
       supabase
         .from("youth_income")
@@ -60,8 +80,19 @@ export async function loadIncomeIn(
         .order("week_ending")
         .range(from, to),
     ),
+    fetchAll((from, to) =>
+      supabase
+        .from("cafe_paybacks")
+        .select(CAFE_PAYBACK_COLUMNS)
+        .gte("received_on", start)
+        .lte("received_on", end)
+        .order("received_on")
+        .order("created_at")
+        .order("id")
+        .range(from, to),
+    ),
   ]);
-  return { youth, weeks };
+  return { youth, weeks, paybacks };
 }
 
 /**

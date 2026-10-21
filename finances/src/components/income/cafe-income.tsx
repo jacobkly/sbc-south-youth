@@ -1,13 +1,24 @@
+import type { ReactNode } from "react";
 import { ChevronRightIcon, PlusIcon } from "lucide-react";
 import { plural, Stat } from "@/components/income/stat";
 import { Button } from "@/components/ui/button";
 import { periodLabel, type IsoDate, type MonthPeriod } from "@/lib/dates";
-import { groupWeeksByMonth, type CafeCost, type CafeTotals, type CafeWeek } from "@/lib/income/cafe";
+import {
+  groupWeeksByMonth,
+  moneyFromSquare,
+  paybackStatus,
+  quarterStartOf,
+  type CafeCost,
+  type CafeTotals,
+  type CafeWeek,
+  type DiscountQuarter,
+  type PaybackStatus,
+} from "@/lib/income/cafe";
 import { relativeWeekLabel, weekLabel } from "@/lib/income/weeks";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
-/** This month's cafe sales, costs, profit, and average week. */
+/** This month's money from Square, discounts, costs, and profit. */
 export function CafeMonthSummary({ month, totals }: { month: MonthPeriod; totals: CafeTotals }) {
   return (
     <section aria-labelledby="cafe-month-heading" className="space-y-2">
@@ -15,59 +26,75 @@ export function CafeMonthSummary({ month, totals }: { month: MonthPeriod; totals
         This month · {periodLabel(month)}
       </h2>
       <div className="grid grid-cols-2 gap-2 desktop:grid-cols-4">
-        <Stat label="Sales" value={formatCents(totals.sales)} note={plural(totals.weeks, "week", "weeks")} />
+        <Stat label="From Square" value={formatCents(totals.moneyIn)} note={plural(totals.weeks, "week", "weeks")} />
+        <Stat label="Discounts" value={formatCents(totals.discounts)} note="The church pays back" />
         <Stat label="Cafe costs" value={formatCents(totals.costs)} note="Cafe requests" />
         <Stat
           label="Profit"
           value={formatCents(totals.profit)}
-          note={totals.profit < 0 ? "Costs are ahead of sales" : "Sales minus costs"}
-        />
-        <Stat
-          label="Average week"
-          value={totals.average === null ? "—" : formatCents(totals.average)}
-          note={totals.average === null ? "No weeks yet" : "Sales per week"}
+          note={totals.profit < 0 ? "Costs are ahead" : "Square and discounts, less costs"}
         />
       </div>
       <p className="text-xs text-muted-foreground">
-        Costs are approved and paid cafe requests, by purchase date. A week counts in the month it ends.
+        From Square is card, cash, and Cash App, less Square&apos;s fees. Costs are approved and paid cafe requests,
+        by purchase date. A week counts in the month it ends.
       </p>
     </section>
   );
 }
 
+const PAYBACK_LABELS: Record<PaybackStatus, string> = {
+  paid: "Paid back",
+  partly: "Partly paid back",
+  owed: "Not paid back",
+};
+
 /**
- * Cafe weeks by month, newest first, with each month's sales, costs, and
- * profit. Owners tap a week to edit it. Viewers see the same list with
- * nothing to tap.
+ * Cafe weeks by month, newest first, with each month's money, costs, and
+ * profit, and whether each week's discounts are paid back. Owners tap a week
+ * to edit it. Viewers see the same list with nothing to tap.
  */
 export function CafeWeekList({
   weeks,
   costs,
+  quarters,
   today,
   onOpen,
   onAdd,
+  importButton,
 }: {
   weeks: CafeWeek[];
   costs: CafeCost[];
+  /** Each quarter's discounts and paybacks, from `discountQuarters`. */
+  quarters: DiscountQuarter[];
   today: IsoDate;
   /** Opens a week to edit. Left out for viewers. */
   onOpen?: (week: CafeWeek) => void;
   /** Starts a new week. Left out for viewers. */
   onAdd?: () => void;
+  /** Imports weeks from Square, offered when there are none yet. Left out for viewers. */
+  importButton?: ReactNode;
 }) {
   if (weeks.length === 0) {
     return (
       <div className="space-y-3 rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
         <p>No cafe weeks yet.</p>
-        {onAdd && (
-          <Button className="h-11 px-5" onClick={onAdd}>
-            <PlusIcon />
-            Add the first week
-          </Button>
+        {(importButton || onAdd) && (
+          <div className="flex flex-col items-center justify-center gap-2 desktop:flex-row">
+            {importButton}
+            {onAdd && (
+              <Button className="h-11 px-5" onClick={onAdd}>
+                <PlusIcon />
+                Add the first week
+              </Button>
+            )}
+          </div>
         )}
       </div>
     );
   }
+
+  const statusOf = new Map(quarters.map((quarter) => [quarter.start, paybackStatus(quarter)]));
 
   return (
     <div className="space-y-6">
@@ -86,13 +113,24 @@ export function CafeWeekList({
                 </p>
               </div>
               <p className="text-xs text-muted-foreground tabular-nums">
-                Sales {formatCents(totals.sales)} · Costs {formatCents(totals.costs)}
+                {[
+                  `From Square ${formatCents(totals.moneyIn)}`,
+                  totals.discounts > 0 && `Discounts ${formatCents(totals.discounts)}`,
+                  `Costs ${formatCents(totals.costs)}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </div>
             <ul className="divide-y overflow-hidden rounded-lg border">
               {monthWeeks.map((week) => (
                 <li key={week.id}>
-                  <WeekRow week={week} today={today} onOpen={onOpen} />
+                  <WeekRow
+                    week={week}
+                    status={statusOf.get(quarterStartOf(week.week_ending)) ?? "owed"}
+                    today={today}
+                    onOpen={onOpen}
+                  />
                 </li>
               ))}
             </ul>
@@ -103,15 +141,32 @@ export function CafeWeekList({
   );
 }
 
-function WeekRow({ week, today, onOpen }: { week: CafeWeek; today: IsoDate; onOpen?: (week: CafeWeek) => void }) {
+function WeekRow({
+  week,
+  status,
+  today,
+  onOpen,
+}: {
+  week: CafeWeek;
+  /** Where its quarter's discounts stand. Shown only when it has discounts. */
+  status: PaybackStatus;
+  today: IsoDate;
+  onOpen?: (week: CafeWeek) => void;
+}) {
   const detail = [relativeWeekLabel(week.week_ending, today), week.note].filter(Boolean).join(" · ");
   const content = (
     <>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{weekLabel(week.week_ending, today)}</p>
         {detail && <p className="truncate text-sm text-muted-foreground">{detail}</p>}
+        {week.discounts_cents > 0 && (
+          <p className="text-sm text-muted-foreground tabular-nums">
+            Discounts {formatCents(week.discounts_cents)} ·{" "}
+            <span className="whitespace-nowrap">{PAYBACK_LABELS[status]}</span>
+          </p>
+        )}
       </div>
-      <span className="shrink-0 text-right tabular-nums">{formatCents(week.sales_cents)}</span>
+      <span className="shrink-0 text-right tabular-nums">{formatCents(moneyFromSquare(week))}</span>
     </>
   );
   const row = "flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left";

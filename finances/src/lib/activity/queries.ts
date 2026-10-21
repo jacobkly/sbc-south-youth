@@ -1,7 +1,7 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { laDateOf, laMidnight, type IsoDate } from "@/lib/dates";
-import { CAFE_WEEK_COLUMNS, YOUTH_ENTRY_COLUMNS } from "@/lib/income/queries";
+import { CAFE_PAYBACK_COLUMNS, CAFE_WEEK_COLUMNS, YOUTH_ENTRY_COLUMNS } from "@/lib/income/queries";
 import {
   ACTIVITY_KIND_ACTIONS,
   firstSince,
@@ -153,7 +153,7 @@ export async function loadCurrentIncome(supabase: SupabaseClient<Database>, chan
   const idsOf = (type: string) => [
     ...new Set(changes.flatMap((change) => (change.entity_type === type && change.entity_id ? [change.entity_id] : []))),
   ];
-  const [entries, weeks] = await Promise.all([
+  const [entries, weeks, paybacks] = await Promise.all([
     Promise.all(
       chunks(idsOf("youth_income")).map(async (ids) => {
         const { data, error } = await supabase.from("youth_income").select(YOUTH_ENTRY_COLUMNS).in("id", ids);
@@ -168,6 +168,13 @@ export async function loadCurrentIncome(supabase: SupabaseClient<Database>, chan
         return data;
       }),
     ),
+    Promise.all(
+      chunks(idsOf("cafe_payback")).map(async (ids) => {
+        const { data, error } = await supabase.from("cafe_paybacks").select(CAFE_PAYBACK_COLUMNS).in("id", ids);
+        if (error) throw error;
+        return data;
+      }),
+    ),
   ]);
-  return currentSubjects(entries.flat(), weeks.flat());
+  return currentSubjects(entries.flat(), weeks.flat(), paybacks.flat());
 }

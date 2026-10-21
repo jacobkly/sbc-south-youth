@@ -23,6 +23,7 @@ const GONE = "00000000-0000-4000-8000-0000000000e1";
 const TITHE = "00000000-0000-4000-8000-00000000f200";
 const BAKE_SALE = "00000000-0000-4000-8000-00000000f201";
 const CAFE_WEEK = "00000000-0000-4000-8000-00000000f202";
+const PAYBACK = "00000000-0000-4000-8000-00000000f203";
 
 let nextId = 0;
 
@@ -88,7 +89,31 @@ function context(overrides: Partial<FeedContext> = {}): FeedContext {
       ],
       [
         CAFE_WEEK,
-        { type: "cafe_week", week: { week_ending: "2026-09-27", sales_cents: 65000, note: "Fall kickoff night" }, deleted: false },
+        {
+          type: "cafe_week",
+          week: {
+            week_ending: "2026-09-27",
+            sales_cents: 68000,
+            returns_cents: 0,
+            discounts_cents: 2000,
+            gift_card_sales_cents: 0,
+            gift_card_redeemed_cents: 0,
+            taxes_cents: 0,
+            tips_cents: 0,
+            fees_cents: 1000,
+            source: "square",
+            note: "Fall kickoff night",
+          },
+          deleted: false,
+        },
+      ],
+      [
+        PAYBACK,
+        {
+          type: "cafe_payback",
+          payback: { quarter_start: "2026-07-01", received_on: "2026-10-01", amount_cents: 12000, note: "By check" },
+          deleted: false,
+        },
       ],
     ]),
     financesUrl: "https://finances.example.test",
@@ -462,8 +487,8 @@ describe("income", () => {
     ]);
   });
 
-  it("shows a cafe week's days and sales, and opens the Cafe tab", () => {
-    const changes = { sales_cents: { from: 61250, to: 65000 }, note: { from: null, to: "Fall kickoff night" } };
+  it("shows a cafe week's days and money from Square, and opens the Cafe tab", () => {
+    const changes = { sales_cents: { from: 61250, to: 68000 }, note: { from: null, to: "Fall kickoff night" } };
     const rows = [income({ action: "cafe_week.updated", entity_id: CAFE_WEEK, changes })];
     const [entry] = buildActivityDays(rows, context())[0].entries;
     expect(entry).toMatchObject({
@@ -473,9 +498,57 @@ describe("income", () => {
       link: { href: "https://finances.example.test/admin/income?tab=cafe", label: "Open in Finances" },
     });
     expect(entry.events[0].changes).toEqual([
-      { label: "Sales", from: "$612.50", to: "$650.00" },
+      { label: "Gross sales", from: "$612.50", to: "$680.00" },
       { label: "Note", from: "None", to: "Fall kickoff night" },
     ]);
+  });
+
+  it("words a week's Square lines the way the cafe week form does", () => {
+    const changes = {
+      discounts_cents: { from: 0, to: 2000 },
+      tips_cents: { from: 0, to: 1500 },
+      fees_cents: { from: 0, to: 1000 },
+      returns_cents: { from: 0, to: 500 },
+      gift_card_sales_cents: { from: 0, to: 2500 },
+      gift_card_redeemed_cents: { from: 0, to: 1200 },
+      taxes_cents: { from: 0, to: 300 },
+      source: { from: "manual", to: "square" },
+    };
+    expect(eventChanges(income({ action: "cafe_week.updated", entity_id: CAFE_WEEK, changes }))).toEqual([
+      { label: "Discounts & comps", from: "$0.00", to: "$20.00" },
+      { label: "Tips", from: "$0.00", to: "$15.00" },
+      { label: "Fees", from: "$0.00", to: "$10.00" },
+      { label: "Returns", from: "$0.00", to: "$5.00" },
+      { label: "Gift card sales", from: "$0.00", to: "$25.00" },
+      { label: "Gift card redeemed", from: "$0.00", to: "$12.00" },
+      { label: "Taxes", from: "$0.00", to: "$3.00" },
+      { label: "Entered", from: "By hand", to: "From Square" },
+    ]);
+  });
+
+  it("shows a church payback's quarter, amount, and day, and opens the Cafe tab", () => {
+    const changes = {
+      quarter_start: { from: "2026-04-01", to: "2026-07-01" },
+      received_on: { from: "2026-09-30", to: "2026-10-01" },
+      amount_cents: { from: 10000, to: 12000 },
+      note: { from: null, to: "By check" },
+    };
+    const rows = [income({ action: "cafe_payback.updated", entity_id: PAYBACK, changes })];
+    const [entry] = buildActivityDays(rows, context())[0].entries;
+    expect(entry).toMatchObject({
+      title: "Church payback changed",
+      subject: "Q3 2026 discounts · $120.00 · Oct 1",
+      icon: "payback",
+      link: { href: "https://finances.example.test/admin/income?tab=cafe", label: "Open in Finances" },
+    });
+    expect(entry.events[0].changes).toEqual([
+      { label: "Quarter", from: "Q2 2026", to: "Q3 2026" },
+      { label: "Date received", from: "Sep 30, 2026", to: "Oct 1, 2026" },
+      { label: "Amount", from: "$100.00", to: "$120.00" },
+      { label: "Note", from: "None", to: "By check" },
+    ]);
+    expect(eventTitle(income({ action: "cafe_payback.created", entity_id: PAYBACK }))).toBe("Church payback added");
+    expect(eventTitle(income({ action: "cafe_payback.deleted", entity_id: PAYBACK }))).toBe("Church payback removed");
   });
 
   it("words each field the way the finances form does", () => {
@@ -534,9 +607,14 @@ describe("income", () => {
         changes: { kind: { from: null, to: "tithe" } },
       }),
     );
-    const rows = [...tithes, income({ action: "cafe_week.created", entity_id: CAFE_WEEK })];
+    const rows = [
+      ...tithes,
+      income({ action: "cafe_week.created", entity_id: CAFE_WEEK }),
+      income({ action: "cafe_payback.created", entity_id: PAYBACK }),
+      income({ action: "cafe_payback.created", entity_id: "00000000-0000-4000-8000-00000000f213" }),
+    ];
     const [entry] = buildActivityDays(rows, context())[0].entries;
-    expect(entry.relatedSummary).toBe("3 youth entries, 1 cafe week");
+    expect(entry.relatedSummary).toBe("3 youth entries, 2 church paybacks, 1 cafe week");
   });
 
   it("shows a tithe import as one item, with its total and dates, opening the Income page", () => {

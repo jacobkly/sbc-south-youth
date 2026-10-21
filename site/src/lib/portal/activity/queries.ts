@@ -154,11 +154,11 @@ async function loadInviteUsers(supabase: Supabase, ids: string[]): Promise<Map<s
 }
 
 /**
- * The tithes, event income, and cafe weeks the rows mention: each as it is
- * now, or as the log last recorded it once deleted.
+ * The tithes, event income, cafe weeks, and church paybacks the rows
+ * mention: each as it is now, or as the log last recorded it once deleted.
  */
 async function loadIncome(supabase: Supabase, rows: readonly FeedRow[]): Promise<Map<string, IncomeSubject>> {
-  const [entries, weeks] = await Promise.all([
+  const [entries, weeks, paybacks] = await Promise.all([
     Promise.all(
       chunks(entityIds(rows, (row) => row.entity_type === "youth_income")).map((group) =>
         supabase.from("youth_income").select("id, kind, received_on, amount_cents, method, event_name").in("id", group),
@@ -166,16 +166,27 @@ async function loadIncome(supabase: Supabase, rows: readonly FeedRow[]): Promise
     ),
     Promise.all(
       chunks(entityIds(rows, (row) => row.entity_type === "cafe_week")).map((group) =>
-        supabase.from("cafe_weeks").select("id, week_ending, sales_cents, note").in("id", group),
+        supabase
+          .from("cafe_weeks")
+          .select(
+            "id, week_ending, sales_cents, returns_cents, discounts_cents, gift_card_sales_cents, gift_card_redeemed_cents, taxes_cents, tips_cents, fees_cents, source, note",
+          )
+          .in("id", group),
+      ),
+    ),
+    Promise.all(
+      chunks(entityIds(rows, (row) => row.entity_type === "cafe_payback")).map((group) =>
+        supabase.from("cafe_paybacks").select("id, quarter_start, received_on, amount_cents, note").in("id", group),
       ),
     ),
   ]);
-  for (const { error } of [...entries, ...weeks]) if (error) throw error;
+  for (const { error } of [...entries, ...weeks, ...paybacks]) if (error) throw error;
   return incomeSubjects(
     rows,
     currentIncome(
       entries.flatMap(({ data }) => data ?? []),
       weeks.flatMap(({ data }) => data ?? []),
+      paybacks.flatMap(({ data }) => data ?? []),
     ),
   );
 }

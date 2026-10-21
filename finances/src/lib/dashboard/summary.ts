@@ -13,7 +13,7 @@ import {
   type MonthPeriod,
   type Period,
 } from "@/lib/dates";
-import { loadCafeCosts } from "@/lib/income/queries";
+import { CAFE_SALES_COLUMNS, loadCafeCosts } from "@/lib/income/queries";
 import type { RequestStatus } from "@/lib/requests/format";
 import { loadRecentRequests, type QueueRow } from "@/lib/requests/queries";
 import type { RequestType } from "@/lib/requests/schema";
@@ -190,7 +190,7 @@ export async function loadDashboard(
   const from = periodRange(shiftPeriod(periodContaining("year", today), -1)).start;
   const to = periodRange(periodContaining("month", today)).end;
 
-  const [open, paid, payees, latest, storage, youth, weeks, cafeCosts] = await Promise.all([
+  const [open, paid, payees, latest, storage, youth, weeks, paybacks, cafeCosts] = await Promise.all([
     fetchAll((start, end) =>
       supabase
         .from("reimbursement_requests")
@@ -226,9 +226,18 @@ export async function loadDashboard(
     fetchAll((start, end) =>
       supabase
         .from("cafe_weeks")
-        .select("week_ending, sales_cents")
+        .select(CAFE_SALES_COLUMNS)
         .gte("week_ending", from)
         .lte("week_ending", to)
+        .order("id")
+        .range(start, end),
+    ),
+    fetchAll((start, end) =>
+      supabase
+        .from("cafe_paybacks")
+        .select("received_on, amount_cents")
+        .gte("received_on", from)
+        .lte("received_on", to)
         .order("id")
         .range(start, end),
     ),
@@ -247,8 +256,8 @@ export async function loadDashboard(
     toPay: statusTotal(open, "approved"),
     paid: totals,
     paidBefore: paidBefore(paid, today),
-    money: moneyTotals(youth, weeks, cafeCosts, totals),
-    moneyByMonth: moneyByMonth(youth, weeks, paidByMonth(paid, today)),
+    money: moneyTotals(youth, weeks, paybacks, cafeCosts, totals),
+    moneyByMonth: moneyByMonth(youth, weeks, paybacks, paidByMonth(paid, today)),
     topPayees: topPayees(paid, names, totals.year.period),
     activePayees: payees.filter((payee) => payee.is_active).length,
     latest: latest.rows,

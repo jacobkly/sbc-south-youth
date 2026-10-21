@@ -3,6 +3,7 @@ import {
   BanIcon,
   BanknoteIcon,
   ChevronDownIcon,
+  ChurchIcon,
   CircleCheckIcon,
   CircleXIcon,
   CoffeeIcon,
@@ -187,11 +188,18 @@ function IncomeItem({
   currentUserId: string | null;
 }) {
   const { change } = item;
-  const cafe = change.entity_type === "cafe_week";
+  const cafe = change.entity_type === "cafe_week" || change.entity_type === "cafe_payback";
   const imported = titheImportOf(change);
+  const icon = imported
+    ? FileSpreadsheetIcon
+    : change.entity_type === "cafe_payback"
+      ? ChurchIcon
+      : cafe
+        ? CoffeeIcon
+        : HandCoinsIcon;
   const body = (
     <>
-      <ItemIcon icon={imported ? FileSpreadsheetIcon : cafe ? CoffeeIcon : HandCoinsIcon} />
+      <ItemIcon icon={icon} />
       <div className="min-w-0 flex-1 space-y-1">
         <ItemHeading title={incomeTitle(change, subject)} createdAt={item.created_at} />
         <p className="truncate text-sm text-muted-foreground">

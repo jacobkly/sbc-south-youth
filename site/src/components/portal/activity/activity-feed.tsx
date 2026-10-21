@@ -7,6 +7,7 @@ import {
   BanIcon,
   BanknoteIcon,
   ChevronRightIcon,
+  ChurchIcon,
   CircleCheckIcon,
   CircleXIcon,
   CoffeeIcon,
@@ -57,6 +58,7 @@ const ICONS: Record<ActivityIcon, LucideIcon> = {
   backup: DatabaseBackupIcon,
   income: HandCoinsIcon,
   cafe: CoffeeIcon,
+  payback: ChurchIcon,
   deleted: Trash2Icon,
 };
 

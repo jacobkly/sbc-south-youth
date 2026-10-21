@@ -1,6 +1,6 @@
 import type { Json } from "@/lib/database.types";
-import { formatDate, formatListDate, isIsoDate, type IsoDate } from "@/lib/dates";
-import type { CafeWeek } from "@/lib/income/cafe";
+import { formatDate, formatListDate, isIsoDate, periodContaining, periodLabel, type IsoDate } from "@/lib/dates";
+import { moneyFromSquare, NO_LINES, type CafeLines, type CafePayback, type CafeWeek } from "@/lib/income/cafe";
 import {
   INCOME_METHOD_LABELS,
   incomeMethodLabel,
@@ -14,7 +14,7 @@ import { formatCents } from "@/lib/money";
 import { rangeLabel } from "@/lib/reports/comparison";
 
 /** The income tables whose changes the feed shows, as the activity log names them. */
-export const INCOME_ENTITY_TYPES = ["youth_income", "cafe_week"] as const;
+export const INCOME_ENTITY_TYPES = ["youth_income", "cafe_week", "cafe_payback"] as const;
 
 /** One income change from the activity log. */
 export type IncomeChange = {
@@ -31,7 +31,8 @@ export type IncomeChange = {
 /** What a change was about, as it is now or, once deleted, as it was then. */
 export type IncomeSubject =
   | { type: "youth_income"; entry: Omit<YouthEntry, "id">; deleted: boolean }
-  | { type: "cafe_week"; week: Omit<CafeWeek, "id">; deleted: boolean };
+  | { type: "cafe_week"; week: Omit<CafeWeek, "id">; deleted: boolean }
+  | { type: "cafe_payback"; payback: Omit<CafePayback, "id">; deleted: boolean };
 
 /** An income change as an item in the feed. */
 export type IncomeItem<T> = { type: "income"; key: string; created_at: string; change: T };
@@ -48,6 +49,11 @@ function isIncomeMethod(value: Json | undefined): value is IncomeMethod {
 
 function isDate(value: Json | undefined): value is IsoDate {
   return typeof value === "string" && isIsoDate(value);
+}
+
+/** "Q3 2026" for the quarter starting on a date. */
+function quarterLabel(start: IsoDate): string {
+  return periodLabel(periodContaining("quarter", start));
 }
 
 /** "created", "updated", "deleted", or "imported". */
@@ -79,7 +85,7 @@ export function titheImportLine(imported: TitheImport): string {
   ].join(" · ");
 }
 
-/** "Tithe added", "Event income edited", "Cafe week deleted", or "Imported 48 tithes". */
+/** "Tithe added", "Event income edited", "Cafe week deleted", "Church payback added", or "Imported 48 tithes". */
 export function incomeTitle(
   change: Pick<IncomeChange, "action" | "entity_type" | "changes">,
   subject: IncomeSubject | undefined,
@@ -92,7 +98,9 @@ export function incomeTitle(
   const noun =
     change.entity_type === "cafe_week"
       ? "Cafe week"
-      : subject?.type === "youth_income"
+      : change.entity_type === "cafe_payback"
+        ? "Church payback"
+        : subject?.type === "youth_income"
         ? subject.entry.kind === "event"
           ? "Event income"
           : "Tithe"
@@ -100,10 +108,24 @@ export function incomeTitle(
   return `${noun} ${VERB_WORDS[verbOf(change.action)] ?? "changed"}`;
 }
 
-/** "$25.00 · Cash App · Oct 4", "Bake sale · $340.00 · Mixed · Oct 4", or "Sep 28 – Oct 4 · $650.00". */
+/**
+ * "$25.00 · Cash App · Oct 4", "Bake sale · $340.00 · Mixed · Oct 4",
+ * "Sep 28 – Oct 4 · $650.00" with the money from Square, or
+ * "Q3 2026 discounts · $120.00 · Oct 2".
+ */
 export function incomeLine(subject: IncomeSubject | undefined, today: IsoDate): string {
   if (!subject) return "Since deleted";
-  if (subject.type === "cafe_week") return `${weekLabel(subject.week.week_ending, today)} · ${formatCents(subject.week.sales_cents)}`;
+  if (subject.type === "cafe_week") {
+    return `${weekLabel(subject.week.week_ending, today)} · ${formatCents(moneyFromSquare(subject.week))}`;
+  }
+  if (subject.type === "cafe_payback") {
+    const { payback } = subject;
+    return [
+      `${quarterLabel(payback.quarter_start)} discounts`,
+      formatCents(payback.amount_cents),
+      formatListDate(payback.received_on, today),
+    ].join(" · ");
+  }
   const { entry } = subject;
   return [
     entry.kind === "event" ? entry.event_name : null,
@@ -126,23 +148,44 @@ const FIELDS: Partial<Record<string, readonly (readonly [string, string])[]>> = 
   ],
   cafe_week: [
     ["week_ending", "Week"],
-    ["sales_cents", "Sales"],
+    ["sales_cents", "Gross sales"],
+    ["discounts_cents", "Discounts & comps"],
+    ["tips_cents", "Tips"],
+    ["fees_cents", "Fees"],
+    ["returns_cents", "Returns"],
+    ["gift_card_sales_cents", "Gift card sales"],
+    ["gift_card_redeemed_cents", "Gift card redeemed"],
+    ["taxes_cents", "Taxes"],
+    ["source", "Entered"],
+    ["note", "Note"],
+  ],
+  cafe_payback: [
+    ["quarter_start", "Quarter"],
+    ["received_on", "Date received"],
+    ["amount_cents", "Amount"],
     ["note", "Note"],
   ],
 };
+
+/** A cafe week's Square lines, as the log names them. */
+const CAFE_LINE_FIELDS = Object.keys(NO_LINES) as (keyof CafeLines)[];
+
+const SOURCE_LABELS: Partial<Record<string, string>> = { manual: "By hand", square: "From Square" };
 
 function formatValue(field: string, value: Json | undefined, today: IsoDate): string {
   // A youth entry with no method came in more than one way.
   if (field === "method") return isIncomeMethod(value) ? INCOME_METHOD_LABELS[value] : value == null ? MIXED_LABEL : String(value);
   if (value === null || value === undefined || value === "") return "None";
+  if (field.endsWith("_cents")) return typeof value === "number" ? formatCents(value) : String(value);
   switch (field) {
-    case "amount_cents":
-    case "sales_cents":
-      return typeof value === "number" ? formatCents(value) : String(value);
     case "received_on":
       return isDate(value) ? formatDate(value) : String(value);
     case "week_ending":
       return isDate(value) ? weekLabel(value, today) : String(value);
+    case "quarter_start":
+      return isDate(value) ? quarterLabel(value) : String(value);
+    case "source":
+      return (typeof value === "string" && SOURCE_LABELS[value]) || String(value);
     case "kind":
       return value === "tithe" || value === "event" ? YOUTH_INCOME_KIND_LABELS[value] : String(value);
     default:
@@ -198,9 +241,29 @@ function snapshotOf(change: IncomeChange): IncomeSubject | null {
   }
   if (change.entity_type === "cafe_week") {
     const weekEnding = value("week_ending");
-    const sales = value("sales_cents");
-    if (!isDate(weekEnding) || typeof sales !== "number") return null;
-    return { type: "cafe_week", week: { week_ending: weekEnding, sales_cents: sales, note: text("note") }, deleted: true };
+    if (!isDate(weekEnding) || typeof value("sales_cents") !== "number") return null;
+    // Weeks logged before Square's lines were kept have only their gross.
+    const lines = { ...NO_LINES };
+    for (const field of CAFE_LINE_FIELDS) {
+      const cents = value(field);
+      if (typeof cents === "number") lines[field] = cents;
+    }
+    return {
+      type: "cafe_week",
+      week: { week_ending: weekEnding, ...lines, source: text("source") ?? "manual", note: text("note") },
+      deleted: true,
+    };
+  }
+  if (change.entity_type === "cafe_payback") {
+    const quarterStart = value("quarter_start");
+    const receivedOn = value("received_on");
+    const amount = value("amount_cents");
+    if (!isDate(quarterStart) || !isDate(receivedOn) || typeof amount !== "number") return null;
+    return {
+      type: "cafe_payback",
+      payback: { quarter_start: quarterStart, received_on: receivedOn, amount_cents: amount, note: text("note") },
+      deleted: true,
+    };
   }
   return null;
 }
@@ -209,10 +272,12 @@ function snapshotOf(change: IncomeChange): IncomeSubject | null {
 export function currentSubjects(
   entries: readonly YouthEntry[],
   weeks: readonly CafeWeek[],
+  paybacks: readonly CafePayback[],
 ): Map<string, IncomeSubject> {
   const subjects = new Map<string, IncomeSubject>();
   for (const { id, ...entry } of entries) subjects.set(id, { type: "youth_income", entry, deleted: false });
   for (const { id, ...week } of weeks) subjects.set(id, { type: "cafe_week", week, deleted: false });
+  for (const { id, ...payback } of paybacks) subjects.set(id, { type: "cafe_payback", payback, deleted: false });
   return subjects;
 }
 

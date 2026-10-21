@@ -184,7 +184,7 @@ describe("activityQuery", () => {
     ]);
   });
 
-  it("finds every tithe, event income, and cafe week change under Income", () => {
+  it("finds every tithe, event income, cafe week, and church payback change under Income", () => {
     const filters = { ...DEFAULT_ACTIVITY_FILTERS, kind: "income" } as const;
     expect(activityQuery(filters, scopesFor(["finance_viewer"])).actions).toEqual([
       "youth_income.created",
@@ -194,6 +194,9 @@ describe("activityQuery", () => {
       "cafe_week.created",
       "cafe_week.updated",
       "cafe_week.deleted",
+      "cafe_payback.created",
+      "cafe_payback.updated",
+      "cafe_payback.deleted",
     ]);
   });
 

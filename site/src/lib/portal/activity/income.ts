@@ -3,8 +3,8 @@ import { addDays, formatDate, formatDateRange, isIsoDate, type IsoDate } from "@
 import { formatCents } from "@/lib/money";
 
 /**
- * Youth income and cafe weeks, as the feed names them. Finances words them
- * the same way in its own Activity.
+ * Youth income, cafe weeks, and the church's cafe paybacks, as the feed names
+ * them. Finances words them the same way in its own Activity.
  */
 
 type IncomeMethod = Database["public"]["Enums"]["income_method"];
@@ -16,7 +16,7 @@ export const MIXED_LABEL = "Mixed";
 export const YOUTH_KIND_LABELS: Record<YouthIncomeKind, string> = { tithe: "Tithe", event: "Event" };
 
 /** The income tables whose changes the feed shows, as the activity log names them. */
-export const INCOME_ENTITY_TYPES = ["youth_income", "cafe_week"] as const;
+export const INCOME_ENTITY_TYPES = ["youth_income", "cafe_week", "cafe_payback"] as const;
 
 export type YouthIncomeEntry = {
   kind: YouthIncomeKind;
@@ -26,12 +26,29 @@ export type YouthIncomeEntry = {
   event_name: string | null;
 };
 
-export type CafeWeekFields = { week_ending: IsoDate; sales_cents: number; note: string | null };
+/** A week typed by hand has its gross in `sales_cents` and zeros for the rest of Square's lines. */
+const NO_LINES = {
+  sales_cents: 0,
+  returns_cents: 0,
+  discounts_cents: 0,
+  gift_card_sales_cents: 0,
+  gift_card_redeemed_cents: 0,
+  taxes_cents: 0,
+  tips_cents: 0,
+  fees_cents: 0,
+};
+
+type CafeLines = typeof NO_LINES;
+
+export type CafeWeekFields = CafeLines & { week_ending: IsoDate; source: string; note: string | null };
+
+export type CafePaybackFields = { quarter_start: IsoDate; received_on: IsoDate; amount_cents: number; note: string | null };
 
 /** What a change was about, as it is now or, once deleted, as it was then. */
 export type IncomeSubject =
   | { type: "youth_income"; entry: YouthIncomeEntry; deleted: boolean }
-  | { type: "cafe_week"; week: CafeWeekFields; deleted: boolean };
+  | { type: "cafe_week"; week: CafeWeekFields; deleted: boolean }
+  | { type: "cafe_payback"; payback: CafePaybackFields; deleted: boolean };
 
 /** What the feed's rows have that naming an entry needs. */
 export type IncomeRow = { action: string; entity_type: string; entity_id: string | null; changes: Json | null };
@@ -66,16 +83,51 @@ export function weekLabel(weekEnding: IsoDate, today?: IsoDate): string {
   return year === today?.slice(0, 4) ? label : `${label}, ${year}`;
 }
 
+/** "Q3 2026" for the quarter starting on a date. */
+export function quarterLabel(start: IsoDate): string {
+  return `Q${Math.floor((Number(start.slice(5, 7)) - 1) / 3) + 1} ${start.slice(0, 4)}`;
+}
+
 /** "Oct 4", or "Dec 28, 2025" from another year. */
 function shortDate(date: IsoDate, today: IsoDate): string {
   return date.slice(0, 4) === today.slice(0, 4) ? formatDateRange(date, date) : formatDate(date);
 }
 
-/** "$25.00 · Cash App · Oct 4", "Bake sale · $340.00 · Mixed · Oct 4", or "Sep 28 – Oct 4 · $650.00". */
+/**
+ * What the cafe got from Square: card, cash, and Cash App, less fees. A gift
+ * card's money came in when it was sold, so paying with one isn't new money.
+ * Finances counts it the same way.
+ */
+function moneyFromSquare(lines: CafeLines): number {
+  return (
+    lines.sales_cents -
+    lines.returns_cents -
+    lines.discounts_cents +
+    lines.gift_card_sales_cents +
+    lines.taxes_cents +
+    lines.tips_cents -
+    lines.fees_cents -
+    lines.gift_card_redeemed_cents
+  );
+}
+
+/**
+ * "$25.00 · Cash App · Oct 4", "Bake sale · $340.00 · Mixed · Oct 4",
+ * "Sep 28 – Oct 4 · $650.00" with the money from Square, or
+ * "Q3 2026 discounts · $120.00 · Oct 2".
+ */
 export function incomeLine(subject: IncomeSubject | undefined, today: IsoDate): string {
   if (!subject) return "An entry that's gone";
   if (subject.type === "cafe_week") {
-    return `${weekLabel(subject.week.week_ending, today)} · ${formatCents(subject.week.sales_cents)}`;
+    return `${weekLabel(subject.week.week_ending, today)} · ${formatCents(moneyFromSquare(subject.week))}`;
+  }
+  if (subject.type === "cafe_payback") {
+    const { payback } = subject;
+    return [
+      `${quarterLabel(payback.quarter_start)} discounts`,
+      formatCents(payback.amount_cents),
+      shortDate(payback.received_on, today),
+    ].join(" · ");
   }
   const { entry } = subject;
   return [
@@ -153,9 +205,29 @@ function snapshotOf(row: IncomeRow): IncomeSubject | null {
   }
   if (row.entity_type === "cafe_week") {
     const weekEnding = value("week_ending");
-    const sales = value("sales_cents");
-    if (!isDate(weekEnding) || typeof sales !== "number") return null;
-    return { type: "cafe_week", week: { week_ending: weekEnding, sales_cents: sales, note: text("note") }, deleted: true };
+    if (!isDate(weekEnding) || typeof value("sales_cents") !== "number") return null;
+    // Weeks logged before Square's lines were kept have only their gross.
+    const lines = { ...NO_LINES };
+    for (const field of Object.keys(NO_LINES) as (keyof CafeLines)[]) {
+      const cents = value(field);
+      if (typeof cents === "number") lines[field] = cents;
+    }
+    return {
+      type: "cafe_week",
+      week: { week_ending: weekEnding, ...lines, source: text("source") ?? "manual", note: text("note") },
+      deleted: true,
+    };
+  }
+  if (row.entity_type === "cafe_payback") {
+    const quarterStart = value("quarter_start");
+    const receivedOn = value("received_on");
+    const amount = value("amount_cents");
+    if (!isDate(quarterStart) || !isDate(receivedOn) || typeof amount !== "number") return null;
+    return {
+      type: "cafe_payback",
+      payback: { quarter_start: quarterStart, received_on: receivedOn, amount_cents: amount, note: text("note") },
+      deleted: true,
+    };
   }
   return null;
 }
@@ -164,10 +236,12 @@ function snapshotOf(row: IncomeRow): IncomeSubject | null {
 export function currentIncome(
   entries: readonly (YouthIncomeEntry & { id: string })[],
   weeks: readonly (CafeWeekFields & { id: string })[],
+  paybacks: readonly (CafePaybackFields & { id: string })[],
 ): Map<string, IncomeSubject> {
   const subjects = new Map<string, IncomeSubject>();
   for (const { id, ...entry } of entries) subjects.set(id, { type: "youth_income", entry, deleted: false });
   for (const { id, ...week } of weeks) subjects.set(id, { type: "cafe_week", week, deleted: false });
+  for (const { id, ...payback } of paybacks) subjects.set(id, { type: "cafe_payback", payback, deleted: false });
   return subjects;
 }
 

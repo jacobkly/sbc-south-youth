@@ -79,7 +79,8 @@ export function MoneyInOut({ money }: { money: MoneyTotals }) {
           {moneyIn.total > 0 && (
             <>
               <Row sub label="Tithes and events" cents={moneyIn.youth} />
-              <Row sub label="Cafe sales" cents={moneyIn.cafe} />
+              <Row sub label="Cafe, from Square" cents={moneyIn.cafe} />
+              {moneyIn.paybacks > 0 && <Row sub label="Church paybacks" cents={moneyIn.paybacks} />}
             </>
           )}
           <Row label="Paid out" cents={paidOut} />
@@ -92,14 +93,14 @@ export function MoneyInOut({ money }: { money: MoneyTotals }) {
           <Row
             label="Cafe profit"
             cents={cafeProfit}
-            note={cafeProfit < 0 ? "Cafe costs are ahead of sales" : "Cafe sales minus cafe costs"}
+            note={cafeProfit < 0 ? "Cafe costs are ahead of sales" : "From Square plus discounts, minus cafe costs"}
             className="border-t"
           />
         </dl>
 
         <p className="text-xs text-muted-foreground">
-          Paid out uses the date paid, like the totals above. Cafe profit matches the Income page, with costs by
-          purchase date.
+          Paid out uses the date paid, like the totals above. Church paybacks count the day they come in. Cafe profit
+          matches the Income page, with discounts in the week they happened and costs by purchase date.
         </p>
       </CardContent>
     </Card>

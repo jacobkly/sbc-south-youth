@@ -4,6 +4,7 @@ import type { Enums } from "@/lib/database.types";
 import { parseAmountToCents } from "@/lib/money";
 import { appErrorMessage } from "@/lib/requests/actions";
 import { amountSchema, MIN_PURCHASE_DATE } from "@/lib/requests/schema";
+import { quarterStartOf } from "./cafe";
 import { FIRST_WEEK_ENDING, isWeekEnding, latestWeekEnding } from "./weeks";
 
 export type IncomeMethod = Enums<"income_method">;
@@ -40,6 +41,22 @@ export type YouthIncomeFieldErrors = Partial<Record<YouthIncomeField, string>>;
 
 const FUTURE_DATE_MESSAGE = "The date can't be in the future.";
 
+/** The day money came in: in 2000 or later, and not after `today`. */
+function receivedOnSchema(today: IsoDate) {
+  return z.string().superRefine((value, ctx) => {
+    const message = !value
+      ? "Enter the date."
+      : !isIsoDate(value)
+        ? "Enter a valid date."
+        : value < MIN_PURCHASE_DATE
+          ? "Enter a date in 2000 or later."
+          : value > today
+            ? FUTURE_DATE_MESSAGE
+            : null;
+    if (message) ctx.addIssue({ code: "custom", message });
+  });
+}
+
 /**
  * Validates the youth form and converts it to saved values. `today` is the
  * Los Angeles date the entry can't be after. Limits match the youth_income
@@ -50,18 +67,7 @@ export function youthIncomeSchema(today: IsoDate = todayInLA()) {
     .object({
       kind: z.enum(["tithe", "event"], "Choose Tithe or Event."),
       amount: amountSchema,
-      received_on: z.string().superRefine((value, ctx) => {
-        const message = !value
-          ? "Enter the date."
-          : !isIsoDate(value)
-            ? "Enter a valid date."
-            : value < MIN_PURCHASE_DATE
-              ? "Enter a date in 2000 or later."
-              : value > today
-                ? FUTURE_DATE_MESSAGE
-                : null;
-        if (message) ctx.addIssue({ code: "custom", message });
-      }),
+      received_on: receivedOnSchema(today),
       method: z.enum([...INCOME_METHODS, MIXED, ""]),
       event_name: z.string().trim().max(100, "Keep the name to 100 characters or fewer."),
     })
@@ -93,11 +99,20 @@ export function youthIncomeFieldErrors(error: Pick<z.ZodError, "issues">): Youth
   return result;
 }
 
-/** What the cafe form holds while editing. The sales stay text until they're saved. */
+/** What the cafe form holds while editing. The amounts stay text until they're saved. */
 export type CafeWeekFormValues = {
   /** The Sunday that ends the week. */
   week_ending: string;
+  /** Gross sales. */
   sales: string;
+  /** Square's other lines. Left blank, each is $0. */
+  discounts: string;
+  tips: string;
+  fees: string;
+  returns: string;
+  gift_card_sales: string;
+  gift_card_redeemed: string;
+  taxes: string;
   note: string;
 };
 
@@ -123,6 +138,15 @@ const salesSchema = z.string().transform((value, ctx) => {
   return z.NEVER;
 });
 
+/** One of Square's other lines, where blank is $0. */
+const lineSchema = z.string().transform((value, ctx) => {
+  if (!value.trim() || parseSalesToCents(value) === 0) return 0;
+  const parsed = amountSchema.safeParse(value);
+  if (parsed.success) return parsed.data;
+  ctx.addIssue({ code: "custom", message: parsed.error.issues[0].message });
+  return z.NEVER;
+});
+
 /**
  * Validates the cafe form and converts it to saved values. `today` is the Los
  * Angeles date whose week is the latest that can be entered. Limits match
@@ -142,9 +166,27 @@ export function cafeWeekSchema(today: IsoDate = todayInLA()) {
         if (message) ctx.addIssue({ code: "custom", message });
       }),
       sales: salesSchema,
+      discounts: lineSchema,
+      tips: lineSchema,
+      fees: lineSchema,
+      returns: lineSchema,
+      gift_card_sales: lineSchema,
+      gift_card_redeemed: lineSchema,
+      taxes: lineSchema,
       note: z.string().trim().max(500, "Keep the note to 500 characters or fewer."),
     })
-    .transform(({ week_ending, sales, note }) => ({ week_ending, sales_cents: sales, note: note || null }));
+    .transform((week) => ({
+      week_ending: week.week_ending,
+      sales_cents: week.sales,
+      returns_cents: week.returns,
+      discounts_cents: week.discounts,
+      gift_card_sales_cents: week.gift_card_sales,
+      gift_card_redeemed_cents: week.gift_card_redeemed,
+      taxes_cents: week.taxes,
+      tips_cents: week.tips,
+      fees_cents: week.fees,
+      note: week.note || null,
+    }));
 }
 
 export type CafeWeekInput = z.output<ReturnType<typeof cafeWeekSchema>>;
@@ -154,6 +196,62 @@ export function cafeWeekFieldErrors(error: Pick<z.ZodError, "issues">): CafeWeek
   const result: CafeWeekFieldErrors = {};
   for (const issue of error.issues) {
     const key = issue.path[0] as CafeWeekField;
+    result[key] ??= issue.message;
+  }
+  return result;
+}
+
+/** What the payback form holds while editing. The amount stays text until it's saved. */
+export type CafePaybackFormValues = {
+  /** The first day of the quarter whose discounts it pays back. */
+  quarter_start: string;
+  received_on: string;
+  amount: string;
+  note: string;
+};
+
+export type CafePaybackField = keyof CafePaybackFormValues;
+
+export type CafePaybackFieldErrors = Partial<Record<CafePaybackField, string>>;
+
+/**
+ * Validates the payback form and converts it to saved values. `today` is the
+ * Los Angeles date the payback can't come after, and whose quarter is the
+ * latest it can be for. Limits match the cafe_paybacks table checks.
+ */
+export function cafePaybackSchema(today: IsoDate = todayInLA()) {
+  return z
+    .object({
+      quarter_start: z.string().superRefine((value, ctx) => {
+        const message =
+          !isIsoDate(value) || quarterStartOf(value) !== value
+            ? "Choose a quarter."
+            : value < MIN_PURCHASE_DATE
+              ? "Choose a quarter in 2000 or later."
+              : value > today
+                ? "That quarter hasn't started yet."
+                : null;
+        if (message) ctx.addIssue({ code: "custom", message });
+      }),
+      received_on: receivedOnSchema(today),
+      amount: amountSchema,
+      note: z.string().trim().max(500, "Keep the note to 500 characters or fewer."),
+    })
+    .transform(({ quarter_start, received_on, amount, note }) => ({
+      quarter_start,
+      received_on,
+      amount_cents: amount,
+      note: note || null,
+    }));
+}
+
+export type CafePaybackInput = z.output<ReturnType<typeof cafePaybackSchema>>;
+
+/** The first message for each field, ready to show next to it. */
+export function cafePaybackFieldErrors(error: Pick<z.ZodError, "issues">): CafePaybackFieldErrors {
+  const result: CafePaybackFieldErrors = {};
+  for (const issue of error.issues) {
+    const key = issue.path[0] as CafePaybackField;
     result[key] ??= issue.message;
   }
   return result;

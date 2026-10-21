@@ -26,8 +26,20 @@ const bakeSale: IncomeSubject = {
   entry: { kind: "event", received_on: "2026-10-04", amount_cents: 34000, method: null, event_name: "Bake sale" },
   deleted: false,
 };
-const cafeWeekFields = { week_ending: "2026-10-04", sales_cents: 65000, note: null };
+const noLines = {
+  sales_cents: 0,
+  returns_cents: 0,
+  discounts_cents: 0,
+  gift_card_sales_cents: 0,
+  gift_card_redeemed_cents: 0,
+  taxes_cents: 0,
+  tips_cents: 0,
+  fees_cents: 0,
+};
+const cafeWeekFields = { week_ending: "2026-10-04", ...noLines, sales_cents: 65000, source: "manual", note: null };
 const cafeWeek: IncomeSubject = { type: "cafe_week", week: cafeWeekFields, deleted: false };
+const paybackFields = { quarter_start: "2026-07-01", received_on: "2026-10-02", amount_cents: 12000, note: null };
+const payback: IncomeSubject = { type: "cafe_payback", payback: paybackFields, deleted: false };
 
 function incomeRow(overrides: Partial<IncomeRow>): IncomeRow {
   return {
@@ -50,6 +62,35 @@ describe("incomeLine", () => {
 
   it("shows a cafe week's days and sales", () => {
     expect(incomeLine(cafeWeek, TODAY)).toBe("Sep 28 – Oct 4 · $650.00");
+  });
+
+  it("shows a week from Square by its money from Square: less discounts, fees, and gift cards spent", () => {
+    const fromSquare: IncomeSubject = {
+      ...cafeWeek,
+      week: {
+        ...cafeWeekFields,
+        sales_cents: 70000,
+        returns_cents: 1000,
+        discounts_cents: 4000,
+        gift_card_sales_cents: 2500,
+        gift_card_redeemed_cents: 1500,
+        taxes_cents: 0,
+        tips_cents: 3000,
+        fees_cents: 2000,
+        source: "square",
+      },
+    };
+    // 70,000 − 1,000 − 4,000 + 2,500 + 3,000 − 2,000 − 1,500
+    expect(incomeLine(fromSquare, TODAY)).toBe("Sep 28 – Oct 4 · $670.00");
+  });
+
+  it("shows a church payback's quarter, amount, and the day it came", () => {
+    expect(incomeLine(payback, TODAY)).toBe("Q3 2026 discounts · $120.00 · Oct 2");
+    const lastYear: IncomeSubject = {
+      ...payback,
+      payback: { ...paybackFields, quarter_start: "2025-10-01", received_on: "2026-01-09" },
+    };
+    expect(incomeLine(lastYear, TODAY)).toBe("Q4 2025 discounts · $120.00 · Jan 9");
   });
 
   it("adds the year to a date from another year", () => {
@@ -137,7 +178,7 @@ describe("incomeSubjects", () => {
     expect(incomeSubjects([deleted, created], new Map()).get("e1")).toEqual({ ...bakeSale, deleted: true });
   });
 
-  it("names a deleted cafe week the same way", () => {
+  it("names a deleted cafe week the same way, even one logged before its Square lines were kept", () => {
     const deleted = incomeRow({
       action: "cafe_week.deleted",
       entity_type: "cafe_week",
@@ -150,6 +191,41 @@ describe("incomeSubjects", () => {
     expect(incomeSubjects([deleted], new Map()).get("e1")).toEqual({ ...cafeWeek, deleted: true });
   });
 
+  it("keeps a deleted Square week's lines", () => {
+    const deleted = incomeRow({
+      action: "cafe_week.deleted",
+      entity_type: "cafe_week",
+      changes: {
+        week_ending: { from: "2026-10-04", to: null },
+        sales_cents: { from: 65000, to: null },
+        discounts_cents: { from: 3000, to: null },
+        fees_cents: { from: 1800, to: null },
+        source: { from: "square", to: null },
+        note: { from: null, to: null },
+      },
+    });
+    expect(incomeSubjects([deleted], new Map()).get("e1")).toEqual({
+      type: "cafe_week",
+      week: { ...cafeWeekFields, discounts_cents: 3000, fees_cents: 1800, source: "square" },
+      deleted: true,
+    });
+  });
+
+  it("names a deleted church payback as its delete recorded it", () => {
+    const deleted = incomeRow({
+      action: "cafe_payback.deleted",
+      entity_type: "cafe_payback",
+      changes: {
+        kind: { from: "discounts", to: null },
+        quarter_start: { from: "2026-07-01", to: null },
+        received_on: { from: "2026-10-02", to: null },
+        amount_cents: { from: 12000, to: null },
+        note: { from: null, to: null },
+      },
+    });
+    expect(incomeSubjects([deleted], new Map()).get("e1")).toEqual({ ...payback, deleted: true });
+  });
+
   it("leaves out entries it can't name, and rows that aren't income", () => {
     const edit = incomeRow({ action: "youth_income.updated", changes: { amount_cents: { from: 1, to: 2 } } });
     const post = incomeRow({ action: "post.created", entity_type: "post", changes: { title: { from: null, to: "x" } } });
@@ -159,8 +235,13 @@ describe("incomeSubjects", () => {
 
 describe("currentIncome", () => {
   it("keys the entries still there by id", () => {
-    const subjects = currentIncome([{ id: "t1", ...titheEntry }], [{ id: "w1", ...cafeWeekFields }]);
+    const subjects = currentIncome(
+      [{ id: "t1", ...titheEntry }],
+      [{ id: "w1", ...cafeWeekFields }],
+      [{ id: "p1", ...paybackFields }],
+    );
     expect(subjects.get("t1")).toEqual(tithe);
     expect(subjects.get("w1")).toEqual(cafeWeek);
+    expect(subjects.get("p1")).toEqual(payback);
   });
 });

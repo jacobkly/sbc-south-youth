@@ -3,7 +3,7 @@ import { IncomePage } from "@/components/income/income-page";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { periodContaining, periodRange, todayInLA, type MonthPeriod } from "@/lib/dates";
 import { cafeTotalsIn } from "@/lib/income/cafe";
-import { loadCafeCosts, loadCafeWeeks, loadYouthEntries } from "@/lib/income/queries";
+import { loadCafeCosts, loadCafePaybacks, loadCafeWeeks, loadYouthEntries } from "@/lib/income/queries";
 import { youthSummary } from "@/lib/income/stats";
 import { parseIncomeTab } from "@/lib/income/view";
 import { createClient } from "@/lib/supabase/server";
@@ -18,7 +18,7 @@ export default async function IncomeRoute({ searchParams }: PageProps<"/admin/in
   const { start, end } = periodRange(month);
   const supabase = await createClient();
   // The loaders throw on failure, and admin/error.tsx handles it.
-  const [user, youthEntries, cafe] = await Promise.all([
+  const [user, youthEntries, cafe, cafePaybacks] = await Promise.all([
     getCurrentUser(),
     loadYouthEntries(supabase),
     loadCafeWeeks(supabase).then(async (weeks) => {
@@ -27,6 +27,7 @@ export default async function IncomeRoute({ searchParams }: PageProps<"/admin/in
       const from = oldest && oldest < start ? `${oldest.slice(0, 7)}-01` : start;
       return { weeks, costs: await loadCafeCosts(supabase, from) };
     }),
+    loadCafePaybacks(supabase),
   ]);
 
   return (
@@ -40,6 +41,7 @@ export default async function IncomeRoute({ searchParams }: PageProps<"/admin/in
       cafeWeeks={cafe.weeks}
       cafeCosts={cafe.costs}
       cafeMonth={cafeTotalsIn(cafe.weeks, cafe.costs, month)}
+      cafePaybacks={cafePaybacks}
     />
   );
 }

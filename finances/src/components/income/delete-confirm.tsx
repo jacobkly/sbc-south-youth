@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button";
 import { incomeDeleteErrorMessage } from "@/lib/income/schema";
 import { createClient } from "@/lib/supabase/client";
 
-/** Go back or delete, for a youth entry or a cafe week. The sheet's title asks the question. */
+/** Go back or delete, for a youth entry, a cafe week, or a church payback. The sheet's title asks the question. */
 export function DeleteConfirm({
   table,
   id,
   onBack,
   onDeleted,
 }: {
-  table: "youth_income" | "cafe_weeks";
+  table: "youth_income" | "cafe_weeks" | "cafe_paybacks";
   id: string;
   onBack: () => void;
   onDeleted: () => void;

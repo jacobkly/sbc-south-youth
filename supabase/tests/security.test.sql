@@ -5,13 +5,13 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(47);
+select plan(49);
 
 select tables_are(
   'public',
   array['users', 'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'receipts', 'request_lines', 'activity_log',
         'email_log', 'email_suppressions', 'invites', 'app_errors', 'youth_income', 'cafe_weeks', 'tags', 'request_tags',
-        'headcounts'],
+        'headcounts', 'cafe_paybacks'],
   'public has only the known tables (add new ones here once they have RLS and tests)'
 );
 
@@ -212,6 +212,8 @@ insert into public.youth_income (received_on, amount_cents, method) values ('202
 
 insert into public.cafe_weeks (week_ending, sales_cents) values ('2026-01-04', 45000);
 
+insert into public.cafe_paybacks (quarter_start, received_on, amount_cents) values ('2026-01-01', '2026-04-10', 12000);
+
 insert into public.tags (id, name) values ('00000000-0000-4000-8000-00000000e101', 'Test tag');
 
 insert into public.request_tags (request_id, tag_id)
@@ -252,6 +254,7 @@ select ok(
   and exists (select 1 from public.app_errors where source = 'Security test')
   and exists (select 1 from public.youth_income where received_on = '2026-01-04')
   and exists (select 1 from public.cafe_weeks where week_ending = '2026-01-04')
+  and exists (select 1 from public.cafe_paybacks where quarter_start = '2026-01-01')
   and exists (select 1 from public.tags where id = '00000000-0000-4000-8000-00000000e101')
   and exists (select 1 from public.request_tags where tag_id = '00000000-0000-4000-8000-00000000e101')
   and exists (select 1 from public.headcounts where id = '00000000-0000-4000-8000-00000000a505')
@@ -289,7 +292,7 @@ select is_empty(
 )
 from unnest(array[
   'app_settings', 'payees', 'reimbursement_requests', 'request_events', 'request_lines', 'receipts', 'request_report',
-  'youth_income', 'cafe_weeks', 'tags', 'request_tags'
+  'youth_income', 'cafe_weeks', 'cafe_paybacks', 'tags', 'request_tags'
 ]) as t (name);
 
 select is_empty(

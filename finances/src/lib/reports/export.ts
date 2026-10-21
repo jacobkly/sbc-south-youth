@@ -1,5 +1,6 @@
 import { toCsv, type CsvValue } from "@/lib/csv";
-import { laDateTime } from "@/lib/dates";
+import { laDateTime, periodContaining, periodLabel } from "@/lib/dates";
+import { moneyFromSquare } from "@/lib/income/cafe";
 import { incomeMethodLabel, YOUTH_INCOME_KIND_LABELS } from "@/lib/income/schema";
 import { centsToDecimal } from "@/lib/money";
 import { PAYMENT_METHOD_LABELS } from "@/lib/requests/actions";
@@ -108,16 +109,37 @@ export function summaryCsv(rows: readonly PayeeReportRow[]): string {
 
 /**
  * The income file's columns. A cafe week's date is the Sunday it ends, which
- * is where the Income page counts it. Who gave is never recorded, so no
- * line has a name.
+ * is where the Income page counts it, and its amount is its money from
+ * Square, so the amounts add up to the Income tab's money in. Square's lines
+ * follow, filled only for a cafe week, and a church payback names the
+ * quarter it's for. Who gave is never recorded, so no line has a name.
  */
-export const INCOME_CSV_HEADER = ["date", "source", "kind", "event", "method", "amount", "note"] as const;
+export const INCOME_CSV_HEADER = [
+  "date",
+  "source",
+  "kind",
+  "event",
+  "method",
+  "amount",
+  "gross_sales",
+  "returns",
+  "discounts",
+  "gift_card_sales",
+  "gift_card_redeemed",
+  "taxes",
+  "tips",
+  "fees",
+  "quarter",
+  "note",
+] as const;
+
+const NO_SQUARE_LINES: CsvValue[] = Array(8).fill(null);
 
 /**
- * One line per tithe, event, and cafe week, oldest first. A youth entry comes
- * before a cafe week on the same day.
+ * One line per tithe, event, cafe week, and church payback, oldest first. On
+ * the same day, youth entries come first, then the cafe week, then paybacks.
  */
-export function incomeCsv({ youth, weeks }: ReportIncome): string {
+export function incomeCsv({ youth, weeks, paybacks }: ReportIncome): string {
   const lines: { date: string; values: CsvValue[] }[] = [
     ...youth.map((entry) => ({
       date: entry.received_on,
@@ -128,6 +150,8 @@ export function incomeCsv({ youth, weeks }: ReportIncome): string {
         entry.event_name,
         incomeMethodLabel(entry.method),
         centsToDecimal(entry.amount_cents),
+        ...NO_SQUARE_LINES,
+        null,
         null,
       ],
     })),
@@ -139,12 +163,37 @@ export function incomeCsv({ youth, weeks }: ReportIncome): string {
         "Cafe week",
         null,
         null,
-        centsToDecimal(week.sales_cents),
+        centsToDecimal(moneyFromSquare(week)),
+        ...[
+          week.sales_cents,
+          week.returns_cents,
+          week.discounts_cents,
+          week.gift_card_sales_cents,
+          week.gift_card_redeemed_cents,
+          week.taxes_cents,
+          week.tips_cents,
+          week.fees_cents,
+        ].map(centsToDecimal),
+        null,
         week.note,
       ],
     })),
+    ...paybacks.map((payback) => ({
+      date: payback.received_on,
+      values: [
+        payback.received_on,
+        REQUEST_TYPE_LABELS.cafe,
+        "Church payback",
+        null,
+        null,
+        centsToDecimal(payback.amount_cents),
+        ...NO_SQUARE_LINES,
+        periodLabel(periodContaining("quarter", payback.quarter_start)),
+        payback.note,
+      ],
+    })),
   ];
-  // Sorting keeps ties in order, so each day's youth entries stay ahead of its cafe week.
+  // Sorting keeps ties in order, so each day's lines stay in the order above.
   lines.sort((a, b) => a.date.localeCompare(b.date));
   return toCsv(INCOME_CSV_HEADER, lines.map((line) => line.values));
 }

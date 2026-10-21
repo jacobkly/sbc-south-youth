@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  cafePaybackFieldErrors,
+  cafePaybackSchema,
   cafeWeekFieldErrors,
   cafeWeekSchema,
   incomeDeleteErrorMessage,
@@ -9,6 +11,7 @@ import {
   parseSalesToCents,
   youthIncomeFieldErrors,
   youthIncomeSchema,
+  type CafePaybackFormValues,
   type CafeWeekFormValues,
   type YouthIncomeFormValues,
 } from "./schema";
@@ -134,7 +137,19 @@ describe("income errors", () => {
 });
 
 function week(values: Partial<CafeWeekFormValues> = {}): CafeWeekFormValues {
-  return { week_ending: "2026-10-04", sales: "640", note: "", ...values };
+  return {
+    week_ending: "2026-10-04",
+    sales: "640",
+    discounts: "",
+    tips: "",
+    fees: "",
+    returns: "",
+    gift_card_sales: "",
+    gift_card_redeemed: "",
+    taxes: "",
+    note: "",
+    ...values,
+  };
 }
 
 function cafeErrorsFor(values: CafeWeekFormValues) {
@@ -148,8 +163,42 @@ describe("cafeWeekSchema", () => {
     expect(cafeWeekSchema(TODAY).parse(week({ sales: "$1,234.5", note: "  Closed early for camp  " }))).toEqual({
       week_ending: "2026-10-04",
       sales_cents: 123450,
+      returns_cents: 0,
+      discounts_cents: 0,
+      gift_card_sales_cents: 0,
+      gift_card_redeemed_cents: 0,
+      taxes_cents: 0,
+      tips_cents: 0,
+      fees_cents: 0,
       note: "Closed early for camp",
     });
+  });
+
+  it("reads each of Square's lines", () => {
+    const values = week({
+      discounts: "98.25",
+      tips: "$41.10",
+      fees: "16.45",
+      returns: "12",
+      gift_card_sales: "50",
+      gift_card_redeemed: "25.00",
+      taxes: "0",
+    });
+    expect(cafeWeekSchema(TODAY).parse(values)).toMatchObject({
+      discounts_cents: 9825,
+      tips_cents: 4110,
+      fees_cents: 1645,
+      returns_cents: 1200,
+      gift_card_sales_cents: 5000,
+      gift_card_redeemed_cents: 2500,
+      taxes_cents: 0,
+    });
+  });
+
+  it("says which line isn't an amount", () => {
+    expect(cafeErrorsFor(week({ tips: "abc" })).tips).toBe("Enter a dollar amount, like 12.34.");
+    expect(cafeErrorsFor(week({ fees: "1000000.01" })).fees).toBe("Keep the amount to $1,000,000.00 or less.");
+    expect(cafeErrorsFor(week({ returns: "-5" }))).toHaveProperty("returns");
   });
 
   it("saves no note as null", () => {
@@ -197,5 +246,63 @@ describe("parseSalesToCents", () => {
     expect(parseSalesToCents("")).toBeNull();
     expect(parseSalesToCents("abc")).toBeNull();
     expect(parseSalesToCents("0.001")).toBeNull();
+  });
+});
+
+function payback(values: Partial<CafePaybackFormValues> = {}): CafePaybackFormValues {
+  return { quarter_start: "2026-07-01", received_on: "2026-10-02", amount: "120", note: "", ...values };
+}
+
+function paybackErrorsFor(values: CafePaybackFormValues) {
+  const result = cafePaybackSchema(TODAY).safeParse(values);
+  if (result.success) throw new Error("Expected the values to be turned down.");
+  return cafePaybackFieldErrors(result.error);
+}
+
+describe("cafePaybackSchema", () => {
+  it("turns a payback into saved values", () => {
+    expect(cafePaybackSchema(TODAY).parse(payback({ amount: "$1,234.5", note: "  By check  " }))).toEqual({
+      quarter_start: "2026-07-01",
+      received_on: "2026-10-02",
+      amount_cents: 123450,
+      note: "By check",
+    });
+  });
+
+  it("saves no note as null", () => {
+    expect(cafePaybackSchema(TODAY).parse(payback({ note: "   " })).note).toBeNull();
+  });
+
+  it("asks for an amount more than $0, up to $1,000,000", () => {
+    expect(paybackErrorsFor(payback({ amount: "" })).amount).toBe("Enter an amount.");
+    expect(paybackErrorsFor(payback({ amount: "0" })).amount).toBeDefined();
+    expect(paybackErrorsFor(payback({ amount: "1000000.01" })).amount).toBe("Keep the amount to $1,000,000.00 or less.");
+  });
+
+  it("takes this quarter, but not one that hasn't started", () => {
+    expect(cafePaybackSchema(TODAY).safeParse(payback({ quarter_start: "2026-10-01" })).success).toBe(true);
+    expect(paybackErrorsFor(payback({ quarter_start: "2027-01-01" })).quarter_start).toBe(
+      "That quarter hasn't started yet.",
+    );
+  });
+
+  it("needs the first day of a quarter, in 2000 or later", () => {
+    expect(paybackErrorsFor(payback({ quarter_start: "2026-08-01" })).quarter_start).toBe("Choose a quarter.");
+    expect(paybackErrorsFor(payback({ quarter_start: "" })).quarter_start).toBe("Choose a quarter.");
+    expect(paybackErrorsFor(payback({ quarter_start: "1999-10-01" })).quarter_start).toBe(
+      "Choose a quarter in 2000 or later.",
+    );
+  });
+
+  it("takes today, but not a future date or one before 2000", () => {
+    expect(cafePaybackSchema(TODAY).safeParse(payback({ received_on: TODAY })).success).toBe(true);
+    expect(paybackErrorsFor(payback({ received_on: "2026-10-06" })).received_on).toBe("The date can't be in the future.");
+    expect(paybackErrorsFor(payback({ received_on: "1999-12-31" })).received_on).toBe("Enter a date in 2000 or later.");
+    expect(paybackErrorsFor(payback({ received_on: "" })).received_on).toBe("Enter the date.");
+  });
+
+  it("keeps the note to 500 characters", () => {
+    expect(cafePaybackSchema(TODAY).safeParse(payback({ note: "a".repeat(500) })).success).toBe(true);
+    expect(paybackErrorsFor(payback({ note: "a".repeat(501) })).note).toBe("Keep the note to 500 characters or fewer.");
   });
 });

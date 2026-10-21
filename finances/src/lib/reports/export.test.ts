@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { NO_LINES } from "@/lib/income/cafe";
 import type { ReportExportRow } from "@/lib/requests/queries";
 import {
   INCOME_CSV_HEADER,
@@ -202,23 +203,35 @@ describe("incomeCsv", () => {
         { id: "y3", kind: "event", received_on: "2026-09-20", amount_cents: 999, method: "zelle", event_name: null },
       ],
       weeks: [
-        { id: "c1", week_ending: "2026-09-06", sales_cents: 31025, note: null },
-        { id: "c2", week_ending: "2026-08-30", sales_cents: 0, note: "Closed for camp, back soon" },
+        {
+          id: "c1",
+          week_ending: "2026-09-06",
+          ...NO_LINES,
+          sales_cents: 31025,
+          discounts_cents: 1000,
+          tips_cents: 200,
+          fees_cents: 525,
+          source: "square",
+          note: null,
+        },
+        { id: "c2", week_ending: "2026-08-30", ...NO_LINES, source: "manual", note: "Closed for camp, back soon" },
       ],
+      paybacks: [{ id: "p1", quarter_start: "2026-07-01", received_on: "2026-09-13", amount_cents: 4250, note: "By check" }],
     }).split("\r\n");
     expect(lines).toEqual([
-      "﻿date,source,kind,event,method,amount,note",
-      "2026-08-30,Cafe,Cafe week,,,0.00,\"Closed for camp, back soon\"",
-      "2026-09-06,Youth,Tithe,,Cash App,20.00,",
-      "2026-09-06,Cafe,Cafe week,,,310.25,",
-      "2026-09-13,Youth,Event,Bake sale,Mixed,150.50,",
-      "2026-09-20,Youth,Event,,Zelle,9.99,",
+      "﻿date,source,kind,event,method,amount,gross_sales,returns,discounts,gift_card_sales,gift_card_redeemed,taxes,tips,fees,quarter,note",
+      "2026-08-30,Cafe,Cafe week,,,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,,\"Closed for camp, back soon\"",
+      "2026-09-06,Youth,Tithe,,Cash App,20.00,,,,,,,,,,",
+      "2026-09-06,Cafe,Cafe week,,,297.00,310.25,0.00,10.00,0.00,0.00,0.00,2.00,5.25,,",
+      "2026-09-13,Youth,Event,Bake sale,Mixed,150.50,,,,,,,,,,",
+      "2026-09-13,Cafe,Church payback,,,42.50,,,,,,,,,Q3 2026,By check",
+      "2026-09-20,Youth,Event,,Zelle,9.99,,,,,,,,,,",
       "",
     ]);
   });
 
   it("is just the header with nothing in", () => {
-    expect(incomeCsv({ youth: [], weeks: [] })).toBe(`﻿${INCOME_CSV_HEADER.join(",")}\r\n`);
+    expect(incomeCsv({ youth: [], weeks: [], paybacks: [] })).toBe(`﻿${INCOME_CSV_HEADER.join(",")}\r\n`);
   });
 });
 

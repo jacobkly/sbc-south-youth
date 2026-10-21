@@ -89,6 +89,9 @@ const KINDS = {
       "cafe_week.created",
       "cafe_week.updated",
       "cafe_week.deleted",
+      "cafe_payback.created",
+      "cafe_payback.updated",
+      "cafe_payback.deleted",
     ],
   },
   access: {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CafeWeek } from "@/lib/income/cafe";
+import { NO_LINES, type CafeLines, type CafePayback, type CafeWeek } from "@/lib/income/cafe";
 import type { YouthEntry } from "@/lib/income/stats";
 import { incomeTotals, titheMonths, type OutRow } from "./income";
 
@@ -12,8 +12,12 @@ function youth(
   return { id: `${received_on}-${amount_cents}`, kind, received_on, amount_cents, method, event_name: null };
 }
 
-function week(week_ending: string, sales_cents: number): CafeWeek {
-  return { id: week_ending, week_ending, sales_cents, note: null };
+function week(week_ending: string, sales_cents: number, lines: Partial<CafeLines> = {}): CafeWeek {
+  return { id: week_ending, week_ending, ...NO_LINES, sales_cents, ...lines, source: "square", note: null };
+}
+
+function payback(received_on: string, amount_cents: number, quarter_start = "2026-07-01"): CafePayback {
+  return { id: `p-${received_on}`, quarter_start, received_on, amount_cents, note: null };
 }
 
 function out(type: OutRow["type"], amount_cents: number, status: OutRow["status"] = "paid"): OutRow {
@@ -26,19 +30,48 @@ describe("incomeTotals", () => {
       {
         youth: [youth("2026-09-06", 2000), youth("2026-09-13", 5000, "event", null)],
         weeks: [week("2026-09-06", 30000), week("2026-09-13", 25000)],
+        paybacks: [],
       },
       [out("cafe", 12000), out("cafe", 3000, "approved"), out("youth", 4500)],
     );
     expect(totals).toEqual({
-      moneyIn: { youth: 7000, cafe: 55000, total: 62000 },
+      moneyIn: { youth: 7000, cafe: 55000, paybacks: 0, total: 62000 },
+      discounts: 0,
       out: { youth: 4500, cafe: 15000, total: 19500, count: 3 },
       left: 42500,
       profit: { cafe: 40000, youth: 2500 },
     });
   });
 
+  it("counts the cafe's money from Square, and church paybacks as money in on the day they came", () => {
+    const totals = incomeTotals(
+      {
+        youth: [youth("2026-09-06", 2000)],
+        weeks: [
+          week("2026-09-06", 30000, { discounts_cents: 2000, fees_cents: 1000 }),
+          week("2026-09-13", 25000, { gift_card_redeemed_cents: 500, tips_cents: 700 }),
+        ],
+        paybacks: [payback("2026-09-10", 1500)],
+      },
+      [out("cafe", 15000)],
+    );
+    // 27,000 + 25,200 from Square, and the payback on its own line.
+    expect(totals.moneyIn).toEqual({ youth: 2000, cafe: 52200, paybacks: 1500, total: 55700 });
+    expect(totals.discounts).toBe(2000);
+    expect(totals.left).toBe(40700);
+  });
+
+  it("counts the cafe's discounts in its profit, in the week they were given", () => {
+    const totals = incomeTotals(
+      { youth: [], weeks: [week("2026-09-06", 30000, { discounts_cents: 2000 })], paybacks: [payback("2026-10-02", 9999)] },
+      [out("cafe", 10000)],
+    );
+    // 28,000 from Square plus 2,000 in discounts, less 10,000 in costs. The payback isn't profit again.
+    expect(totals.profit).toEqual({ cafe: 20000, youth: 0 });
+  });
+
   it("counts only approved and paid requests as out, so All statuses doesn't add what wasn't spent", () => {
-    const totals = incomeTotals({ youth: [youth("2026-09-06", 1000)], weeks: [] }, [
+    const totals = incomeTotals({ youth: [youth("2026-09-06", 1000)], weeks: [], paybacks: [] }, [
       out("youth", 400, "approved"),
       out("youth", 200, "paid"),
       out("youth", 10000, "draft"),
@@ -52,14 +85,15 @@ describe("incomeTotals", () => {
   });
 
   it("goes below zero when more went out than came in", () => {
-    const totals = incomeTotals({ youth: [], weeks: [week("2026-09-06", 1000)] }, [out("cafe", 4750)]);
+    const totals = incomeTotals({ youth: [], weeks: [week("2026-09-06", 1000)], paybacks: [] }, [out("cafe", 4750)]);
     expect(totals.left).toBe(-3750);
     expect(totals.profit).toEqual({ cafe: -3750, youth: 0 });
   });
 
   it("is all zeros with nothing in or out", () => {
-    expect(incomeTotals({ youth: [], weeks: [] }, [])).toEqual({
-      moneyIn: { youth: 0, cafe: 0, total: 0 },
+    expect(incomeTotals({ youth: [], weeks: [], paybacks: [] }, [])).toEqual({
+      moneyIn: { youth: 0, cafe: 0, paybacks: 0, total: 0 },
+      discounts: 0,
       out: { youth: 0, cafe: 0, total: 0, count: 0 },
       left: 0,
       profit: { cafe: 0, youth: 0 },

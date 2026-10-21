@@ -104,31 +104,99 @@ export type Database = {
         }
         Relationships: []
       }
+      cafe_paybacks: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["cafe_payback_kind"]
+          note: string | null
+          quarter_start: string
+          received_on: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["cafe_payback_kind"]
+          note?: string | null
+          quarter_start: string
+          received_on: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["cafe_payback_kind"]
+          note?: string | null
+          quarter_start?: string
+          received_on?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_paybacks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cafe_weeks: {
         Row: {
           created_at: string
           created_by: string | null
+          discounts_cents: number
+          fees_cents: number
+          gift_card_redeemed_cents: number
+          gift_card_sales_cents: number
           id: string
           note: string | null
+          returns_cents: number
           sales_cents: number
+          source: string
+          taxes_cents: number
+          tips_cents: number
           updated_at: string
           week_ending: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
+          discounts_cents?: number
+          fees_cents?: number
+          gift_card_redeemed_cents?: number
+          gift_card_sales_cents?: number
           id?: string
           note?: string | null
+          returns_cents?: number
           sales_cents: number
+          source?: string
+          taxes_cents?: number
+          tips_cents?: number
           updated_at?: string
           week_ending: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
+          discounts_cents?: number
+          fees_cents?: number
+          gift_card_redeemed_cents?: number
+          gift_card_sales_cents?: number
           id?: string
           note?: string | null
+          returns_cents?: number
           sales_cents?: number
+          source?: string
+          taxes_cents?: number
+          tips_cents?: number
           updated_at?: string
           week_ending?: string
         }
@@ -1040,6 +1108,7 @@ export type Database = {
         | "site_editor"
         | "site_messages"
         | "attendance"
+      cafe_payback_kind: "discounts"
       income_method: "cash_app" | "zelle" | "cash"
       payment_method: "cash_app" | "bank_transfer" | "check" | "cash" | "other"
       reimbursement_type: "cafe" | "youth"
@@ -1191,6 +1260,7 @@ export const Constants = {
         "site_messages",
         "attendance",
       ],
+      cafe_payback_kind: ["discounts"],
       income_method: ["cash_app", "zelle", "cash"],
       payment_method: ["cash_app", "bank_transfer", "check", "cash", "other"],
       reimbursement_type: ["cafe", "youth"],

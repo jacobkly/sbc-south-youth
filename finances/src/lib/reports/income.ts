@@ -1,22 +1,25 @@
 import { periodContaining, periodRange, shiftPeriod, type MonthPeriod, type Period } from "@/lib/dates";
-import type { CafeWeek } from "@/lib/income/cafe";
+import { moneyFromSquare, type CafePayback, type CafeWeek } from "@/lib/income/cafe";
 import type { YouthEntry } from "@/lib/income/stats";
 import type { RequestStatus } from "@/lib/requests/format";
 import type { RequestType } from "@/lib/requests/schema";
 import { REPORT_STATUSES } from "./filters";
 
-/** A report period's youth entries and cafe weeks. */
-export type ReportIncome = { youth: YouthEntry[]; weeks: CafeWeek[] };
+/** A report period's youth entries, cafe weeks, and the church's paybacks for the cafe's discounts. */
+export type ReportIncome = { youth: YouthEntry[]; weeks: CafeWeek[]; paybacks: CafePayback[] };
 
 /** A request as the Income tab counts it. */
 export type OutRow = { type: RequestType; amount_cents: number; status: RequestStatus };
 
 export type IncomeTotals = {
-  moneyIn: Record<RequestType, number> & { total: number };
+  /** The cafe's is its money from Square. Paybacks count on the day they came in. */
+  moneyIn: Record<RequestType, number> & { paybacks: number; total: number };
+  /** The cafe's discounts, which the church pays back. */
+  discounts: number;
   out: Record<RequestType, number> & { total: number; count: number };
   /** Below 0 when more went out than came in. */
   left: number;
-  /** Each type's money in minus its requests. */
+  /** Each type's money in minus its requests. The cafe's adds its discounts. */
   profit: Record<RequestType, number>;
 };
 
@@ -25,13 +28,17 @@ const counted = new Set<RequestStatus>(REPORT_STATUSES);
 /**
  * A period's money in against the report's requests. Only approved and paid
  * requests count as out, even with All statuses on, since the rest weren't
- * spent.
+ * spent. Money in is what reached the bank, so a payback counts when it came
+ * in, while the cafe's profit counts its discounts in the week they were
+ * given, like the Cafe tab.
  */
-export function incomeTotals({ youth, weeks }: ReportIncome, rows: readonly OutRow[]): IncomeTotals {
+export function incomeTotals({ youth, weeks, paybacks }: ReportIncome, rows: readonly OutRow[]): IncomeTotals {
   const moneyIn = {
     youth: youth.reduce((total, entry) => total + entry.amount_cents, 0),
-    cafe: weeks.reduce((total, week) => total + week.sales_cents, 0),
+    cafe: weeks.reduce((total, week) => total + moneyFromSquare(week), 0),
+    paybacks: paybacks.reduce((total, payback) => total + payback.amount_cents, 0),
   };
+  const discounts = weeks.reduce((total, week) => total + week.discounts_cents, 0);
   const out = { youth: 0, cafe: 0, total: 0, count: 0 };
   for (const row of rows) {
     if (!counted.has(row.status)) continue;
@@ -39,12 +46,13 @@ export function incomeTotals({ youth, weeks }: ReportIncome, rows: readonly OutR
     out.total += row.amount_cents;
     out.count += 1;
   }
-  const total = moneyIn.youth + moneyIn.cafe;
+  const total = moneyIn.youth + moneyIn.cafe + moneyIn.paybacks;
   return {
     moneyIn: { ...moneyIn, total },
+    discounts,
     out,
     left: total - out.total,
-    profit: { cafe: moneyIn.cafe - out.cafe, youth: moneyIn.youth - out.youth },
+    profit: { cafe: moneyIn.cafe + discounts - out.cafe, youth: moneyIn.youth - out.youth },
   };
 }
 

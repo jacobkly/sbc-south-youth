@@ -3,14 +3,16 @@
 import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PlusIcon } from "lucide-react";
+import { CafeImportButton } from "@/components/income/cafe-import";
 import { CafeMonthSummary, CafeWeekList } from "@/components/income/cafe-income";
+import { CafePaybacks, CafePaybackSheet } from "@/components/income/cafe-paybacks";
 import { CafeWeekSheet } from "@/components/income/cafe-week-sheet";
 import { YouthIncomeSheet } from "@/components/income/youth-income-sheet";
 import { YouthEntryList, YouthMonthSummary } from "@/components/income/youth-income";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { IsoDate, MonthPeriod } from "@/lib/dates";
-import type { CafeCost, CafeTotals, CafeWeek } from "@/lib/income/cafe";
+import { discountQuarters, type CafeCost, type CafePayback, type CafeTotals, type CafeWeek } from "@/lib/income/cafe";
 import { incomeHref, type IncomeTab } from "@/lib/income/view";
 import type { YouthEntry, YouthSummary } from "@/lib/income/stats";
 import { defaultWeekEnding } from "@/lib/income/weeks";
@@ -29,6 +31,7 @@ export function IncomePage({
   cafeWeeks,
   cafeCosts,
   cafeMonth,
+  cafePaybacks,
 }: {
   tab: IncomeTab;
   canEdit: boolean;
@@ -42,13 +45,17 @@ export function IncomePage({
   /** The cafe requests that count against sales, back to the oldest week's month. */
   cafeCosts: CafeCost[];
   cafeMonth: CafeTotals;
+  /** The church's paybacks for cafe discounts. */
+  cafePaybacks: CafePayback[];
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(tab);
   const [youthEntry, setYouthEntry] = useState<YouthEntry | "new" | null>(null);
   const [cafeWeek, setCafeWeek] = useState<IsoDate | null>(null);
+  const [payback, setPayback] = useState<CafePayback | "new" | null>(null);
   const addCafeWeek = () => setCafeWeek(defaultWeekEnding(today));
+  const quarters = discountQuarters(cafeWeeks, cafePaybacks);
 
   function showTab(next: IncomeTab) {
     startTransition(() => {
@@ -62,10 +69,15 @@ export function IncomePage({
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Income</h1>
         {canEdit && (
-          <Button className="h-10 px-4" onClick={shown === "youth" ? () => setYouthEntry("new") : addCafeWeek}>
-            <PlusIcon />
-            Add<span className="sr-only">{shown === "youth" ? " youth income" : " cafe week"}</span>
-          </Button>
+          <div className="flex gap-2">
+            {shown === "cafe" && cafeWeeks.length > 0 && (
+              <CafeImportButton weeks={cafeWeeks} today={today} className="h-10 px-4" />
+            )}
+            <Button className="h-10 px-4" onClick={shown === "youth" ? () => setYouthEntry("new") : addCafeWeek}>
+              <PlusIcon />
+              Add<span className="sr-only">{shown === "youth" ? " youth income" : " cafe week"}</span>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -85,12 +97,24 @@ export function IncomePage({
         </TabsContent>
         <TabsContent value="cafe" className="mt-2 space-y-6">
           <CafeMonthSummary month={month} totals={cafeMonth} />
+          <CafePaybacks
+            quarters={quarters}
+            today={today}
+            onRecord={canEdit ? () => setPayback("new") : undefined}
+            onOpen={canEdit ? setPayback : undefined}
+          />
           <CafeWeekList
             weeks={cafeWeeks}
             costs={cafeCosts}
+            quarters={quarters}
             today={today}
             onOpen={canEdit ? (week) => setCafeWeek(week.week_ending) : undefined}
             onAdd={canEdit ? addCafeWeek : undefined}
+            importButton={
+              canEdit && (
+                <CafeImportButton weeks={cafeWeeks} today={today} label="Import from Square" className="h-11 px-5" />
+              )
+            }
           />
         </TabsContent>
       </Tabs>
@@ -98,6 +122,9 @@ export function IncomePage({
       {canEdit && <YouthIncomeSheet entry={youthEntry} onClose={() => setYouthEntry(null)} />}
       {canEdit && (
         <CafeWeekSheet weekEnding={cafeWeek} weeks={cafeWeeks} today={today} onClose={() => setCafeWeek(null)} />
+      )}
+      {canEdit && (
+        <CafePaybackSheet payback={payback} quarters={quarters} today={today} onClose={() => setPayback(null)} />
       )}
     </div>
   );

@@ -20,6 +20,7 @@ import {
   incomeLine,
   isIncomeType,
   MIXED_LABEL,
+  quarterLabel,
   titheImportLine,
   titheImportOf,
   titheImportTitle,
@@ -91,7 +92,7 @@ export type FeedContext = {
   payeeNames: ReadonlyMap<string, string>;
   /** Each invite's account, so an invite reads and groups as its person. */
   inviteUsers: ReadonlyMap<string, string>;
-  /** The tithes, event income, and cafe weeks finance rows are about, by ID. */
+  /** The tithes, event income, cafe weeks, and church paybacks finance rows are about, by ID. */
   income: ReadonlyMap<string, IncomeSubject>;
   /** Null when someone has no finances link to follow. */
   financesUrl: string | null;
@@ -142,6 +143,7 @@ const VERB_WORDS: Partial<Record<string, string>> = {
 /** What the site calls things whose table names say otherwise. */
 const NOUNS: Partial<Record<string, string>> = {
   post: "Heads-up",
+  cafe_payback: "Church payback",
 };
 
 /** A heads-up or event going out, being cancelled, or coming back, which says more than "changed". */
@@ -299,6 +301,9 @@ function formatPlainDate(value: Json | undefined): string {
   return typeof value === "string" && isIsoDate(value) ? formatDate(value) : "None";
 }
 
+/** How a cafe week got in. */
+const SOURCE_LABELS: Readonly<Record<string, string>> = { manual: "By hand", square: "From Square" };
+
 /** Logged fields worth showing for each kind of thing, in the order they show. */
 const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
   user: [
@@ -383,7 +388,23 @@ const LOG_FIELDS: Partial<Record<string, readonly LogField[]>> = {
     incomeField("week_ending", "Week", (value) =>
       typeof value === "string" && isIsoDate(value) ? weekLabel(value) : "None",
     ),
-    incomeField("sales_cents", "Sales", formatAmount),
+    incomeField("sales_cents", "Gross sales", formatAmount),
+    incomeField("discounts_cents", "Discounts & comps", formatAmount),
+    incomeField("tips_cents", "Tips", formatAmount),
+    incomeField("fees_cents", "Fees", formatAmount),
+    incomeField("returns_cents", "Returns", formatAmount),
+    incomeField("gift_card_sales_cents", "Gift card sales", formatAmount),
+    incomeField("gift_card_redeemed_cents", "Gift card redeemed", formatAmount),
+    incomeField("taxes_cents", "Taxes", formatAmount),
+    incomeField("source", "Entered", (value) => formatLabel(SOURCE_LABELS, value)),
+    incomeField("note", "Note", formatText),
+  ],
+  cafe_payback: [
+    incomeField("quarter_start", "Quarter", (value) =>
+      typeof value === "string" && isIsoDate(value) ? quarterLabel(value) : "None",
+    ),
+    incomeField("received_on", "Date received", formatPlainDate),
+    incomeField("amount_cents", "Amount", formatAmount),
     incomeField("note", "Note", formatText),
   ],
   // The line names the tag, so its name shows only when it's renamed. A
@@ -640,6 +661,7 @@ export type ActivityIcon =
   | "backup"
   | "income"
   | "cafe"
+  | "payback"
   | "deleted";
 
 const ACTION_ICONS: Partial<Record<string, ActivityIcon>> = {
@@ -690,6 +712,7 @@ function iconOf(row: FeedRow): ActivityIcon {
   if (row.action === "youth_income.imported") return "bulk";
   if (row.entity_type === "youth_income") return "income";
   if (row.entity_type === "cafe_week") return "cafe";
+  if (row.entity_type === "cafe_payback") return "payback";
   const status = contentStatusChange(row);
   if (status) return status === "published" ? "submitted" : status === "cancelled" ? "cancelled" : "undo";
   const icon = ACTION_ICONS[row.action];
@@ -763,7 +786,7 @@ function linkOf(row: FeedRow, ctx: FeedContext): ItemLink | null {
   if (isIncomeType(row.entity_type)) {
     const subject = row.entity_id ? ctx.income.get(row.entity_id) : undefined;
     if (!ctx.financesUrl || !subject || subject.deleted) return null;
-    const tab = subject.type === "cafe_week" ? "?tab=cafe" : "";
+    const tab = subject.type === "youth_income" ? "" : "?tab=cafe";
     return { href: `${ctx.financesUrl}/admin/income${tab}`, label: "Open in Finances" };
   }
   if (row.entity_type === "message" && row.entity_id) return { href: `/messages/${row.entity_id}`, label: "Open message" };
@@ -845,6 +868,7 @@ const COUNT_NOUNS: Partial<Record<string, readonly [string, string]>> = {
   message: ["message", "messages"],
   youth_income: ["youth entry", "youth entries"],
   cafe_week: ["cafe week", "cafe weeks"],
+  cafe_payback: ["church payback", "church paybacks"],
   tag: ["tag", "tags"],
   headcount: ["headcount", "headcounts"],
 };

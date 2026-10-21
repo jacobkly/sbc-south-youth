@@ -128,7 +128,11 @@ export function IncomeReport({
           <Cell
             label="Money in"
             cents={totals.moneyIn.total}
-            detail="Tithes, events, and cafe sales"
+            detail={
+              totals.moneyIn.paybacks > 0
+                ? `Tithes, events, the cafe, and ${formatCents(totals.moneyIn.paybacks)} in church paybacks`
+                : "Tithes, events, and the cafe from Square"
+            }
             change={change(totals.moneyIn.total, beforeTotals.moneyIn.total)}
           />
           <Cell
@@ -148,7 +152,10 @@ export function IncomeReport({
 
       <section aria-labelledby="income-profit-heading" className="@container space-y-3">
         <Heading id="income-profit-heading" title="Profit">
-          <p className="text-sm text-muted-foreground">What each type took in, minus its own requests</p>
+          <p className="text-sm text-muted-foreground">
+            What each type took in, minus its own requests. The cafe&apos;s adds its discounts, which the church
+            pays back.
+          </p>
         </Heading>
         <dl className="grid divide-y rounded-lg border @md:grid-cols-2 @md:divide-x @md:divide-y-0">
           {REQUEST_TYPES.map((type) => (
@@ -157,7 +164,13 @@ export function IncomeReport({
               label={REQUEST_TYPE_LABELS[type]}
               swatch={TYPE_CHART_CONFIG[type].color}
               cents={totals.profit[type]}
-              detail={`${formatCents(totals.moneyIn[type])} in · ${formatCents(totals.out[type])} out`}
+              detail={[
+                `${formatCents(totals.moneyIn[type])} in`,
+                type === "cafe" && totals.discounts > 0 && `${formatCents(totals.discounts)} discounts`,
+                `${formatCents(totals.out[type])} out`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
               change={change(totals.profit[type], beforeTotals.profit[type])}
             />
           ))}
