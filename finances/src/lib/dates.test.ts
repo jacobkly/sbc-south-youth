@@ -13,6 +13,7 @@ import {
   laDateTime,
   laMidnight,
   laNoon,
+  monthName,
   monthShortName,
   periodContaining,
   periodLabel,
@@ -190,6 +191,7 @@ describe("labels", () => {
     expect(periodLabel({ kind: "quarter", year: 2026, quarter: 3 })).toBe("Q3 2026");
     expect(periodLabel({ kind: "year", year: 2026 })).toBe("2026");
     expect(monthShortName({ kind: "month", year: 2026, month: 9 })).toBe("Sep");
+    expect(monthName({ kind: "month", year: 2026, month: 9 })).toBe("September");
     expect(periodLabel({ kind: "custom", start: "2026-03-15", end: "2026-04-02" })).toBe(
       "Mar 15, 2026 – Apr 2, 2026",
     );

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { ChevronRightIcon, PlusIcon } from "lucide-react";
 import { plural, Stat } from "@/components/income/stat";
-import { Fold } from "@/components/income/fold";
+import { MonthFold, YearFold } from "@/components/income/fold";
 import { Button } from "@/components/ui/button";
-import { periodLabel, type IsoDate, type MonthPeriod } from "@/lib/dates";
+import { monthName, periodLabel, type IsoDate, type MonthPeriod } from "@/lib/dates";
 import {
   cafeTotalsIn,
   groupWeeksByMonth,
@@ -11,7 +11,6 @@ import {
   paybackStatus,
   quarterStartOf,
   type CafeCost,
-  type CafeMonthGroup,
   type CafePaybackIncome,
   type CafeTotals,
   type CafeWeek,
@@ -70,10 +69,10 @@ const PAYBACK_LABELS: Record<PaybackStatus, string> = {
 };
 
 /**
- * Cafe weeks by month, newest first, with each month's money, costs, and
- * profit, and whether each week's discounts are paid back. The newest month
- * stays open, and earlier months and past years fold into a row each. Owners
- * tap a week to edit it. Viewers see the same list with nothing to tap.
+ * Cafe weeks by year and month, newest first, with each one's money, costs,
+ * and profit, and whether each week's discounts are paid back. The newest year
+ * and its newest month start open. Owners tap a week to edit it. Viewers see
+ * the same list with nothing to tap.
  */
 export function CafeWeekList({
   weeks,
@@ -119,26 +118,6 @@ export function CafeWeekList({
   }
 
   const statusOf = new Map(quarters.map((quarter) => [quarter.start, paybackStatus(quarter)]));
-  const [newest, ...older] = groupMonthsByYear(groupWeeksByMonth(weeks, costs, paybacks));
-  const [latest, ...earlier] = newest.months;
-
-  function weekList(monthWeeks: CafeWeek[]) {
-    return (
-      <ul className="divide-y overflow-hidden rounded-lg border">
-        {monthWeeks.map((week) => (
-          <li key={week.id}>
-            <WeekRow
-              week={week}
-              status={statusOf.get(quarterStartOf(week.week_ending)) ?? "owed"}
-              today={today}
-              onOpen={onOpen}
-            />
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
   /** How many weeks, and the money behind the profit. */
   function foldLines(totals: CafeTotals) {
     return {
@@ -148,43 +127,44 @@ export function CafeWeekList({
     };
   }
 
-  function monthFold({ period, totals, weeks: monthWeeks }: CafeMonthGroup) {
-    return (
-      <Fold key={`${period.year}-${period.month}`} title={periodLabel(period)} {...foldLines(totals)}>
-        {weekList(monthWeeks)}
-      </Fold>
-    );
-  }
-
-  const headingId = `cafe-${latest.period.year}-${latest.period.month}`;
-
   return (
-    <div className="space-y-6">
-      <section aria-labelledby={headingId} className="space-y-2">
-        <div className="space-y-0.5 px-1">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 id={headingId} className="text-sm font-medium">
-              {periodLabel(latest.period)}
-            </h2>
-            <p className="text-sm tabular-nums">
-              <Profit cents={latest.totals.profit} />
-            </p>
-          </div>
-          <p className="text-xs text-muted-foreground tabular-nums">{moneyLine(latest.totals)}</p>
-        </div>
-        {weekList(latest.weeks)}
-      </section>
-      {(earlier.length > 0 || older.length > 0) && (
-        <div className="space-y-2">
-          {earlier.map(monthFold)}
-          {older.map(({ year, months }) => (
-            <Fold key={year} title={String(year)} {...foldLines(cafeTotalsIn(weeks, costs, paybacks, { kind: "year", year }))}>
-              {months.map(monthFold)}
-            </Fold>
-          ))}
-        </div>
-      )}
-    </div>
+    <section aria-labelledby="cafe-weeks-heading">
+      <h2 id="cafe-weeks-heading" className="pb-1 text-sm font-medium text-muted-foreground">
+        Weeks
+      </h2>
+      <div className="divide-y">
+        {groupMonthsByYear(groupWeeksByMonth(weeks, costs, paybacks)).map(({ year, months }, yearIndex) => (
+          <YearFold
+            key={year}
+            title={String(year)}
+            defaultOpen={yearIndex === 0}
+            {...foldLines(cafeTotalsIn(weeks, costs, paybacks, { kind: "year", year }))}
+          >
+            {months.map(({ period, totals, weeks: monthWeeks }, monthIndex) => (
+              <MonthFold
+                key={period.month}
+                title={monthName(period)}
+                defaultOpen={yearIndex === 0 && monthIndex === 0}
+                {...foldLines(totals)}
+              >
+                <ul className="divide-y">
+                  {monthWeeks.map((week) => (
+                    <li key={week.id}>
+                      <WeekRow
+                        week={week}
+                        status={statusOf.get(quarterStartOf(week.week_ending)) ?? "owed"}
+                        today={today}
+                        onOpen={onOpen}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </MonthFold>
+            ))}
+          </YearFold>
+        ))}
+      </div>
+    </section>
   );
 }
 

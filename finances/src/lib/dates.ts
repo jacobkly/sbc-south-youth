@@ -97,6 +97,11 @@ const monthShortLabel = new Intl.DateTimeFormat("en-US", {
   month: "short",
 });
 
+const monthNameLabel = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "long",
+});
+
 function pad(n: number, width = 2): string {
   return String(n).padStart(width, "0");
 }
@@ -213,6 +218,11 @@ export function recentMonths(count: number, date: IsoDate): MonthPeriod[] {
 /** Short month name for chart axes, e.g. "Sep". */
 export function monthShortName(period: MonthPeriod): string {
   return monthShortLabel.format(new Date(Date.UTC(period.year, period.month - 1, 1)));
+}
+
+/** Month name without its year, for a list already under the year, e.g. "September". */
+export function monthName(period: MonthPeriod): string {
+  return monthNameLabel.format(new Date(Date.UTC(period.year, period.month - 1, 1)));
 }
 
 /** Human label for a period, e.g. "September 2026", "Q3 2026", "2026". */
