@@ -61,6 +61,34 @@ const GIFT_CARDS: [string, string][] = [
 
 const WEEK_FILE = "sales-summary-2026-10-05-2026-10-11.csv";
 
+// The PLAIN week in Square's Weekly view, whose weeks run Sunday to Saturday,
+// so Monday to Sunday comes as two columns with most of the money on Sunday.
+const SPLIT: [string, string, string][] = [
+  ["Gross sales", "$12.50", "$600.00"],
+  ["Items", "$12.50", "$600.00"],
+  ["Returns", "$0.00", "$0.00"],
+  ["Discounts & comps", "$0.00", "($98.25)"],
+  ["Discounts", "$0.00", "($98.25)"],
+  ["Net sales", "$12.50", "$501.75"],
+  ["Deferred sales", "$0.00", "$0.00"],
+  ["Gift card sales", "$0.00", "$0.00"],
+  ["Taxes", "$0.00", "$0.00"],
+  ["Tips", "$0.00", "$41.10"],
+  ["Total sales", "$12.50", "$542.85"],
+  ["Total payments collected", "$12.50", "$542.85"],
+  ["Fees", "($0.50)", "($15.95)"],
+  ["Net total", "$12.00", "$526.90"],
+  ["Tips transactions", "0", "30"],
+];
+
+/** A made-up file in Square's Weekly or Daily view, with a column for each header. */
+function columns(rows: string[][], headers: string): string {
+  const title = "Sales summary - Weekly\nAll day (12:00 AM-11:59 PM PT)";
+  return [`"${title}",${headers}`, ...rows.map((row) => row.join(",")), ""].join("\n");
+}
+
+const SPLIT_HEADERS = "10/5/2026 – 10/10/2026,10/11/2026";
+
 function without(rows: [string, string][], label: string): [string, string][] {
   return rows.filter(([name]) => name !== label);
 }
@@ -222,6 +250,53 @@ describe("parseSalesSummary", () => {
     expect(parseSalesSummary(summary(replaced(rows, "Net total", "$496.80")), WEEK_FILE)).toEqual({
       ok: false,
       error: "Tips is below $0 this week. Type the week in by hand.",
+    });
+  });
+
+  it("adds up every column of a week Square split into columns", () => {
+    expect(parseSalesSummary(columns(SPLIT, SPLIT_HEADERS), WEEK_FILE)).toEqual(parseSalesSummary(summary(PLAIN), WEEK_FILE));
+  });
+
+  it("reads a week split into a column per day", () => {
+    const days = ["10/5/2026", "10/6/2026", "10/7/2026", "10/8/2026", "10/9/2026", "10/10/2026", "10/11/2026"];
+    const rows = SPLIT.map(([label, monday, sunday]) => [label, monday, ...days.slice(1, -1).map(() => "$0.00"), sunday]);
+    expect(parseSalesSummary(columns(rows, days.join(",")), WEEK_FILE)).toEqual(parseSalesSummary(summary(PLAIN), WEEK_FILE));
+  });
+
+  it("finds the week in the columns when the name has no dates", () => {
+    expect(parseSalesSummary(columns(SPLIT, SPLIT_HEADERS), "cafe week.csv")).toMatchObject({
+      ok: true,
+      week_ending: "2026-10-11",
+    });
+  });
+
+  it("never adds in a column that isn't a date, which could be a total", () => {
+    const rows = SPLIT.map((row) => [...row, row[2]]);
+    expect(parseSalesSummary(columns(rows, `${SPLIT_HEADERS},Total`), WEEK_FILE)).toEqual({
+      ok: false,
+      error: "Square split this file into columns that don't cover the whole week. Export it again in the Summary view.",
+    });
+  });
+
+  it("turns away columns with a day missing", () => {
+    expect(parseSalesSummary(columns(SPLIT, "10/5/2026 – 10/9/2026,10/11/2026"), WEEK_FILE)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("whole week"),
+    });
+  });
+
+  it("turns away columns for a different week than the name says", () => {
+    expect(parseSalesSummary(columns(SPLIT, "9/28/2026 – 10/3/2026,10/4/2026"), WEEK_FILE)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("whole week"),
+    });
+  });
+
+  it("treats a row as missing when one column has no amount", () => {
+    const rows = SPLIT.map((row) => (row[0] === "Net total" ? [row[0], row[1], "Not available"] : row));
+    expect(parseSalesSummary(columns(rows, SPLIT_HEADERS), WEEK_FILE)).toEqual({
+      ok: false,
+      error: "This doesn't look like Square's sales summary. It has no Net total row.",
     });
   });
 

@@ -1,14 +1,17 @@
-import { formatDate, isIsoDate, type IsoDate } from "@/lib/dates";
-import { parseTable } from "@/lib/import/parse";
+import { addDays, formatDate, isIsoDate, type IsoDate } from "@/lib/dates";
+import { parseSheetDate, parseTable } from "@/lib/import/parse";
 import type { CafeLines } from "@/lib/income/cafe";
 import { isWeekEnding, weekStartOf } from "@/lib/income/weeks";
 
 /**
  * Reads Square's sales summary export: one `label,value` row per line, with
- * money like "$1,234.56" and amounts taken off in parentheses. The file has
- * no dates in it, so the week comes from its name,
- * `sales-summary-2026-10-05-2026-10-11.csv`. Rows it doesn't know, like the
- * fee breakdown, payment methods, and transaction counts, are skipped.
+ * money like "$1,234.56" and amounts taken off in parentheses. The Summary
+ * view has no dates in it, so the week comes from the file's name,
+ * `sales-summary-2026-10-05-2026-10-11.csv`. The Weekly and Daily views have
+ * a value column for each stretch of days, which are added together. Square's
+ * weeks run Sunday to Saturday, so even one of ours comes as two columns.
+ * Rows it doesn't know, like the fee breakdown, payment methods, and
+ * transaction counts, are skipped.
  */
 
 // Matches the cafe_weeks column checks.
@@ -83,11 +86,48 @@ function normalizeLabel(label: string): string {
   return label.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+/** A row's amount, added across the file's columns. Null unless each column that has a value holds money. */
+function rowAmount(cells: readonly string[]): number | null {
+  let total: number | null = null;
+  for (const cell of cells) {
+    if (cell.trim() === "") continue;
+    const cents = parseSquareMoney(cell);
+    if (cents === null) return null;
+    total = (total ?? 0) + cents;
+  }
+  return total;
+}
+
+type Dates = { start: IsoDate; end: IsoDate };
+
 /** The dates in a file name like `sales-summary-2026-10-05-2026-10-11 (1).csv`. */
-function datesInName(fileName: string): { start: IsoDate; end: IsoDate } | null {
+function datesInName(fileName: string): Dates | null {
   const match = /(\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})/.exec(fileName);
   if (!match || !isIsoDate(match[1]) || !isIsoDate(match[2])) return null;
   return { start: match[1], end: match[2] };
+}
+
+/** The days a column covers, from a header like "1/18/2026" or "1/12/2026 – 1/17/2026". */
+function datesInHeader(header: string): Dates | null {
+  const [start, end = start, ...rest] = header.split(/\s+[–-]\s+/).map((part) => parseSheetDate(part));
+  return start && end && rest.length === 0 ? { start, end } : null;
+}
+
+/**
+ * The days a file's columns cover together. Null unless every column is dates
+ * and each starts the day after the last, so a total is never added in.
+ */
+function datesInColumns(headers: readonly string[]): Dates | null {
+  const columns: Dates[] = [];
+  for (const header of headers) {
+    const column = datesInHeader(header);
+    const previous = columns.at(-1);
+    if (!column || (previous && column.start !== addDays(previous.end, 1))) return null;
+    columns.push(column);
+  }
+  const first = columns.at(0);
+  const last = columns.at(-1);
+  return first && last ? { start: first.start, end: last.end } : null;
 }
 
 /** The hours of each day the file covers, when it isn't the whole day. */
@@ -104,10 +144,10 @@ export function parseSalesSummary(text: string, fileName: string): ParsedSalesSu
   const values = new Map<Row, number>();
   const labels = new Map<string, Row>(Object.entries(ROWS).map(([row, label]) => [label, row as Row]));
 
-  for (const [label = "", value = ""] of table) {
+  for (const [label = "", ...cells] of table) {
     const row = labels.get(normalizeLabel(label));
     if (!row || values.has(row)) continue;
-    const cents = parseSquareMoney(value);
+    const cents = rowAmount(cells);
     if (cents !== null) values.set(row, cents);
   }
 
@@ -121,8 +161,19 @@ export function parseSalesSummary(text: string, fileName: string): ParsedSalesSu
     return { ok: false, error: `This file covers only ${hours} each day. Export it from Square with All day picked.` };
   }
 
+  const [first = "", ...rest] = table[0] ?? [];
+  const headers = labels.has(normalizeLabel(first)) ? [] : rest.filter((cell) => cell.trim() !== "");
+  const named = datesInName(fileName);
+  const inColumns = headers.length > 0 ? datesInColumns(headers) : null;
+  if (headers.length > 0 && (!inColumns || (named && (inColumns.start !== named.start || inColumns.end !== named.end)))) {
+    return {
+      ok: false,
+      error: "Square split this file into columns that don't cover the whole week. Export it again in the Summary view.",
+    };
+  }
+
   let week_ending: IsoDate | null = null;
-  const dates = datesInName(fileName);
+  const dates = named ?? inColumns;
   if (dates) {
     if (!isWeekEnding(dates.end) || weekStartOf(dates.end) !== dates.start) {
       return {
