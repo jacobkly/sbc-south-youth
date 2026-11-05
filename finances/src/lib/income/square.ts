@@ -1,7 +1,7 @@
 import { addDays, formatDate, isIsoDate, type IsoDate } from "@/lib/dates";
 import { parseSheetDate, parseTable } from "@/lib/import/parse";
 import type { CafeLines } from "@/lib/income/cafe";
-import { isWeekEnding, weekStartOf } from "@/lib/income/weeks";
+import { isWeekEnding, weekEndingOf, weekStartOf } from "@/lib/income/weeks";
 
 /**
  * Reads Square's sales summary export: one `label,value` row per line, with
@@ -9,9 +9,11 @@ import { isWeekEnding, weekStartOf } from "@/lib/income/weeks";
  * view has no dates in it, so the week comes from the file's name,
  * `sales-summary-2026-10-05-2026-10-11.csv`. The Weekly and Daily views have
  * a value column for each stretch of days, which are added together. Square's
- * weeks run Sunday to Saturday, so even one of ours comes as two columns.
- * Rows it doesn't know, like the fee breakdown, payment methods, and
- * transaction counts, are skipped.
+ * weeks run Sunday to Saturday, so even one of ours comes as two columns, and
+ * a long range can only be split into our weeks when it's by day. Rows it
+ * doesn't know, like the fee breakdown, payment methods, and transaction
+ * counts, are skipped. A refund by amount counts as a return, since it comes
+ * off Square's Total sales the same way.
  */
 
 // Matches the cafe_weeks column checks.
@@ -27,6 +29,7 @@ const ROWS = {
   giftCardSales: "gift card sales",
   taxes: "taxes",
   tips: "tips",
+  refunds: "refunds by amount",
   totalSales: "total sales",
   payments: "total payments collected",
   giftCardRedeemed: "gift card redeemed",
@@ -35,6 +38,8 @@ const ROWS = {
 } as const;
 
 type Row = keyof typeof ROWS;
+
+const ROW_BY_LABEL = new Map<string, Row>(Object.entries(ROWS).map(([row, label]) => [label, row as Row]));
 
 /** Rows every summary has. Square can leave out the rest when they're $0. */
 const REQUIRED: readonly Row[] = ["gross", "discounts", "net", "totalSales", "payments", "netTotal"];
@@ -49,6 +54,7 @@ const LABELS: Record<Row, string> = {
   giftCardSales: "Gift card sales",
   taxes: "Taxes",
   tips: "Tips",
+  refunds: "Refunds by amount",
   totalSales: "Total sales",
   payments: "Total payments collected",
   giftCardRedeemed: "Gift card redeemed",
@@ -113,11 +119,21 @@ function datesInHeader(header: string): Dates | null {
   return start && end && rest.length === 0 ? { start, end } : null;
 }
 
+const sameDates = (a: Dates, b: Dates) => a.start === b.start && a.end === b.end;
+
+/** A file's column headers, without Square's blank ones at the end. A Summary file has none. */
+function columnHeaders(table: readonly string[][]): string[] {
+  const [first = "", ...rest] = table[0] ?? [];
+  if (ROW_BY_LABEL.has(normalizeLabel(first))) return [];
+  const last = rest.findLastIndex((cell) => cell.trim() !== "");
+  return rest.slice(0, last + 1);
+}
+
 /**
- * The days a file's columns cover together. Null unless every column is dates
- * and each starts the day after the last, so a total is never added in.
+ * Each column's days. Null unless every column is dates and each starts the
+ * day after the last, so a total is never added in.
  */
-function datesInColumns(headers: readonly string[]): Dates | null {
+function columnDates(headers: readonly string[]): Dates[] | null {
   const columns: Dates[] = [];
   for (const header of headers) {
     const column = datesInHeader(header);
@@ -125,10 +141,17 @@ function datesInColumns(headers: readonly string[]): Dates | null {
     if (!column || (previous && column.start !== addDays(previous.end, 1))) return null;
     columns.push(column);
   }
+  return columns;
+}
+
+function spanOf(columns: readonly Dates[]): Dates | null {
   const first = columns.at(0);
   const last = columns.at(-1);
   return first && last ? { start: first.start, end: last.end } : null;
 }
+
+/** True when a column's days run from one Monday to Sunday week into the next. */
+const crossesWeeks = ({ start, end }: Dates) => weekEndingOf(start) !== weekEndingOf(end);
 
 /** The hours of each day the file covers, when it isn't the whole day. */
 function partOfDay(title: string): string | null {
@@ -138,14 +161,12 @@ function partOfDay(title: string): string | null {
   return /^12:00\s*AM-11:59\s*PM$/i.test(range) ? null : range;
 }
 
-/** Reads one sales summary file for one Monday to Sunday week. */
-export function parseSalesSummary(text: string, fileName: string): ParsedSalesSummary {
-  const table = parseTable(text);
+/** Reads one Monday to Sunday week. `named` is the dates its file's name gives. */
+function readWeek(table: string[][], named: Dates | null): ParsedSalesSummary {
   const values = new Map<Row, number>();
-  const labels = new Map<string, Row>(Object.entries(ROWS).map(([row, label]) => [label, row as Row]));
 
   for (const [label = "", ...cells] of table) {
-    const row = labels.get(normalizeLabel(label));
+    const row = ROW_BY_LABEL.get(normalizeLabel(label));
     if (!row || values.has(row)) continue;
     const cents = rowAmount(cells);
     if (cents !== null) values.set(row, cents);
@@ -161,14 +182,19 @@ export function parseSalesSummary(text: string, fileName: string): ParsedSalesSu
     return { ok: false, error: `This file covers only ${hours} each day. Export it from Square with All day picked.` };
   }
 
-  const [first = "", ...rest] = table[0] ?? [];
-  const headers = labels.has(normalizeLabel(first)) ? [] : rest.filter((cell) => cell.trim() !== "");
-  const named = datesInName(fileName);
-  const inColumns = headers.length > 0 ? datesInColumns(headers) : null;
-  if (headers.length > 0 && (!inColumns || (named && (inColumns.start !== named.start || inColumns.end !== named.end)))) {
+  const headers = columnHeaders(table);
+  const columns = headers.length > 0 ? columnDates(headers) : null;
+  const inColumns = columns && spanOf(columns);
+  if (headers.length > 0 && (!inColumns || (named && !sameDates(inColumns, named)))) {
     return {
       ok: false,
       error: "Square split this file into columns that don't cover the whole week. Export it again in the Summary view.",
+    };
+  }
+  if (columns?.some(crossesWeeks)) {
+    return {
+      ok: false,
+      error: "Square's columns in this file cross from one Monday to Sunday week into the next, so they can't be split up. Export it by day instead.",
     };
   }
 
@@ -178,7 +204,7 @@ export function parseSalesSummary(text: string, fileName: string): ParsedSalesSu
     if (!isWeekEnding(dates.end) || weekStartOf(dates.end) !== dates.start) {
       return {
         ok: false,
-        error: `This file covers ${formatDate(dates.start)} to ${formatDate(dates.end)}. Export one week from Square, Monday to Sunday.`,
+        error: `This file covers ${formatDate(dates.start)} to ${formatDate(dates.end)}. Export it from Square by day, or export one week, Monday to Sunday.`,
       };
     }
     week_ending = dates.end;
@@ -187,12 +213,13 @@ export function parseSalesSummary(text: string, fileName: string): ParsedSalesSu
   const get = (row: Row) => values.get(row) ?? 0;
   // Square shows what it takes off as negative amounts.
   const returns = Math.abs(get("returns"));
+  const refunds = Math.abs(get("refunds"));
   const discounts = Math.abs(get("discounts"));
   const fees = Math.abs(get("fees"));
 
   const sums: [Row, number][] = [
     ["net", get("gross") - returns - discounts],
-    ["totalSales", get("net") + get("deferred") + get("taxes") + get("tips")],
+    ["totalSales", get("net") + get("deferred") + get("taxes") + get("tips") - refunds],
     ["payments", get("totalSales")],
     ["netTotal", get("payments") - fees],
   ];
@@ -210,7 +237,7 @@ export function parseSalesSummary(text: string, fileName: string): ParsedSalesSu
 
   const lines: CafeLines = {
     sales_cents: get("gross"),
-    returns_cents: returns,
+    returns_cents: returns + refunds,
     discounts_cents: discounts,
     gift_card_sales_cents: get("giftCardSales"),
     gift_card_redeemed_cents: get("giftCardRedeemed"),
@@ -237,4 +264,45 @@ export function parseSalesSummary(text: string, fileName: string): ParsedSalesSu
   }
 
   return { ok: true, week_ending, lines };
+}
+
+/**
+ * Reads a sales summary file into its weeks: one, unless it's by day across
+ * more than one Monday to Sunday week. A week the file has only part of is
+ * turned away, and a week with nothing in it isn't a week the cafe ran.
+ */
+export function parseSalesSummaries(text: string, fileName: string): ParsedSalesSummary[] {
+  const table = parseTable(text);
+  const named = datesInName(fileName);
+  const columns = columnDates(columnHeaders(table));
+  const span = columns && spanOf(columns);
+  if (!columns || !span || columns.some(crossesWeeks) || (named && !sameDates(span, named)) || partOfDay(table[0]?.[0] ?? "")) {
+    return [readWeek(table, named)];
+  }
+
+  const weeks = new Map<IsoDate, Dates & { indexes: number[] }>();
+  columns.forEach(({ start, end }, index) => {
+    const week = weekEndingOf(end);
+    const found = weeks.get(week);
+    if (found) {
+      found.end = end;
+      found.indexes.push(index);
+    } else {
+      weeks.set(week, { start, end, indexes: [index] });
+    }
+  });
+  if (weeks.size < 2) return [readWeek(table, named)];
+
+  const parsed = [...weeks].flatMap(([week, { start, end, indexes }]): ParsedSalesSummary[] => {
+    const monday = weekStartOf(week);
+    const dates = `${formatDate(monday)} to ${formatDate(week)}`;
+    if (start !== monday || end !== week) {
+      return [{ ok: false, error: `Only part of the week ${dates} is in this file. Export the whole week, Monday to Sunday.` }];
+    }
+    const slice = table.map(([label = "", ...cells]) => [label, ...indexes.map((index) => cells[index] ?? "")]);
+    const result = readWeek(slice, { start: monday, end: week });
+    if (!result.ok) return [{ ok: false, error: `${dates}: ${result.error}` }];
+    return Object.values(result.lines).some(Boolean) ? [result] : [];
+  });
+  return parsed.length ? parsed : [{ ok: false, error: "This file has no sales in it." }];
 }

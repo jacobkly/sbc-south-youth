@@ -4,9 +4,10 @@ import type { ParsedSalesSummary } from "./square";
 import { FIRST_WEEK_ENDING, latestWeekEnding } from "./weeks";
 
 /**
- * A file picked for import, read, with the week the person picked when its
- * name has no dates. Its key is picked once, and a new week saves with it as
- * its id, so importing again after a dropped connection can't add it twice.
+ * One week read from a file picked for import, with the week the person
+ * picked when the file has no dates. A file by day gives one of these per
+ * week. Its key is picked once, and a new week saves with it as its id, so
+ * importing again after a dropped connection can't add it twice.
  */
 export type CafeImportFile = { key: string; name: string; parsed: ParsedSalesSummary; picked: IsoDate | null };
 

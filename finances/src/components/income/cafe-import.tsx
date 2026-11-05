@@ -21,7 +21,7 @@ import {
   type CafeImportRow,
 } from "@/lib/income/cafe-import";
 import { incomeSaveErrorMessage } from "@/lib/income/schema";
-import { parseSalesSummary } from "@/lib/income/square";
+import { parseSalesSummaries, type ParsedSalesSummary } from "@/lib/income/square";
 import { defaultWeekEnding, weekLabel } from "@/lib/income/weeks";
 import { formatCents } from "@/lib/money";
 import { newLineId } from "@/lib/requests/lines";
@@ -31,21 +31,21 @@ import { cn } from "@/lib/utils";
 // A year of weeks, with room to spare.
 const MAX_FILES = 60;
 
-// A week's sales summary is a few kilobytes.
-const MAX_FILE_BYTES = 200_000;
+// A sales summary by day is about 180 bytes a day, so this holds over ten years.
+const MAX_FILE_BYTES = 1_000_000;
 
-async function readFile(file: File): Promise<CafeImportFile> {
-  const base = { key: newLineId(), name: file.name, picked: null };
+async function readFile(file: File): Promise<CafeImportFile[]> {
+  const entry = (parsed: ParsedSalesSummary): CafeImportFile => ({ key: newLineId(), name: file.name, parsed, picked: null });
   if (!/\.csv$/i.test(file.name)) {
-    return { ...base, parsed: { ok: false, error: "Export the sales summary from Square as a CSV file." } };
+    return [entry({ ok: false, error: "Export the sales summary from Square as a CSV file." })];
   }
   if (file.size > MAX_FILE_BYTES) {
-    return { ...base, parsed: { ok: false, error: "This file is too big for one week's sales summary." } };
+    return [entry({ ok: false, error: "This file is too big for Square's sales summary." })];
   }
   try {
-    return { ...base, parsed: parseSalesSummary(await file.text(), file.name) };
+    return parseSalesSummaries(await file.text(), file.name).map(entry);
   } catch {
-    return { ...base, parsed: { ok: false, error: "Couldn't read this file. Try choosing it again." } };
+    return [entry({ ok: false, error: "Couldn't read this file. Try choosing it again." })];
   }
 }
 
@@ -54,9 +54,10 @@ function weekCount(count: number): string {
 }
 
 /**
- * Imports weeks from Square's sales summary, one CSV file per week. Choosing
- * files opens a preview of each week. New weeks go in, and a week already
- * entered is replaced only when its switch is on.
+ * Imports weeks from Square's sales summary: a CSV file per week, or one file
+ * by day that holds many weeks. Choosing files opens a preview of each week.
+ * New weeks go in, and a week already entered is replaced only when its switch
+ * is on.
  */
 export function CafeImportButton({
   weeks,
@@ -94,7 +95,7 @@ export function CafeImportButton({
       return;
     }
     const read = await Promise.all([...list].map(readFile));
-    setFiles(read.sort(byImportOrder));
+    setFiles(read.flat().sort(byImportOrder));
   }
 
   function pick(key: string, week: IsoDate) {
@@ -146,6 +147,7 @@ export function CafeImportButton({
   ]
     .filter(Boolean)
     .join(" · ");
+  const manyFiles = new Set(rows.map((row) => row.name)).size > 1;
 
   return (
     <>
@@ -177,7 +179,7 @@ export function CafeImportButton({
             <SheetDescription>
               {tooMany
                 ? `Choose up to ${MAX_FILES} files at a time.`
-                : `Each file is one week of Square's sales summary. ${summary}.`}
+                : `Weeks from Square's sales summary. ${summary}.`}
             </SheetDescription>
           </SheetHeader>
 
@@ -198,6 +200,7 @@ export function CafeImportButton({
                       <ImportRow
                         row={row}
                         today={today}
+                        showName={manyFiles}
                         picked={file?.parsed.ok && !file.parsed.week_ending ? (file.picked ?? null) : undefined}
                         saved={row.status === "existing" ? saved.get(row.week_ending) : undefined}
                         replacing={row.status === "existing" && replace.has(row.week_ending)}
@@ -211,7 +214,7 @@ export function CafeImportButton({
             )}
 
             {counts.left > 0 && (
-              <p className="text-sm text-muted-foreground">Files left out aren&apos;t saved. The rest still go in.</p>
+              <p className="text-sm text-muted-foreground">Anything left out isn&apos;t saved. The rest still go in.</p>
             )}
           </div>
 
@@ -243,6 +246,7 @@ function amounts(lines: CafeLines): string {
 function ImportRow({
   row,
   today,
+  showName,
   picked,
   saved,
   replacing,
@@ -251,6 +255,8 @@ function ImportRow({
 }: {
   row: CafeImportRow;
   today: IsoDate;
+  /** Whether to say which file a week came from, when more than one was picked. */
+  showName: boolean;
   /** The week picked for a file whose name has no dates, null before one is. Undefined for other files. */
   picked: IsoDate | null | undefined;
   saved: CafeWeek | undefined;
@@ -285,7 +291,7 @@ function ImportRow({
           {row.status === "existing" && saved && (
             <p className="text-sm text-muted-foreground tabular-nums">Entered now: {amounts(saved)}</p>
           )}
-          {"week_ending" in row && <p className="truncate text-xs text-muted-foreground">{row.name}</p>}
+          {showName && "week_ending" in row && <p className="truncate text-xs text-muted-foreground">{row.name}</p>}
         </div>
         <span className="shrink-0">{badge}</span>
       </div>
