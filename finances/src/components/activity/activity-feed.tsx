@@ -24,11 +24,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { itemTitle, leadEvent, type ActivityDay, type ActivityItem, type ActivityKind } from "@/lib/activity/feed";
 import {
+  cafeImportLine,
+  cafeImportTitle,
   describeIncomeChanges,
   incomeLine,
   incomeTitle,
   titheImportLine,
   titheImportOf,
+  type CafeImportItem as CafeImportFeedItem,
   type IncomeItem as IncomeFeedItem,
   type IncomeSubject,
 } from "@/lib/activity/income";
@@ -68,8 +71,8 @@ function ItemIcon({ icon: Icon }: { icon: LucideIcon }) {
   );
 }
 
-/** One item in the feed: a request's events, many requests at once, or an income change. */
-export type FeedItem = ActivityItem<ActivityEvent> | IncomeFeedItem<IncomeActivity>;
+/** One item in the feed: a request's events, many requests at once, an income change, or a cafe import. */
+export type FeedItem = ActivityItem<ActivityEvent> | IncomeFeedItem<IncomeActivity> | CafeImportFeedItem<IncomeActivity>;
 
 /** The item's headline, with the time it happened on the right. */
 function ItemHeading({ title, createdAt }: { title: string; createdAt: string }) {
@@ -226,6 +229,31 @@ function IncomeItem({
   );
 }
 
+/** Many cafe weeks imported at once, linking to the cafe tab. */
+function CafeImportItem({
+  item,
+  currentUserId,
+}: {
+  item: CafeImportFeedItem<IncomeActivity>;
+  currentUserId: string | null;
+}) {
+  return (
+    <li>
+      <Link
+        href={incomeHref("cafe")}
+        className="flex items-start gap-3 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted"
+      >
+        <ItemIcon icon={FileSpreadsheetIcon} />
+        <div className="min-w-0 flex-1 space-y-1">
+          <ItemHeading title={cafeImportTitle(item.changes)} createdAt={item.created_at} />
+          <p className="truncate text-sm text-muted-foreground">{cafeImportLine(item.changes)}</p>
+          <Actor event={item.changes[0]} currentUserId={currentUserId} />
+        </div>
+      </Link>
+    </li>
+  );
+}
+
 /** Items under a heading for each day, newest first. */
 export function ActivityFeed({
   days,
@@ -250,7 +278,9 @@ export function ActivityFeed({
           </h2>
           <ul className="divide-y overflow-hidden rounded-lg border">
             {day.items.map((item) =>
-              item.type === "income" ? (
+              item.type === "cafe_import" ? (
+                <CafeImportItem key={item.key} item={item} currentUserId={currentUserId} />
+              ) : item.type === "income" ? (
                 <IncomeItem
                   key={item.key}
                   item={item}

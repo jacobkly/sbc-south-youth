@@ -17,7 +17,7 @@ import {
   type IncomeMethod,
 } from "@/lib/income/schema";
 import type { YouthEntry } from "@/lib/income/stats";
-import { weekLabel } from "@/lib/income/weeks";
+import { weekLabel, weekStartOf } from "@/lib/income/weeks";
 import { formatCents } from "@/lib/money";
 import { rangeLabel } from "@/lib/reports/comparison";
 
@@ -27,6 +27,7 @@ export const INCOME_ENTITY_TYPES = ["youth_income", "cafe_week", "cafe_payback"]
 /** One income change from the activity log. */
 export type IncomeChange = {
   id: string;
+  actor_id?: string | null;
   /** e.g. "youth_income.updated". */
   action: string;
   entity_type: string;
@@ -44,6 +45,12 @@ export type IncomeSubject =
 
 /** An income change as an item in the feed. */
 export type IncomeItem<T> = { type: "income"; key: string; created_at: string; change: T };
+
+/** Weeks added at one instant by one person, which only an import does at this many. */
+const CAFE_IMPORT_WEEKS = 3;
+
+/** A cafe import as one item in the feed. Each week it added keeps its own row in the log. */
+export type CafeImportItem<T> = { type: "cafe_import"; key: string; created_at: string; changes: T[] };
 
 type JsonRecord = { [key: string]: Json | undefined };
 
@@ -344,20 +351,59 @@ export function takeNewest<A extends Stamped, B extends Stamped>(
   return { a: keptA, b: keptB, more: a.length + b.length > count };
 }
 
+/** "Imported 312 cafe weeks" */
+export function cafeImportTitle(changes: readonly IncomeChange[]): string {
+  return `Imported ${changes.length.toLocaleString("en-US")} cafe weeks`;
+}
+
+/** "$12,345.67 · Oct 12, 2020 – Nov 1, 2026": the money from Square, as the import recorded it. */
+export function cafeImportLine(changes: readonly IncomeChange[]): string {
+  const weeks = changes.flatMap((change) => {
+    const subject = snapshotOf(change);
+    return subject?.type === "cafe_week" ? [subject.week] : [];
+  });
+  const endings = weeks.map((week) => week.week_ending).sort();
+  const [first, last] = [endings[0], endings.at(-1)];
+  if (!first || !last) return "From Square";
+  const money = weeks.reduce((total, week) => total + moneyFromSquare(week), 0);
+  return `${formatCents(money)} · ${rangeLabel({ start: weekStartOf(first), end: last })}`;
+}
+
+/** Income changes as feed items, with the weeks an import added folded into one. */
+function incomeItems<T extends IncomeChange>(changes: readonly T[]): (IncomeItem<T> | CafeImportItem<T>)[] {
+  const isWeekAdded = (change: T) => change.action === "cafe_week.created";
+  const instantOf = (change: T) => `${change.actor_id}|${change.created_at}`;
+  const weeksAt = new Map<string, T[]>();
+  for (const change of changes) {
+    if (!isWeekAdded(change)) continue;
+    const weeks = weeksAt.get(instantOf(change));
+    if (weeks) weeks.push(change);
+    else weeksAt.set(instantOf(change), [change]);
+  }
+
+  return changes.flatMap((change): (IncomeItem<T> | CafeImportItem<T>)[] => {
+    const weeks = isWeekAdded(change) ? weeksAt.get(instantOf(change)) : undefined;
+    if (!weeks || weeks.length < CAFE_IMPORT_WEEKS) {
+      return [{ type: "income", key: change.id, created_at: change.created_at, change }];
+    }
+    return weeks[0] === change ? [{ type: "cafe_import", key: change.id, created_at: change.created_at, changes: weeks }] : [];
+  });
+}
+
 /** Newest-first request items with newest-first income changes, as one newest-first feed. */
 export function mergeIncome<R extends { created_at: string }, T extends IncomeChange>(
   items: readonly R[],
   changes: readonly T[],
-): (R | IncomeItem<T>)[] {
-  const merged: (R | IncomeItem<T>)[] = [];
-  const asItem = (change: T): IncomeItem<T> => ({ type: "income", key: change.id, created_at: change.created_at, change });
+): (R | IncomeItem<T> | CafeImportItem<T>)[] {
+  const income = incomeItems(changes);
+  const merged: (R | IncomeItem<T> | CafeImportItem<T>)[] = [];
   let next = 0;
   for (const item of items) {
-    while (next < changes.length && Date.parse(changes[next].created_at) > Date.parse(item.created_at)) {
-      merged.push(asItem(changes[next++]));
+    while (next < income.length && Date.parse(income[next].created_at) > Date.parse(item.created_at)) {
+      merged.push(income[next++]);
     }
     merged.push(item);
   }
-  for (const change of changes.slice(next)) merged.push(asItem(change));
+  merged.push(...income.slice(next));
   return merged;
 }

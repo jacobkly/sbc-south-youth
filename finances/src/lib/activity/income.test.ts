@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { NO_LINES } from "@/lib/income/cafe";
 import {
+  cafeImportLine,
+  cafeImportTitle,
   currentSubjects,
   describeIncomeChanges,
   incomeLine,
@@ -388,6 +390,84 @@ describe("mergeIncome", () => {
       key: "i2",
       created_at: "2026-10-05T18:04:00Z",
       change: income[0],
+    });
+  });
+
+  /** A week the log recorded as added, the way an import adds them: all at one instant. */
+  function weekAdded(id: string, weekEnding: string, overrides: Partial<IncomeChange> = {}): IncomeChange {
+    return change({
+      id,
+      action: "cafe_week.created",
+      entity_type: "cafe_week",
+      entity_id: `week-${id}`,
+      changes: {
+        week_ending: { from: null, to: weekEnding },
+        sales_cents: { from: null, to: 10000 },
+        fees_cents: { from: null, to: 300 },
+      },
+      actor_id: "alex",
+      ...overrides,
+    });
+  }
+
+  const threeWeeks = [
+    weekAdded("w3", "2026-09-27"),
+    weekAdded("w2", "2026-09-20"),
+    weekAdded("w1", "2026-09-13"),
+  ];
+
+  it("folds 3 weeks added at one instant by one person into one import", () => {
+    const merged = mergeIncome([], threeWeeks);
+    expect(merged).toEqual([
+      { type: "cafe_import", key: "w3", created_at: "2026-10-05T18:00:00Z", changes: threeWeeks },
+    ]);
+  });
+
+  it("keeps the import in order among the other items", () => {
+    const requests = [
+      { type: "request" as const, key: "newer", created_at: "2026-10-05T19:00:00Z" },
+      { type: "request" as const, key: "older", created_at: "2026-10-05T17:00:00Z" },
+    ];
+    const tithe = change({ id: "t", created_at: "2026-10-05T17:30:00Z" });
+    expect(mergeIncome(requests, [...threeWeeks, tithe]).map((item) => item.key)).toEqual(["newer", "w3", "t", "older"]);
+  });
+
+  it("leaves 2 weeks added at one instant as their own items", () => {
+    const merged = mergeIncome([], threeWeeks.slice(0, 2));
+    expect(merged.map((item) => item.type)).toEqual(["income", "income"]);
+  });
+
+  it("doesn't fold weeks added at different times, or by different people", () => {
+    const apart = [
+      weekAdded("c", "2026-09-27", { created_at: "2026-10-05T18:02:00Z" }),
+      weekAdded("b", "2026-09-20", { created_at: "2026-10-05T18:01:00Z" }),
+      weekAdded("a", "2026-09-13"),
+    ];
+    expect(mergeIncome([], apart).map((item) => item.type)).toEqual(["income", "income", "income"]);
+
+    const people = [weekAdded("c", "2026-09-27"), weekAdded("b", "2026-09-20"), weekAdded("a", "2026-09-13", { actor_id: "sam" })];
+    expect(mergeIncome([], people).map((item) => item.type)).toEqual(["income", "income", "income"]);
+  });
+
+  it("doesn't fold other changes made at one instant", () => {
+    const edits = threeWeeks.map((week) => ({ ...week, action: "cafe_week.updated" }));
+    expect(mergeIncome([], edits).map((item) => item.type)).toEqual(["income", "income", "income"]);
+    const tithes = [change({ id: "c" }), change({ id: "b" }), change({ id: "a" })];
+    expect(mergeIncome([], tithes).map((item) => item.type)).toEqual(["income", "income", "income"]);
+  });
+
+  describe("an import's headline", () => {
+    it("says how many weeks went in", () => {
+      expect(cafeImportTitle(threeWeeks)).toBe("Imported 3 cafe weeks");
+    });
+
+    it("gives the money from Square and the dates, from the first week's Monday to the last Sunday", () => {
+      expect(cafeImportLine(threeWeeks)).toBe("$291.00 · Sep 7–27, 2026");
+    });
+
+    it("spans years", () => {
+      const years = [weekAdded("c", "2026-09-27"), weekAdded("b", "2024-03-03"), weekAdded("a", "2020-10-18")];
+      expect(cafeImportLine(years)).toBe("$291.00 · Oct 12, 2020 – Sep 27, 2026");
     });
   });
 });
