@@ -12,8 +12,8 @@ import { isWeekEnding, weekEndingOf, weekStartOf } from "@/lib/income/weeks";
  * weeks run Sunday to Saturday, so even one of ours comes as two columns, and
  * a long range can only be split into our weeks when it's by day. Rows it
  * doesn't know, like the fee breakdown, payment methods, and transaction
- * counts, are skipped. A refund by amount counts as a return, since it comes
- * off Square's Total sales the same way.
+ * counts, are skipped. A refund by amount, or tax below $0 from a return,
+ * counts as a return, since it comes off Square's Total sales the same way.
  */
 
 // Matches the cafe_weeks column checks.
@@ -235,13 +235,15 @@ function readWeek(table: string[][], named: Dates | null): ParsedSalesSummary {
     return { ok: false, error: "This week has deferred sales that aren't gift cards. Type the week in by hand." };
   }
 
+  // A return can give back more tax than the week took in.
+  const taxesBack = Math.max(-get("taxes"), 0);
   const lines: CafeLines = {
     sales_cents: get("gross"),
-    returns_cents: returns + refunds,
+    returns_cents: returns + refunds + taxesBack,
     discounts_cents: discounts,
     gift_card_sales_cents: get("giftCardSales"),
     gift_card_redeemed_cents: get("giftCardRedeemed"),
-    taxes_cents: get("taxes"),
+    taxes_cents: Math.max(get("taxes"), 0),
     tips_cents: get("tips"),
     fees_cents: fees,
   };

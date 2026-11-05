@@ -351,6 +351,25 @@ describe("parseSalesSummary", () => {
     expect(parseSalesSummary(summary(rows), WEEK_FILE)).toMatchObject({ ok: true, lines: { returns_cents: 3200 } });
   });
 
+  it("counts tax below $0 as a return, so money in matches Square's", () => {
+    // A returned sale can give back more tax than the week took in.
+    const rows: [string, string][] = [
+      ["Gross sales", "$100.00"],
+      ["Returns", "($10.00)"],
+      ["Discounts & comps", "$0.00"],
+      ["Net sales", "$90.00"],
+      ["Taxes", "($0.80)"],
+      ["Tips", "$0.00"],
+      ["Total sales", "$89.20"],
+      ["Total payments collected", "$89.20"],
+      ["Fees", "($3.00)"],
+      ["Net total", "$86.20"],
+    ];
+    const parsed = parseSalesSummary(summary(rows), WEEK_FILE);
+    expect(parsed).toMatchObject({ ok: true, lines: { returns_cents: 1080, taxes_cents: 0 } });
+    expect(parsed.ok && netTotal(parsed.lines)).toBe(8620);
+  });
+
   it("turns away a file that isn't a sales summary", () => {
     expect(parseSalesSummary("Date,Amount\n2026-10-05,12.00\n", WEEK_FILE)).toMatchObject({ ok: false });
     expect(parseSalesSummary("", WEEK_FILE)).toMatchObject({ ok: false });
