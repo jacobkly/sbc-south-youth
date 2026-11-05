@@ -59,8 +59,8 @@ Both apps use one Supabase project, kept in [`supabase/`](supabase/): migrations
 npm install                                  # installs the Supabase CLI
 npx supabase login
 npx supabase link --project-ref <project-ref>
-npx supabase db push --dry-run               # list migrations the hosted project doesn't have yet
-npx supabase db push                         # apply them, in order
+npx supabase db push --remote --dry-run      # list migrations the hosted project doesn't have yet
+npx supabase db push --remote                # apply them, in order
 npm run db:types                             # regenerate the finances app's database types
 ```
 

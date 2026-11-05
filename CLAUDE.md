@@ -37,8 +37,8 @@ In both apps, `.env.local` may hold the hosted project's keys, so the maintainer
 Run these from the repo root, where the Supabase CLI is installed:
 
 ```bash
-npx supabase db push --dry-run     # list migrations the linked project doesn't have yet
-npx supabase db push               # apply them
+npx supabase db push --remote --dry-run  # list migrations the hosted project doesn't have yet
+npx supabase db push --remote            # apply them
 npm run db:types                   # regenerate finances/src/lib/database.types.ts from the hosted project
 npx supabase start                 # local Supabase stack (needs Docker Desktop)
 npx supabase migration up --local  # apply new migrations to the local DB, keeping its data
@@ -48,7 +48,7 @@ npm run db:types:local             # finances types from the local stack
 npm run db:types:site              # site/src/lib/database.types.ts (public and site schemas)
 ```
 
-The maintainer runs `link` and `db push` against the hosted project. Claude doesn't handle the database password, and never runs anything with `--linked`, including `npm run db:types`.
+The maintainer runs `link` and `db push --remote` against the hosted project. In CLI 3, plain `db push` goes to the local stack. In 2.x it goes to the linked project, so check the `Target:` line of a dry run first. Claude doesn't handle the database password, and never runs anything with `--linked` or `--remote`, including `npm run db:types`.
 
 - Use `migration up --local` for a new migration. `db reset` wipes local data, including anything another session is using.
 - The local type generator formats its output differently from the committed files. When a migration changes the types, edit the committed file by hand in its existing format instead of committing a reformatted one.
