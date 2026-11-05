@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupByMonth, titheStats, youthSummary, type YouthEntry } from "./stats";
+import { groupByMonth, groupMonthsByYear, titheStats, youthSummary, type YouthEntry } from "./stats";
 
 let next = 0;
 
@@ -101,5 +101,22 @@ describe("groupByMonth", () => {
 
   it("has no months with no entries", () => {
     expect(groupByMonth([])).toEqual([]);
+  });
+});
+
+describe("groupMonthsByYear", () => {
+  const month = (year: number, number: number) => ({ period: { kind: "month" as const, year, month: number } });
+
+  it("puts newest-first months under their year, keeping their order", () => {
+    const [october, january, december, june] = [month(2026, 10), month(2026, 1), month(2025, 12), month(2024, 6)];
+    expect(groupMonthsByYear([october, january, december, june])).toEqual([
+      { year: 2026, months: [october, january] },
+      { year: 2025, months: [december] },
+      { year: 2024, months: [june] },
+    ]);
+  });
+
+  it("has no years with no months", () => {
+    expect(groupMonthsByYear([])).toEqual([]);
   });
 });

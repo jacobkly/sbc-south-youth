@@ -1,20 +1,24 @@
 import type { ReactNode } from "react";
 import { ChevronRightIcon, PlusIcon } from "lucide-react";
 import { plural, Stat } from "@/components/income/stat";
+import { Fold } from "@/components/income/fold";
 import { Button } from "@/components/ui/button";
 import { periodLabel, type IsoDate, type MonthPeriod } from "@/lib/dates";
 import {
+  cafeTotalsIn,
   groupWeeksByMonth,
   moneyFromSquare,
   paybackStatus,
   quarterStartOf,
   type CafeCost,
+  type CafeMonthGroup,
   type CafePaybackIncome,
   type CafeTotals,
   type CafeWeek,
   type DiscountQuarter,
   type PaybackStatus,
 } from "@/lib/income/cafe";
+import { groupMonthsByYear } from "@/lib/income/stats";
 import { relativeWeekLabel, weekLabel } from "@/lib/income/weeks";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -67,8 +71,9 @@ const PAYBACK_LABELS: Record<PaybackStatus, string> = {
 
 /**
  * Cafe weeks by month, newest first, with each month's money, costs, and
- * profit, and whether each week's discounts are paid back. Owners tap a week
- * to edit it. Viewers see the same list with nothing to tap.
+ * profit, and whether each week's discounts are paid back. The newest month
+ * stays open, and earlier months and past years fold into a row each. Owners
+ * tap a week to edit it. Viewers see the same list with nothing to tap.
  */
 export function CafeWeekList({
   weeks,
@@ -114,51 +119,94 @@ export function CafeWeekList({
   }
 
   const statusOf = new Map(quarters.map((quarter) => [quarter.start, paybackStatus(quarter)]));
+  const [newest, ...older] = groupMonthsByYear(groupWeeksByMonth(weeks, costs, paybacks));
+  const [latest, ...earlier] = newest.months;
+
+  function weekList(monthWeeks: CafeWeek[]) {
+    return (
+      <ul className="divide-y overflow-hidden rounded-lg border">
+        {monthWeeks.map((week) => (
+          <li key={week.id}>
+            <WeekRow
+              week={week}
+              status={statusOf.get(quarterStartOf(week.week_ending)) ?? "owed"}
+              today={today}
+              onOpen={onOpen}
+            />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  /** How many weeks, and the money behind the profit. */
+  function foldLines(totals: CafeTotals) {
+    return {
+      note: plural(totals.weeks, "week", "weeks"),
+      total: <Profit cents={totals.profit} />,
+      detail: moneyLine(totals),
+    };
+  }
+
+  function monthFold({ period, totals, weeks: monthWeeks }: CafeMonthGroup) {
+    return (
+      <Fold key={`${period.year}-${period.month}`} title={periodLabel(period)} {...foldLines(totals)}>
+        {weekList(monthWeeks)}
+      </Fold>
+    );
+  }
+
+  const headingId = `cafe-${latest.period.year}-${latest.period.month}`;
 
   return (
     <div className="space-y-6">
-      {groupWeeksByMonth(weeks, costs, paybacks).map(({ period, totals, weeks: monthWeeks }) => {
-        const headingId = `cafe-${period.year}-${period.month}`;
-        return (
-          <section key={headingId} aria-labelledby={headingId} className="space-y-2">
-            <div className="space-y-0.5 px-1">
-              <div className="flex items-baseline justify-between gap-3">
-                <h2 id={headingId} className="text-sm font-medium">
-                  {periodLabel(period)}
-                </h2>
-                <p className="text-sm tabular-nums">
-                  <span className="text-muted-foreground">Profit </span>
-                  {formatCents(totals.profit)}
-                </p>
-              </div>
-              <p className="text-xs text-muted-foreground tabular-nums">
-                {[
-                  `From Square ${formatCents(totals.moneyIn)}`,
-                  totals.discounts > 0 && `Discounts ${formatCents(totals.discounts)}`,
-                  totals.giftCards > 0 && `Gift cards ${formatCents(totals.giftCards)}`,
-                  `Costs ${formatCents(totals.costs)}`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            </div>
-            <ul className="divide-y overflow-hidden rounded-lg border">
-              {monthWeeks.map((week) => (
-                <li key={week.id}>
-                  <WeekRow
-                    week={week}
-                    status={statusOf.get(quarterStartOf(week.week_ending)) ?? "owed"}
-                    today={today}
-                    onOpen={onOpen}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+      <section aria-labelledby={headingId} className="space-y-2">
+        <div className="space-y-0.5 px-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id={headingId} className="text-sm font-medium">
+              {periodLabel(latest.period)}
+            </h2>
+            <p className="text-sm tabular-nums">
+              <Profit cents={latest.totals.profit} />
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground tabular-nums">{moneyLine(latest.totals)}</p>
+        </div>
+        {weekList(latest.weeks)}
+      </section>
+      {(earlier.length > 0 || older.length > 0) && (
+        <div className="space-y-2">
+          {earlier.map(monthFold)}
+          {older.map(({ year, months }) => (
+            <Fold key={year} title={String(year)} {...foldLines(cafeTotalsIn(weeks, costs, paybacks, { kind: "year", year }))}>
+              {months.map(monthFold)}
+            </Fold>
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+function Profit({ cents }: { cents: number }) {
+  return (
+    <span>
+      <span className="text-muted-foreground">Profit </span>
+      {formatCents(cents)}
+    </span>
+  );
+}
+
+/** "From Square $650.00 · Discounts $45.00 · Costs $120.00" */
+function moneyLine(totals: CafeTotals): string {
+  return [
+    `From Square ${formatCents(totals.moneyIn)}`,
+    totals.discounts > 0 && `Discounts ${formatCents(totals.discounts)}`,
+    totals.giftCards > 0 && `Gift cards ${formatCents(totals.giftCards)}`,
+    `Costs ${formatCents(totals.costs)}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function WeekRow({

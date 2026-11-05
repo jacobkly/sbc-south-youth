@@ -80,3 +80,14 @@ export function groupByMonth<T extends YouthEntry>(entries: readonly T[]): (Mont
   }
   return groups;
 }
+
+/** Newest-first months by year, keeping their order. */
+export function groupMonthsByYear<T extends { period: MonthPeriod }>(months: readonly T[]): { year: number; months: T[] }[] {
+  const years: { year: number; months: T[] }[] = [];
+  for (const month of months) {
+    const last = years.at(-1);
+    if (last?.year === month.period.year) last.months.push(month);
+    else years.push({ year: month.period.year, months: [month] });
+  }
+  return years;
+}

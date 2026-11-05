@@ -1,10 +1,18 @@
 import { ChevronRightIcon, PlusIcon } from "lucide-react";
 import { plural, Stat } from "@/components/income/stat";
+import { Fold } from "@/components/income/fold";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatListDate, periodLabel, type IsoDate, type MonthPeriod } from "@/lib/dates";
 import { incomeMethodLabel, YOUTH_INCOME_KIND_LABELS } from "@/lib/income/schema";
-import { groupByMonth, type YouthEntry, type YouthSummary } from "@/lib/income/stats";
+import {
+  groupByMonth,
+  groupMonthsByYear,
+  youthSummary,
+  type MonthGroup,
+  type YouthEntry,
+  type YouthSummary,
+} from "@/lib/income/stats";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -34,8 +42,9 @@ export function YouthMonthSummary({ month, summary }: { month: MonthPeriod; summ
 }
 
 /**
- * Youth entries by month, newest first. Owners tap one to edit it. Viewers
- * see the same list with nothing to tap.
+ * Youth entries by month, newest first. The newest month stays open, and
+ * earlier months and past years fold into a row each. Owners tap an entry to
+ * edit it. Viewers see the same list with nothing to tap.
  */
 export function YouthEntryList({
   entries,
@@ -64,31 +73,65 @@ export function YouthEntryList({
     );
   }
 
+  const [newest, ...older] = groupMonthsByYear(groupByMonth(entries));
+  const [latest, ...earlier] = newest.months;
+
+  function entryList(monthEntries: YouthEntry[]) {
+    return (
+      <ul className="divide-y overflow-hidden rounded-lg border">
+        {monthEntries.map((entry) => (
+          <li key={entry.id}>
+            <EntryRow entry={entry} today={today} onOpen={onOpen} />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  /** How many entries, and the tithes and events behind a total. */
+  function foldLines(foldEntries: YouthEntry[]) {
+    const { total, tithes, events } = youthSummary(foldEntries);
+    return {
+      note: plural(tithes.count + events.count, "entry", "entries"),
+      total: formatCents(total),
+      detail: `Tithes ${formatCents(tithes.total)} · Events ${formatCents(events.total)}`,
+    };
+  }
+
+  function monthFold({ period, entries: monthEntries }: MonthGroup) {
+    return (
+      <Fold key={`${period.year}-${period.month}`} title={periodLabel(period)} {...foldLines(monthEntries)}>
+        {entryList(monthEntries)}
+      </Fold>
+    );
+  }
+
+  const headingId = `youth-${latest.period.year}-${latest.period.month}`;
+
   return (
     <div className="space-y-6">
-      {groupByMonth(entries).map(({ period, total, entries: monthEntries }) => {
-        const headingId = `youth-${period.year}-${period.month}`;
-        return (
-          <section key={headingId} aria-labelledby={headingId} className="space-y-2">
-            <div className="flex items-baseline justify-between gap-3 px-1">
-              <h2 id={headingId} className="text-sm font-medium">
-                {periodLabel(period)}
-              </h2>
-              <p className="text-sm text-muted-foreground tabular-nums">
-                {formatCents(total)}
-                <span className="sr-only"> in {periodLabel(period)}</span>
-              </p>
-            </div>
-            <ul className="divide-y overflow-hidden rounded-lg border">
-              {monthEntries.map((entry) => (
-                <li key={entry.id}>
-                  <EntryRow entry={entry} today={today} onOpen={onOpen} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+      <section aria-labelledby={headingId} className="space-y-2">
+        <div className="flex items-baseline justify-between gap-3 px-1">
+          <h2 id={headingId} className="text-sm font-medium">
+            {periodLabel(latest.period)}
+          </h2>
+          <p className="text-sm text-muted-foreground tabular-nums">
+            {formatCents(latest.total)}
+            <span className="sr-only"> in {periodLabel(latest.period)}</span>
+          </p>
+        </div>
+        {entryList(latest.entries)}
+      </section>
+      {(earlier.length > 0 || older.length > 0) && (
+        <div className="space-y-2">
+          {earlier.map(monthFold)}
+          {older.map(({ year, months }) => (
+            <Fold key={year} title={String(year)} {...foldLines(months.flatMap((month) => month.entries))}>
+              {months.map(monthFold)}
+            </Fold>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

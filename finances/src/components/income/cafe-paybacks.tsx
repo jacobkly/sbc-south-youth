@@ -51,6 +51,9 @@ function shiftQuarter(start: IsoDate, steps: number): IsoDate {
   return periodRange(shiftPeriod(periodContaining("quarter", start), steps)).start;
 }
 
+/** A year's worth. Past this, the card says how many instead of listing them. */
+const OWED_QUARTERS_LISTED = 4;
+
 /**
  * What the church owes for cafe discounts, quarter by quarter, and the gift
  * cards it prepays. Owners record a payback here and tap one to fix it. Left
@@ -89,22 +92,28 @@ export function CafePaybacks({
                 <p className="font-medium">Church still owes</p>
                 <p className="font-semibold tabular-nums">{formatCents(total)}</p>
               </div>
-              <ul className="space-y-1 text-sm">
-                {owed.map((quarter) => (
-                  <li key={quarter.start} className="flex items-baseline justify-between gap-3">
-                    <span>
-                      {quarterName(quarter.start)}
-                      {quarter.start === thisQuarter && <span className="text-muted-foreground"> so far</span>}
-                    </span>
-                    <span className="tabular-nums">
-                      {formatCents(quarter.left)}
-                      {quarter.paid > 0 && (
-                        <span className="text-muted-foreground"> of {formatCents(quarter.owed)}</span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {owed.length > OWED_QUARTERS_LISTED ? (
+                <p className="text-sm text-muted-foreground">
+                  {owed.length} quarters, back to {quarterName(owed[0].start)}. Paybacks by quarter has each one.
+                </p>
+              ) : (
+                <ul className="space-y-1 text-sm">
+                  {owed.map((quarter) => (
+                    <li key={quarter.start} className="flex items-baseline justify-between gap-3">
+                      <span>
+                        {quarterName(quarter.start)}
+                        {quarter.start === thisQuarter && <span className="text-muted-foreground"> so far</span>}
+                      </span>
+                      <span className="tabular-nums">
+                        {formatCents(quarter.left)}
+                        {quarter.paid > 0 && (
+                          <span className="text-muted-foreground"> of {formatCents(quarter.owed)}</span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </>
           ) : (
             <div className="space-y-0.5">
