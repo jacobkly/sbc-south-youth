@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cafeImportErrorMessage,
   cafePaybackFieldErrors,
   cafePaybackSchema,
   cafeWeekFieldErrors,
@@ -133,6 +134,27 @@ describe("income errors", () => {
     const error = { code: "23505", message: "That week already has its sales. Open it to change them." };
     expect(isAlreadySavedError(error)).toBe(false);
     expect(incomeSaveErrorMessage(error)).toBe("That week already has its sales. Open it to change them.");
+  });
+});
+
+describe("cafeImportErrorMessage", () => {
+  it("points at what's still marked New, since a dropped reply can hide a save that worked", () => {
+    expect(cafeImportErrorMessage(null)).toBe(
+      "Couldn't save it. Check your connection and try again. Any week still marked New didn't go in.",
+    );
+  });
+
+  it("keeps the reason a save was refused", () => {
+    expect(cafeImportErrorMessage({ code: "42501" })).toBe(
+      "You don't have permission to change income. Any week still marked New didn't go in.",
+    );
+  });
+
+  it("says a week someone else entered held the new ones back", () => {
+    const error = { code: "23505", message: "That week already has its sales. Open it to change them." };
+    expect(cafeImportErrorMessage(error)).toBe(
+      "Someone else just entered one of these weeks, so the new ones didn't go in. Import again to add the rest.",
+    );
   });
 });
 

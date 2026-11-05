@@ -288,6 +288,17 @@ export function incomeSaveErrorMessage(error: IncomeError | null): string {
   return appErrorMessage(error) ?? "Couldn't save it. Check your connection and try again.";
 }
 
+/**
+ * A failed import. A dropped reply can hide a save that worked, so it doesn't
+ * claim what saved. The list reloads, and what's still marked New says.
+ */
+export function cafeImportErrorMessage(error: IncomeError | null): string {
+  if (error?.message === WEEK_TAKEN_MESSAGE) {
+    return "Someone else just entered one of these weeks, so the new ones didn't go in. Import again to add the rest.";
+  }
+  return `${incomeSaveErrorMessage(error)} Any week still marked New didn't go in.`;
+}
+
 /** A plain message for a failed delete. */
 export function incomeDeleteErrorMessage(error: IncomeError | null): string {
   if (error?.code === "42501") return NO_PERMISSION;

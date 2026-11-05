@@ -65,8 +65,18 @@ describe("planCafeImport", () => {
       [],
       TODAY,
     );
-    expect(plan.map((row) => row.status)).toEqual(["error", "new", "error"]);
+    expect(plan.map((row) => row.status)).toEqual(["error", "error", "new"]);
     expect(plan[0]).toMatchObject({ error: "Two files are for this week. Leave one of them out." });
+  });
+
+  it("names the week it turned away, and lists it above the weeks going in", () => {
+    const plan = planCafeImport(
+      [file("a.csv", "2026-10-11"), file("b.csv", "2026-10-04"), file("c.csv", "2026-10-04")],
+      [],
+      TODAY,
+    );
+    expect(plan.map((row) => row.name)).toEqual(["b.csv", "c.csv", "a.csv"]);
+    expect(plan[0]).toMatchObject({ status: "error", week_ending: "2026-10-04" });
   });
 });
 

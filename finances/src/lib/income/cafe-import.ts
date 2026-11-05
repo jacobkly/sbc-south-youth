@@ -17,7 +17,7 @@ export type CafeImportRow = Pick<CafeImportFile, "key" | "name"> &
     | { status: "new"; week_ending: IsoDate; lines: CafeLines }
     | { status: "existing"; week_ending: IsoDate; lines: CafeLines; /** The saved week's id. */ id: string }
     | { status: "needs_week"; lines: CafeLines }
-    | { status: "error"; error: string }
+    | { status: "error"; error: string; /** The week, when the file's week is what's wrong. */ week_ending?: IsoDate }
   );
 
 /** Sorts problems first, then files waiting for a week, then weeks newest first. */
@@ -28,9 +28,10 @@ export function byImportOrder(a: CafeImportFile, b: CafeImportFile): number {
 }
 
 /**
- * What each file would do, in the order picked. A week already entered is
- * marked with its id, so the person can choose to replace it. Two files for
- * one week are both turned away, since there's no telling which is right.
+ * What each file would do, with what's turned away first and the rest in the
+ * order given. A week already entered is marked with its id, so the person can
+ * choose to replace it. Two files for one week are both turned away, since
+ * there's no telling which is right.
  */
 export function planCafeImport(
   files: readonly CafeImportFile[],
@@ -47,7 +48,7 @@ export function planCafeImport(
   }
   const ids = new Map(saved.map((week) => [week.week_ending, week.id]));
 
-  return files.map((file): CafeImportRow => {
+  const rows = files.map((file): CafeImportRow => {
     const { key, name, parsed } = file;
     if (!parsed.ok) return { key, name, status: "error", error: parsed.error };
 
@@ -56,7 +57,7 @@ export function planCafeImport(
     if (week_ending > latest) return { key, name, status: "error", error: "This file's week hasn't started yet." };
     if (week_ending < FIRST_WEEK_ENDING) return { key, name, status: "error", error: "Pick a week in 2000 or later." };
     if ((counts.get(week_ending) ?? 0) > 1) {
-      return { key, name, status: "error", error: "Two files are for this week. Leave one of them out." };
+      return { key, name, status: "error", week_ending, error: "Two files are for this week. Leave one of them out." };
     }
 
     const id = ids.get(week_ending);
@@ -64,6 +65,7 @@ export function planCafeImport(
       ? { key, name, status: "existing", week_ending, lines: parsed.lines, id }
       : { key, name, status: "new", week_ending, lines: parsed.lines };
   });
+  return [...rows.filter((row) => row.status === "error"), ...rows.filter((row) => row.status !== "error")];
 }
 
 /**

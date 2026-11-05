@@ -20,7 +20,7 @@ import {
   type CafeImportFile,
   type CafeImportRow,
 } from "@/lib/income/cafe-import";
-import { incomeSaveErrorMessage } from "@/lib/income/schema";
+import { cafeImportErrorMessage } from "@/lib/income/schema";
 import { parseSalesSummaries, type ParsedSalesSummary } from "@/lib/income/square";
 import { defaultWeekEnding, weekLabel } from "@/lib/income/weeks";
 import { formatCents } from "@/lib/money";
@@ -123,10 +123,13 @@ export function CafeImportButton({
 
     const failed = results.find((result) => result?.error)?.error;
     if (failed) {
-      // Some weeks may have gone in, so the list reloads to show what's saved now.
-      setError(`Not everything was imported. ${incomeSaveErrorMessage(failed)}`);
+      setError(cafeImportErrorMessage(failed));
       setReplace(new Set());
-      router.refresh();
+      // Some weeks may have gone in, so the list reloads to show what's saved now.
+      // With no connection a refresh becomes a browser navigation, which would
+      // swap this message for the browser's offline page, so it checks first.
+      const { error: unreachable } = await table.select("id").limit(1);
+      if (!unreachable) router.refresh();
       return;
     }
     setFiles(null);
@@ -183,14 +186,7 @@ export function CafeImportButton({
             </SheetDescription>
           </SheetHeader>
 
-          <div className="space-y-4 px-4">
-            {error && (
-              <Alert variant="destructive">
-                <CircleAlertIcon />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
+          <div className="min-h-0 flex-1 overflow-y-auto px-4">
             {rows.length > 0 && (
               <ul className="divide-y overflow-hidden rounded-lg border">
                 {rows.map((row) => {
@@ -212,26 +208,34 @@ export function CafeImportButton({
                 })}
               </ul>
             )}
+          </div>
 
+          {/* Stays in view below the list, which can run to hundreds of weeks. */}
+          <div className="space-y-3 border-t px-4 pt-3">
+            {error && (
+              <Alert variant="destructive">
+                <CircleAlertIcon />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             {counts.left > 0 && (
               <p className="text-sm text-muted-foreground">Anything left out isn&apos;t saved. The rest still go in.</p>
             )}
-          </div>
-
-          <div className="flex flex-col-reverse gap-2 px-4 pt-2 desktop:flex-row desktop:justify-end">
-            <SheetClose asChild>
-              <Button type="button" variant="outline" className="h-11 desktop:min-w-28" disabled={pending}>
-                Cancel
+            <div className="flex flex-col-reverse gap-2 desktop:flex-row desktop:justify-end">
+              <SheetClose asChild>
+                <Button type="button" variant="outline" className="h-11 desktop:min-w-28" disabled={pending}>
+                  Cancel
+                </Button>
+              </SheetClose>
+              <Button
+                type="button"
+                className="h-11 desktop:min-w-28"
+                disabled={pending || saving === 0}
+                onClick={() => void runImport()}
+              >
+                {pending ? "Importing…" : saving ? `Import ${weekCount(saving)}` : "Nothing to import"}
               </Button>
-            </SheetClose>
-            <Button
-              type="button"
-              className="h-11 desktop:min-w-28"
-              disabled={pending || saving === 0}
-              onClick={() => void runImport()}
-            >
-              {pending ? "Importing…" : saving ? `Import ${weekCount(saving)}` : "Nothing to import"}
-            </Button>
+            </div>
           </div>
         </ResponsiveSheetContent>
       </Sheet>
@@ -281,7 +285,7 @@ function ImportRow({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-0.5">
           <p className="truncate font-medium">
-            {"week_ending" in row ? weekLabel(row.week_ending, today) : row.name}
+            {row.status !== "needs_week" && row.week_ending ? weekLabel(row.week_ending, today) : row.name}
           </p>
           {row.status === "error" ? (
             <p className="text-sm text-destructive">{row.error}</p>
@@ -291,7 +295,9 @@ function ImportRow({
           {row.status === "existing" && saved && (
             <p className="text-sm text-muted-foreground tabular-nums">Entered now: {amounts(saved)}</p>
           )}
-          {showName && "week_ending" in row && <p className="truncate text-xs text-muted-foreground">{row.name}</p>}
+          {showName && row.status !== "needs_week" && row.week_ending && (
+            <p className="truncate text-xs text-muted-foreground">{row.name}</p>
+          )}
         </div>
         <span className="shrink-0">{badge}</span>
       </div>
