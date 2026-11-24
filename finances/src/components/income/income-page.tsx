@@ -7,6 +7,7 @@ import { CafeImportButton } from "@/components/income/cafe-import";
 import { CafeMonthSummary, CafeWeekList } from "@/components/income/cafe-income";
 import { CafePaybacks, CafePaybackSheet } from "@/components/income/cafe-paybacks";
 import { CafeWeekSheet } from "@/components/income/cafe-week-sheet";
+import { SquareHelp } from "@/components/income/square-help";
 import { YouthIncomeSheet } from "@/components/income/youth-income-sheet";
 import { YouthEntryList, YouthMonthSummary } from "@/components/income/youth-income";
 import { Button } from "@/components/ui/button";
@@ -71,7 +72,10 @@ export function IncomePage({
         {canEdit && (
           <div className="flex gap-2">
             {shown === "cafe" && cafeWeeks.length > 0 && (
-              <CafeImportButton weeks={cafeWeeks} today={today} className="h-10 px-4" />
+              <>
+                <SquareHelp className="size-10" />
+                <CafeImportButton weeks={cafeWeeks} today={today} className="h-10 px-4" />
+              </>
             )}
             <Button className="h-10 px-4" onClick={shown === "youth" ? () => setYouthEntry("new") : addCafeWeek}>
               <PlusIcon />
@@ -113,7 +117,10 @@ export function IncomePage({
             onAdd={canEdit ? addCafeWeek : undefined}
             importButton={
               canEdit && (
-                <CafeImportButton weeks={cafeWeeks} today={today} label="Import from Square" className="h-11 px-5" />
+                <div className="flex items-center gap-1">
+                  <CafeImportButton weeks={cafeWeeks} today={today} label="Import from Square" className="h-11 px-5" />
+                  <SquareHelp className="size-11" />
+                </div>
               )
             }
           />
