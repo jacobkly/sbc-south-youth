@@ -53,11 +53,9 @@ export type DashboardSummary = {
   /** Approved and not paid yet. */
   toPay: StatusTotal;
   paid: PaidTotals;
-  /** Paid in the month, quarter, and year before, up to the same point as today. */
-  paidBefore: Record<PaidKind, number>;
-  /** Money in, paid out, and what's left in the month, quarter, and year, plus cafe profit. */
+  /** Income, expenses, and profit in the month, quarter, and year, plus cafe profit. */
   money: MoneyTotals;
-  /** The last 12 months of money in and paid out, oldest first, ending with this month. */
+  /** The last 12 months of income and expenses, oldest first, ending with this month. */
   moneyByMonth: MoneyPeriod<MonthPeriod>[];
   /** Who was paid the most this year, most first. */
   topPayees: PayeeTotal[];
@@ -108,12 +106,10 @@ export function samePointBefore(period: CalendarPeriod, today: IsoDate): DateRan
 }
 
 /** Cents paid in the month, quarter, and year before, up to the same point as today. */
-export function paidBefore(rows: readonly PaidRow[], today: IsoDate): Record<PaidKind, number> {
-  const sum = (kind: PaidKind) => {
-    const range = samePointBefore(periodContaining(kind, today), today);
-    return paidIn(rows, { kind: "custom", ...range }).cents;
-  };
-  return { month: sum("month"), quarter: sum("quarter"), year: sum("year") };
+export function paidBefore(rows: readonly PaidRow[], today: IsoDate): PaidTotals {
+  const before = (kind: PaidKind) =>
+    paidIn(rows, { kind: "custom", ...samePointBefore(periodContaining(kind, today), today) });
+  return { month: before("month"), quarter: before("quarter"), year: before("year") };
 }
 
 /** How `current` compares with `before`, as a whole percent. Null when there's nothing to compare with. */
@@ -249,15 +245,15 @@ export async function loadDashboard(
 
   const names = new Map(payees.map((payee) => [payee.id, payee.full_name]));
   const totals = paidTotals(paid, today);
+  const income = { youth, weeks, paybacks };
 
   return {
     awaitingReview: statusTotal(open, "submitted"),
     needsInfo: statusTotal(open, "needs_info"),
     toPay: statusTotal(open, "approved"),
     paid: totals,
-    paidBefore: paidBefore(paid, today),
-    money: moneyTotals(youth, weeks, paybacks, cafeCosts, totals),
-    moneyByMonth: moneyByMonth(youth, weeks, paybacks, paidByMonth(paid, today)),
+    money: moneyTotals(income, cafeCosts, totals, paidBefore(paid, today)),
+    moneyByMonth: moneyByMonth(income, paidByMonth(paid, today)),
     topPayees: topPayees(paid, names, totals.year.period),
     activePayees: payees.filter((payee) => payee.is_active).length,
     latest: latest.rows,

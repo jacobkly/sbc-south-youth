@@ -26,13 +26,6 @@ export const compactUsd = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
 });
 
-const UNIT_TITLES: Record<TimelineUnit, string> = {
-  day: "By day",
-  week: "By week",
-  month: "By month",
-  year: "By year",
-};
-
 export const UNIT_COLUMNS: Record<TimelineUnit, string> = {
   day: "Day",
   week: "Week",
@@ -79,6 +72,9 @@ type ChartRow = {
   beforeLabel: string | null;
 } & Record<RequestType, number>;
 
+/** What the bars count: expenses, or every request when all statuses are showing. */
+export type ChartNoun = "Expenses" | "Requests";
+
 /** The period before, lined up with the bars. */
 export type ChartBefore = { label: string; buckets: BeforeBucket[] };
 
@@ -106,7 +102,15 @@ export function BucketTick({ x, y, payload, index, width, visibleTicksCount, uni
  * are days, weeks, months, or years, depending on how long the period is.
  * A dashed line shows the period before, when it had requests.
  */
-export function ReportChart({ timeline, before }: { timeline: Timeline; before: ChartBefore | null }) {
+export function ReportChart({
+  timeline,
+  before,
+  noun,
+}: {
+  timeline: Timeline;
+  before: ChartBefore | null;
+  noun: ChartNoun;
+}) {
   const { unit, buckets } = timeline;
   const rows: ChartRow[] = buckets.map((bucket, index) => {
     const earlier = before?.buckets[index] ?? null;
@@ -122,7 +126,7 @@ export function ReportChart({ timeline, before }: { timeline: Timeline; before: 
   });
   const busiest = rows.reduce((most, row) => (row.total > most.total ? row : most), rows[0]);
   const filled = rows.filter((row) => row.total > 0 || (row.before ?? 0) > 0);
-  const title = UNIT_TITLES[unit];
+  const title = `${noun} by ${unit}`;
 
   return (
     <section aria-labelledby="report-chart-heading" className="space-y-3">
@@ -131,7 +135,7 @@ export function ReportChart({ timeline, before }: { timeline: Timeline; before: 
           {title}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Busiest {unit}: {busiest.label}, {formatCents(busiest.total)}
+          Most {noun === "Expenses" ? "spent" : "requested"}: {busiest.label}, {formatCents(busiest.total)}
         </p>
       </div>
       <div className="rounded-lg border">

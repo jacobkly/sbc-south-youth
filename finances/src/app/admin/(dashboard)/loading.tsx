@@ -18,12 +18,12 @@ export default function DashboardLoading() {
           <Skeleton className="h-64" />
         </div>
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 @min-[45rem]/main:grid-cols-2 @4xl/main:grid-cols-1">
             {Array.from({ length: 4 }, (_, index) => (
-              <Skeleton key={index} className="h-24" />
+              <Skeleton key={index} className="h-26" />
             ))}
           </div>
-          <Skeleton className="h-48" />
+          <Skeleton className="h-80" />
         </div>
       </Busy>
     </div>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FileSpreadsheetIcon, PlusIcon, ReceiptTextIcon } from "lucide-react";
 import { LatestRequests } from "@/components/dashboard/latest-requests";
-import { MoneyInOut } from "@/components/dashboard/money-in-out";
+import { IncomeExpenses } from "@/components/dashboard/income-expenses";
 import { MonthlyChart } from "@/components/dashboard/monthly-chart";
 import { NeedsAction } from "@/components/dashboard/needs-action";
 import { QuickActions } from "@/components/dashboard/quick-actions";
@@ -50,9 +50,9 @@ export default async function DashboardPage() {
 
       {summary.hasRequests ? (
         // On a PC, two columns that each stack on their own, so neither waits
-        // for the other: what needs action, in and out by month, and the
-        // latest requests on the left, and the totals, money in and out, top
-        // payees, and the cafe and youth split on the right. The totals span
+        // for the other: what needs action, income and expenses by month, and
+        // the latest requests on the left, and the totals, what makes them up,
+        // top payees, and the cafe and youth split on the right. The totals span
         // the first two rows, so the left column starts right under what
         // needs action. The last row is flexible, so a taller left column
         // stretches only that row. Margins stand in for row gaps, so a row
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
           </div>
           <div className="space-y-6 @4xl/main:row-span-2 @4xl/main:mb-6">
             <StatCards summary={summary} />
-            <MoneyInOut money={summary.money} />
+            <IncomeExpenses money={summary.money} />
           </div>
           <div className="grid grid-cols-1 gap-6 @4xl/main:row-span-2 @4xl/main:grid-rows-[auto_1fr] @4xl/main:self-stretch">
             <MonthlyChart months={summary.moneyByMonth} />

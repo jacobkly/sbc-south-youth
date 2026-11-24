@@ -7,11 +7,11 @@ export const TYPE_CHART_CONFIG = {
   youth: { label: REQUEST_TYPE_LABELS.youth, color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
-export const IN_OUT_SERIES = ["in", "out"] as const;
-export type InOutSeries = (typeof IN_OUT_SERIES)[number];
+export const MONEY_SERIES = ["income", "expenses"] as const;
+export type MoneySeries = (typeof MONEY_SERIES)[number];
 
-/** Money in and paid out. Neutral colors, so neither reads as cafe or youth. */
-export const IN_OUT_CHART_CONFIG = {
-  in: { label: "Money in", color: "var(--primary)" },
-  out: { label: "Paid out", color: "var(--chart-3)" },
-} satisfies Record<InOutSeries, ChartConfig[string]>;
+/** Income and expenses. Neutral colors, so neither reads as cafe or youth. */
+export const MONEY_CHART_CONFIG = {
+  income: { label: "Income", color: "var(--primary)" },
+  expenses: { label: "Expenses", color: "var(--chart-3)" },
+} satisfies Record<MoneySeries, ChartConfig[string]>;

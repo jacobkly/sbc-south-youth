@@ -19,7 +19,7 @@ const KIND_LABELS: Record<Kind, string> = { month: "Month", quarter: "Quarter", 
 
 const SELECTED = "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:data-[state=on]:bg-primary/90";
 
-/** Cafe vs. youth paid this month, quarter, or year. Uses the same totals as the cards. */
+/** Cafe vs. youth expenses this month, quarter, or year. Uses the same totals as the cards. */
 export function TypeSplitChart({ paid }: { paid: PaidTotals }) {
   const [kind, setKind] = useState<Kind>("year");
   const { period, cents: total, byType } = paid[kind];
@@ -30,7 +30,7 @@ export function TypeSplitChart({ paid }: { paid: PaidTotals }) {
     <Card className="@container">
       <CardHeader>
         <CardTitle>
-          <h2>Cafe vs. youth</h2>
+          <h2>Cafe vs. youth expenses</h2>
         </CardTitle>
         <CardDescription aria-live="polite">Paid in {label}</CardDescription>
       </CardHeader>
@@ -91,7 +91,7 @@ export function TypeSplitChart({ paid }: { paid: PaidTotals }) {
                 </div>
               ))}
               <div className="flex items-center justify-between gap-3 pt-2">
-                <dt className="font-medium">Total</dt>
+                <dt className="font-medium">Total expenses</dt>
                 <dd className="font-semibold tabular-nums">{formatCents(total)}</dd>
               </div>
             </dl>

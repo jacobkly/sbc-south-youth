@@ -6,7 +6,7 @@ export function ChangeLine({ current, before, label }: { current: number; before
   const change = compareAmounts(current, before);
   const { amount, percent } = formatChange(change);
   return (
-    <span className="flex flex-wrap items-center justify-end gap-x-1 text-sm text-muted-foreground @md:justify-start">
+    <span className="flex flex-wrap items-center justify-end gap-x-1 text-sm text-muted-foreground @lg:justify-start">
       <span aria-hidden className="flex items-center gap-1 whitespace-nowrap">
         <TrendIcon direction={change.direction} />
         {amount}

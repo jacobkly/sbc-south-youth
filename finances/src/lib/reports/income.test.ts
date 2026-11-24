@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NO_LINES, type CafeLines, type CafePayback, type CafeWeek } from "@/lib/income/cafe";
 import type { YouthEntry } from "@/lib/income/stats";
-import { incomeTotals, titheMonths, type OutRow } from "./income";
+import { hasMoney, incomeTotals, titheMonths, type OutRow } from "./income";
 
 function youth(
   received_on: string,
@@ -30,7 +30,7 @@ function out(type: OutRow["type"], amount_cents: number, status: OutRow["status"
 }
 
 describe("incomeTotals", () => {
-  it("adds up money in, what went out, what's left, and each type's profit", () => {
+  it("adds up income, money in, what went out, what's left, and profit", () => {
     const totals = incomeTotals(
       {
         youth: [youth("2026-09-06", 2000), youth("2026-09-13", 5000, "event", null)],
@@ -40,12 +40,11 @@ describe("incomeTotals", () => {
       [out("cafe", 12000), out("cafe", 3000, "approved"), out("youth", 4500)],
     );
     expect(totals).toEqual({
+      income: { youth: 7000, square: 55000, discounts: 0, giftCards: 0, cafe: 55000, total: 62000 },
       moneyIn: { youth: 7000, cafe: 55000, paybacks: 0, total: 62000 },
-      discounts: 0,
-      giftCards: 0,
       out: { youth: 4500, cafe: 15000, total: 19500, count: 3 },
       left: 42500,
-      profit: { cafe: 40000, youth: 2500 },
+      profit: { cafe: 40000, youth: 2500, total: 42500 },
     });
   });
 
@@ -63,17 +62,17 @@ describe("incomeTotals", () => {
     );
     // 27,000 + 25,200 from Square, and the payback on its own line.
     expect(totals.moneyIn).toEqual({ youth: 2000, cafe: 52200, paybacks: 1500, total: 55700 });
-    expect(totals.discounts).toBe(2000);
     expect(totals.left).toBe(40700);
   });
 
-  it("counts the cafe's discounts in its profit, in the week they were given", () => {
+  it("counts the cafe's discounts in income and profit, in the week they were given", () => {
     const totals = incomeTotals(
       { youth: [], weeks: [week("2026-09-06", 30000, { discounts_cents: 2000 })], paybacks: [payback("2026-10-02", 9999)] },
       [out("cafe", 10000)],
     );
     // 28,000 from Square plus 2,000 in discounts, less 10,000 in costs. The payback isn't profit again.
-    expect(totals.profit).toEqual({ cafe: 20000, youth: 0 });
+    expect(totals.income).toMatchObject({ square: 28000, discounts: 2000, cafe: 30000, total: 30000 });
+    expect(totals.profit).toEqual({ cafe: 20000, youth: 0, total: 20000 });
   });
 
   it("counts the church's gift card money as money in and in the cafe's profit", () => {
@@ -83,7 +82,7 @@ describe("incomeTotals", () => {
     );
     // The cards were bought with a cafe request, and the church's money for them makes it up.
     expect(totals.moneyIn).toMatchObject({ paybacks: 25000, total: 55000 });
-    expect(totals.giftCards).toBe(25000);
+    expect(totals.income).toMatchObject({ giftCards: 25000, cafe: 55000, total: 55000 });
     expect(totals.profit.cafe).toBe(30000);
   });
 
@@ -104,18 +103,32 @@ describe("incomeTotals", () => {
   it("goes below zero when more went out than came in", () => {
     const totals = incomeTotals({ youth: [], weeks: [week("2026-09-06", 1000)], paybacks: [] }, [out("cafe", 4750)]);
     expect(totals.left).toBe(-3750);
-    expect(totals.profit).toEqual({ cafe: -3750, youth: 0 });
+    expect(totals.profit).toEqual({ cafe: -3750, youth: 0, total: -3750 });
   });
 
   it("is all zeros with nothing in or out", () => {
     expect(incomeTotals({ youth: [], weeks: [], paybacks: [] }, [])).toEqual({
+      income: { youth: 0, square: 0, discounts: 0, giftCards: 0, cafe: 0, total: 0 },
       moneyIn: { youth: 0, cafe: 0, paybacks: 0, total: 0 },
-      discounts: 0,
-      giftCards: 0,
       out: { youth: 0, cafe: 0, total: 0, count: 0 },
       left: 0,
-      profit: { cafe: 0, youth: 0 },
+      profit: { cafe: 0, youth: 0, total: 0 },
     });
+  });
+});
+
+describe("hasMoney", () => {
+  const nothing = { youth: [], weeks: [], paybacks: [] };
+
+  it("is true with income, money in, or something spent", () => {
+    expect(hasMoney(incomeTotals({ ...nothing, youth: [youth("2026-09-06", 2000)] }, []))).toBe(true);
+    expect(hasMoney(incomeTotals({ ...nothing, paybacks: [payback("2026-09-10", 1500)] }, []))).toBe(true);
+    expect(hasMoney(incomeTotals(nothing, [out("cafe", 4750)]))).toBe(true);
+  });
+
+  it("is false with nothing, or with only requests that weren't spent", () => {
+    expect(hasMoney(incomeTotals(nothing, []))).toBe(false);
+    expect(hasMoney(incomeTotals(nothing, [out("cafe", 4750, "submitted")]))).toBe(false);
   });
 });
 

@@ -1,6 +1,7 @@
 import { MinusIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 import { cn } from "cn";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { MoneyTotal } from "@/lib/dashboard/money";
 import { trend, type DashboardSummary, type PaidKind, type Trend } from "@/lib/dashboard/summary";
 import { periodLabel } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
@@ -17,7 +18,7 @@ const KINDS: { kind: PaidKind; label: string; before: string }[] = [
   { kind: "year", label: "This year", before: "last year" },
 ];
 
-/** An arrow for which way an amount went. Spending isn't good or bad, so it has no color of its own. */
+/** An arrow for which way an amount went. Up isn't always good, so it has no color of its own. */
 export function TrendIcon({ direction }: { direction: Trend["direction"] }) {
   const className = "size-3.5 shrink-0";
   if (direction === "up") return <TrendingUpIcon className={className} aria-hidden />;
@@ -25,33 +26,53 @@ export function TrendIcon({ direction }: { direction: Trend["direction"] }) {
   return <MinusIcon className={className} aria-hidden />;
 }
 
-/** Paid so far in a period, and how that compares with the same point in the one before. */
-function PaidCard({ summary, kind, label, before }: { summary: DashboardSummary; kind: PaidKind; before: string; label: string }) {
-  const { period, cents } = summary.paid[kind];
-  const earlier = summary.paidBefore[kind];
+/** One amount, and how it compares with the same point in the period before. */
+function Amount({ label, cents, earlier, before }: { label: string; cents: number; earlier: number; before: string }) {
   const change = trend(cents, earlier);
 
   return (
-    <Card size="sm" className="min-w-0 gap-2">
-      <CardHeader>
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className="truncate text-xl font-semibold tabular-nums">{formatCents(cents)}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-0.5 text-xs text-muted-foreground">
-        <p className="truncate">{periodLabel(period)}</p>
+    <div className="min-w-0">
+      <dt className="truncate text-xs text-muted-foreground">{label}</dt>
+      <dd className="space-y-0.5">
+        <span className="block truncate text-base font-semibold tracking-tight tabular-nums @sm:text-lg">
+          {formatCents(cents)}
+        </span>
         {change && (
-          <p className="flex items-center gap-1">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <TrendIcon direction={change.direction} />
-            <span aria-hidden className="truncate">
-              {change.direction === "same" ? "Same as" : `${change.percent}% vs.`} {before}
+            <span aria-hidden className="tabular-nums">
+              {change.direction === "same" ? "Same" : `${change.percent}%`}
             </span>
             <span className="sr-only">
               {change.direction === "same"
                 ? `About the same as ${formatCents(earlier)} at this point ${before}.`
                 : `${change.direction === "up" ? "Up" : "Down"} ${change.percent}% from ${formatCents(earlier)} at this point ${before}.`}
             </span>
-          </p>
+          </span>
         )}
+      </dd>
+    </div>
+  );
+}
+
+/** Income, expenses, and profit so far in a period. */
+function PeriodCard({ total, label, before }: { total: MoneyTotal; label: string; before: string }) {
+  const { period, income, expenses, profit } = total;
+
+  return (
+    <Card size="sm" className="@container min-w-0 gap-2">
+      <CardHeader>
+        <CardTitle className="flex items-baseline justify-between gap-3">
+          <h2>{label}</h2>
+          <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">{periodLabel(period)}</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid grid-cols-3 gap-2">
+          <Amount label="Income" cents={income.total} earlier={total.before.income} before={before} />
+          <Amount label="Expenses" cents={expenses} earlier={total.before.expenses} before={before} />
+          <Amount label="Profit" cents={profit} earlier={total.before.profit} before={before} />
+        </dl>
       </CardContent>
     </Card>
   );
@@ -106,20 +127,21 @@ function StorageCard({ bytes }: { bytes: number }) {
 }
 
 /**
- * Paid this month, quarter, and year, plus receipt storage. Two across on
- * phones, four on wider screens, and two again in the PC dashboard's column.
+ * Income, expenses, and profit this month, quarter, and year, plus receipt
+ * storage. One across on phones and in the PC dashboard's column, and two
+ * between.
  */
 export function StatCards({ summary }: { summary: DashboardSummary }) {
   return (
     <section aria-label="Totals" className="space-y-2">
-      <div className="grid grid-cols-2 gap-3 @min-[45rem]/main:grid-cols-4 @4xl/main:grid-cols-2">
-        {KINDS.map((item) => (
-          <PaidCard key={item.kind} summary={summary} {...item} />
+      <div className="grid grid-cols-1 gap-3 @min-[45rem]/main:grid-cols-2 @4xl/main:grid-cols-1">
+        {KINDS.map(({ kind, label, before }) => (
+          <PeriodCard key={kind} total={summary.money[kind]} label={label} before={before} />
         ))}
         <StorageCard bytes={summary.storageBytes} />
       </div>
       <p className="text-xs text-muted-foreground">
-        Totals use the date paid. Changes compare with the same point last month, quarter, or year.
+        Expenses use the date paid. Changes compare with the same point last month, quarter, or year.
       </p>
     </section>
   );

@@ -1,76 +1,25 @@
-import type { ReactNode } from "react";
 import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
 import { plural } from "@/components/income/stat";
 import { Breakdown, requestCount } from "@/components/reports/breakdown";
 import { ChangeLine } from "@/components/reports/change-line";
 import { TitheChart } from "@/components/reports/tithe-chart";
-import { periodLabel, type Period } from "@/lib/dates";
+import { Cell, Cells, EmptyCell, Heading, within } from "@/components/reports/totals";
+import type { Period } from "@/lib/dates";
 import { INCOME_METHOD_LABELS } from "@/lib/income/schema";
 import { youthSummary } from "@/lib/income/stats";
 import { formatCents } from "@/lib/money";
-import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
-import { REQUEST_TYPES } from "@/lib/requests/schema";
 import { comparisonLabel } from "@/lib/reports/comparison";
 import type { ReportFilters } from "@/lib/reports/filters";
-import { incomeTotals, titheMonths, type OutRow, type ReportIncome } from "@/lib/reports/income";
+import { hasMoney, incomeTotals, titheMonths, type OutRow, type ReportIncome } from "@/lib/reports/income";
 
 /** The period before, to compare the Income tab with. */
 export type IncomeBefore = { period: Period; income: ReportIncome; rows: readonly OutRow[] };
 
-/** The period as a sentence ends it: "in Q3 2026", or a custom range on its own. */
-function within(period: Period): string {
-  const label = periodLabel(period);
-  return period.kind === "custom" ? label : `in ${label}`;
-}
-
 /**
- * One amount in a bordered list, like the Overview's totals: label and
- * amount side by side on a phone, and a column each when there's room.
- */
-function Cell({
-  label,
-  swatch,
-  cents,
-  detail,
-  change,
-}: {
-  label: string;
-  /** A type's color, so the cell matches its charts. */
-  swatch?: string;
-  cents: number;
-  detail: string;
-  change?: ReactNode;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-3 px-4 py-3 @md:flex-col @md:justify-start @md:gap-1">
-      <dt className="flex items-center gap-2 text-sm">
-        {swatch && <span aria-hidden className="size-2.5 shrink-0 rounded-[2px]" style={{ backgroundColor: swatch }} />}
-        {label}
-      </dt>
-      <dd className="text-right tabular-nums @md:text-left">
-        <span className="block font-semibold">{formatCents(cents)}</span>
-        <span className="block text-sm text-muted-foreground">{detail}</span>
-        {change}
-      </dd>
-    </div>
-  );
-}
-
-function Heading({ id, title, children }: { id: string; title: string; children: ReactNode }) {
-  return (
-    <div>
-      <h2 id={id} className="text-lg font-semibold">
-        {title}
-      </h2>
-      {children}
-    </div>
-  );
-}
-
-/**
- * The Income tab: money in against the report's requests, what's left, each
- * type's profit, and the tithes. Money in counts by the day it came in, or
- * the Sunday a cafe week ends, whatever the requests are counted by.
+ * The Income tab: the period's income and where it came from, the tithes,
+ * and the money that reached the bank against the report's requests. Income
+ * counts by the day it came in, or the Sunday a cafe week ends, whatever the
+ * requests are counted by.
  */
 export function IncomeReport({
   filters,
@@ -85,7 +34,7 @@ export function IncomeReport({
 }) {
   const when = within(filters.period);
   const totals = incomeTotals(income, rows);
-  if (totals.moneyIn.total === 0 && totals.out.count === 0) {
+  if (!hasMoney(totals)) {
     return (
       <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
         Nothing came in or went out {when}.
@@ -95,7 +44,7 @@ export function IncomeReport({
 
   const beforeTotals = incomeTotals(before.income, before.rows);
   const beforeLabel = comparisonLabel(before.period);
-  const compared = beforeTotals.moneyIn.total > 0 || beforeTotals.out.count > 0;
+  const compared = hasMoney(beforeTotals);
   const change = (current: number, earlier: number) =>
     compared ? <ChangeLine current={current} before={earlier} label={beforeLabel} /> : undefined;
 
@@ -103,7 +52,36 @@ export function IncomeReport({
   const outLabel = byPaidDate ? "Paid out" : "Spent";
   const youth = youthSummary(income.youth);
   const beforeYouth = youthSummary(before.income.youth);
-  const { tithes } = youth;
+  const { tithes, events } = youth;
+  const discountWeeks = income.weeks.filter((week) => week.discounts_cents !== 0).length;
+  const giftCards = income.paybacks.filter((payback) => payback.kind === "gift_cards").length;
+  const sources = [
+    { key: "tithes", label: "Tithes", count: tithes.count, cents: tithes.total, detail: plural(tithes.count, "tithe", "tithes") },
+    { key: "events", label: "Events", count: events.count, cents: events.total, detail: plural(events.count, "event", "events") },
+    {
+      key: "square",
+      label: "Cafe, from Square",
+      count: income.weeks.length,
+      cents: totals.income.square,
+      detail: plural(income.weeks.length, "week", "weeks"),
+    },
+    {
+      key: "discounts",
+      label: "Cafe discounts",
+      count: discountWeeks,
+      cents: totals.income.discounts,
+      detail: `${plural(discountWeeks, "week", "weeks")}, paid back by the church`,
+    },
+    {
+      key: "gift-cards",
+      label: "Cafe gift cards",
+      count: giftCards,
+      cents: totals.income.giftCards,
+      detail: `${plural(giftCards, "payment", "payments")} from the church`,
+    },
+  ]
+    .filter((source) => source.cents !== 0)
+    .sort((a, b) => b.cents - a.cents);
   const months = titheMonths(income.youth, filters.period);
   const methods = tithes.byMethod
     .filter((method) => method.count > 0)
@@ -113,18 +91,101 @@ export function IncomeReport({
   return (
     <div className="space-y-6">
       <section aria-labelledby="income-totals-heading" className="@container space-y-3">
-        <Heading id="income-totals-heading" title="Money in and out">
+        <Heading id="income-totals-heading" title="Income">
+          <p className="text-sm text-muted-foreground">All income {when}, before expenses</p>
           <p className="text-sm text-muted-foreground">
-            Money that came in, and {byPaidDate ? "requests paid" : "approved and paid requests bought"}, {when}
+            {compared ? `Compared with ${beforeLabel}` : `Nothing in ${beforeLabel} to compare with`}
+          </p>
+        </Heading>
+        <Cells>
+          <Cell
+            size="lg"
+            label="Total income"
+            cents={totals.income.total}
+            change={change(totals.income.total, beforeTotals.income.total)}
+          />
+          <Cell
+            label="Cafe"
+            swatch={TYPE_CHART_CONFIG.cafe.color}
+            cents={totals.income.cafe}
+            detail="Square, discounts, and gift cards"
+            change={change(totals.income.cafe, beforeTotals.income.cafe)}
+          />
+          <Cell
+            label="Youth"
+            swatch={TYPE_CHART_CONFIG.youth.color}
+            cents={totals.income.youth}
+            detail="Tithes and events"
+            change={change(totals.income.youth, beforeTotals.income.youth)}
+          />
+        </Cells>
+      </section>
+
+      <Breakdown
+        id="income-sources"
+        title="Income by source"
+        description="Where the period's income came from"
+        items={sources}
+        detail={(source) => source.detail}
+        empty={`No income ${when}.`}
+      />
+
+      <section aria-labelledby="income-youth-heading" className="@container space-y-3">
+        <Heading id="income-youth-heading" title="Tithes and events">
+          <p className="text-sm text-muted-foreground">
+            Stats are per tithe, not per person. Who gave is never recorded, and events stay out of the tithe
+            stats.
+          </p>
+        </Heading>
+        <Cells>
+          <Cell
+            label="Tithes"
+            cents={tithes.total}
+            detail={plural(tithes.count, "tithe", "tithes")}
+            change={change(tithes.total, beforeYouth.tithes.total)}
+          />
+          {tithes.average === null ? (
+            <EmptyCell label="Average tithe">No tithes {when}</EmptyCell>
+          ) : (
+            <Cell
+              label="Average tithe"
+              cents={tithes.average}
+              detail={`Middle tithe ${formatCents(tithes.median ?? 0)}`}
+            />
+          )}
+          <Cell
+            label="Events"
+            cents={events.total}
+            detail={plural(events.count, "event", "events")}
+            change={change(events.total, beforeYouth.events.total)}
+          />
+        </Cells>
+      </section>
+
+      <div className="grid gap-6 @4xl/main:grid-cols-2 @4xl/main:items-start">
+        <Breakdown
+          id="income-methods"
+          title="How tithes came in"
+          description="Tithes only, since an event's money can come in more than one way"
+          items={methods}
+          detail={(item) => plural(item.count, "tithe", "tithes")}
+          empty={`No tithes ${when}.`}
+        />
+        {/* One month would be a single bar. */}
+        {months.length > 1 && tithes.count > 0 && <TitheChart months={months} />}
+      </div>
+
+      <section aria-labelledby="income-cash-heading" className="@container space-y-3">
+        <Heading id="income-cash-heading" title="Money in and out">
+          <p className="text-sm text-muted-foreground">
+            What reached the bank {when}. Church paybacks count the day they came in, not when the discounts were
+            given, so this can differ from profit.
           </p>
           {filters.allStatuses && !byPaidDate && (
             <p className="text-sm text-muted-foreground">Other statuses weren&apos;t spent, so they stay out here.</p>
           )}
-          <p className="text-sm text-muted-foreground">
-            {compared ? `Compared with ${beforeLabel}` : `Nothing in or out in ${beforeLabel} to compare with`}
-          </p>
         </Heading>
-        <dl className="grid divide-y rounded-lg border @md:grid-cols-3 @md:divide-x @md:divide-y-0">
+        <Cells>
           <Cell
             label="Money in"
             cents={totals.moneyIn.total}
@@ -147,84 +208,8 @@ export function IncomeReport({
             detail={totals.left < 0 ? "More went out than came in" : `Money in minus ${outLabel.toLowerCase()}`}
             change={change(totals.left, beforeTotals.left)}
           />
-        </dl>
+        </Cells>
       </section>
-
-      <section aria-labelledby="income-profit-heading" className="@container space-y-3">
-        <Heading id="income-profit-heading" title="Profit">
-          <p className="text-sm text-muted-foreground">
-            What each type took in, minus its own requests. The cafe&apos;s adds its discounts, which the church
-            pays back, and the gift cards it prepays.
-          </p>
-        </Heading>
-        <dl className="grid divide-y rounded-lg border @md:grid-cols-2 @md:divide-x @md:divide-y-0">
-          {REQUEST_TYPES.map((type) => (
-            <Cell
-              key={type}
-              label={REQUEST_TYPE_LABELS[type]}
-              swatch={TYPE_CHART_CONFIG[type].color}
-              cents={totals.profit[type]}
-              detail={[
-                `${formatCents(totals.moneyIn[type])} in`,
-                type === "cafe" && totals.discounts > 0 && `${formatCents(totals.discounts)} discounts`,
-                type === "cafe" && totals.giftCards > 0 && `${formatCents(totals.giftCards)} gift cards`,
-                `${formatCents(totals.out[type])} out`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-              change={change(totals.profit[type], beforeTotals.profit[type])}
-            />
-          ))}
-        </dl>
-      </section>
-
-      <section aria-labelledby="income-youth-heading" className="@container space-y-3">
-        <Heading id="income-youth-heading" title="Tithes and events">
-          <p className="text-sm text-muted-foreground">
-            Stats are per tithe, not per person. Who gave is never recorded, and events stay out of the tithe
-            stats.
-          </p>
-        </Heading>
-        <dl className="grid divide-y rounded-lg border @md:grid-cols-3 @md:divide-x @md:divide-y-0">
-          <Cell
-            label="Tithes"
-            cents={tithes.total}
-            detail={plural(tithes.count, "tithe", "tithes")}
-            change={change(tithes.total, beforeYouth.tithes.total)}
-          />
-          {tithes.average === null ? (
-            <div className="flex items-start justify-between gap-3 px-4 py-3 @md:flex-col @md:justify-start @md:gap-1">
-              <dt className="text-sm">Average tithe</dt>
-              <dd className="text-right text-sm text-muted-foreground @md:text-left">No tithes {when}</dd>
-            </div>
-          ) : (
-            <Cell
-              label="Average tithe"
-              cents={tithes.average}
-              detail={`Middle tithe ${formatCents(tithes.median ?? 0)}`}
-            />
-          )}
-          <Cell
-            label="Events"
-            cents={youth.events.total}
-            detail={plural(youth.events.count, "event", "events")}
-            change={change(youth.events.total, beforeYouth.events.total)}
-          />
-        </dl>
-      </section>
-
-      <div className="grid gap-6 @4xl/main:grid-cols-2 @4xl/main:items-start">
-        <Breakdown
-          id="income-methods"
-          title="How tithes came in"
-          description="Tithes only, since an event's money can come in more than one way"
-          items={methods}
-          detail={(item) => plural(item.count, "tithe", "tithes")}
-          empty={`No tithes ${when}.`}
-        />
-        {/* One month would be a single bar. */}
-        {months.length > 1 && tithes.count > 0 && <TitheChart months={months} />}
-      </div>
     </div>
   );
 }

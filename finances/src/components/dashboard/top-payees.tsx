@@ -8,7 +8,7 @@ function payeeCount(count: number): string {
   return count === 1 ? "1 active payee" : `${count} active payees`;
 }
 
-/** Who was paid the most this year, as bars against the top payee. */
+/** Who was paid the most expenses this year, as bars against the top payee. */
 export function TopPayees({ payees, period, activePayees }: { payees: PayeeTotal[]; period: Period; activePayees: number }) {
   const most = payees[0]?.cents ?? 0;
 
@@ -19,7 +19,7 @@ export function TopPayees({ payees, period, activePayees }: { payees: PayeeTotal
           <h2>Top payees</h2>
         </CardTitle>
         <CardDescription>
-          Paid in {periodLabel(period)} · {payeeCount(activePayees)}
+          Expenses paid in {periodLabel(period)} · {payeeCount(activePayees)}
         </CardDescription>
         <CardAction>
           <Link

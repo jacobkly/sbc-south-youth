@@ -9,6 +9,7 @@ import {
   NoValue,
   UNIT_COLUMNS,
   type ChartBefore,
+  type ChartNoun,
 } from "@/components/reports/report-chart";
 import {
   ChartContainer,
@@ -43,6 +44,7 @@ export function RunningTotalChart({
   timeline,
   before,
   label,
+  noun,
   today,
   running,
 }: {
@@ -51,6 +53,7 @@ export function RunningTotalChart({
   before: (ChartBefore & { cents: number }) | null;
   /** The report's period, e.g. "September 2026". */
   label: string;
+  noun: ChartNoun;
   today: IsoDate;
   /** The period hasn't ended yet. */
   running: boolean;
@@ -78,7 +81,7 @@ export function RunningTotalChart({
     <section aria-labelledby="report-running-heading" className="space-y-3">
       <div>
         <h2 id="report-running-heading" className="text-lg font-semibold">
-          Running total
+          Running total of {noun.toLowerCase()}
         </h2>
         <p className="text-sm text-muted-foreground">
           {formatCents(latest.cents ?? 0)} {running ? "so far" : "in all"}
@@ -159,7 +162,7 @@ export function RunningTotalChart({
         <ChartNumbers>
           <table className="w-full text-sm tabular-nums">
             <caption className="sr-only">
-              Running total, oldest first. Only {unit}s where a total changed are listed.
+              Running total of {noun.toLowerCase()}, oldest first. Only {unit}s where a total changed are listed.
               {before && ` Before is the running total of ${before.label} at the same point.`}
             </caption>
             <thead>

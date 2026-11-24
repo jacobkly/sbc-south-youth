@@ -46,7 +46,7 @@ export function ExportMenu({
               <SheetIcon aria-hidden className="mt-0.5" />
               <span>
                 <span className="block">Requests CSV</span>
-                <span className="block text-xs text-muted-foreground">One line per request</span>
+                <span className="block text-xs text-muted-foreground">Expenses, one line per request</span>
               </span>
             </a>
           </DropdownMenuItem>
@@ -55,7 +55,7 @@ export function ExportMenu({
               <SigmaIcon aria-hidden className="mt-0.5" />
               <span>
                 <span className="block">Summary CSV</span>
-                <span className="block text-xs text-muted-foreground">Totals by payee and type</span>
+                <span className="block text-xs text-muted-foreground">Expenses by payee and type</span>
               </span>
             </a>
           </DropdownMenuItem>

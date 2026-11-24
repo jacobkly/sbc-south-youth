@@ -60,7 +60,7 @@ function nextStart(date: IsoDate, unit: TimelineUnit): IsoDate {
 }
 
 /** Every bucket in the range, in order, with no gaps. */
-function spans(range: DateRange, unit: TimelineUnit): DateRange[] {
+export function spans(range: DateRange, unit: TimelineUnit): DateRange[] {
   const result: DateRange[] = [];
   for (let start = range.start; start <= range.end; ) {
     const next = nextStart(start, unit);

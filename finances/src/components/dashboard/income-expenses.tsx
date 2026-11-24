@@ -7,6 +7,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { MoneyTotals } from "@/lib/dashboard/money";
 import { periodLabel } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
+import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
+import { REQUEST_TYPES } from "@/lib/requests/schema";
 
 const KINDS = ["month", "quarter", "year"] as const;
 type Kind = (typeof KINDS)[number];
@@ -44,16 +46,16 @@ function Row({
   );
 }
 
-/** Money in, paid out, and what's left this month, quarter, or year, plus cafe profit. */
-export function MoneyInOut({ money }: { money: MoneyTotals }) {
+/** What makes up income, expenses, and profit this month, quarter, or year, plus cafe profit. */
+export function IncomeExpenses({ money }: { money: MoneyTotals }) {
   const [kind, setKind] = useState<Kind>("month");
-  const { period, moneyIn, paidOut, left, cafeProfit } = money[kind];
+  const { period, income, expenses, expensesByType, profit, paidBack, cafeProfit } = money[kind];
 
   return (
     <Card className="@container">
       <CardHeader>
         <CardTitle>
-          <h2>Money in and out</h2>
+          <h2>Income and expenses</h2>
         </CardTitle>
         <CardDescription aria-live="polite">{periodLabel(period)}</CardDescription>
       </CardHeader>
@@ -75,32 +77,43 @@ export function MoneyInOut({ money }: { money: MoneyTotals }) {
         </ToggleGroup>
 
         <dl className="text-sm">
-          <Row label="Money in" cents={moneyIn.total} note={moneyIn.total === 0 ? "Nothing in yet" : undefined} />
-          {moneyIn.total > 0 && (
+          <Row label="Income" cents={income.total} note={income.total === 0 ? "Nothing in yet" : undefined} />
+          {income.total > 0 && (
             <>
-              <Row sub label="Tithes and events" cents={moneyIn.youth} />
-              <Row sub label="Cafe, from Square" cents={moneyIn.cafe} />
-              {moneyIn.paybacks > 0 && <Row sub label="Church paybacks" cents={moneyIn.paybacks} />}
+              <Row sub label="Tithes and events" cents={income.youth} />
+              <Row sub label="Cafe, from Square" cents={income.square} />
+              {income.discounts > 0 && <Row sub label="Cafe discounts" cents={income.discounts} />}
+              {income.giftCards > 0 && <Row sub label="Cafe gift cards" cents={income.giftCards} />}
             </>
           )}
-          <Row label="Paid out" cents={paidOut} />
           <Row
-            label="Left"
-            cents={left}
-            note={left < 0 ? "More was paid out than came in" : undefined}
+            label="Expenses"
+            cents={expenses}
+            note={expenses === 0 ? "Nothing paid yet" : undefined}
+            className="border-t"
+          />
+          {expenses > 0 &&
+            REQUEST_TYPES.map((type) => (
+              <Row key={type} sub label={REQUEST_TYPE_LABELS[type]} cents={expensesByType[type]} />
+            ))}
+          <Row
+            label="Profit"
+            cents={profit}
+            note={profit < 0 ? "More was spent than came in" : undefined}
             className="border-t"
           />
           <Row
             label="Cafe profit"
             cents={cafeProfit}
-            note={cafeProfit < 0 ? "Cafe costs are ahead of sales" : "From Square plus discounts, minus cafe costs"}
+            note={cafeProfit < 0 ? "Cafe costs are ahead of sales" : "Cafe income minus cafe costs"}
             className="border-t"
           />
         </dl>
 
         <p className="text-xs text-muted-foreground">
-          Paid out uses the date paid, like the totals above. Church paybacks count the day they come in. Cafe profit
-          matches the Income page, with discounts in the week they happened and costs by purchase date.
+          Expenses use the date paid. Cafe profit matches the Income page, which uses the purchase date for costs.
+          {paidBack > 0 &&
+            ` The church paid back ${formatCents(paidBack)} of discounts, which income already counts.`}
         </p>
       </CardContent>
     </Card>

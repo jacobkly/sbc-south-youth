@@ -1,5 +1,6 @@
 import { periodContaining, periodRange, shiftPeriod, type MonthPeriod, type Period } from "@/lib/dates";
-import { moneyFromSquare, type CafePayback, type CafeWeek } from "@/lib/income/cafe";
+import type { CafePayback, CafeWeek } from "@/lib/income/cafe";
+import { earnedIncome, type EarnedIncome } from "@/lib/income/earned";
 import type { YouthEntry } from "@/lib/income/stats";
 import type { RequestStatus } from "@/lib/requests/format";
 import type { RequestType } from "@/lib/requests/schema";
@@ -8,59 +9,61 @@ import { REPORT_STATUSES } from "./filters";
 /** A report period's youth entries, cafe weeks, and the church's paybacks for the cafe's discounts and gift cards. */
 export type ReportIncome = { youth: YouthEntry[]; weeks: CafeWeek[]; paybacks: CafePayback[] };
 
-/** A request as the Income tab counts it. */
+/** A request as income and profit count it. */
 export type OutRow = { type: RequestType; amount_cents: number; status: RequestStatus };
 
 export type IncomeTotals = {
+  /** What was earned, which profit counts. */
+  income: EarnedIncome;
   /** The cafe's is its money from Square. Paybacks count on the day they came in. */
   moneyIn: Record<RequestType, number> & { paybacks: number; total: number };
-  /** The cafe's discounts, which the church pays back. */
-  discounts: number;
-  /** What the church prepaid for the cafe's gift cards. */
-  giftCards: number;
   out: Record<RequestType, number> & { total: number; count: number };
   /** Below 0 when more went out than came in. */
   left: number;
-  /** Each type's money in minus its requests. The cafe's adds its discounts and gift cards. */
-  profit: Record<RequestType, number>;
+  /** Income minus requests, for each type and in all. */
+  profit: Record<RequestType, number> & { total: number };
 };
 
 const counted = new Set<RequestStatus>(REPORT_STATUSES);
 
+/** Only approved and paid requests are expenses, even with All statuses on. The rest weren't spent. */
+export function wasSpent(row: { status: RequestStatus }): boolean {
+  return counted.has(row.status);
+}
+
+/** Whether there was any income, money in, or expenses to show. */
+export function hasMoney({ income, moneyIn, out }: IncomeTotals): boolean {
+  return income.total !== 0 || moneyIn.total !== 0 || out.count > 0;
+}
+
 /**
- * A period's money in against the report's requests. Only approved and paid
- * requests count as out, even with All statuses on, since the rest weren't
- * spent. Money in is what reached the bank, so a payback counts when it came
- * in, while the cafe's profit counts its discounts in the week they were
- * given, like the Cafe tab. The church's gift card money counts in profit
- * when it came in, since nothing is owed for it.
+ * A period's income and money in against the report's requests. Money in is
+ * what reached the bank, so a payback counts when it came in. Income, and so
+ * profit, counts the cafe's discounts in the week they were given, like the
+ * Cafe tab. The church's gift card money counts in both when it came in,
+ * since nothing is owed for it.
  */
-export function incomeTotals({ youth, weeks, paybacks }: ReportIncome, rows: readonly OutRow[]): IncomeTotals {
+export function incomeTotals(sources: ReportIncome, rows: readonly OutRow[]): IncomeTotals {
+  const income = earnedIncome(sources);
   const moneyIn = {
-    youth: youth.reduce((total, entry) => total + entry.amount_cents, 0),
-    cafe: weeks.reduce((total, week) => total + moneyFromSquare(week), 0),
-    paybacks: paybacks.reduce((total, payback) => total + payback.amount_cents, 0),
+    youth: income.youth,
+    cafe: income.square,
+    paybacks: sources.paybacks.reduce((total, payback) => total + payback.amount_cents, 0),
   };
-  const discounts = weeks.reduce((total, week) => total + week.discounts_cents, 0);
-  const giftCards = paybacks.reduce(
-    (total, payback) => (payback.kind === "gift_cards" ? total + payback.amount_cents : total),
-    0,
-  );
   const out = { youth: 0, cafe: 0, total: 0, count: 0 };
   for (const row of rows) {
-    if (!counted.has(row.status)) continue;
+    if (!wasSpent(row)) continue;
     out[row.type] += row.amount_cents;
     out.total += row.amount_cents;
     out.count += 1;
   }
   const total = moneyIn.youth + moneyIn.cafe + moneyIn.paybacks;
   return {
+    income,
     moneyIn: { ...moneyIn, total },
-    discounts,
-    giftCards,
     out,
     left: total - out.total,
-    profit: { cafe: moneyIn.cafe + discounts + giftCards - out.cafe, youth: moneyIn.youth - out.youth },
+    profit: { cafe: income.cafe - out.cafe, youth: income.youth - out.youth, total: income.total - out.total },
   };
 }
 

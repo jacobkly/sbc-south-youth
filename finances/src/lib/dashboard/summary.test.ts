@@ -153,7 +153,23 @@ describe("paidBefore", () => {
   ];
 
   it("sums the period before up to the same point", () => {
-    expect(paidBefore(rows, "2026-09-25")).toEqual({ month: 100, quarter: 400, year: 1600 });
+    expect(paidBefore(rows, "2026-09-25")).toEqual({
+      month: {
+        period: { kind: "custom", start: "2026-08-01", end: "2026-08-25" },
+        cents: 100,
+        byType: { cafe: 100, youth: 0 },
+      },
+      quarter: {
+        period: { kind: "custom", start: "2026-04-01", end: "2026-06-26" },
+        cents: 400,
+        byType: { cafe: 0, youth: 400 },
+      },
+      year: {
+        period: { kind: "custom", start: "2025-01-01", end: "2025-09-25" },
+        cents: 1600,
+        byType: { cafe: 1600, youth: 0 },
+      },
+    });
   });
 });
 

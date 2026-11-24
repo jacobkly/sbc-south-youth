@@ -4,29 +4,23 @@ import { useEffect, useOptimistic, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "cn";
-import { TYPE_CHART_CONFIG } from "@/components/dashboard/chart-config";
-import { ChangeLine } from "@/components/reports/change-line";
+import { requestCount } from "@/components/reports/breakdown";
 import { ExportMenu } from "@/components/reports/export-menu";
 import { IncomeReport } from "@/components/reports/income-report";
+import { OverviewReport, type ReportBefore } from "@/components/reports/overview-report";
 import { PayeeBreakdowns } from "@/components/reports/payee-breakdowns";
 import { PeriodPicker } from "@/components/reports/period-picker";
-import { ReportChart } from "@/components/reports/report-chart";
 import { ReportList } from "@/components/reports/report-list";
 import { RequestBreakdowns } from "@/components/reports/request-breakdowns";
-import { RunningTotalChart } from "@/components/reports/running-total-chart";
 import { TimingBreakdowns } from "@/components/reports/timing-breakdowns";
+import { within } from "@/components/reports/totals";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { sharePercent } from "@/lib/dashboard/summary";
-import { periodLabel, periodRange, type IsoDate, type Period } from "@/lib/dates";
+import { periodRange, type IsoDate } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { pageCount, pageItems, pageSlice } from "@/lib/pagination";
-import { REQUEST_TYPE_LABELS } from "@/lib/requests/format";
-import type { RequestStatus } from "@/lib/requests/format";
 import type { ReportRow } from "@/lib/requests/queries";
-import { REQUEST_TYPES } from "@/lib/requests/schema";
-import { comparisonLabel } from "@/lib/reports/comparison";
 import {
   REPORT_BASES,
   REPORT_BASIS_LABELS,
@@ -39,41 +33,24 @@ import {
   type ReportBasis,
   type ReportFilters,
   type ReportTab,
-  type ReportTotals,
 } from "@/lib/reports/filters";
-import type { ReportIncome } from "@/lib/reports/income";
-import { reportTimeline, timelineBefore, type TimelineRow } from "@/lib/reports/timeline";
+import { incomeTotals, type ReportIncome } from "@/lib/reports/income";
+import { reportTimeline } from "@/lib/reports/timeline";
 
 const SELECTED = "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:data-[state=on]:bg-primary/90";
 
-function requestCount(count: number): string {
-  return `${count.toLocaleString()} ${count === 1 ? "request" : "requests"}`;
-}
-
 /** What the report counts, e.g. "Approved and paid, bought in Q3 2026". */
 function reportSubject(filters: ReportFilters): string {
-  const label = periodLabel(filters.period);
-  const when = filters.period.kind === "custom" ? label : `in ${label}`;
+  const when = within(filters.period);
   if (filters.basis === "paid") return `Paid ${when}`;
   return `${filters.allStatuses ? "All statuses" : "Approved and paid"}, bought ${when}`;
 }
 
 function emptyMessage(filters: ReportFilters): string {
-  const label = periodLabel(filters.period);
-  const when = filters.period.kind === "custom" ? label : `in ${label}`;
+  const when = within(filters.period);
   if (filters.basis === "paid") return `Nothing paid ${when}.`;
   return `No ${filters.allStatuses ? "" : "approved or paid "}purchases ${when}.`;
 }
-
-/** The period a report compares with, its requests, and its money in. */
-export type ReportBefore = {
-  period: Period;
-  rows: (TimelineRow & { status: RequestStatus })[];
-  income: ReportIncome;
-};
-
-/** The period before's name and totals, for the changes under each total. */
-type Comparison = { label: string; totals: ReportTotals };
 
 /**
  * The reports page. The period, filters, and open tab live in the URL, so
@@ -96,7 +73,7 @@ export function ReportView({
   page: number;
   today: IsoDate;
   rows: ReportRow[];
-  /** Tithes, events, and cafe weeks in the period, for the Income tab. */
+  /** Tithes, events, cafe weeks, and church paybacks in the period. */
   income: ReportIncome;
   before: ReportBefore;
   /** Payees with a request the report would count from before its period. */
@@ -127,13 +104,8 @@ export function ReportView({
 
   const range = periodRange(filters.period);
   const totals = reportTotals(rows);
+  const money = incomeTotals(income, rows);
   const timeline = reportTimeline(rows, range, filters.basis);
-  const comparison: Comparison = { label: comparisonLabel(before.period), totals: reportTotals(before.rows) };
-  const beforeBuckets =
-    comparison.totals.count > 0
-      ? timelineBefore(timeline, range, { range: periodRange(before.period), rows: before.rows }, filters.basis)
-      : null;
-  const chartBefore = beforeBuckets && { label: comparison.label, buckets: beforeBuckets };
 
   return (
     <div className="space-y-6">
@@ -205,31 +177,23 @@ export function ReportView({
           ))}
         </TabsList>
         <div aria-busy={pending} className={cn("transition-opacity", pending && "opacity-60")}>
-          <TabsContent value="overview" className="space-y-6 text-base">
-            {rows.length > 0 ? (
-              <>
-                <TotalsSection totals={totals} subject={reportSubject(filters)} comparison={comparison} />
-                {/* A one-day report would be a single bar. */}
-                {timeline.buckets.length > 1 && (
-                  <>
-                    <ReportChart timeline={timeline} before={chartBefore} />
-                    <RunningTotalChart
-                      timeline={timeline}
-                      before={chartBefore && { ...chartBefore, cents: comparison.totals.cents }}
-                      label={comparisonLabel(filters.period)}
-                      today={today}
-                      running={range.end > today}
-                    />
-                  </>
-                )}
-              </>
-            ) : (
-              <EmptyReport filters={filters} />
-            )}
+          <TabsContent value="overview" className="text-base">
+            <OverviewReport
+              filters={filters}
+              income={income}
+              rows={rows}
+              before={before}
+              timeline={timeline}
+              today={today}
+            />
+          </TabsContent>
+          <TabsContent value="income" className="text-base">
+            <IncomeReport filters={filters} income={income} rows={rows} before={before} />
           </TabsContent>
           <TabsContent value="requests" className="space-y-6 text-base">
             {rows.length > 0 ? (
               <>
+                <TabNote filters={filters} count={totals.count} cents={totals.cents} />
                 <RequestBreakdowns rows={rows} filters={filters} />
                 <RequestsSection rows={rows} filters={filters} page={page} disabled={pending} />
               </>
@@ -237,33 +201,38 @@ export function ReportView({
               <EmptyReport filters={filters} />
             )}
           </TabsContent>
-          <TabsContent value="payees" className="text-base">
+          <TabsContent value="payees" className="space-y-6 text-base">
             {rows.length > 0 ? (
-              <PayeeBreakdowns
-                payees={reportPayeeTotals(rows)}
-                totals={totals}
-                returning={new Set(returning)}
-                filters={filters}
-              />
+              <>
+                <TabNote filters={filters} count={totals.count} cents={totals.cents} />
+                <PayeeBreakdowns
+                  payees={reportPayeeTotals(rows)}
+                  totals={totals}
+                  returning={new Set(returning)}
+                  filters={filters}
+                />
+              </>
             ) : (
               <EmptyReport filters={filters} />
             )}
           </TabsContent>
-          <TabsContent value="timing" className="text-base">
+          <TabsContent value="timing" className="space-y-6 text-base">
             {rows.length > 0 ? (
-              <TimingBreakdowns rows={rows} timeline={timeline} filters={filters} />
+              <>
+                <TabNote filters={filters} count={totals.count} cents={totals.cents} />
+                <TimingBreakdowns rows={rows} timeline={timeline} filters={filters} />
+              </>
             ) : (
               <EmptyReport filters={filters} />
             )}
-          </TabsContent>
-          <TabsContent value="income" className="text-base">
-            <IncomeReport filters={filters} income={income} rows={rows} before={before} />
           </TabsContent>
         </div>
       </Tabs>
 
       <p className="sr-only" role="status">
-        {pending ? "" : `${requestCount(totals.count)}, ${formatCents(totals.cents)}`}
+        {pending
+          ? ""
+          : `Income ${formatCents(money.income.total)}, expenses ${formatCents(money.out.total)}, profit ${formatCents(money.profit.total)}`}
       </p>
     </div>
   );
@@ -277,62 +246,14 @@ function EmptyReport({ filters }: { filters: ReportFilters }) {
   );
 }
 
-/**
- * Cafe, youth, and the total, one row each on a phone and side by side when
- * there's room. Each shows how it changed from the period before.
- */
-function TotalsSection({ totals, subject, comparison }: { totals: ReportTotals; subject: string; comparison: Comparison }) {
-  const compared = comparison.totals.count > 0;
+/** What a tab about requests counts, since these tabs leave income out. */
+function TabNote({ filters, count, cents }: { filters: ReportFilters; count: number; cents: number }) {
+  const everyStatus = filters.allStatuses && filters.basis === "purchase";
   return (
-    <section aria-labelledby="report-totals-heading" className="@container space-y-3">
-      <div>
-        <h2 id="report-totals-heading" className="text-lg font-semibold">
-          Totals
-        </h2>
-        <p className="text-sm text-muted-foreground">{subject}</p>
-        <p className="text-sm text-muted-foreground">
-          {compared ? `Compared with ${comparison.label}` : `No requests in ${comparison.label} to compare with`}
-        </p>
-      </div>
-      <dl className="grid divide-y rounded-lg border @md:grid-cols-3 @md:divide-x @md:divide-y-0">
-        {REQUEST_TYPES.map((type) => (
-          <div
-            key={type}
-            className="flex items-start justify-between gap-3 px-4 py-3 @md:flex-col @md:justify-start @md:gap-1"
-          >
-            <dt className="flex items-center gap-2 text-sm">
-              <span
-                aria-hidden
-                className="size-2.5 shrink-0 rounded-[2px]"
-                style={{ backgroundColor: TYPE_CHART_CONFIG[type].color }}
-              />
-              {REQUEST_TYPE_LABELS[type]}
-            </dt>
-            <dd className="text-right tabular-nums @md:text-left">
-              <span className="block font-semibold">{formatCents(totals.byType[type].cents)}</span>
-              <span className="block text-sm text-muted-foreground">
-                {requestCount(totals.byType[type].count)} · {sharePercent(totals.byType[type].cents, totals.cents)}
-              </span>
-              {compared && (
-                <ChangeLine
-                  current={totals.byType[type].cents}
-                  before={comparison.totals.byType[type].cents}
-                  label={comparison.label}
-                />
-              )}
-            </dd>
-          </div>
-        ))}
-        <div className="flex items-start justify-between gap-3 px-4 py-3 @md:flex-col @md:justify-start @md:gap-1">
-          <dt className="text-sm font-medium">Total</dt>
-          <dd className="text-right tabular-nums @md:text-left">
-            <span className="block font-semibold">{formatCents(totals.cents)}</span>
-            <span className="block text-sm text-muted-foreground">{requestCount(totals.count)}</span>
-            {compared && <ChangeLine current={totals.cents} before={comparison.totals.cents} label={comparison.label} />}
-          </dd>
-        </div>
-      </dl>
-    </section>
+    <p className="text-sm text-muted-foreground">
+      <span className="font-medium text-foreground">{everyStatus ? "Requests only" : "Expenses only"}.</span>{" "}
+      {reportSubject(filters)} · {requestCount(count)}, {formatCents(cents)}
+    </p>
   );
 }
 
